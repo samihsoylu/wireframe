@@ -241,8 +241,7 @@ fn control(node: &LayoutNode) -> Control {
     if let Some(Value::Color(v)) = p.get("fill") {
         c.fill = [v[0], v[1], v[2]];
     }
-    c.checked = matches!(p.get("state"),Some(Value::Choice(v)) if v=="selected"||v=="selected_disabled")
-        || matches!(p.get("checked"), Some(Value::Bool(true)));
+    c.checked = matches!(p.get("state"),Some(Value::Choice(v)) if v=="selected"||v=="disabled_selected"||v=="on");
     if !supported {
         c.text = format!(
             "Unsupported control: {}",

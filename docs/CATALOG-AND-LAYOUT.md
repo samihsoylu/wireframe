@@ -20,6 +20,8 @@ Unsupported automatic layout returns an explicit error. For unsupported controls
 
 ## Verification
 
-63 tests pass across the app, legacy workflows, recursive document/workspace, catalog/layout and text. New cases cover IDs/defaults and migration coverage, search ranking, sparse edits versus inherited overrides, state distinctions, hidden inspector fields, failed schema validation, per-axis resize policy, real glyph widths/wrapping, nested override layout and clipping, and explicit unsupported-layout outcomes. Clippy passes with warnings denied. Five saved native test documents still migrate read-only with their source bytes unchanged.
+68 tests pass across the app, legacy workflows, recursive document/workspace, catalog/layout and text. New cases cover IDs/defaults and migration coverage, search ranking, sparse edits versus inherited overrides, state distinctions, hidden inspector fields, failed schema validation, per-axis resize policy, real glyph widths/wrapping, nested override layout and clipping, and explicit unsupported-layout outcomes. Clippy passes with warnings denied. Five saved native test documents still migrate read-only with their source bytes unchanged.
 
 The shared text/table scene is integrated; continue control-specific measurement/rendering and visual comparisons. Representative native version-2 editing and save/reopen are verified; full visual fidelity, control coverage and Windows/Linux runtime acceptance remain outstanding.
+
+Typed text/table properties and six-state choice rendering are integrated; see INSPECTOR-AND-STATES.md for the current field boundary and native evidence.

@@ -60,7 +60,7 @@ pub fn text_placement(kind: &str) -> TextPlacement {
         "text_area" | "sticky_note" => (8., 8., 8., 8., false, true),
         "button" | "pointed_button" => (8., 8., 5., 5., true, false),
         "multiline_button" => (8., 8., 5., 5., true, true),
-        "checkbox" | "radio" => (23., 0., 1., 1., true, false),
+        "checkbox" | "radio" => (20., 0., 6., 4., true, false),
         "search" => (30., 24., 4., 4., true, false),
         "text_input" | "dropdown" | "numeric_stepper" | "date_chooser" => {
             (10., 24., 4., 4., true, false)
@@ -287,7 +287,7 @@ impl<M: TextMeasurer> Engine<'_, M> {
         let (_, _, min_w, min_h) = match kind {
             "label" | "heading" | "subtitle" | "link" | "paragraph" => (0., 0., 1., 1.),
             "button" | "pointed_button" | "multiline_button" => (16., 10., 20., 20.),
-            "checkbox" | "radio" => (23., 2., 23., 22.),
+            "checkbox" | "radio" => (20., 10., 20., 1.),
             "text_input" | "dropdown" | "search" | "numeric_stepper" | "date_chooser" => {
                 (12., 8., 24., 24.)
             }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 //! Shared positioned drawing data for the canvas and vector/raster exports.
+mod choice;
 mod svg;
 mod table;
 use crate::{
@@ -160,7 +161,9 @@ impl Scene {
             c.kind,
             Kind::Label | Kind::Heading | Kind::Link | Kind::Paragraph
         );
-        if !text_only {
+        if matches!(c.kind, Kind::Checkbox | Kind::Radio) {
+            self.choice_control(layer);
+        } else if !text_only {
             let mut background = c.clone();
             background.text.clear();
             for p in crate::scene::control_scene(&background, sketch) {
@@ -205,7 +208,7 @@ impl Scene {
                 middle: placement.middle,
                 wrap,
                 soft_breaks: wrap,
-                truncate: false,
+                truncate: matches!(c.kind, Kind::Checkbox | Kind::Radio),
                 clip: clip_with(layer.clip, b),
             },
             fonts,
@@ -406,11 +409,15 @@ fn paint_options(p: &Properties) -> PaintOptions {
     let color = rgb(p, "text_color", [0, 0, 0]);
     PaintOptions {
         ink: if matches!(p.get("state"),Some(Value::Choice(s))if s.contains("disabled")) {
-            Color32::from_gray(153)
+            Color32::from_rgb(128, 128, 139)
         } else {
             Color32::from_rgb(color[0], color[1], color[2])
         },
-        link: Color32::from_rgb(0, 102, 204),
+        link: if matches!(p.get("state"),Some(Value::Choice(s))if s.contains("disabled")) {
+            Color32::from_rgb(128, 128, 139)
+        } else {
+            Color32::from_rgb(0, 102, 204)
+        },
         underline: boolean(p, "underline"),
     }
 }

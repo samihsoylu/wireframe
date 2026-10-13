@@ -16,12 +16,16 @@ Native macOS evidence: migrated an isolated two-control fixture; grouped, duplic
 
 Additional native evidence: opened the styled-text/table specimen, inspected canvas and thumbnails, followed Continue to its linked page in presentation, and exported PNG through the native Save dialog. The native PNG and example-generated PNG have the same SHA-256. Evidence is local under evidence/text-scene/. The table measures 169.78125×83; typography, clean-style font selection and exact sizing remain acceptance work.
 
-Verification: 63 tests pass (five app, eleven legacy workflows, ten document, eleven catalog/layout, eight text, eleven recursive workspace, seven scene). Clippy passes with warnings denied. Prior five-fixture read-only migration checks retain source bytes. The macOS development bundle is refreshed. Windows/Linux runtime checks remain unperformed.
+The text/table inspector now reads effective typed properties from the recursive node and writes sparse values through the catalog. It exposes implemented text styles/colors/alignment, six choice states, and table row/header/selection/line options, with per-property Reset and Auto-size. Locked controls reject edits. Project font defaults are shared with layout; unknown properties survive. New checkbox/radio insertion uses automatic catalog defaults. Choice marks, disabled outlines/labels/links, 20-unit label padding and state-preserving projection are implemented. Other families still need full typed/rendered state coverage.
+
+Native property evidence: inserted a checkbox; selected Indeterminate and disabled; undid/redid; reset and undid reset; saved, closed and reopened. Confirmed the same state and 73.69×25 measured size. Selected and disabled also worked, and its menu closed after selection. Restored the saved state with Undo. Local evidence: evidence/property-inspector/; saved input: evidence/text-scene/Native-choice-properties.wireframe. The default checkbox's typography/measurement remains an open fidelity item.
+
+Verification: 68 tests pass (five app, eleven legacy workflows, ten document, eleven catalog/layout, eight text, eleven recursive workspace, seven scene, five property/state). Clippy passes with warnings denied. Prior five-fixture read-only migration checks retain source bytes. The macOS development bundle is refreshed. Windows/Linux runtime checks remain unperformed.
 
 ## Next work and unresolved acceptance
 
 1. Expand representative text/table visual comparisons and refine typography, states, padding, clean/sketch styles and source-specific formatting. Current shared rendering covers eleven basic text controls plus tables; other control families still need it. Maintain source text and shared canvas/export geometry.
-2. Complete typed inspector and all control-family rendering, automatic size/anchor rules, states, text/macros/icons and licensed fonts. The catalog inventories 86 families; this is not 86 completed renderers.
+2. Extend typed inspector and rendering beyond the initial text/table subset, including button/input states, automatic size/anchor rules, text/macros/icons and licensed fonts. The catalog inventories 86 families; this is not 86 completed renderers.
 3. Complete component creation/source editing/overrides/reset/detach UI and component resizing. Existing instances can be rendered, moved and copied with dependencies; full component editing is not yet exposed. Group resizing containing instances remains incomplete. Cropped-group ungrouping requires layout-aware handling; it currently reports the limitation.
 4. Add asset import/crop/rotation UI, alternate versions, page hierarchy, richer snapping/alignment/distribution and presentation history/target behavior. Verify shutdown/recovery and debounced saves through real failures.
 5. Finish exports including PDF/links/fonts and 1x/2x behavior, then package and run native macOS/Windows/Linux acceptance. No cross-platform runtime or full visual fidelity claim is established.
@@ -34,6 +38,7 @@ Large-document profiling and revision-based cache invalidation remain open. Curr
 - docs/DOCUMENT-FORMAT.md: recursive data, scoped identity, expansion, migration and validation.
 - docs/CATALOG-AND-LAYOUT.md: property defaults, schemas, search, sizing and remaining gaps.
 - docs/RICH-TEXT.md: source-preserving text/structured parsing and font geometry.
+- docs/INSPECTOR-AND-STATES.md: typed property edits, choice rendering and native checks.
 - docs/RECURSIVE-EDITOR.md: current live editing/storage boundary and verification.
 
 Keep product-only fixtures/evidence local unless explicitly selected for distribution. Update this checkpoint and commit completed product work. No unattended supervision beyond active goal execution is implied.

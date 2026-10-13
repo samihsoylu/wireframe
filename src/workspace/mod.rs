@@ -2,6 +2,7 @@
 // Copyright 2026 Wireframe contributors
 //! Recursive editing owns project data; renderer projections never become saved documents.
 mod clipboard;
+mod properties;
 mod view;
 use crate::{
     catalog,
@@ -230,6 +231,21 @@ impl Editor {
                 e.error = Some("Project ID space exhausted".into());
                 return;
             };
+            if matches!(kind, Kind::Checkbox | Kind::Radio) {
+                let kind_id = if kind == Kind::Checkbox {
+                    "checkbox"
+                } else {
+                    "radio"
+                };
+                let parent = e.context_origin();
+                let node = catalog::get(kind_id)
+                    .unwrap()
+                    .create(id, Point::new(x - parent.x, y - parent.y));
+                e.nodes_mut().push(node);
+                e.selection = HashSet::from([id]);
+                e.append_order(id);
+                return;
+            }
             let mut old = model::Document {
                 next_id: id + 1,
                 ..model::Document::default()

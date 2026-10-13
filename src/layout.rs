@@ -336,7 +336,13 @@ impl<M: TextMeasurer> Engine<'_, M> {
                 return Err(format!("Automatic layout is not implemented for {kind}"));
             }
         };
-        let pad_x = placement.left + placement.right;
+        let pad_x = placement.left
+            + placement.right
+            + if kind == "text_area" && boolean(props, "vertical_scrollbar") {
+                16.
+            } else {
+                0.
+            };
         let pad_y = placement.top + placement.bottom;
         let wrap = if multiline {
             match width {

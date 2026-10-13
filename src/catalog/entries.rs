@@ -974,6 +974,12 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     if let Some(first) = states.first() {
         c.properties.push(choice("state", "State", states, first));
     }
+    if matches!(c.id, "dropdown" | "text_area") {
+        c.properties.extend([
+            boolean("vertical_scrollbar", "Scrollbar", false),
+            number("value", "Scroll position", 0., 0., 1., false),
+        ]);
+    }
     if c.id == "dropdown" {
         c.properties
             .push(number("selected_index", "Selection", 0., 0., 10000., true));

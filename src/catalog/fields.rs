@@ -148,6 +148,7 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "text_color",
             "underline",
             "value",
+            "vertical_scrollbar",
         ],
         "cover_flow" => &["grayscale", "image", "rotation", "value"],
         "vertical_brace" => &[
@@ -382,6 +383,7 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "text_color",
             "underline",
             "value",
+            "vertical_scrollbar",
         ],
         "text_input" => &[
             "align",

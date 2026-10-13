@@ -20,7 +20,7 @@ Button now exposes Normal, Selected, Focused and Disabled; text input and text a
 
 The generated two-style gallery, native state-change/Undo and drawing-style checks passed. Three additional regression tests cover inserted families/default sizes, fill Reset, automatic font-height changes, round-trip geometry, all ten form-state combinations in both styles, stable text placement, and contrast. The form-state checkpoint passed 77 tests. Native reference equivalence is not established by those tests.
 
-Remaining form work includes menu icons, input border style/color/opacity, text-area scrollbars and inherited text contrast on filled inputs. Native clean-font selection and original sketch contours remain incomplete. Library previews now use the same insertion defaults and positioned scene as the canvas. An isolated temporary document avoids changing the active project. Scenes are cached by family and invalidated on drawing-style or font-default changes. Two regression tests cover all 24 library families in both styles and setting changes; the full suite passes 79 tests with Clippy warnings denied. Native macOS checks verified button and empty-input insertion, preview/canvas/thumbnail agreement and style switching. Evidence is local under evidence/library-previews/.
+Remaining form work includes menu icons, input border style/color/opacity, inherited text contrast on filled inputs. Native clean-font selection and original sketch contours remain incomplete. Library previews now use the same insertion defaults and positioned scene as the canvas. An isolated temporary document avoids changing the active project. Scenes are cached by family and invalidated on drawing-style or font-default changes. Two regression tests cover all 24 library families in both styles and setting changes; the full suite passes 79 tests with Clippy warnings denied. Native macOS checks verified button and empty-input insertion, preview/canvas/thumbnail agreement and style switching. Evidence is local under evidence/library-previews/.
 
 ## Search controls
 
@@ -38,4 +38,12 @@ Automatic width uses the selected title plus30; header height is text height plu
 
 Canvas, library, thumbnails and SVG/PNG share original vector rendering. Native macOS checks verified label selection and Undo, collapse106→27 and Undo, clean expanded height98, and corrected filled arrow triangles. Two regression tests cover parsing/index mapping, six-state geometry/colors, undo/storage and resource bounds.83 tests pass; Clippy all targets with warnings denied passes. Gallery: `cargo run --locked --example render_dropdown -- evidence/dropdown-controls`.
 
-Remaining: custom title icon, vertical scrollbar, precise skin/font appearance and further rich-text edge comparisons. No independent review or Windows/Linux native acceptance is claimed.
+Remaining: custom title icon, precise skin/font appearance and further rich-text edge comparisons. No independent review or Windows/Linux native acceptance is claimed.
+
+## Embedded scrollbars
+
+Dropdowns and text areas expose Scrollbar (default off) and Scroll position (0–1, default0), shown only when enabled. They share a vector renderer across canvas, thumbnails and exports. A fixed8×21 thumb appears only when track height exceeds45. Its Y position is track top+13+(height−48)×value. Position depicts scroll state without moving the content. Normal/focused track ink is black sketch or gray51 clean; disabled ink is128/128/139.
+
+Text areas reserve16 units from wrapping width. Their16-unit track is inset2 on top/right/bottom in sketch style and0 in clean style. Dropdowns overlay a20-unit right strip beneath the header, ending2 above the bottom, with no change to menu sizing. Closed dropdowns and those with no menu rows omit the track. Covered inline link regions are removed.
+
+Two regression tests cover both families/styles, endpoint/midpoint values,45/46 height boundary, state palettes, stable dimensions/content, wrapping and link bounds, Undo/Redo and storage round trips.85 tests and Clippy all targets pass. Native macOS verified inspector position changes and Undo for both families, dropdown toggle hiding the slider, and clean/sketch switching. The development bundle is refreshed; the saved gallery is restored. Generate editable fixtures and SVG/PNG with `cargo run --locked --example render_scrollbars -- evidence/scrollbar-controls`. Standalone scrollbar insertion and exact contours remain incomplete; Windows/Linux native checks and independent review remain unperformed.

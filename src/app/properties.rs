@@ -21,6 +21,7 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "search"
                 | "dropdown"
         ),
+        "vertical_scrollbar" | "value" => matches!(kind, "dropdown" | "text_area"),
         "border_color" => kind == "dropdown",
         "selected_index" => matches!(kind, "table" | "dropdown"),
         "shape" | "search_icon" | "microphone_icon" => kind == "search",
@@ -87,7 +88,8 @@ impl WireframeApp {
                 if let Err(error) = self.editor.auto_size_control(id) { self.error = Some(error); }
                 self.editor.commit();
             }
-            for key in ["text", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "text_color", "border_color", "fill", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+            for key in ["text", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border_color", "fill", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+                if key == "value" && values.get("vertical_scrollbar") != Some(&Value::Bool(true)) { continue; }
                 let Some(field) = spec.property(key).filter(|f| f.visible && supported(spec.id, key)) else { continue; };
                 let Some(mut value) = values.get(key).cloned() else { continue; };
                 let original = value.clone();
@@ -117,6 +119,10 @@ impl WireframeApp {
                                 }
                             });
                             finish = value != original;
+                        }
+                        (PropertyType::Number {..}, Value::Number(v)) if key == "value" => {
+                            let r = ui.add(egui::Slider::new(v, 0.0..=1.0).fixed_decimals(2));
+                            finish = r.lost_focus() || r.drag_stopped() || (r.changed() && !r.dragged());
                         }
                         (PropertyType::Number {min,max,integer}, Value::Number(v)) => {
                             let mut edit = egui::DragValue::new(v).range(*min..=*max).speed(1.);

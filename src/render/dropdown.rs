@@ -235,6 +235,20 @@ impl Scene {
             }
             y += height;
         }
+        if boolean(&layer.properties, "vertical_scrollbar") {
+            self.vertical_scrollbar(
+                Bounds::new(
+                    b.x + b.w - 20.,
+                    b.y + metrics.header,
+                    20.,
+                    b.h - metrics.header - 2.,
+                ),
+                number(&layer.properties, "value", 0.),
+                disabled,
+                sketch,
+                clip,
+            );
+        }
         self.dropdown_frame(
             Bounds::new(
                 b.x,

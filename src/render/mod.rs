@@ -4,6 +4,7 @@
 mod choice;
 mod dropdown;
 mod forms;
+mod scrollbar;
 mod search;
 mod svg;
 mod table;
@@ -201,10 +202,12 @@ impl Scene {
             italic: boolean(&layer.properties, "italic"),
         };
         let wrap = placement.wrap;
+        let scrollbar =
+            c.kind == Kind::TextArea && boolean(&layer.properties, "vertical_scrollbar");
         let area = Bounds::new(
             b.x + placement.left,
             b.y + placement.top,
-            (b.w - placement.left - placement.right).max(1.),
+            (b.w - placement.left - placement.right - if scrollbar { 16. } else { 0. }).max(1.),
             (b.h - placement.top - placement.bottom).max(1.),
         );
         let parsed = RichText::parse(&c.text, c.kind == Kind::Paragraph);
@@ -231,6 +234,16 @@ impl Scene {
             fonts,
             options,
         )?;
+        if scrollbar {
+            let inset = if sketch { 2. } else { 0. };
+            self.vertical_scrollbar(
+                Bounds::new(b.x + b.w - inset - 16., b.y + inset, 16., b.h - 2. * inset),
+                number(&layer.properties, "value", 0.),
+                matches!(layer.properties.get("state"), Some(Value::Choice(s)) if s == "disabled"),
+                sketch,
+                clip_with(layer.clip, b),
+            );
+        }
         Ok(())
     }
     fn text(

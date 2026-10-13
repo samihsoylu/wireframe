@@ -47,6 +47,8 @@ impl Default for Editor {
 }
 impl Editor {
     pub fn new(document: Project) -> Self {
+        let fonts = eframe::egui::Context::default();
+        crate::fonts::install(&fonts);
         Self {
             page: document.pages[0].id,
             saved: document.clone(),
@@ -58,7 +60,7 @@ impl Editor {
             pending: None,
             error: None,
             cache: RefCell::new(view::Cache::default()),
-            fonts: eframe::egui::Context::default(),
+            fonts,
         }
     }
     fn snapshot(&self) -> Snapshot {

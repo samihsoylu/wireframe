@@ -4,6 +4,7 @@
 use super::RichText;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Align {
+    Inherit,
     Left,
     Center,
     Right,
@@ -65,7 +66,7 @@ impl Grid {
             count.max(columns.len()),
             Column {
                 weight: 0,
-                align: Align::Left,
+                align: Align::Inherit,
             },
         );
         Self {
@@ -74,7 +75,8 @@ impl Grid {
             columns,
         }
     }
-    /// Zero-weight columns keep intrinsic width; positive weights divide the rest.
+    /// Unweighted columns scale proportionally. With positive weights, zero-weight
+    /// columns keep intrinsic width and positive weights divide the remainder.
     pub fn column_widths(&self, intrinsic: &[f32], available: f32) -> Vec<f32> {
         let count = intrinsic.len();
         let weight: u64 = self
@@ -84,7 +86,17 @@ impl Grid {
             .map(|c| c.weight as u64)
             .sum();
         if weight == 0 {
-            return intrinsic.to_vec();
+            let total: f32 = intrinsic.iter().sum();
+            return intrinsic
+                .iter()
+                .map(|w| {
+                    if total > 0. {
+                        (available * w / total).ceil()
+                    } else {
+                        0.
+                    }
+                })
+                .collect();
         }
         let reserved: f32 = intrinsic
             .iter()
@@ -173,7 +185,8 @@ fn parse_columns(text: &str) -> Option<Vec<Column>> {
                 digits.parse().ok()?
             };
             let align = match &part[digits.len()..] {
-                "" | "l" | "L" => Align::Left,
+                "" => Align::Inherit,
+                "l" | "L" => Align::Left,
                 "c" | "C" => Align::Center,
                 "r" | "R" => Align::Right,
                 _ => return None,
@@ -302,6 +315,74 @@ impl Grid {
             intrinsic_widths,
             column_widths,
             row_heights,
+        })
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct TableMetrics {
+    pub columns: Vec<f32>,
+    pub rows: Vec<f32>,
+    pub natural_width: f32,
+    pub natural_height: f32,
+    pub top: f32,
+    pub bottom: f32,
+}
+impl Grid {
+    /// Table frame padding is separate from intrinsic cell padding and row heights.
+    pub fn table_layout<M: crate::layout::TextMeasurer>(
+        &self,
+        fonts: &M,
+        style: crate::layout::TextStyle,
+        width: Option<f32>,
+        row_height: f32,
+        header: bool,
+        sketch: bool,
+    ) -> Result<TableMetrics, String> {
+        let count = self.columns.len();
+        let mut intrinsic = vec![0f32; count];
+        let mut rows = vec![];
+        for (r, row) in self.rows.iter().enumerate() {
+            let mut h = 0f32;
+            for (column, cell) in row.iter().enumerate() {
+                let (mut w, height) = match &cell.content {
+                    CellContent::Choice(_) => (22., 22.),
+                    CellContent::Text(text) => {
+                        let m = fonts.measure_rich(text, style, None, true);
+                        (m.width, m.height + 3.)
+                    }
+                };
+                if !w.is_finite() || !height.is_finite() || w < 0. || height < 0. {
+                    return Err("Invalid table text geometry".into());
+                }
+                if cell.sort.is_some() {
+                    w += 17.;
+                }
+                intrinsic[column] = intrinsic[column].max(w);
+                h = h.max(height);
+            }
+            rows.push(if header && r == 0 {
+                h.max(16.)
+            } else {
+                h.max(row_height.clamp(16., 80.))
+            });
+        }
+        for (i, w) in intrinsic.iter_mut().enumerate() {
+            *w += if i == 0 || i + 1 == count { 3. } else { 6. };
+        }
+        let (top, bottom) = if sketch { (2., 3.) } else { (1., 1.) };
+        let natural_width =
+            intrinsic.iter().sum::<f32>() + 14. + count.saturating_sub(1) as f32 * 6.;
+        let natural_height = rows.iter().sum::<f32>() + top + bottom;
+        let available = (width.unwrap_or(natural_width) - 14.).max(1.);
+        let columns = self.column_widths(&intrinsic, available);
+        Ok(TableMetrics {
+            columns,
+            rows,
+            natural_width,
+            natural_height,
+            top,
+            bottom,
         })
     }
 }

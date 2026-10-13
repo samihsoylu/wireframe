@@ -305,3 +305,7 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | zvariant-5.15.0 | MIT | [files](licenses/zvariant-5.15.0/) |
 | zvariant_derive-5.15.0 | MIT | [files](licenses/zvariant_derive-5.15.0/) |
 | zvariant_utils-4.2.0 | MIT | [files](licenses/zvariant_utils-4.2.0/) |
+
+## Canvas fonts
+
+Comic Neue regular, bold, italic and bold italic are redistributed unchanged under OFL-1.1. Copyright 2014 The Comic Neue Project Authors. See [font license](assets/fonts/comic-neue/OFL.txt) and [provenance](assets/fonts/comic-neue/PROVENANCE.json).

@@ -6,7 +6,10 @@ Wireframe uses egui/eframe 0.36.2 and a custom Rust canvas. Native file dialogs 
 - model: legacy file representation and temporary control-renderer view.
 - workspace: live recursive editing, transactions/history, nested contexts, clipboard dependencies and derived views.
 - editor: legacy implementation retained for migration/regression tests.
-- scene: deterministic drawing primitives consumed by the canvas and SVG/PNG exporters.
+- layout/rich_text: font measurement, source-preserving parsing and structured cells.
+- render: shared positioned glyphs, primitives, clips and visible links for canvas and exports.
+- scene: initial primitive renderers retained for remaining controls.
+- fonts: bundled canvas faces, separate from the UI font families.
 - storage: bounded reads, validation, atomic writes and recovery paths behind ProjectRepository for the desktop app.
 - app: interface composition, input routing, dialogs and user workflows.
 
@@ -18,6 +21,6 @@ References for the chosen libraries: https://docs.rs/eframe/0.36.2/eframe/ and h
 
 ## Recursive document transition
 
-The desktop app uses the recursive `document` model, workspace editor and ProjectStore. Rendering is a temporary projection into the existing control primitives; projections never replace project data. Version-1 reads migrate without rewriting the input, while saves/recovery use version 2. See DOCUMENT-FORMAT.md and RECURSIVE-EDITOR.md for scoped identity, parent-local geometry and native verification.
+The desktop app uses the recursive `document` model, workspace editor and ProjectStore. Rendering derives a shared scene through control views, resolved properties and recursive layout; derived views never replace project data. Basic text/tables use positioned glyphs, while remaining controls retain initial primitives. Version-1 reads migrate without rewriting the input, while saves/recovery use version 2. See DOCUMENT-FORMAT.md and RECURSIVE-EDITOR.md for scoped identity, parent-local geometry and native verification.
 
 The catalog now owns control identity, common property contracts, defaults, inspector visibility and resize policies. The layout engine consumes expanded recursive content plus a TextMeasurer and emits geometry/clip information without changing documents. The egui adapter measures actual glyph advances. Catalog inventory, layout support and rendered control support are separate acceptance measures; see CATALOG-AND-LAYOUT.md.

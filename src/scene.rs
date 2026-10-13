@@ -505,14 +505,14 @@ pub fn page_bounds(page: &Page) -> Bounds {
         .reduce(Bounds::union)
         .unwrap_or(Bounds::new(0., 0., 800., 600.))
 }
-fn escape(s: &str) -> String {
+pub(crate) fn escape(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
         .replace('"', "&quot;")
         .replace('\'', "&apos;")
 }
-fn color(c: [u8; 3]) -> String {
+pub(crate) fn color(c: [u8; 3]) -> String {
     format!("#{:02x}{:02x}{:02x}", c[0], c[1], c[2])
 }
 pub fn svg(page: &Page, sketch: bool) -> String {
@@ -540,12 +540,7 @@ pub fn svg_layers(name: &str, layers: &[(Control, Option<Bounds>)], sketch: bool
             s.push_str(&format!("<defs><clipPath id=\"clip{i}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\"/></clipPath></defs><g clip-path=\"url(#clip{i})\">",b.x,b.y,b.w,b.h));
         }
         for p in control_scene(c, sketch) {
-            match p {
-        Primitive::Rect{b,fill,stroke,radius}=>s.push_str(&format!("<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" rx=\"{}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"1.5\"/>",b.x,b.y,b.w,b.h,radius,color(fill),if stroke{color(INK)}else{"none".into()})),
-        Primitive::Ellipse{b,fill}=>s.push_str(&format!("<ellipse cx=\"{}\" cy=\"{}\" rx=\"{}\" ry=\"{}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"1.5\"/>",b.x+b.w/2.,b.y+b.h/2.,b.w/2.,b.h/2.,color(fill),color(INK))),
-        Primitive::Line{points,color:c,width}=>s.push_str(&format!("<polyline points=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{width}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>",points.iter().map(|p|format!("{},{}",p[0],p[1])).collect::<Vec<_>>().join(" "),color(c))),
-        Primitive::Text{x,y,text,size,bold,color:c,center}=>s.push_str(&format!("<text x=\"{x}\" y=\"{y}\" font-family=\"Ubuntu,DejaVu Sans,Arial,sans-serif\" font-size=\"{size}\" font-weight=\"{}\" text-anchor=\"{}\" fill=\"{}\">{}</text>",if bold{"bold"}else{"normal"},if center{"middle"}else{"start"},color(c),escape(&text))),
-    }
+            s.push_str(&primitive_svg(p));
         }
         if clip.is_some() {
             s.push_str("</g>");
@@ -562,6 +557,14 @@ pub fn png_svg(svg: &str) -> Result<Vec<u8>, String> {
     // Use the same bundled fonts as the canvas, including on minimal Linux systems.
     for font in eframe::egui::FontDefinitions::default().font_data.values() {
         options.fontdb_mut().load_font_data(font.font.to_vec());
+    }
+    for bytes in [
+        crate::fonts::REGULAR,
+        crate::fonts::BOLD,
+        crate::fonts::ITALIC,
+        crate::fonts::BOLD_ITALIC,
+    ] {
+        options.fontdb_mut().load_font_data(bytes.to_vec());
     }
     options.fontdb_mut().set_sans_serif_family("Ubuntu");
     let tree = resvg::usvg::Tree::from_str(svg, &options).map_err(|e| e.to_string())?;
@@ -591,4 +594,61 @@ fn intersect(a: Bounds, b: Bounds) -> Bounds {
         ((a.x + a.w).min(b.x + b.w) - x).max(0.),
         ((a.y + a.h).min(b.y + b.h) - y).max(0.),
     )
+}
+
+pub fn primitive_svg(p: Primitive) -> String {
+    match p {
+        Primitive::Rect {
+            b,
+            fill,
+            stroke,
+            radius,
+        } => format!(
+            "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" rx=\"{}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"1.5\"/>",
+            b.x,
+            b.y,
+            b.w,
+            b.h,
+            radius,
+            color(fill),
+            if stroke { color(INK) } else { "none".into() }
+        ),
+        Primitive::Ellipse { b, fill } => format!(
+            "<ellipse cx=\"{}\" cy=\"{}\" rx=\"{}\" ry=\"{}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"1.5\"/>",
+            b.x + b.w / 2.,
+            b.y + b.h / 2.,
+            b.w / 2.,
+            b.h / 2.,
+            color(fill),
+            color(INK)
+        ),
+        Primitive::Line {
+            points,
+            color: c,
+            width,
+        } => format!(
+            "<polyline points=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{width}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>",
+            points
+                .iter()
+                .map(|p| format!("{},{}", p[0], p[1]))
+                .collect::<Vec<_>>()
+                .join(" "),
+            color(c)
+        ),
+        Primitive::Text {
+            x,
+            y,
+            text,
+            size,
+            bold,
+            color: c,
+            center,
+        } => format!(
+            "<text x=\"{x}\" y=\"{y}\" font-family=\"Ubuntu,DejaVu Sans,Arial,sans-serif\" font-size=\"{size}\" font-weight=\"{}\" text-anchor=\"{}\" fill=\"{}\">{}</text>",
+            if bold { "bold" } else { "normal" },
+            if center { "middle" } else { "start" },
+            color(c),
+            escape(&text)
+        ),
+    }
 }

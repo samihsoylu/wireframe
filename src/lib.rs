@@ -11,3 +11,7 @@ pub mod scene;
 pub mod storage;
 
 pub mod workspace;
+
+pub mod fonts;
+
+pub mod render;

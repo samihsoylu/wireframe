@@ -1,0 +1,33 @@
+{
+  "family": "Comic Neue",
+  "license": "OFL-1.1",
+  "revision": "3dd78844021e948ceb633d1dcee3f7885561b5d9",
+  "modified": false,
+  "files": [
+    {
+      "file": "ComicNeue-Regular.ttf",
+      "sha256": "a0ee5a37c8b27c4db0700137d928598b1e23b0089e1546a8961909176b779360",
+      "url": "https://raw.githubusercontent.com/google/fonts/3dd78844021e948ceb633d1dcee3f7885561b5d9/ofl/comicneue/ComicNeue-Regular.ttf"
+    },
+    {
+      "file": "ComicNeue-Bold.ttf",
+      "sha256": "3e7e5fccfd7e0788f317b43312151c1bd5cf058c9697a8d83eac3939050bd61e",
+      "url": "https://raw.githubusercontent.com/google/fonts/3dd78844021e948ceb633d1dcee3f7885561b5d9/ofl/comicneue/ComicNeue-Bold.ttf"
+    },
+    {
+      "file": "ComicNeue-Italic.ttf",
+      "sha256": "e06bfd1552f5c9464c5665733ffd69239b0593885dbb9e059688a5900f78cf98",
+      "url": "https://raw.githubusercontent.com/google/fonts/3dd78844021e948ceb633d1dcee3f7885561b5d9/ofl/comicneue/ComicNeue-Italic.ttf"
+    },
+    {
+      "file": "ComicNeue-BoldItalic.ttf",
+      "sha256": "5c312c2a2fa64eee82f3b87fcfab8f3b12a5e59b043124401d322eb323cfbf16",
+      "url": "https://raw.githubusercontent.com/google/fonts/3dd78844021e948ceb633d1dcee3f7885561b5d9/ofl/comicneue/ComicNeue-BoldItalic.ttf"
+    },
+    {
+      "file": "OFL.txt",
+      "sha256": "7c38a22e5878e60fe423360553e63dd7be23d29f1f60336034935dbfc96e8320",
+      "url": "https://raw.githubusercontent.com/google/fonts/3dd78844021e948ceb633d1dcee3f7885561b5d9/ofl/comicneue/OFL.txt"
+    }
+  ]
+}

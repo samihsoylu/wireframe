@@ -45,6 +45,37 @@ pub struct TextStyle {
     pub bold: bool,
     pub italic: bool,
 }
+#[derive(Clone, Copy)]
+pub struct TextPlacement {
+    pub left: f32,
+    pub right: f32,
+    pub top: f32,
+    pub bottom: f32,
+    pub middle: bool,
+    pub wrap: bool,
+}
+pub fn text_placement(kind: &str) -> TextPlacement {
+    let (left, right, top, bottom, middle, wrap) = match kind {
+        "paragraph" => (0., 0., 0., 0., false, true),
+        "text_area" | "sticky_note" => (8., 8., 8., 8., false, true),
+        "button" | "pointed_button" => (8., 8., 5., 5., true, false),
+        "multiline_button" => (8., 8., 5., 5., true, true),
+        "checkbox" | "radio" => (23., 0., 1., 1., true, false),
+        "search" => (30., 24., 4., 4., true, false),
+        "text_input" | "dropdown" | "numeric_stepper" | "date_chooser" => {
+            (10., 24., 4., 4., true, false)
+        }
+        _ => (0., 0., 0., 0., false, false),
+    };
+    TextPlacement {
+        left,
+        right,
+        top,
+        bottom,
+        middle,
+        wrap,
+    }
+}
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TextMetrics {
     pub width: f32,
@@ -232,27 +263,28 @@ impl<M: TextMeasurer> Engine<'_, M> {
                 Dimension::Fixed(w) => Some(w),
                 Dimension::Auto => None,
             };
-            let mut measured = grid.measure(self.measurer, style, available, (12., 8.))?;
-            let body_start = usize::from(boolean(props, "header"));
-            for height in measured.row_heights.iter_mut().skip(body_start) {
-                *height = height.max(number(props, "row_height", 30.));
-            }
+            let measured = grid.table_layout(
+                self.measurer,
+                style,
+                available,
+                number(props, "row_height", 30.),
+                boolean(props, "header"),
+                self.project.settings.sketch,
+            )?;
             let w = match width {
                 Dimension::Fixed(w) => w,
-                Dimension::Auto => measured.width().max(1.),
+                Dimension::Auto => measured.natural_width.max(1.),
             };
             let h = match height {
                 Dimension::Fixed(h) => h,
-                Dimension::Auto => measured.height().max(1.),
+                Dimension::Auto => measured.natural_height.max(1.),
             };
             validate_size(w, h)?;
             return Ok((w, h));
         }
-        let multiline = matches!(
-            kind,
-            "paragraph" | "text_area" | "multiline_button" | "sticky_note"
-        );
-        let (pad_x, pad_y, min_w, min_h) = match kind {
+        let placement = text_placement(kind);
+        let multiline = placement.wrap;
+        let (_, _, min_w, min_h) = match kind {
             "label" | "heading" | "subtitle" | "link" | "paragraph" => (0., 0., 1., 1.),
             "button" | "pointed_button" | "multiline_button" => (16., 10., 20., 20.),
             "checkbox" | "radio" => (23., 2., 23., 22.),
@@ -273,6 +305,8 @@ impl<M: TextMeasurer> Engine<'_, M> {
                 return Err(format!("Automatic layout is not implemented for {kind}"));
             }
         };
+        let pad_x = placement.left + placement.right;
+        let pad_y = placement.top + placement.bottom;
         let wrap = if multiline {
             match width {
                 Dimension::Fixed(w) => Some((w - pad_x).max(1.)),

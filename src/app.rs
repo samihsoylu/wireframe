@@ -80,6 +80,7 @@ pub struct WireframeApp {
 }
 impl WireframeApp {
     fn workspace(ctx: &egui::Context, mut recovery: Option<PathBuf>) -> Self {
+        wireframe::fonts::install(ctx);
         ctx.set_visuals(egui::Visuals::light());
         ctx.global_style_mut(|s| {
             s.spacing.item_spacing = Vec2::new(8., 8.);
@@ -266,19 +267,16 @@ impl WireframeApp {
             .set_file_name(format!("{}.{}", self.editor.current().name, ext))
             .save_file()
         {
-            let bytes = self.editor.layers(self.editor.page).and_then(|layers| {
-                let layers: Vec<_> = layers.into_iter().map(|l| (l.control, l.clip)).collect();
-                let svg = scene::svg_layers(
-                    &self.editor.page_data().name,
-                    &layers,
-                    self.editor.document.settings.sketch,
-                );
-                if png {
-                    scene::png_svg(&svg)
-                } else {
-                    Ok(svg.into_bytes())
-                }
-            });
+            let bytes = self
+                .editor
+                .rendered_scene(self.editor.page)
+                .and_then(|drawing| {
+                    if png {
+                        drawing.png()
+                    } else {
+                        Ok(drawing.svg().into_bytes())
+                    }
+                });
             match bytes.and_then(|bytes| storage::write_atomic(&path, &bytes)) {
                 Ok(()) => self.status = format!("Exported {}", path.display()),
                 Err(e) => self.error = Some(e),
@@ -894,27 +892,8 @@ impl WireframeApp {
                                     - Vec2::new(bounds.w, bounds.h) * scale / 2.
                                     - Vec2::new(bounds.x, bounds.y) * scale;
                                 let painter = ui.painter().with_clip_rect(paper);
-                                if let Ok(layers) = self.editor.layers(page.id) {
-                                    for layer in layers {
-                                        let clipped = layer.clip.map_or_else(
-                                            || painter.clone(),
-                                            |b| {
-                                                painter.with_clip_rect(
-                                                    Rect::from_min_size(
-                                                        origin + Vec2::new(b.x, b.y) * scale,
-                                                        Vec2::new(b.w, b.h) * scale,
-                                                    )
-                                                    .intersect(painter.clip_rect()),
-                                                )
-                                            },
-                                        );
-                                        for primitive in scene::control_scene(
-                                            &layer.control,
-                                            self.editor.document.settings.sketch,
-                                        ) {
-                                            Self::paint_at(&clipped, primitive, origin, scale);
-                                        }
-                                    }
+                                if let Ok(drawing) = self.editor.rendered_scene(page.id) {
+                                    Self::paint_scene(&painter, &drawing, origin, scale);
                                 }
                                 ui.painter().text(
                                     r.center_bottom() - Vec2::new(0., 9.),
@@ -1027,8 +1006,37 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
     fn screen_rect(&self, b: Bounds) -> Rect {
         Rect::from_min_size(self.screen([b.x, b.y]), Vec2::new(b.w, b.h) * self.zoom)
     }
-    fn paint(&self, painter: &egui::Painter, p: Primitive) {
-        Self::paint_at(painter, p, self.canvas_rect.min + self.pan, self.zoom);
+    fn paint_scene(
+        painter: &egui::Painter,
+        drawing: &wireframe::render::Scene,
+        origin: Pos2,
+        scale: f32,
+    ) {
+        for item in &drawing.items {
+            let clipped = item.clip.map_or_else(
+                || painter.clone(),
+                |b| {
+                    painter.with_clip_rect(
+                        Rect::from_min_size(
+                            origin + Vec2::new(b.x, b.y) * scale,
+                            Vec2::new(b.w, b.h) * scale,
+                        )
+                        .intersect(painter.clip_rect()),
+                    )
+                },
+            );
+            if !clipped.clip_rect().is_positive() {
+                continue;
+            }
+            match &item.drawing {
+                wireframe::render::Drawing::Primitive(p) => {
+                    Self::paint_at(&clipped, p.clone(), origin, scale)
+                }
+                wireframe::render::Drawing::Glyph(g) => {
+                    wireframe::render::paint_glyph(&clipped, g, origin, scale)
+                }
+            }
+        }
     }
     fn paint_at(painter: &egui::Painter, p: Primitive, origin: Pos2, scale: f32) {
         let screen = |p: [f32; 2]| origin + Vec2::new(p[0], p[1]) * scale;
@@ -1372,7 +1380,27 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     } else {
                         self.editor.hit(p.x, p.y)
                     };
-                    if let Some(c) = hit {
+                    let inline = self
+                        .present
+                        .then(|| {
+                            self.editor
+                                .rendered_scene(self.editor.page)
+                                .ok()
+                                .and_then(|s| s.hit_link(p.x, p.y).map(str::to_owned))
+                        })
+                        .flatten();
+                    if let Some(target) = inline {
+                        if let Some(id) = target
+                            .strip_prefix("page:")
+                            .and_then(|s| s.parse::<Id>().ok())
+                        {
+                            self.editor.switch_page(id);
+                        } else if target.starts_with("https://") || target.starts_with("http://") {
+                            ctx.open_url(egui::OpenUrl::new_tab(target));
+                        } else {
+                            self.status = "This link destination is not available".into();
+                        }
+                    } else if let Some(c) = hit {
                         if self.present {
                             if let Some(id) = c.link {
                                 self.editor.switch_page(id);
@@ -1409,26 +1437,21 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                         }
                     }
                 }
-                if let Ok(layers) = self.editor.layers(self.editor.page) {
-                    for layer in layers {
-                        let c = &layer.control;
-                        if self
-                            .screen_rect(c.bounds)
-                            .expand(10.)
-                            .intersects(response.rect)
-                        {
-                            let clipped = layer.clip.map_or_else(
-                                || painter.clone(),
-                                |b| {
-                                    painter.with_clip_rect(
-                                        self.screen_rect(b).intersect(painter.clip_rect()),
-                                    )
-                                },
-                            );
-                            for p in scene::control_scene(c, self.editor.document.settings.sketch) {
-                                self.paint(&clipped, p);
-                            }
-                        }
+                match self.editor.rendered_scene(self.editor.page) {
+                    Ok(drawing) => Self::paint_scene(
+                        &painter,
+                        &drawing,
+                        self.canvas_rect.min + self.pan,
+                        self.zoom,
+                    ),
+                    Err(error) => {
+                        painter.text(
+                            response.rect.min + Vec2::splat(20.),
+                            Align2::LEFT_TOP,
+                            error,
+                            FontId::proportional(14.),
+                            Color32::DARK_RED,
+                        );
                     }
                 }
                 if !self.present {
@@ -1764,6 +1787,48 @@ mod tests {
             pressed,
             modifiers: Modifiers::NONE,
         }
+    }
+    #[test]
+    fn presentation_follows_inline_page_link_at_zoomed_glyph_position() {
+        use wireframe::document::{Content, NodeContent, Page, Point, Project, Size, Value};
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        let mut p = Project {
+            next_id: 4,
+            ..Project::default()
+        };
+        let mut node = wireframe::catalog::get("paragraph")
+            .unwrap()
+            .create(2, Point::new(50., 50.));
+        node.content = NodeContent::Control {
+            kind: "paragraph".into(),
+            size: Size::fixed(250., 80.),
+        };
+        node.properties
+            .insert("text".into(), Value::Text("é [Continue](page:3)".into()));
+        p.pages[0].content.nodes.push(node);
+        p.pages.push(Page {
+            id: 3,
+            name: "Destination".into(),
+            notes: String::new(),
+            parent: None,
+            content: Content::default(),
+            alternates: vec![],
+        });
+        app.editor = Editor::new(p);
+        app.present = true;
+        app.zoom = 1.5;
+        frame(&ctx, &mut app, vec![]);
+        let b = app.editor.rendered_scene(1).unwrap().links[0].bounds;
+        let position = app.screen([b.x + b.w / 2., b.y + b.h / 2.]);
+        frame(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(position), pointer(position, true)],
+        );
+        frame(&ctx, &mut app, vec![pointer(position, false)]);
+        assert_eq!(app.editor.page, 3);
+        assert!(!app.editor.dirty());
     }
     #[test]
     fn actual_canvas_drag_resize_and_undo() {

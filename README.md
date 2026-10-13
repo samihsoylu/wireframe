@@ -23,7 +23,7 @@ Editable documents use the versioned `.wireframe` JSON format. Files are validat
 
 ## Development status
 
-The first native build runs on macOS. Windows/Linux verification and packaging are in progress. See [current state](SESSION-SPEC.md) for actual checks and remaining work. The desktop editor supports nested groups and version-2 project saving. Double-click a group to edit its children; use Escape or Exit group to return. Image controls remain placeholders, and rich text, full control coverage and component editing are still under development.
+The first native build runs on macOS. Windows/Linux verification and packaging are in progress. See [current state](SESSION-SPEC.md) for actual checks and remaining work. The desktop editor supports nested groups and version-2 project saving. Double-click a group to edit its children; use Escape or Exit group to return. Basic rich text and table formatting appear on canvas, thumbnails and PNG/SVG exports. Image controls remain placeholders; final typography, full control coverage and component editing remain under development.
 
 ## License
 

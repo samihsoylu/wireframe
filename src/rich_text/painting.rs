@@ -9,6 +9,21 @@ pub struct LinkArea {
     pub target: String,
     pub rect: egui::Rect,
 }
+#[derive(Clone, Copy)]
+pub struct PaintOptions {
+    pub ink: Color32,
+    pub link: Color32,
+    pub underline: bool,
+}
+impl Default for PaintOptions {
+    fn default() -> Self {
+        Self {
+            ink: Color32::BLACK,
+            link: Color32::from_rgb(0, 102, 204),
+            underline: false,
+        }
+    }
+}
 pub struct PaintedText {
     pub galley: Arc<egui::Galley>,
     pub links: Vec<LinkArea>,
@@ -20,6 +35,16 @@ impl EguiMeasurer<'_> {
         base: TextStyle,
         width: Option<f32>,
         soft_breaks: bool,
+    ) -> PaintedText {
+        self.rich_galley_with(text, base, width, soft_breaks, PaintOptions::default())
+    }
+    pub fn rich_galley_with(
+        &self,
+        text: &RichText,
+        base: TextStyle,
+        width: Option<f32>,
+        soft_breaks: bool,
+        options: PaintOptions,
     ) -> PaintedText {
         let mut job = egui::text::LayoutJob::default();
         job.wrap.max_width = width.unwrap_or(f32::INFINITY);
@@ -41,22 +66,27 @@ impl EguiMeasurer<'_> {
             } else if let Some(color) = style.color.as_deref().and_then(parse_color) {
                 color
             } else if style.link {
-                Color32::from_rgb(0, 102, 204)
+                options.link
             } else {
-                Color32::BLACK
+                options.ink
             };
+            let sketch = self.regular == crate::fonts::family(false, false);
+            let bold = base.bold || style.bold;
+            let italic = base.italic || style.italic;
             let format = egui::text::TextFormat {
                 font_id: FontId::new(
                     size,
-                    if base.bold || style.bold {
+                    if sketch {
+                        crate::fonts::family(bold, italic)
+                    } else if bold {
                         self.bold.clone()
                     } else {
                         self.regular.clone()
                     },
                 ),
                 color,
-                italics: base.italic || style.italic,
-                underline: if style.underline || style.link {
+                italics: italic && !sketch,
+                underline: if style.underline || style.link || options.underline {
                     Stroke::new(1., color)
                 } else {
                     Stroke::NONE

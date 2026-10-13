@@ -10,12 +10,14 @@ use eframe::egui;
 pub(super) struct Cache {
     project: Option<Project>,
     pages: HashMap<Id, Result<Layout, String>>,
+    scenes: HashMap<Id, Result<crate::render::Scene, String>>,
 }
 #[derive(Clone)]
 pub struct Layer {
     pub control: Control,
     pub clip: Option<Bounds>,
     pub path: NodePath,
+    pub properties: Properties,
 }
 impl Editor {
     pub fn layout_page(&self, id: Id) -> Result<Layout, String> {
@@ -23,6 +25,7 @@ impl Editor {
         if cache.project.as_ref() != Some(&self.document) {
             cache.project = Some(self.document.clone());
             cache.pages.clear();
+            cache.scenes.clear();
         }
         if let Some(layout) = cache.pages.get(&id) {
             return layout.clone();
@@ -37,8 +40,8 @@ impl Editor {
         let output = self.fonts.run_ui(egui::RawInput::default(), |ui| {
             let measurer = layout::EguiMeasurer {
                 context: ui.ctx(),
-                regular: egui::FontFamily::Proportional,
-                bold: egui::FontFamily::Proportional,
+                regular: crate::fonts::family(false, false),
+                bold: crate::fonts::family(true, false),
             };
             result = layout::Engine {
                 project: &self.document,
@@ -49,6 +52,33 @@ impl Editor {
         });
         output.drop_without_applying_deltas();
         cache.pages.insert(id, result.clone());
+        result
+    }
+    pub fn rendered_scene(&self, id: Id) -> Result<crate::render::Scene, String> {
+        self.layout_page(id)?;
+        if let Some(scene) = self.cache.borrow().scenes.get(&id) {
+            return scene.clone();
+        }
+        let layers = self.layers(id)?;
+        let title = &self
+            .document
+            .pages
+            .iter()
+            .find(|p| p.id == id)
+            .ok_or("Page no longer exists")?
+            .name;
+        let mut result = Err("Drawing did not run".into());
+        let output = self.fonts.run_ui(egui::RawInput::default(), |ui| {
+            let fonts = layout::EguiMeasurer {
+                context: ui.ctx(),
+                regular: crate::fonts::family(false, false),
+                bold: crate::fonts::family(true, false),
+            };
+            result =
+                crate::render::Scene::build(title, &layers, self.document.settings.sketch, &fonts);
+        });
+        output.drop_without_applying_deltas();
+        self.cache.borrow_mut().scenes.insert(id, result.clone());
         result
     }
     pub fn current(&self) -> model::Page {
@@ -86,6 +116,7 @@ impl Editor {
                 },
                 clip: path_clip(&layout.nodes, &node.path).map(bounds),
                 path: node.path.clone(),
+                properties: node.properties.clone(),
             })
             .collect())
     }

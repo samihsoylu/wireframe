@@ -56,6 +56,7 @@ def main():
         resources = bundle / 'Contents' / 'Resources'
         resources.mkdir(exist_ok=True)
         shutil.copyfile(ROOT / 'LICENSE', resources / 'LICENSE')
+        shutil.copytree(ROOT / 'assets', resources / 'assets', dirs_exist_ok=True)
         # A local ad-hoc signature; this is not Developer ID signing or notarization.
         run('codesign', '--force', '--deep', '--sign', '-', str(bundle))
         payload = bundle
@@ -76,11 +77,12 @@ def main():
     for path in ('LICENSE','README.md','THIRD_PARTY_NOTICES.md'):
         shutil.copyfile(ROOT / path, staging / path)
     shutil.copytree(ROOT / 'licenses', staging / 'licenses', dirs_exist_ok=True)
+    shutil.copytree(ROOT / 'assets', staging / 'assets', dirs_exist_ok=True)
     shutil.copytree(ROOT / 'docs', staging / 'docs', dirs_exist_ok=True)
     # Include this product's corresponding source and build scripts with every package.
     source = staging / 'source'
     source.mkdir(exist_ok=True)
-    for path in ('src','tests','scripts'):
+    for path in ('src','tests','scripts','assets'):
         shutil.copytree(ROOT / path, source / path, dirs_exist_ok=True,
             ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
     for path in ('Cargo.toml','Cargo.lock','LICENSE','README.md'):

@@ -98,6 +98,7 @@ def main():
     for p in manifest:
         key = f"{p['name']}-{p['version']}"
         rows.append(f"| {key} | {p['license']} | [files](licenses/{key}/) |")
+    rows.extend(['', '## Canvas fonts', '', 'Comic Neue regular, bold, italic and bold italic are redistributed unchanged under OFL-1.1. Copyright 2014 The Comic Neue Project Authors. See [font license](assets/fonts/comic-neue/OFL.txt) and [provenance](assets/fonts/comic-neue/PROVENANCE.json).'])
     (ROOT / 'THIRD_PARTY_NOTICES.md').write_text('\n'.join(rows) + '\n')
     print(f'Collected notices for {len(manifest)} locked dependencies.')
 

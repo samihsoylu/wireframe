@@ -1,0 +1,6 @@
+work/
+evidence/
+fixtures/
+.DS_Store
+target/
+dist/

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 
+mod previews;
 mod properties;
 mod recovery;
 
@@ -71,6 +72,7 @@ pub struct WireframeApp {
     quit_allowed: bool,
     text_edit: Option<(Id, String)>,
     clipboard: Clipboard,
+    previews: previews::LibraryPreviews,
     recovery: Option<PathBuf>,
     _recovery_lock: Option<std::fs::File>,
     recovery_offer: Option<Project>,
@@ -130,6 +132,7 @@ impl WireframeApp {
             quit_allowed: false,
             text_edit: None,
             clipboard: Clipboard::default(),
+            previews: previews::LibraryPreviews::default(),
             recovery,
             _recovery_lock: recovery_lock,
             recovery_offer,
@@ -777,16 +780,29 @@ impl WireframeApp {
                                     if response.hovered() {
                                         ui.painter().rect_filled(r, 3, Color32::from_gray(222));
                                     }
-                                    let c = Control::new(0, kind, 0., 0.);
-                                    let scale = (82. / c.bounds.w).min(43. / c.bounds.h).min(1.);
-                                    let origin =
-                                        r.min + Vec2::new((94. - c.bounds.w * scale) / 2., 4.);
                                     let painter = ui.painter().with_clip_rect(r);
-                                    for primitive in scene::control_scene(
-                                        &c,
-                                        self.editor.document.settings.sketch,
-                                    ) {
-                                        Self::paint_at(&painter, primitive, origin, scale);
+                                    match self.previews.scene(kind, &self.editor.document.settings)
+                                    {
+                                        Ok(drawing) => {
+                                            let b = drawing.bounds;
+                                            let scale =
+                                                (82. / b.w.max(1.)).min(43. / b.h.max(1.)).min(1.);
+                                            let origin = r.min
+                                                + Vec2::new(
+                                                    (94. - b.w * scale) / 2. - b.x * scale,
+                                                    4. - b.y * scale,
+                                                );
+                                            Self::paint_scene(&painter, drawing, origin, scale);
+                                        }
+                                        Err(_) => {
+                                            painter.text(
+                                                r.center_top() + Vec2::new(0., 18.),
+                                                Align2::CENTER_TOP,
+                                                "Preview unavailable",
+                                                FontId::proportional(10.),
+                                                Color32::DARK_GRAY,
+                                            );
+                                        }
                                     }
                                     painter.text(
                                         r.center_bottom() - Vec2::new(0., 4.),

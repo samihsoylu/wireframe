@@ -305,6 +305,8 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
         "horizontal_scrollbar" => &["value"],
         "vertical_scrollbar" => &["value"],
         "search" => &[
+            "search_icon",
+            "microphone_icon",
             "bold",
             "font_size",
             "italic",

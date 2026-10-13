@@ -233,7 +233,12 @@ impl Editor {
             };
             if matches!(
                 kind,
-                Kind::Checkbox | Kind::Radio | Kind::Button | Kind::TextInput | Kind::TextArea
+                Kind::Checkbox
+                    | Kind::Radio
+                    | Kind::Button
+                    | Kind::TextInput
+                    | Kind::TextArea
+                    | Kind::Search
             ) {
                 let kind_id = match kind {
                     Kind::Checkbox => "checkbox",
@@ -241,6 +246,7 @@ impl Editor {
                     Kind::Button => "button",
                     Kind::TextInput => "text_input",
                     Kind::TextArea => "text_area",
+                    Kind::Search => "search",
                     _ => unreachable!(),
                 };
                 let parent = e.context_origin();

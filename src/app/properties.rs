@@ -18,7 +18,9 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "button"
                 | "text_input"
                 | "text_area"
+                | "search"
         ),
+        "shape" | "search_icon" | "microphone_icon" => kind == "search",
         "fill" => matches!(
             kind,
             "button" | "text_input" | "text_area" | "dropdown" | "search" | "table"
@@ -40,6 +42,8 @@ fn choice_label(value: &str) -> &str {
         "left" => "Left",
         "center" => "Center",
         "right" => "Right",
+        "rounded" => "Rounded corners",
+        "rectangle" => "Rectangle",
         other => other,
     }
 }
@@ -76,7 +80,7 @@ impl WireframeApp {
                 if let Err(error) = self.editor.auto_size_control(id) { self.error = Some(error); }
                 self.editor.commit();
             }
-            for key in ["text", "font_size", "bold", "italic", "underline", "align", "state", "text_color", "fill", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+            for key in ["text", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "text_color", "fill", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
                 let Some(field) = spec.property(key).filter(|f| f.visible && supported(spec.id, key)) else { continue; };
                 let Some(mut value) = values.get(key).cloned() else { continue; };
                 let original = value.clone();

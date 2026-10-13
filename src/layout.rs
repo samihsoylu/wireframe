@@ -65,7 +65,8 @@ pub fn text_placement(kind: &str, sketch: bool) -> TextPlacement {
         "pointed_button" => (8., 8., 5., 5., true, false),
         "multiline_button" => (8., 8., 5., 5., true, true),
         "checkbox" | "radio" => (20., 0., 6., 4., true, false),
-        "search" => (30., 24., 4., 4., true, false),
+        "search" if sketch => (22., 4., 6., 6., false, false),
+        "search" => (22., 4., 7., 6., false, false),
         "text_input" if sketch => (7., 7., 7., 7., false, false),
         "text_input" => (5., 5., 6., 5., false, false),
         "dropdown" | "numeric_stepper" | "date_chooser" => (10., 24., 4., 4., true, false),
@@ -302,7 +303,8 @@ impl<M: TextMeasurer> Engine<'_, M> {
             "pointed_button" | "multiline_button" => (16., 10., 20., 20.),
             "checkbox" | "radio" => (20., 10., 20., 1.),
             "text_input" => (0., 0., 1., 1.),
-            "dropdown" | "search" | "numeric_stepper" | "date_chooser" => (12., 8., 24., 24.),
+            "search" => (0., 0., 120., 1.),
+            "dropdown" | "numeric_stepper" | "date_chooser" => (12., 8., 24., 24.),
             "text_area" | "sticky_note" => (12., 12., 40., 30.),
             "shape" | "rectangle" | "ellipse" | "line" | "horizontal_rule" | "vertical_rule" => {
                 (0., 0., 1., 1.)

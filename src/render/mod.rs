@@ -3,6 +3,7 @@
 //! Shared positioned drawing data for the canvas and vector/raster exports.
 mod choice;
 mod forms;
+mod search;
 mod svg;
 mod table;
 use crate::{
@@ -135,6 +136,9 @@ impl Scene {
     ) -> Result<(), String> {
         let c = &layer.control;
         let b = c.bounds;
+        if c.kind == Kind::Search {
+            return self.search_control(layer, sketch, fonts);
+        }
         if c.kind == Kind::Table {
             return self.table(layer, sketch, fonts);
         }

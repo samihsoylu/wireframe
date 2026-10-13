@@ -898,6 +898,8 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     );
     ink.default = if c.id == "link" {
         DefaultValue::LinkColor
+    } else if c.id == "search" {
+        DefaultValue::SearchInk
     } else {
         DefaultValue::Ink
     };
@@ -910,7 +912,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "subtitle" => "Subtitle",
         "paragraph" => "Write your ideas here.",
         "text_input" => "",
-        "search" => "Search",
+        "search" => "search",
         "link" => "Link",
         "table" => "Name, Status\nItem one, Ready\nItem two, Draft",
         "list" => "Item one\nItem two\nItem three",
@@ -998,6 +1000,13 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     }
     if c.id == "image" {
         c.properties.push(boolean("grayscale", "Grayscale", false));
+    }
+    if c.id == "search" {
+        c.properties.extend([
+            choice("shape", "Shape", &["rounded", "rectangle"], "rounded"),
+            boolean("search_icon", "Search icon", true),
+            boolean("microphone_icon", "Microphone icon", false),
+        ]);
     }
     if c.id == "shape" {
         c.properties.push(choice(

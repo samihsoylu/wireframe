@@ -54,6 +54,7 @@ pub enum DefaultValue {
     Ink,
     Fill,
     ButtonFill,
+    SearchInk,
     LinkColor,
 }
 #[derive(Clone, Debug)]
@@ -159,6 +160,11 @@ impl PropertySpec {
                 context.fill
             } else {
                 [221, 221, 221, 255]
+            }),
+            DefaultValue::SearchInk => Value::Color(if context.sketch {
+                [128, 128, 139, 255]
+            } else {
+                [51, 51, 51, 255]
             }),
             DefaultValue::LinkColor => Value::Color(context.link_color),
         }

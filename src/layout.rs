@@ -354,7 +354,12 @@ impl Layout {
                 .enumerate()
                 .map(|(i, path)| (path, i))
                 .collect();
-            out.sort_by_key(|(n, _)| order.get(&n.path).copied().unwrap_or(usize::MAX));
+            out.sort_by_key(|(n, _)| {
+                (1..=n.path.len())
+                    .rev()
+                    .find_map(|len| order.get(&n.path[..len].to_vec()).copied())
+                    .unwrap_or(usize::MAX)
+            });
         }
         out
     }

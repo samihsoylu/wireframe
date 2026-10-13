@@ -9,8 +9,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let new = document::decode(&bytes)?;
         assert_eq!(document::decode(&new.encode()?)?, new);
         assert_eq!(old.pages.len(), new.pages.len());
+        let editor = wireframe::workspace::Editor::new(new.clone());
         let mut count = 0;
         for (old_page, new_page) in old.pages.iter().zip(&new.pages) {
+            let projected = editor.layers(old_page.id)?;
+            assert_eq!(projected.len(), old_page.controls.len());
+            for (old, layer) in old_page.controls.iter().zip(&projected) {
+                assert_eq!(old.bounds, layer.control.bounds);
+                assert_eq!(old.text, layer.control.text);
+                assert_eq!(old.kind, layer.control.kind);
+            }
             let leaves = new_page.content.leaves()?;
             assert_eq!(old_page.controls.len(), leaves.len());
             for (old, node) in old_page.controls.iter().zip(leaves) {
@@ -26,7 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         assert_eq!(std::fs::read(&path)?, bytes);
         println!(
-            "PASS: {path}: {} pages, {count} controls; order, positions, text, round trip and unchanged source",
+            "PASS: {path}: {} pages, {count} controls; editor projection, order, positions, text, round trip and unchanged source",
             new.pages.len()
         );
     }

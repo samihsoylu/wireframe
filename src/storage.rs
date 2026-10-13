@@ -72,7 +72,12 @@ pub fn acquire_recovery(path: &Path) -> Result<fs::File, String> {
     Ok(lock)
 }
 
-/// Version-2 storage is opt-in until the editor migration is complete.
+/// Storage boundary used by the desktop workspace and failure-injection tests.
+pub trait ProjectRepository {
+    fn load(&self, path: &Path) -> Result<crate::document::Project, String>;
+    fn save(&self, path: &Path, project: &crate::document::Project) -> Result<(), String>;
+}
+/// Reads either document version and saves recursive version-2 projects.
 pub struct ProjectStore;
 impl ProjectStore {
     pub fn load(&self, path: &Path) -> Result<crate::document::Project, String> {
@@ -87,5 +92,14 @@ impl ProjectStore {
     }
     pub fn save(&self, path: &Path, project: &crate::document::Project) -> Result<(), String> {
         write_atomic(path, &project.encode()?)
+    }
+}
+
+impl ProjectRepository for ProjectStore {
+    fn load(&self, path: &Path) -> Result<crate::document::Project, String> {
+        ProjectStore::load(self, path)
+    }
+    fn save(&self, path: &Path, project: &crate::document::Project) -> Result<(), String> {
+        ProjectStore::save(self, path, project)
     }
 }

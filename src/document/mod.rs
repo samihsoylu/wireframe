@@ -273,3 +273,41 @@ impl Project {
         Ok(bytes)
     }
 }
+
+impl Content {
+    /// Structural paint units: controls and component instances are atomic; groups recurse.
+    pub fn paint_paths(&self) -> Result<Vec<NodePath>, String> {
+        fn collect(
+            nodes: &[Node],
+            prefix: &mut NodePath,
+            out: &mut Vec<NodePath>,
+        ) -> Result<(), String> {
+            if prefix.len() > MAX_DEPTH {
+                return Err("Control hierarchy is too deep".into());
+            }
+            for n in nodes {
+                prefix.push(n.id);
+                match &n.content {
+                    NodeContent::Group { children } => collect(children, prefix, out)?,
+                    _ => out.push(prefix.clone()),
+                };
+                prefix.pop();
+            }
+            Ok(())
+        }
+        let mut paths = vec![];
+        collect(&self.nodes, &mut vec![], &mut paths)?;
+        if self.paint_order.is_empty() {
+            return Ok(paths);
+        }
+        let expected: std::collections::BTreeSet<_> = paths.iter().collect();
+        let actual: std::collections::BTreeSet<_> = self.paint_order.iter().collect();
+        if paths.len() != self.paint_order.len()
+            || actual.len() != self.paint_order.len()
+            || expected != actual
+        {
+            return Err("Invalid or incomplete paint order".into());
+        }
+        Ok(self.paint_order.clone())
+    }
+}

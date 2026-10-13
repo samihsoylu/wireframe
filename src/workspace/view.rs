@@ -1,0 +1,226 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright 2026 Wireframe contributors
+use super::*;
+use crate::{
+    catalog::Context,
+    layout::{self, Layout, LayoutNode},
+};
+use eframe::egui;
+#[derive(Default)]
+pub(super) struct Cache {
+    project: Option<Project>,
+    pages: HashMap<Id, Result<Layout, String>>,
+}
+#[derive(Clone)]
+pub struct Layer {
+    pub control: Control,
+    pub clip: Option<Bounds>,
+    pub path: NodePath,
+}
+impl Editor {
+    pub fn layout_page(&self, id: Id) -> Result<Layout, String> {
+        let mut cache = self.cache.borrow_mut();
+        if cache.project.as_ref() != Some(&self.document) {
+            cache.project = Some(self.document.clone());
+            cache.pages.clear();
+        }
+        if let Some(layout) = cache.pages.get(&id) {
+            return layout.clone();
+        }
+        let page = self
+            .document
+            .pages
+            .iter()
+            .find(|p| p.id == id)
+            .ok_or("Page no longer exists")?;
+        let mut result = Err("Font layout did not run".into());
+        let output = self.fonts.run_ui(egui::RawInput::default(), |ui| {
+            let measurer = layout::EguiMeasurer {
+                context: ui.ctx(),
+                regular: egui::FontFamily::Proportional,
+                bold: egui::FontFamily::Proportional,
+            };
+            result = layout::Engine {
+                project: &self.document,
+                measurer: &measurer,
+                context: Context::default(),
+            }
+            .layout(&page.content);
+        });
+        output.drop_without_applying_deltas();
+        cache.pages.insert(id, result.clone());
+        result
+    }
+    pub fn current(&self) -> model::Page {
+        let page = self.page_data();
+        let controls = self
+            .layout_page(self.page)
+            .map(|layout| {
+                let nodes = if self.context.is_empty() {
+                    &layout.nodes
+                } else {
+                    find_layout(&layout.nodes, &self.context)
+                        .map(|n| &n.children)
+                        .unwrap_or(&layout.nodes)
+                };
+                nodes.iter().map(control).collect()
+            })
+            .unwrap_or_default();
+        model::Page {
+            id: page.id,
+            name: page.name.clone(),
+            notes: page.notes.clone(),
+            controls,
+        }
+    }
+    pub fn layers(&self, id: Id) -> Result<Vec<Layer>, String> {
+        let layout = self.layout_page(id)?;
+        Ok(layout
+            .leaves()
+            .into_iter()
+            .map(|(node, _)| Layer {
+                control: {
+                    let mut c = control(node);
+                    c.bounds = bounds(node.uncropped);
+                    c
+                },
+                clip: path_clip(&layout.nodes, &node.path).map(bounds),
+                path: node.path.clone(),
+            })
+            .collect())
+    }
+    pub fn rendered_page(&self, id: Id) -> Result<model::Page, String> {
+        let page = self
+            .document
+            .pages
+            .iter()
+            .find(|p| p.id == id)
+            .ok_or("Page no longer exists")?;
+        Ok(model::Page {
+            id,
+            name: page.name.clone(),
+            notes: page.notes.clone(),
+            controls: self.layers(id)?.into_iter().map(|l| l.control).collect(),
+        })
+    }
+    pub fn hit(&self, x: f32, y: f32) -> Option<Control> {
+        let controls = self.current().controls;
+        if let Ok(layers) = self.layers(self.page) {
+            for layer in layers.into_iter().rev() {
+                if layer.path.starts_with(&self.context)
+                    && layer.control.bounds.contains(x, y)
+                    && layer.clip.is_none_or(|b| b.contains(x, y))
+                    && let Some(id) = layer.path.get(self.context.len())
+                    && let Some(control) = controls.iter().find(|c| c.id == *id)
+                {
+                    return Some(control.clone());
+                }
+            }
+        }
+        controls
+            .into_iter()
+            .rev()
+            .find(|c| c.group.is_some() && c.bounds.contains(x, y))
+    }
+    pub fn selection_label(&self, id: Id) -> String {
+        match self.nodes().iter().find(|n| n.id == id).map(|n| &n.content) {
+            Some(NodeContent::Group { .. }) => "Group".into(),
+            Some(NodeContent::Instance { .. }) => "Component".into(),
+            Some(NodeContent::Control { kind, .. }) => {
+                catalog::get(kind).map_or_else(|| kind.clone(), |s| s.name.into())
+            }
+            None => "Control".into(),
+        }
+    }
+}
+pub(super) fn find_layout<'a>(nodes: &'a [LayoutNode], path: &[Id]) -> Option<&'a LayoutNode> {
+    let node = nodes.iter().find(|n| n.path.last() == path.first())?;
+    if path.len() == 1 {
+        Some(node)
+    } else {
+        find_layout(&node.children, &path[1..])
+    }
+}
+fn path_clip(nodes: &[LayoutNode], path: &[Id]) -> Option<layout::Rect> {
+    let node = nodes.iter().find(|n| n.path.last() == path.first())?;
+    let next = if path.len() > 1 {
+        path_clip(&node.children, &path[1..])
+    } else {
+        None
+    };
+    match (node.clip, next) {
+        (Some(a), Some(b)) => Some(a.intersect(b)),
+        (Some(a), None) | (None, Some(a)) => Some(a),
+        (None, None) => None,
+    }
+}
+fn bounds(b: layout::Rect) -> Bounds {
+    Bounds::new(b.x, b.y, b.width, b.height)
+}
+fn control(node: &LayoutNode) -> Control {
+    let mut supported = true;
+    let kind = match node.kind.as_deref().unwrap_or("") {
+        "button" => Kind::Button,
+        "label" => Kind::Label,
+        "heading" => Kind::Heading,
+        "paragraph" => Kind::Paragraph,
+        "text_input" => Kind::TextInput,
+        "text_area" => Kind::TextArea,
+        "checkbox" => Kind::Checkbox,
+        "radio" => Kind::Radio,
+        "dropdown" => Kind::Dropdown,
+        "search" => Kind::Search,
+        "ellipse" => Kind::Ellipse,
+        "line" | "horizontal_rule" => Kind::Line,
+        "arrow" => Kind::Arrow,
+        "image" => Kind::Image,
+        "browser" => Kind::Browser,
+        "phone" => Kind::Phone,
+        "panel" | "window" => Kind::Panel,
+        "list" => Kind::List,
+        "table" => Kind::Table,
+        "tabs" => Kind::Tabs,
+        "progress" => Kind::Progress,
+        "toggle" => Kind::Toggle,
+        "link" => Kind::Link,
+        "rectangle" | "shape" | "" => Kind::Rectangle,
+        _ => {
+            supported = false;
+            Kind::Rectangle
+        }
+    };
+    let mut c = Control::new(
+        *node.path.last().unwrap(),
+        kind,
+        node.uncropped.x,
+        node.uncropped.y,
+    );
+    c.bounds = bounds(node.bounds);
+    c.locked = node.locked;
+    c.group = node.kind.is_none().then_some(c.id);
+    let p = &node.properties;
+    c.text = match p.get("text") {
+        Some(Value::Text(t)) => t.clone(),
+        _ => String::new(),
+    };
+    if let Some(Value::Number(v)) = p.get("font_size") {
+        c.font_size = *v as f32;
+    }
+    c.bold = matches!(p.get("bold"), Some(Value::Bool(true)));
+    if let Some(Value::Color(v)) = p.get("fill") {
+        c.fill = [v[0], v[1], v[2]];
+    }
+    c.checked = matches!(p.get("state"),Some(Value::Choice(v)) if v=="selected"||v=="selected_disabled")
+        || matches!(p.get("checked"), Some(Value::Bool(true)));
+    if !supported {
+        c.text = format!(
+            "Unsupported control: {}",
+            node.kind.as_deref().unwrap_or("")
+        );
+    }
+    c.link = match p.get("link") {
+        Some(Value::Link(Link::Page(id))) => Some(*id),
+        _ => None,
+    };
+    c
+}

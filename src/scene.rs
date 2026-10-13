@@ -516,18 +516,29 @@ fn color(c: [u8; 3]) -> String {
     format!("#{:02x}{:02x}{:02x}", c[0], c[1], c[2])
 }
 pub fn svg(page: &Page, sketch: bool) -> String {
-    let b = page_bounds(page);
+    let layers: Vec<_> = page.controls.iter().map(|c| (c.clone(), None)).collect();
+    svg_layers(&page.name, &layers, sketch)
+}
+pub fn svg_layers(name: &str, layers: &[(Control, Option<Bounds>)], sketch: bool) -> String {
+    let b = layers
+        .iter()
+        .map(|(c, clip)| clip.map_or(c.bounds, |clip| intersect(c.bounds, clip)))
+        .reduce(Bounds::union)
+        .unwrap_or(Bounds::new(0., 0., 800., 600.));
     let w = b.w + 48.;
     let h = b.h + 48.;
     let mut s = format!(
         "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{w}\" height=\"{h}\" viewBox=\"{} {} {w} {h}\"><title>{}</title><rect x=\"{}\" y=\"{}\" width=\"{w}\" height=\"{h}\" fill=\"white\"/>",
         b.x - 24.,
         b.y - 24.,
-        escape(&page.name),
+        escape(name),
         b.x - 24.,
         b.y - 24.
     );
-    for c in &page.controls {
+    for (i, (c, clip)) in layers.iter().enumerate() {
+        if let Some(b) = clip {
+            s.push_str(&format!("<defs><clipPath id=\"clip{i}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\"/></clipPath></defs><g clip-path=\"url(#clip{i})\">",b.x,b.y,b.w,b.h));
+        }
         for p in control_scene(c, sketch) {
             match p {
         Primitive::Rect{b,fill,stroke,radius}=>s.push_str(&format!("<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" rx=\"{}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"1.5\"/>",b.x,b.y,b.w,b.h,radius,color(fill),if stroke{color(INK)}else{"none".into()})),
@@ -536,19 +547,24 @@ pub fn svg(page: &Page, sketch: bool) -> String {
         Primitive::Text{x,y,text,size,bold,color:c,center}=>s.push_str(&format!("<text x=\"{x}\" y=\"{y}\" font-family=\"Ubuntu,DejaVu Sans,Arial,sans-serif\" font-size=\"{size}\" font-weight=\"{}\" text-anchor=\"{}\" fill=\"{}\">{}</text>",if bold{"bold"}else{"normal"},if center{"middle"}else{"start"},color(c),escape(&text))),
     }
         }
+        if clip.is_some() {
+            s.push_str("</g>");
+        }
     }
     s.push_str("</svg>");
     s
 }
 pub fn png(page: &Page, sketch: bool) -> Result<Vec<u8>, String> {
+    png_svg(&svg(page, sketch))
+}
+pub fn png_svg(svg: &str) -> Result<Vec<u8>, String> {
     let mut options = resvg::usvg::Options::default();
     // Use the same bundled fonts as the canvas, including on minimal Linux systems.
     for font in eframe::egui::FontDefinitions::default().font_data.values() {
         options.fontdb_mut().load_font_data(font.font.to_vec());
     }
     options.fontdb_mut().set_sans_serif_family("Ubuntu");
-    let tree =
-        resvg::usvg::Tree::from_str(&svg(page, sketch), &options).map_err(|e| e.to_string())?;
+    let tree = resvg::usvg::Tree::from_str(svg, &options).map_err(|e| e.to_string())?;
     let size = tree.size().to_int_size();
     if size.width() > 8192
         || size.height() > 8192
@@ -564,4 +580,15 @@ pub fn png(page: &Page, sketch: bool) -> Result<Vec<u8>, String> {
         &mut pixmap.as_mut(),
     );
     pixmap.encode_png().map_err(|e| e.to_string())
+}
+
+fn intersect(a: Bounds, b: Bounds) -> Bounds {
+    let x = a.x.max(b.x);
+    let y = a.y.max(b.y);
+    Bounds::new(
+        x,
+        y,
+        ((a.x + a.w).min(b.x + b.w) - x).max(0.),
+        ((a.y + a.h).min(b.y + b.h) - y).max(0.),
+    )
 }

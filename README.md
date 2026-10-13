@@ -6,7 +6,7 @@ A local desktop workspace for turning rough ideas into clear wireframes. Built i
 
 - 24 controls for forms, text, shapes, navigation and layout.
 - Pages, notes, searchable library and layers.
-- Move, resize, align, group, duplicate and lock controls.
+- Move, resize, align, nest groups, duplicate and lock controls.
 - Undo/redo, local project files and recovery copies.
 - Sketch and clean styles; PNG and SVG export.
 - Page links and presentation mode.
@@ -23,7 +23,7 @@ Editable documents use the versioned `.wireframe` JSON format. Files are validat
 
 ## Development status
 
-The first native build runs on macOS. Windows/Linux verification and packaging are in progress. See [current state](SESSION-SPEC.md) for actual checks and remaining work. Image controls currently provide placeholders; the desktop editor does not yet support nested groups. A recursive document/storage API is tested separately while editor integration proceeds.
+The first native build runs on macOS. Windows/Linux verification and packaging are in progress. See [current state](SESSION-SPEC.md) for actual checks and remaining work. The desktop editor supports nested groups and version-2 project saving. Double-click a group to edit its children; use Escape or Exit group to return. Image controls remain placeholders, and rich text, full control coverage and component editing are still under development.
 
 ## License
 

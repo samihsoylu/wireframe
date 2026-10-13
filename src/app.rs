@@ -10,10 +10,11 @@ use std::{
     time::{Duration, Instant},
 };
 use wireframe::{
-    editor::Editor,
+    document::Project,
     model::*,
     scene::{self, Primitive},
-    storage::{self, DocumentStore, JsonStore},
+    storage::{self, ProjectRepository, ProjectStore},
+    workspace::{Clipboard, Editor},
 };
 
 const ACCENT: Color32 = Color32::from_rgb(49, 94, 145);
@@ -46,7 +47,7 @@ enum Drag {
 }
 pub struct WireframeApp {
     editor: Editor,
-    store: Box<dyn DocumentStore>,
+    store: Box<dyn ProjectRepository>,
     file: Option<PathBuf>,
     quick: String,
     quick_index: usize,
@@ -66,12 +67,12 @@ pub struct WireframeApp {
     pending: Option<Pending>,
     quit_allowed: bool,
     text_edit: Option<(Id, String)>,
-    clipboard: Vec<Control>,
+    clipboard: Clipboard,
     recovery: Option<PathBuf>,
     _recovery_lock: Option<std::fs::File>,
-    recovery_offer: Option<Document>,
+    recovery_offer: Option<Project>,
     last_recovery: Instant,
-    recovery_doc: Option<Document>,
+    recovery_doc: Option<Project>,
     help: bool,
     about: bool,
     present: bool,
@@ -101,10 +102,10 @@ impl WireframeApp {
         if recovery_lock.is_none() {
             recovery = None;
         }
-        let recovery_offer = recovery.as_ref().and_then(|p| JsonStore.load(p).ok());
+        let recovery_offer = recovery.as_ref().and_then(|p| ProjectStore.load(p).ok());
         Self {
             editor: Editor::default(),
-            store: Box::new(JsonStore),
+            store: Box::new(ProjectStore),
             file: None,
             quick: String::new(),
             quick_index: 0,
@@ -124,7 +125,7 @@ impl WireframeApp {
             pending: None,
             quit_allowed: false,
             text_edit: None,
-            clipboard: Vec::new(),
+            clipboard: Clipboard::default(),
             recovery,
             _recovery_lock: recovery_lock,
             recovery_offer,
@@ -140,7 +141,7 @@ impl WireframeApp {
         let mut app = Self::workspace(&cc.egui_ctx, storage::recovery_path());
         let args: Vec<_> = std::env::args().skip(1).collect();
         if args.iter().any(|a| a == "--demo") {
-            app.editor = Editor::new(example_document());
+            app.editor = Editor::new(Project::try_from(example_document()).expect("valid example"));
             app.recovery_offer = None;
         } else if let Some(path) = args.first() {
             app.load(PathBuf::from(path));
@@ -150,7 +151,14 @@ impl WireframeApp {
     fn load(&mut self, path: PathBuf) -> bool {
         match self.store.load(&path) {
             Ok(doc) => {
-                self.editor = Editor::new(doc);
+                let candidate = Editor::new(doc);
+                for page in &candidate.document.pages {
+                    if let Err(error) = candidate.layout_page(page.id) {
+                        self.error = Some(error);
+                        return false;
+                    }
+                }
+                self.editor = candidate;
                 self.file = Some(path);
                 self.pan = Vec2::ZERO;
                 self.zoom = 1.;
@@ -235,7 +243,8 @@ impl WireframeApp {
             }
             Pending::Example => {
                 self.clear_recovery();
-                self.editor = Editor::new(example_document());
+                self.editor =
+                    Editor::new(Project::try_from(example_document()).expect("valid example"));
                 self.file = None;
                 self.zoom = 1.;
                 self.pan = Vec2::ZERO;
@@ -257,11 +266,19 @@ impl WireframeApp {
             .set_file_name(format!("{}.{}", self.editor.current().name, ext))
             .save_file()
         {
-            let bytes = if png {
-                scene::png(self.editor.current(), self.editor.document.sketch)
-            } else {
-                Ok(scene::svg(self.editor.current(), self.editor.document.sketch).into_bytes())
-            };
+            let bytes = self.editor.layers(self.editor.page).and_then(|layers| {
+                let layers: Vec<_> = layers.into_iter().map(|l| (l.control, l.clip)).collect();
+                let svg = scene::svg_layers(
+                    &self.editor.page_data().name,
+                    &layers,
+                    self.editor.document.settings.sketch,
+                );
+                if png {
+                    scene::png_svg(&svg)
+                } else {
+                    Ok(svg.into_bytes())
+                }
+            });
             match bytes.and_then(|bytes| storage::write_atomic(&path, &bytes)) {
                 Ok(()) => self.status = format!("Exported {}", path.display()),
                 Err(e) => self.error = Some(e),
@@ -278,11 +295,22 @@ impl WireframeApp {
     fn copy(&mut self, ctx: &egui::Context) {
         self.clipboard = self.editor.copy();
         if let Ok(s) = serde_json::to_string(&self.clipboard) {
-            ctx.copy_text(format!("wireframe-controls-v1:{s}"));
+            ctx.copy_text(format!("wireframe-nodes-v2:{s}"));
         }
         self.status = format!("Copied {} controls", self.clipboard.len());
     }
     fn pasted(&mut self, s: &str) {
+        if let Some(json) = s.strip_prefix("wireframe-nodes-v2:") {
+            if json.len() > 4_000_000 {
+                self.error = Some("Clipboard content is too large".into());
+                return;
+            }
+            match serde_json::from_str::<Clipboard>(json) {
+                Ok(copy) => self.editor.paste(&copy, 20.),
+                Err(e) => self.error = Some(format!("Cannot paste controls: {e}")),
+            };
+            return;
+        }
         if let Some(json) = s.strip_prefix("wireframe-controls-v1:") {
             if json.len() > 4_000_000 {
                 self.error = Some("Clipboard content is too large".into());
@@ -297,7 +325,7 @@ impl WireframeApp {
                             && c.text.len() <= 100_000
                     })
                 {
-                    self.editor.paste(&controls, 20.);
+                    self.editor.paste_legacy(&controls, 20.);
                 } else {
                     self.error = Some("Clipboard contains invalid controls".into());
                 }
@@ -398,10 +426,14 @@ impl WireframeApp {
             self.present = false;
             self.editor.cancel();
             self.drag = None;
-            self.editor.selection.clear();
+            if !self.editor.leave() {
+                self.editor.selection.clear();
+            }
         }
         if take(Modifiers::NONE, Key::Enter)
-            && let Some(c) = self.editor.copy().first()
+            && let Some(c) = self.editor.selected_views().first()
+            && !self.editor.enter(c.id)
+            && c.group.is_none()
         {
             self.text_edit = Some((c.id, c.text.clone()));
         }
@@ -570,6 +602,9 @@ impl WireframeApp {
                         self.zoom = (self.zoom / 1.2).max(0.2);
                     }
                     ui.label(format!("{:.0}%", self.zoom * 100.));
+                    if !self.editor.context.is_empty() && ui.button("Exit group").clicked() {
+                        self.editor.leave();
+                    }
                     if ui.button("+").clicked() {
                         self.zoom = (self.zoom * 1.2).min(4.);
                     }
@@ -583,10 +618,10 @@ impl WireframeApp {
                     ui.checkbox(&mut self.grid, "Grid");
                     ui.checkbox(&mut self.snap, "Snap to 10");
                     ui.separator();
-                    let mut sketch = self.editor.document.sketch;
+                    let mut sketch = self.editor.document.settings.sketch;
                     if ui.checkbox(&mut sketch, "Sketch style").changed() {
                         self.editor
-                            .edit("Change style", |e| e.document.sketch = sketch);
+                            .edit("Change style", |e| e.document.settings.sketch = sketch);
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         self.quick_add_ui(ui);
@@ -754,9 +789,10 @@ impl WireframeApp {
                                     let origin =
                                         r.min + Vec2::new((94. - c.bounds.w * scale) / 2., 4.);
                                     let painter = ui.painter().with_clip_rect(r);
-                                    for primitive in
-                                        scene::control_scene(&c, self.editor.document.sketch)
-                                    {
+                                    for primitive in scene::control_scene(
+                                        &c,
+                                        self.editor.document.settings.sketch,
+                                    ) {
                                         Self::paint_at(&painter, primitive, origin, scale);
                                     }
                                     painter.text(
@@ -825,6 +861,12 @@ impl WireframeApp {
                     .max_height((ui.available_height() - 120.).max(140.))
                     .show(ui, |ui| {
                         for page in pages {
+                            let page = self.editor.rendered_page(page.id).unwrap_or(Page {
+                                id: page.id,
+                                name: page.name,
+                                notes: page.notes,
+                                controls: vec![],
+                            });
                             let selected = self.editor.page == page.id;
                             if self.thumbnails {
                                 let width = ui.available_width();
@@ -852,11 +894,26 @@ impl WireframeApp {
                                     - Vec2::new(bounds.w, bounds.h) * scale / 2.
                                     - Vec2::new(bounds.x, bounds.y) * scale;
                                 let painter = ui.painter().with_clip_rect(paper);
-                                for c in &page.controls {
-                                    for primitive in
-                                        scene::control_scene(c, self.editor.document.sketch)
-                                    {
-                                        Self::paint_at(&painter, primitive, origin, scale);
+                                if let Ok(layers) = self.editor.layers(page.id) {
+                                    for layer in layers {
+                                        let clipped = layer.clip.map_or_else(
+                                            || painter.clone(),
+                                            |b| {
+                                                painter.with_clip_rect(
+                                                    Rect::from_min_size(
+                                                        origin + Vec2::new(b.x, b.y) * scale,
+                                                        Vec2::new(b.w, b.h) * scale,
+                                                    )
+                                                    .intersect(painter.clip_rect()),
+                                                )
+                                            },
+                                        );
+                                        for primitive in scene::control_scene(
+                                            &layer.control,
+                                            self.editor.document.settings.sketch,
+                                        ) {
+                                            Self::paint_at(&clipped, primitive, origin, scale);
+                                        }
                                     }
                                 }
                                 ui.painter().text(
@@ -894,7 +951,7 @@ impl WireframeApp {
                             let label = format!(
                                 "{}{}",
                                 if c.locked { "[locked] " } else { "" },
-                                c.kind.name()
+                                self.editor.selection_label(c.id)
                             );
                             if ui
                                 .selectable_label(self.editor.selection.contains(&c.id), label)
@@ -909,7 +966,7 @@ impl WireframeApp {
     fn inspector(&mut self, ui: &mut egui::Ui) {
         egui::Panel::right("inspector").resizable(true).default_size(250.).size_range(220.0..=340.0).show(ui,|ui|{
             ui.add_space(10.);egui::ScrollArea::vertical().show(ui,|ui|{
-                let selected=self.editor.copy();
+                let selected=self.editor.selected_views();
                 if selected.is_empty(){ui.heading("Page");ui.label("Project title");let mut title=self.editor.document.title.clone();let r=ui.text_edit_singleline(&mut title);if r.changed(){self.editor.begin("Rename project");self.editor.document.title=title;}
 if r.lost_focus(){self.editor.commit();}
                     ui.label("Page name");let mut name=self.editor.current().name.clone();let r=ui.text_edit_singleline(&mut name);if r.changed(){self.editor.begin("Rename page");self.editor.current_mut().name=name;}
@@ -918,17 +975,20 @@ if r.lost_focus(){self.editor.commit();}
 if r.lost_focus(){self.editor.commit();}
                     ui.add_space(14.);if ui.add_enabled(self.editor.document.pages.len()>1,egui::Button::new("Delete this page")).clicked(){self.editor.delete_page();}ui.separator();ui.small("Select a control on the canvas to change its content and appearance. Double-click it to edit text.");return;
                 }
-                ui.heading(if selected.len()==1{selected[0].kind.name().to_owned()}else{format!("{} controls",selected.len())});
+                ui.heading(if selected.len()==1{self.editor.selection_label(selected[0].id)}else{format!("{} controls",selected.len())});
                 if selected.len()==1 {let mut c=selected[0].clone();let original=c.clone();
                     ui.add_space(10.);ui.label("Position & size");egui::Grid::new("geometry").num_columns(4).spacing([7.,8.]).show(ui,|ui|{ui.label("X");ui.add(egui::DragValue::new(&mut c.bounds.x).speed(1.).range(-50_000.0..=50_000.0));ui.label("Y");ui.add(egui::DragValue::new(&mut c.bounds.y).speed(1.).range(-50_000.0..=50_000.0));ui.end_row();ui.label("W");ui.add(egui::DragValue::new(&mut c.bounds.w).speed(1.).range(8.0..=10_000.0));ui.label("H");ui.add(egui::DragValue::new(&mut c.bounds.h).speed(1.).range(8.0..=10_000.0));ui.end_row();});
-                    ui.add_space(10.);ui.label("Text");ui.add(egui::TextEdit::multiline(&mut c.text).desired_rows(4).desired_width(f32::INFINITY));if c.kind==Kind::Table {ui.small("Separate columns with commas and rows with new lines.");}
+                    if c.group.is_none() {ui.add_space(10.);ui.label("Text");ui.add(egui::TextEdit::multiline(&mut c.text).desired_rows(4).desired_width(f32::INFINITY));if c.kind==Kind::Table {ui.small("Separate columns with commas and rows with new lines.");}
 if c.kind==Kind::Tabs {ui.small("Separate tabs with commas.");}
                     ui.horizontal(|ui|{ui.label("Size");ui.add(egui::DragValue::new(&mut c.font_size).range(6.0..=120.0));ui.checkbox(&mut c.bold,"Bold");});
                     ui.horizontal(|ui|{ui.label("Fill");ui.color_edit_button_srgb(&mut c.fill);});if matches!(c.kind,Kind::Checkbox|Kind::Radio|Kind::Toggle){ui.checkbox(&mut c.checked,"Selected state");}
+                    }
                     ui.checkbox(&mut c.locked,"Lock position and content");
+                    if c.group.is_none() {
                     egui::ComboBox::from_id_salt("page-link").selected_text(c.link.and_then(|id|self.editor.document.pages.iter().find(|p|p.id==id).map(|p|p.name.clone())).unwrap_or("No page link".into())).show_ui(ui,|ui|{ui.selectable_value(&mut c.link,None,"No page link");for p in &self.editor.document.pages {ui.selectable_value(&mut c.link,Some(p.id),&p.name);}});
+                    } else if self.editor.is_group(c.id) && ui.button("Edit group contents").clicked(){self.editor.enter(c.id);}
                     if c!=original {self.editor.begin("Edit properties");if original.locked {c.bounds=original.bounds;c.text=original.text;c.font_size=original.font_size;c.bold=original.bold;c.fill=original.fill;c.checked=original.checked;c.link=original.link;}
-                        if let Some(target)=self.editor.current_mut().controls.iter_mut().find(|target|target.id==c.id){*target=c;}}
+                        self.editor.update_control(c);}
                     if !ui.ctx().egui_wants_keyboard_input()&&!ui.input(|i|i.pointer.any_down()){self.editor.commit();}
                 }else {ui.label("Align");ui.horizontal(|ui|{for(i,name)in ["Left","Center","Right"].iter().enumerate(){if ui.button(*name).clicked(){self.editor.align(0,i);}}});ui.horizontal(|ui|{for(i,name)in ["Top","Middle","Bottom"].iter().enumerate(){if ui.button(*name).clicked(){self.editor.align(1,i);}}});ui.horizontal(|ui|{if ui.button("Spread X").clicked(){self.editor.distribute(0);}
 if ui.button("Spread Y").clicked(){self.editor.distribute(1);}});}
@@ -942,7 +1002,12 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
         });
     }
     fn fit(&mut self) {
-        let b = scene::page_bounds(self.editor.current());
+        let b = scene::page_bounds(
+            &self
+                .editor
+                .rendered_page(self.editor.page)
+                .unwrap_or_else(|_| self.editor.current()),
+        );
         let size = self.canvas_rect.size();
         self.zoom = ((size.x - 100.) / b.w.max(1.))
             .min((size.y - 100.) / b.h.max(1.))
@@ -1151,7 +1216,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                                 .into_iter()
                                 .find(|(_, point)| point.distance(pos) < 7.)
                         })
-                        .filter(|_| self.editor.copy().iter().any(|c| !c.locked));
+                        .filter(|_| self.editor.selected_views().iter().any(|c| !c.locked));
                     if space {
                         self.drag = Some(Drag::Pan {
                             start: pos,
@@ -1163,7 +1228,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                             start,
                             original: self
                                 .editor
-                                .copy()
+                                .selected_views()
                                 .iter()
                                 .map(|c| (c.id, c.bounds))
                                 .collect(),
@@ -1171,14 +1236,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                             handle,
                         });
                     } else {
-                        let hit = self
-                            .editor
-                            .current()
-                            .controls
-                            .iter()
-                            .rev()
-                            .find(|c| c.bounds.contains(start.x, start.y))
-                            .map(|c| (c.id, c.locked));
+                        let hit = self.editor.hit(start.x, start.y).map(|c| (c.id, c.locked));
                         if let Some((id, locked)) = hit {
                             if !self.editor.selection.contains(&id) {
                                 self.editor.select(id, ui.input(|i| i.modifiers.shift));
@@ -1189,7 +1247,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                                     start,
                                     original: self
                                         .editor
-                                        .copy()
+                                        .selected_views()
                                         .iter()
                                         .map(|c| (c.id, c.bounds))
                                         .collect(),
@@ -1297,14 +1355,23 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                         ctx.memory_mut(|m| m.surrender_focus(id));
                     }
                     let p = self.world(pos);
-                    let hit = self
-                        .editor
-                        .current()
-                        .controls
-                        .iter()
-                        .rev()
-                        .find(|c| c.bounds.contains(p.x, p.y))
-                        .cloned();
+                    let hit = if self.present {
+                        self.editor
+                            .layers(self.editor.page)
+                            .ok()
+                            .and_then(|layers| {
+                                layers
+                                    .into_iter()
+                                    .rev()
+                                    .find(|l| {
+                                        l.control.bounds.contains(p.x, p.y)
+                                            && l.clip.is_none_or(|b| b.contains(p.x, p.y))
+                                    })
+                                    .map(|l| l.control)
+                            })
+                    } else {
+                        self.editor.hit(p.x, p.y)
+                    };
                     if let Some(c) = hit {
                         if self.present {
                             if let Some(id) = c.link {
@@ -1319,8 +1386,10 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                 }
                 if response.double_clicked()
                     && !self.present
-                    && let Some(c) = self.editor.copy().first()
+                    && let Some(c) = self.editor.selected_views().first()
                     && !c.locked
+                    && !self.editor.enter(c.id)
+                    && c.group.is_none()
                 {
                     self.text_edit = Some((c.id, c.text.clone()));
                 }
@@ -1340,14 +1409,25 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                         }
                     }
                 }
-                for c in &self.editor.current().controls {
-                    if self
-                        .screen_rect(c.bounds)
-                        .expand(10.)
-                        .intersects(response.rect)
-                    {
-                        for p in scene::control_scene(c, self.editor.document.sketch) {
-                            self.paint(&painter, p);
+                if let Ok(layers) = self.editor.layers(self.editor.page) {
+                    for layer in layers {
+                        let c = &layer.control;
+                        if self
+                            .screen_rect(c.bounds)
+                            .expand(10.)
+                            .intersects(response.rect)
+                        {
+                            let clipped = layer.clip.map_or_else(
+                                || painter.clone(),
+                                |b| {
+                                    painter.with_clip_rect(
+                                        self.screen_rect(b).intersect(painter.clip_rect()),
+                                    )
+                                },
+                            );
+                            for p in scene::control_scene(c, self.editor.document.settings.sketch) {
+                                self.paint(&clipped, p);
+                            }
                         }
                     }
                 }
@@ -1365,7 +1445,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     if let Some(b) = self.editor.bounds() {
                         let r = self.screen_rect(b).expand(4.);
                         painter.rect_stroke(r, 0, Stroke::new(1., ACCENT), StrokeKind::Outside);
-                        if self.editor.copy().iter().any(|c| !c.locked) {
+                        if self.editor.selected_views().iter().any(|c| !c.locked) {
                             for (_, point) in self.resize_handles(b) {
                                 painter.rect(
                                     Rect::from_center_size(point, Vec2::splat(6.)),
@@ -1414,7 +1494,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                             ui.close();
                         }
                         if ui.button("Edit text").clicked() {
-                            if let Some(c) = self.editor.copy().first() {
+                            if let Some(c) = self.editor.selected_views().first() {
                                 self.text_edit = Some((c.id, c.text.clone()));
                             }
                             ui.close();
@@ -1452,13 +1532,14 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                 ui.horizontal(|ui| {
                     if ui.button("Apply").clicked() {
                         self.editor.edit("Edit text", |e| {
-                            if let Some(c) = e
-                                .current_mut()
+                            if let Some(mut c) = e
+                                .current()
                                 .controls
-                                .iter_mut()
+                                .into_iter()
                                 .find(|c| c.id == id && !c.locked)
                             {
                                 c.text = value.clone();
+                                e.update_control(c);
                             }
                         });
                         keep = false;
@@ -1533,7 +1614,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     ui.label(include_str!("../LICENSE"));
                 });
             });
-        egui::Window::new("Working with Wireframe").open(&mut self.help).default_width(470.).show(ctx,|ui|{ui.label("Copyright 2026 Wireframe contributors · GNU GPL v3.0 only · No warranty.");if ui.button("View license").clicked(){self.about=true;}ui.separator();ui.label("Everything stays on your computer. Save editable projects as .wireframe files; export the current page as PNG or SVG.");ui.separator();for (keys,what)in [("Click / Shift-click","Select one or several controls"),("Drag empty canvas","Select an area"),("Drag a selection","Move controls"),("Eight resize handles","Resize; hold Shift for aspect ratio"),("Arrow / Shift+Arrow","Move by 1 / 10 units"),("Double-click / Enter","Edit selected control text"),("⌘/Ctrl Z · Shift Z","Undo · Redo"),("⌘/Ctrl D · G · Shift G","Duplicate · Group · Ungroup"),("Space + drag","Pan the canvas"),("⌘/Ctrl + scroll","Zoom around the pointer")]{ui.horizontal(|ui|{ui.strong(keys);ui.label(what);});}ui.separator();ui.label("Groups move and resize together. Nested groups are not yet supported. Image controls are placeholders. Click page links in Present mode.");});
+        egui::Window::new("Working with Wireframe").open(&mut self.help).default_width(470.).show(ctx,|ui|{ui.label("Copyright 2026 Wireframe contributors · GNU GPL v3.0 only · No warranty.");if ui.button("View license").clicked(){self.about=true;}ui.separator();ui.label("Everything stays on your computer. Save editable projects as .wireframe files; export the current page as PNG or SVG.");ui.separator();for (keys,what)in [("Click / Shift-click","Select one or several controls"),("Drag empty canvas","Select an area"),("Drag a selection","Move controls"),("Eight resize handles","Resize; hold Shift for aspect ratio"),("Arrow / Shift+Arrow","Move by 1 / 10 units"),("Double-click / Enter","Edit selected control text"),("⌘/Ctrl Z · Shift Z","Undo · Redo"),("⌘/Ctrl D · G · Shift G","Duplicate · Group · Ungroup"),("Space + drag","Pan the canvas"),("⌘/Ctrl + scroll","Zoom around the pointer")]{ui.horizontal(|ui|{ui.strong(keys);ui.label(what);});}ui.separator();ui.label("Groups move and resize together. Double-click a group to edit its children; Escape or Exit group returns to its parent. Image controls are placeholders. Click page links in Present mode.");});
     }
 }
 impl eframe::App for WireframeApp {
@@ -1595,6 +1676,9 @@ impl eframe::App for WireframeApp {
             }
         }
         self.canvas(ui);
+        if let Some(error) = self.editor.error.take() {
+            self.error = Some(error);
+        }
         self.dialogs(&ctx);
         if self.last_recovery.elapsed() > Duration::from_secs(5) {
             self.last_recovery = Instant::now();
@@ -1752,5 +1836,30 @@ mod tests {
         assert_eq!(app.editor.document, expected);
         assert!(!app.load(PathBuf::from("not-a-real-project.wireframe")));
         assert_eq!(app.editor.document, expected);
+    }
+    #[test]
+    fn failed_recursive_save_retains_dirty_state_and_document() {
+        struct FailingStore;
+        impl ProjectRepository for FailingStore {
+            fn load(&self, _: &std::path::Path) -> Result<Project, String> {
+                Err("Unavailable".into())
+            }
+            fn save(&self, _: &std::path::Path, _: &Project) -> Result<(), String> {
+                Err("Disk full".into())
+            }
+        }
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        app.editor.add(Kind::Button, 10., 20.);
+        app.editor.add(Kind::Label, 60., 70.);
+        app.editor.select_all();
+        app.editor.group();
+        let expected = app.editor.document.clone();
+        app.file = Some(PathBuf::from("unused-test-path.wireframe"));
+        app.store = Box::new(FailingStore);
+        assert!(!app.save(false));
+        assert_eq!(app.editor.document, expected);
+        assert!(app.editor.dirty());
+        assert_eq!(app.error.as_deref(), Some("Disk full"));
     }
 }

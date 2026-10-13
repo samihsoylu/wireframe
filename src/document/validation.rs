@@ -115,7 +115,7 @@ impl Check<'_> {
     fn content(&mut self, c: &Content) -> Result<(), String> {
         self.nodes(&c.nodes, 0)?;
         if !c.paint_order.is_empty() {
-            c.leaves()?;
+            c.paint_paths()?;
         }
         Ok(())
     }

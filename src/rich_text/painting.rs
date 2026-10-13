@@ -8,6 +8,7 @@ use std::{ops::Range, sync::Arc};
 pub struct LinkArea {
     pub target: String,
     pub rect: egui::Rect,
+    pub row: usize,
 }
 #[derive(Clone, Copy)]
 pub struct PaintOptions {
@@ -25,8 +26,18 @@ impl Default for PaintOptions {
     }
 }
 pub struct PaintedText {
+    /// Font shaping supplies horizontal advances; canvas line boxes are independent.
     pub galley: Arc<egui::Galley>,
+    pub rows: Vec<TextRow>,
+    pub size: egui::Vec2,
     pub links: Vec<LinkArea>,
+}
+#[derive(Clone, Copy, Debug)]
+pub struct TextRow {
+    pub top: f32,
+    pub height: f32,
+    pub width: f32,
+    pub baseline: f32,
 }
 impl EguiMeasurer<'_> {
     pub fn rich_galley(
@@ -105,10 +116,48 @@ impl EguiMeasurer<'_> {
             }
         }
         let galley = self.context.fonts_mut(|f| f.layout_job(job));
+        let mut rows = Vec::with_capacity(galley.rows.len());
+        let mut byte = 0;
+        let mut section = 0;
+        let mut top = 0.;
+        let mut width: f32 = 0.;
+        for row in &galley.rows {
+            let mut height: f32 = 0.;
+            for glyph in &row.glyphs {
+                while section + 1 < galley.job.sections.len()
+                    && byte >= galley.job.sections[section].byte_range.end.0
+                {
+                    section += 1;
+                }
+                height = height.max(galley.job.sections[section].format.font_id.size);
+                byte += glyph.chr.len_utf8();
+            }
+            if height == 0. {
+                height = base.size;
+            }
+            let row_width = row.size.x.ceil();
+            rows.push(TextRow {
+                top,
+                height,
+                width: row_width,
+                baseline: top + height / 1.27,
+            });
+            width = width.max(row_width);
+            top += height * 1.2;
+            if row.ends_with_newline {
+                byte += 1;
+            }
+        }
+        let size = egui::vec2(
+            width,
+            rows.last()
+                .map_or(base.size, |r| (r.top + r.height).round()),
+        );
         let mut areas: Vec<LinkArea> = vec![];
         let mut byte = 0;
         let mut link_index = 0;
-        for row in &galley.rows {
+        for (row_index, row) in galley.rows.iter().enumerate() {
+            let metrics = rows[row_index];
             let mut row_areas: Vec<(usize, egui::Rect)> = vec![];
             for glyph in &row.glyphs {
                 while links
@@ -122,7 +171,10 @@ impl EguiMeasurer<'_> {
                     .is_some_and(|(range, _)| range.contains(&byte))
                 {
                     let index = link_index;
-                    let rect = glyph.logical_rect().translate(row.pos.to_vec2());
+                    let rect = egui::Rect::from_min_size(
+                        egui::pos2(row.pos.x + glyph.pos.x, metrics.top),
+                        egui::vec2(glyph.advance_width, metrics.height),
+                    );
                     if let Some((last, area)) = row_areas.last_mut()
                         && *last == index
                     {
@@ -137,6 +189,7 @@ impl EguiMeasurer<'_> {
                 areas.push(LinkArea {
                     target: links[index].1.clone(),
                     rect,
+                    row: row_index,
                 });
             }
             if row.ends_with_newline {
@@ -145,6 +198,8 @@ impl EguiMeasurer<'_> {
         }
         PaintedText {
             galley,
+            rows,
+            size,
             links: areas,
         }
     }

@@ -113,13 +113,11 @@ impl TextMeasurer for EguiMeasurer<'_> {
         wrap_width: Option<f32>,
         soft_breaks: bool,
     ) -> TextMetrics {
-        let galley = self
-            .rich_galley(text, style, wrap_width, soft_breaks)
-            .galley;
+        let painted = self.rich_galley(text, style, wrap_width, soft_breaks);
         TextMetrics {
-            width: galley.size().x,
-            height: galley.size().y,
-            rows: galley.rows.len(),
+            width: painted.size.x,
+            height: painted.size.y,
+            rows: painted.rows.len(),
         }
     }
 }

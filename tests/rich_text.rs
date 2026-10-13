@@ -10,6 +10,57 @@ use wireframe::{
 };
 
 #[test]
+fn line_boxes_follow_font_sizes_and_spacing_independently_of_font_metrics() {
+    let ctx = egui::Context::default();
+    wireframe::fonts::install(&ctx);
+    ctx.run_ui(Default::default(), |_| {
+        let measure = EguiMeasurer {
+            context: &ctx,
+            regular: wireframe::fonts::family(false, false),
+            bold: wireframe::fonts::family(true, false),
+        };
+        let style = TextStyle {
+            size: 13.,
+            bold: false,
+            italic: false,
+        };
+        for (source, height, rows) in [
+            ("One", 13., 1),
+            ("One\nTwo", 29., 2),
+            ("One\n\nThree\n", 60., 4),
+            ("{size:24}Large{size}\nSmall", 42., 2),
+            ("{size:8}Small{size}", 8., 1),
+            ("", 13., 1),
+        ] {
+            let text = RichText::parse(source, false);
+            let result = measure.measure_rich(&text, style, None, true);
+            assert_eq!((result.height, result.rows), (height, rows), "{source}");
+            assert_eq!(result.width.fract(), 0.);
+        }
+        let text = RichText::parse("{size:24}Big{size} [é](page:2)\n[Next](page:3)", false);
+        let painted = measure.rich_galley(&text, style, None, true);
+        assert_eq!(painted.rows[0].height, 24.);
+        assert!((painted.rows[1].top - 28.8).abs() < 0.001);
+        assert!((painted.rows[0].baseline - 24. / 1.27).abs() < 0.001);
+        assert_eq!(painted.links[0].rect.height(), 24.);
+        assert_eq!(painted.links[0].row, 0);
+        assert_eq!(painted.links[1].row, 1);
+        assert!((painted.links[1].rect.top() - 28.8).abs() < 0.001);
+        let wrapped = measure.rich_galley(
+            &RichText::plain("one two three four"),
+            style,
+            Some(30.),
+            true,
+        );
+        assert!(wrapped.rows.len() >= 3);
+        for pair in wrapped.rows.windows(2) {
+            assert!((pair[1].top - pair[0].top - 15.6).abs() < 0.001);
+        }
+    })
+    .drop_without_applying_deltas();
+}
+
+#[test]
 fn nested_styles_escape_sequences_and_unicode_preserve_source() {
     let source = r"*Strong _café_* &under& ~cut~ -dim- \*literal\*";
     let parsed = RichText::parse(source, false);
@@ -156,8 +207,8 @@ fn font_measurement_and_link_areas_use_the_same_wrapped_galley() {
         );
         let painted = measurer.rich_galley(&text, style, Some(70.), true);
         let metrics = measurer.measure_rich(&text, style, Some(70.), true);
-        assert_eq!(metrics.width, painted.galley.size().x);
-        assert_eq!(metrics.height, painted.galley.size().y);
+        assert_eq!(metrics.width, painted.size.x);
+        assert_eq!(metrics.height, painted.size.y);
         assert!(metrics.rows > 2);
         assert!(
             painted

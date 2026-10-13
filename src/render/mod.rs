@@ -233,7 +233,7 @@ impl Scene {
         );
         let galley = &painted.galley;
         let vertical = if area.middle {
-            (area.bounds.h - galley.size().y) / 2.
+            (area.bounds.h - painted.size.y) / 2.
         } else {
             0.
         };
@@ -245,12 +245,12 @@ impl Scene {
                     .last()
                     .map_or(0., |g| g.pos.x + g.advance_width)
             } else {
-                row.size.x
+                row.size.x.ceil()
             }
         };
         let mut byte = 0;
         let mut section = 0;
-        for row in &galley.rows {
+        for (row_index, row) in galley.rows.iter().enumerate() {
             let width = visible_width(row);
             let dx = area.bounds.x + area.align.offset(area.bounds.w, width);
             let dy = area.bounds.y + vertical;
@@ -269,7 +269,7 @@ impl Scene {
                 }
                 let family = format.font_id.family.to_string();
                 let x = dx + row.pos.x + glyph.pos.x;
-                let baseline = dy + row.pos.y + glyph.pos.y;
+                let baseline = dy + painted.rows[row_index].baseline;
                 self.items.push(Item {
                     drawing: Drawing::Glyph(Glyph {
                         text: glyph.chr.to_string(),
@@ -304,9 +304,7 @@ impl Scene {
             }
         }
         for link in painted.links {
-            let row = galley.rows.iter().find(|r| {
-                link.rect.center().y >= r.pos.y && link.rect.center().y <= r.pos.y + r.size.y
-            });
+            let row = galley.rows.get(link.row);
             let dx = row.map_or(0., |r| area.align.offset(area.bounds.w, visible_width(r)));
             let mut bounds = Bounds::new(
                 area.bounds.x + dx + link.rect.min.x,

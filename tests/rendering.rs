@@ -36,6 +36,20 @@ fn glyphs(scene: &Scene) -> Vec<&Glyph> {
 }
 
 #[test]
+fn mixed_sizes_share_a_baseline_and_links_use_the_line_box() {
+    let p = specimen("paragraph", "{size:24}B{size}[é](page:3)\nx", 200., 80.);
+    let scene = Editor::new(p).rendered_scene(1).unwrap();
+    let g = glyphs(&scene);
+    assert_eq!(g.len(), 3);
+    assert_eq!(g[0].baseline, g[1].baseline);
+    assert!((g[0].baseline - (50. + 24. / 1.27)).abs() < 0.001);
+    assert!((g[2].baseline - (50. + 28.8 + 13. / 1.27)).abs() < 0.001);
+    assert_eq!(scene.links[0].bounds.y, 50.);
+    assert_eq!(scene.links[0].bounds.h, 24.);
+    assert_eq!(scene.hit_link(scene.links[0].bounds.x + 1., 74.1), None);
+}
+
+#[test]
 fn styled_scene_retains_source_and_uses_real_faces_and_inline_colors() {
     let source = "*Bold* _café_ {color:#cc2200}Red{color} -dim- {size:24}Big{size}";
     let p = specimen("paragraph", source, 600., 150.);

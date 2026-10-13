@@ -2,6 +2,7 @@
 // Copyright 2026 Wireframe contributors
 
 mod properties;
+mod recovery;
 
 use eframe::egui::{
     self, Align2, Color32, FontId, Key, Modifiers, Pos2, Rect, Sense, Stroke, StrokeKind, Vec2,
@@ -145,7 +146,6 @@ impl WireframeApp {
         let args: Vec<_> = std::env::args().skip(1).collect();
         if args.iter().any(|a| a == "--demo") {
             app.editor = Editor::new(Project::try_from(example_document()).expect("valid example"));
-            app.recovery_offer = None;
         } else if let Some(path) = args.first() {
             app.load(PathBuf::from(path));
         }
@@ -166,7 +166,6 @@ impl WireframeApp {
                 self.pan = Vec2::ZERO;
                 self.zoom = 1.;
                 self.status = "Project opened".into();
-                self.recovery_offer = None;
                 true
             }
             Err(e) => {
@@ -210,12 +209,6 @@ impl WireframeApp {
                 false
             }
         }
-    }
-    fn clear_recovery(&mut self) {
-        if let Some(p) = &self.recovery {
-            let _ = std::fs::remove_file(p);
-        }
-        self.recovery_doc = None;
     }
     fn request(&mut self, pending: Pending, ctx: &egui::Context) {
         self.editor.commit();
@@ -1643,6 +1636,9 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
     }
 }
 impl eframe::App for WireframeApp {
+    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        self.sync_recovery(true);
+    }
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
         if ctx.input(|i| i.viewport().close_requested()) && !self.quit_allowed {
@@ -1650,7 +1646,7 @@ impl eframe::App for WireframeApp {
             if self.editor.dirty() {
                 ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
                 self.pending = Some(Pending::Quit);
-            } else {
+            } else if self.recovery_offer.is_none() {
                 self.clear_recovery();
             }
         }
@@ -1705,20 +1701,7 @@ impl eframe::App for WireframeApp {
             self.error = Some(error);
         }
         self.dialogs(&ctx);
-        if self.last_recovery.elapsed() > Duration::from_secs(5) {
-            self.last_recovery = Instant::now();
-            if self.editor.dirty()
-                && self.recovery_doc.as_ref() != Some(&self.editor.document)
-                && let Some(path) = &self.recovery
-            {
-                match self.store.save(path, &self.editor.document) {
-                    Ok(()) => {
-                        self.recovery_doc = Some(self.editor.document.clone());
-                    }
-                    Err(e) => self.status = format!("Recovery could not be saved: {e}"),
-                }
-            }
-        }
+        self.sync_recovery(false);
         ctx.request_repaint_after(Duration::from_secs(2));
     }
 }

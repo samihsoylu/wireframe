@@ -19,14 +19,18 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "text_input"
                 | "text_area"
                 | "search"
+                | "dropdown"
         ),
+        "border_color" => kind == "dropdown",
+        "selected_index" => matches!(kind, "table" | "dropdown"),
         "shape" | "search_icon" | "microphone_icon" => kind == "search",
         "fill" => matches!(
             kind,
             "button" | "text_input" | "text_area" | "dropdown" | "search" | "table"
         ),
-        "alternate_fill" | "header" | "row_height" | "selected_index" | "horizontal_lines"
-        | "vertical_lines" => kind == "table",
+        "alternate_fill" | "header" | "row_height" | "horizontal_lines" | "vertical_lines" => {
+            kind == "table"
+        }
         _ => false,
     }
 }
@@ -35,6 +39,9 @@ fn choice_label(value: &str) -> &str {
         "normal" => "Normal",
         "selected" => "Selected",
         "focused" => "Focused",
+        "closed" => "Closed",
+        "disabled_closed" => "Disabled and closed",
+        "focused_closed" => "Focused and closed",
         "disabled" => "Disabled",
         "disabled_selected" => "Selected and disabled",
         "indeterminate" => "Indeterminate",
@@ -80,7 +87,7 @@ impl WireframeApp {
                 if let Err(error) = self.editor.auto_size_control(id) { self.error = Some(error); }
                 self.editor.commit();
             }
-            for key in ["text", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "text_color", "fill", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+            for key in ["text", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "text_color", "border_color", "fill", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
                 let Some(field) = spec.property(key).filter(|f| f.visible && supported(spec.id, key)) else { continue; };
                 let Some(mut value) = values.get(key).cloned() else { continue; };
                 let original = value.clone();
@@ -99,6 +106,17 @@ impl WireframeApp {
                         (PropertyType::Text, Value::Text(v)) => {
                             let r = ui.add(egui::TextEdit::multiline(v).desired_rows(4).desired_width(f32::INFINITY));
                             finish = r.lost_focus();
+                        }
+                        (PropertyType::Number {..}, Value::Number(v)) if key == "selected_index" && spec.id == "dropdown" => {
+                            let source = match values.get("text") {Some(Value::Text(s)) => s.as_str(),_=>""};
+                            let labels = wireframe::dropdown::selectable_labels(source);
+                            let current = labels.get(*v as usize).copied().unwrap_or("No matching item");
+                            egui::ComboBox::from_id_salt("selection").selected_text(if current.is_empty() {"(Empty title)"} else {current}).show_ui(ui, |ui| {
+                                for (index,label) in labels.iter().enumerate() {
+                                    if ui.selectable_value(v,index as f64,if label.is_empty() {"(Empty title)"} else {label}).clicked() {ui.close();}
+                                }
+                            });
+                            finish = value != original;
                         }
                         (PropertyType::Number {min,max,integer}, Value::Number(v)) => {
                             let mut edit = egui::DragValue::new(v).range(*min..=*max).speed(1.);
@@ -130,6 +148,9 @@ impl WireframeApp {
                     if let Err(error) = self.editor.set_control_property(id, key, value) { self.error = Some(error); }
                 }
                 if finish { self.editor.commit(); }
+                if key == "text" && spec.id == "dropdown" {
+                    ui.small("First line is the title. Add menu items on new lines; a blank line is a separator. Prefix x or o plus a space for check or dot marks; end with > for a submenu arrow.");
+                }
                 if key == "text" && spec.id == "table" {
                     ui.small("Separate columns with commas and rows with new lines. End with weights such as {60L,20R,20C}.");
                 }

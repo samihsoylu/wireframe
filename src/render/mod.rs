@@ -2,6 +2,7 @@
 // Copyright 2026 Wireframe contributors
 //! Shared positioned drawing data for the canvas and vector/raster exports.
 mod choice;
+mod dropdown;
 mod forms;
 mod search;
 mod svg;
@@ -136,6 +137,9 @@ impl Scene {
     ) -> Result<(), String> {
         let c = &layer.control;
         let b = c.bounds;
+        if c.kind == Kind::Dropdown {
+            return self.dropdown_control(layer, sketch, fonts);
+        }
         if c.kind == Kind::Search {
             return self.search_control(layer, sketch, fonts);
         }

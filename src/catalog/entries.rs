@@ -905,6 +905,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     };
     let text = match c.id {
         "button" => "Button",
+        "dropdown" => "Dropdown",
         "checkbox" => "Checkbox",
         "radio" => "Radio button",
         "label" => "Some text",
@@ -972,6 +973,18 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     };
     if let Some(first) = states.first() {
         c.properties.push(choice("state", "State", states, first));
+    }
+    if c.id == "dropdown" {
+        c.properties
+            .push(number("selected_index", "Selection", 0., 0., 10000., true));
+        let mut border = prop(
+            "border_color",
+            "Border color",
+            PropertyType::Color,
+            Value::Color([0, 0, 0, 255]),
+        );
+        border.default = DefaultValue::Ink;
+        c.properties.push(border);
     }
     if matches!(c.family, Family::Rows) {
         c.properties.push(number(

@@ -136,6 +136,7 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
         ],
         "color_picker" => &["fill"],
         "dropdown" => &[
+            "border_color",
             "bold",
             "font_size",
             "italic",

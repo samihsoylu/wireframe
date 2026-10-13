@@ -239,6 +239,7 @@ impl Editor {
                     | Kind::TextInput
                     | Kind::TextArea
                     | Kind::Search
+                    | Kind::Dropdown
             ) {
                 let kind_id = match kind {
                     Kind::Checkbox => "checkbox",
@@ -247,6 +248,7 @@ impl Editor {
                     Kind::TextInput => "text_input",
                     Kind::TextArea => "text_area",
                     Kind::Search => "search",
+                    Kind::Dropdown => "dropdown",
                     _ => unreachable!(),
                 };
                 let parent = e.context_origin();

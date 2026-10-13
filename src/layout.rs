@@ -261,6 +261,23 @@ impl<M: TextMeasurer> Engine<'_, M> {
             bold: boolean(props, "bold"),
             italic: boolean(props, "italic"),
         };
+        if kind == "dropdown" {
+            let selected = number(props, "selected_index", 0.).max(0.) as usize;
+            let menu = crate::dropdown::Menu::parse(text, selected)?;
+            let closed =
+                matches!(props.get("state"), Some(Value::Choice(s)) if s.ends_with("closed"));
+            let metrics = menu.measure(self.measurer, style, self.project.settings.sketch, closed);
+            let w = match width {
+                Dimension::Auto => metrics.width,
+                Dimension::Fixed(w) => w,
+            };
+            let h = match height {
+                Dimension::Auto => metrics.height,
+                Dimension::Fixed(h) => h,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         if kind == "table" {
             let grid = crate::rich_text::structured::Grid::parse(text);
             let available = match width {

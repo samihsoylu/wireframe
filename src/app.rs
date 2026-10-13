@@ -1085,6 +1085,13 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     Stroke::new(1.5 * scale, Color32::from_rgb(44, 48, 55)),
                 ));
             }
+            Primitive::Polygon { points, fill } => {
+                painter.add(egui::Shape::convex_polygon(
+                    points.into_iter().map(screen).collect(),
+                    Color32::from_rgb(fill[0], fill[1], fill[2]),
+                    Stroke::NONE,
+                ));
+            }
             Primitive::Line {
                 points,
                 color,

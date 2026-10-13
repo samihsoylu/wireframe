@@ -6,6 +6,10 @@ use crate::model::{Bounds, Control, Kind, Page};
 pub const INK: [u8; 3] = [44, 48, 55];
 #[derive(Clone, Debug)]
 pub enum Primitive {
+    Polygon {
+        points: Vec<[f32; 2]>,
+        fill: [u8; 3],
+    },
     Rect {
         b: Bounds,
         fill: [u8; 3],
@@ -621,6 +625,15 @@ pub fn primitive_svg(p: Primitive) -> String {
             b.h / 2.,
             color(fill),
             color(INK)
+        ),
+        Primitive::Polygon { points, fill } => format!(
+            "<polygon points=\"{}\" fill=\"{}\"/>",
+            points
+                .iter()
+                .map(|p| format!("{},{}", p[0], p[1]))
+                .collect::<Vec<_>>()
+                .join(" "),
+            color(fill)
         ),
         Primitive::Line {
             points,

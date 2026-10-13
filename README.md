@@ -1,0 +1,30 @@
+# Wireframe
+
+A local desktop workspace for turning rough ideas into clear wireframes. Built in Rust for macOS, Windows and Linux. No account or cloud service is required.
+
+## Features
+
+- 24 controls for forms, text, shapes, navigation and layout.
+- Pages, notes, searchable library and layers.
+- Move, resize, align, group, duplicate and lock controls.
+- Undo/redo, local project files and recovery copies.
+- Sketch and clean styles; PNG and SVG export.
+- Page links and presentation mode.
+
+## Run from source
+
+Requires Rust 1.95 or newer and platform build dependencies. Run `cargo run --release`. Use `cargo test` for behavioral and persistence checks.
+
+On Linux, install a C toolchain, pkg-config, and the development packages for X11, Wayland and OpenGL. File dialogs use the desktop portal.
+
+## Project files
+
+Editable documents use the versioned `.wireframe` JSON format. Files are validated before saving and replaced atomically. Projects remain on your computer. A local recovery copy is offered after an interrupted session.
+
+## Development status
+
+The first native build runs on macOS. Windows/Linux verification and packaging are in progress. See [current state](SESSION-SPEC.md) for actual checks and remaining work. Image controls currently provide placeholders; the desktop editor does not yet support nested groups. A recursive document/storage API is tested separately while editor integration proceeds.
+
+## License
+
+GNU General Public License v3.0 only (`GPL-3.0-only`). See [LICENSE](LICENSE). Copyright 2026 Wireframe contributors. Dependency licenses remain applicable; see [third-party notices](THIRD_PARTY_NOTICES.md).

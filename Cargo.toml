@@ -18,4 +18,3 @@ resvg = "0.48.1"
 [profile.release]
 lto = "thin"
 strip = true
-

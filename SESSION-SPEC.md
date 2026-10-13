@@ -14,7 +14,7 @@ Rust 2024 with egui/eframe 0.36.2, custom canvas, shared scene/export primitives
 
 ## Current checkpoint — 2026-10-13
 
-The initial Rust foundation has 24 controls, local projects, pages, notes, properties, selection, movement, eight-handle resizing, grouping, alignment, duplication, locking, undo/redo, recovery and PNG/SVG exports. A dark toolbar, Quick Add, horizontal previews and page thumbnails are implemented. Native macOS checks verified text/save/new/reopen, recovery, PNG export, drag, resize, library insertion, and the unsaved-close dialog. Fourteen automated workflow/input tests passed at the latest canvas checkpoint; rerun after subsequent edits. Only the GPL license and ignore rules are committed so far (87f11c1).
+The initial Rust foundation has 24 controls, local projects, pages, notes, properties, selection, movement, eight-handle resizing, grouping, alignment, duplication, locking, undo/redo, recovery and PNG/SVG exports. A dark toolbar, Quick Add, horizontal previews and page thumbnails are implemented. Native macOS checks verified text/save/new/reopen, recovery, PNG export, drag, resize, library insertion, and the unsaved-close dialog. Fourteen automated workflow/input tests passed at the latest canvas checkpoint; rerun after subsequent edits. The GPL license and ignore rules were committed first (87f11c1); the desktop foundation and recursive project model are committed in 0fcfbd5.
 
 The initial behavior-specification gate was met on 2026-10-13. Feature development may resume. The user explicitly authorizes an automatic transition to implementation once the readiness gate below is met; no further approval is needed for that transition. The current implementation is provisional and has not met fidelity acceptance. Preserve it and all user/test projects. The app currently has a saved synthetic gesture document open.
 
@@ -66,7 +66,7 @@ Editing requirements distinguish center distribution from equal gaps, preserve e
 
 The initial behavior and architecture gate is met. The user already authorized automatic progression. Begin the recursive document and typed-property redesign, preserving the provisional application and existing product files. This decision does not establish visual fidelity, complete catalog behavior or cross-platform runtime acceptance. Remaining checks stay assigned in docs/IMPLEMENTATION-PLAN.md. Goal remains active.
 
-Baseline before foundation migration: `cargo test --locked` passes all 14 tests (3 application tests and 11 workflows). This confirms only the provisional behaviors. No model/feature changes have been made at the transition checkpoint. Next implement and test the recursive document representation and legacy migration before UI integration.
+Baseline before foundation migration: `cargo test --locked` passes all 14 tests (3 application tests and 11 workflows). This confirms only the provisional behaviors. That baseline preceded the recursive document checkpoint below.
 
 ## Recursive document checkpoint
 

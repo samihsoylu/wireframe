@@ -35,6 +35,7 @@ pub enum Drawing {
 }
 #[derive(Clone, Debug)]
 pub struct Item {
+    pub opacity: f32,
     pub drawing: Drawing,
     pub clip: Option<Bounds>,
 }
@@ -126,6 +127,7 @@ impl Scene {
     }
     fn primitive(&mut self, p: Primitive, clip: Option<Bounds>) {
         self.items.push(Item {
+            opacity: 1.,
             drawing: Drawing::Primitive(p),
             clip,
         });
@@ -195,7 +197,12 @@ impl Scene {
             Kind::Paragraph => "paragraph",
             _ => "label",
         };
-        let placement = crate::layout::text_placement(kind, sketch);
+        let mut placement = crate::layout::text_placement(kind, sketch);
+        if c.kind == Kind::TextInput
+            && matches!(layer.properties.get("border"), Some(Value::Choice(s)) if s == "line")
+        {
+            placement.left = 0.;
+        }
         let style = TextStyle {
             size: c.font_size,
             bold: c.bold,
@@ -234,6 +241,9 @@ impl Scene {
             fonts,
             options,
         )?;
+        if c.kind == Kind::TextArea {
+            self.form_border(layer, sketch);
+        }
         if scrollbar {
             let inset = if sketch { 2. } else { 0. };
             self.vertical_scrollbar(
@@ -301,6 +311,7 @@ impl Scene {
                 let x = dx + row.pos.x + glyph.pos.x;
                 let baseline = dy + painted.rows[row_index].baseline;
                 self.items.push(Item {
+                    opacity: 1.,
                     drawing: Drawing::Glyph(Glyph {
                         text: glyph.chr.to_string(),
                         x,
@@ -435,6 +446,7 @@ fn alignment(p: &Properties) -> Alignment {
 }
 fn paint_options(p: &Properties) -> PaintOptions {
     let color = rgb(p, "text_color", [0, 0, 0]);
+    let link = rgb(p, "link_color", [0, 102, 204]);
     PaintOptions {
         ink: if matches!(p.get("state"),Some(Value::Choice(s))if s.contains("disabled")) {
             Color32::from_rgb(128, 128, 139)
@@ -444,7 +456,7 @@ fn paint_options(p: &Properties) -> PaintOptions {
         link: if matches!(p.get("state"),Some(Value::Choice(s))if s.contains("disabled")) {
             Color32::from_rgb(128, 128, 139)
         } else {
-            Color32::from_rgb(0, 102, 204)
+            Color32::from_rgb(link[0], link[1], link[2])
         },
         underline: boolean(p, "underline"),
     }

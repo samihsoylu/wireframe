@@ -45,9 +45,17 @@ impl Editor {
         let (spec, _) = self
             .control_properties(id)
             .ok_or("Select a known control")?;
-        let property = spec.property(key).ok_or("Unknown property")?;
-        self.set_control_property(id, key, property.default_value(&self.property_context()))
+        let node = self
+            .nodes_mut()
+            .iter_mut()
+            .find(|n| n.id == id)
+            .ok_or("Control no longer exists")?;
+        if node.locked {
+            return Err("Unlock the control before editing its properties".into());
+        }
+        spec.reset_property(node, key).map_err(|e| e.to_string())
     }
+
     pub fn auto_size_control(&mut self, id: Id) -> Result<(), String> {
         let (spec, _) = self
             .control_properties(id)

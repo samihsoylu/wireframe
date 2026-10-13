@@ -47,13 +47,6 @@ impl Scene {
         };
         let button = control.kind == Kind::Button;
         let selection = selection_color(sketch);
-        let border = match state {
-            "disabled" if button && !sketch => [204, 204, 204],
-            "disabled" => [128, 128, 139],
-            "focused" => selection,
-            _ if sketch => [0, 0, 0],
-            _ => [51, 51, 51],
-        };
         let fill = if button && state == "selected" {
             selection
         } else {
@@ -79,6 +72,60 @@ impl Scene {
             },
             clip,
         );
+        if !button {
+            self.items.last_mut().expect("Form background").opacity =
+                number(&layer.properties, "background_opacity", 1.);
+        }
+        if control.kind != Kind::TextArea {
+            self.form_border(layer, sketch);
+        }
+    }
+    pub(super) fn form_border(&mut self, layer: &Layer, sketch: bool) {
+        let control = &layer.control;
+        let bounds = control.bounds;
+        let state = match layer.properties.get("state") {
+            Some(Value::Choice(s)) => s.as_str(),
+            _ => "normal",
+        };
+        let button = control.kind == Kind::Button;
+        let selection = selection_color(sketch);
+        let border = match state {
+            "disabled" if button && !sketch => [204, 204, 204],
+            "disabled" => [128, 128, 139],
+            "focused" => selection,
+            _ if !button => rgb(
+                &layer.properties,
+                "border_color",
+                if sketch { [0; 3] } else { [51; 3] },
+            ),
+            _ if sketch => [0, 0, 0],
+            _ => [51, 51, 51],
+        };
+        let clip = clip_with(layer.clip, bounds);
+        let frame = if button && sketch {
+            Bounds::new(
+                bounds.x,
+                bounds.y,
+                (bounds.w - 3.).max(0.),
+                (bounds.h - 3.).max(0.),
+            )
+        } else {
+            bounds
+        };
+        if control.kind == Kind::TextInput
+            && matches!(layer.properties.get("border"), Some(Value::Choice(s)) if s == "line")
+        {
+            let y = bounds.y + bounds.h - if sketch { 1. } else { 0.5 };
+            self.primitive(
+                Primitive::Line {
+                    points: vec![[bounds.x, y], [bounds.x + bounds.w, y]],
+                    color: border,
+                    width: if sketch { 2. } else { 1. },
+                },
+                clip,
+            );
+            return;
+        }
         let (x, y, w, h) = (frame.x, frame.y, frame.w, frame.h);
         let inset = (if sketch { 1.0_f32 } else { 0.5_f32 })
             .min(w / 2.)

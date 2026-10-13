@@ -55,6 +55,7 @@ pub enum DefaultValue {
     Fill,
     ButtonFill,
     SearchInk,
+    FormInk,
     LinkColor,
 }
 #[derive(Clone, Debug)]
@@ -166,6 +167,11 @@ impl PropertySpec {
             } else {
                 [51, 51, 51, 255]
             }),
+            DefaultValue::FormInk => Value::Color(if context.sketch {
+                context.ink
+            } else {
+                [51, 51, 51, 255]
+            }),
             DefaultValue::LinkColor => Value::Color(context.link_color),
         }
     }
@@ -219,6 +225,29 @@ impl ControlSpec {
             }
             values.insert(key.clone(), value.clone());
         }
+        if matches!(self.id, "text_input" | "text_area") {
+            if !node.properties.contains_key("link_color") {
+                values.insert("link_color".into(), Value::Color([8, 83, 148, 255]));
+            }
+            let fill = match values.get("fill") {
+                Some(Value::Color(c)) => *c,
+                _ => context.fill,
+            };
+            let opacity = match values.get("background_opacity") {
+                Some(Value::Number(n)) => *n,
+                _ => 1.,
+            };
+            let dark = opacity >= 0.75
+                && u32::from(fill[0]) * 299 + u32::from(fill[1]) * 587 + u32::from(fill[2]) * 114
+                    < 153_000;
+            if dark {
+                for key in ["text_color", "link_color"] {
+                    if !node.properties.contains_key(key) {
+                        values.insert(key.into(), Value::Color([255; 4]));
+                    }
+                }
+            }
+        }
         // Version-1 checkbox/radio/switch values retain their meaning after migration.
         if matches!(self.id, "checkbox" | "radio" | "toggle")
             && !node.properties.contains_key("state")
@@ -251,6 +280,14 @@ impl ControlSpec {
         value: Value,
         context: &Context,
     ) -> Result<(), PropertyError> {
+        // An explicit input text color must retain its intent across fill changes.
+        if key == "text_color" && matches!(self.id, "text_input" | "text_area") {
+            self.property(key)
+                .expect("Input text color")
+                .validate(&value)?;
+            node.properties.insert(key.into(), value);
+            return Ok(());
+        }
         self.set_override(&mut node.properties, key, value, &self.defaults(context))
     }
     /// Component patches compare against the inherited value, not the global default.

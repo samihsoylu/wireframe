@@ -22,7 +22,9 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "dropdown"
         ),
         "vertical_scrollbar" | "value" => matches!(kind, "dropdown" | "text_area"),
-        "border_color" => kind == "dropdown",
+        "border_color" => matches!(kind, "dropdown" | "text_input" | "text_area"),
+        "border" => kind == "text_input",
+        "background_opacity" => matches!(kind, "text_input" | "text_area"),
         "selected_index" => matches!(kind, "table" | "dropdown"),
         "shape" | "search_icon" | "microphone_icon" => kind == "search",
         "fill" => matches!(
@@ -52,6 +54,7 @@ fn choice_label(value: &str) -> &str {
         "right" => "Right",
         "rounded" => "Rounded corners",
         "rectangle" => "Rectangle",
+        "line" => "Underline",
         other => other,
     }
 }
@@ -88,7 +91,7 @@ impl WireframeApp {
                 if let Err(error) = self.editor.auto_size_control(id) { self.error = Some(error); }
                 self.editor.commit();
             }
-            for key in ["text", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border_color", "fill", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+            for key in ["text", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
                 if key == "value" && values.get("vertical_scrollbar") != Some(&Value::Bool(true)) { continue; }
                 let Some(field) = spec.property(key).filter(|f| f.visible && supported(spec.id, key)) else { continue; };
                 let Some(mut value) = values.get(key).cloned() else { continue; };
@@ -120,7 +123,7 @@ impl WireframeApp {
                             });
                             finish = value != original;
                         }
-                        (PropertyType::Number {..}, Value::Number(v)) if key == "value" => {
+                        (PropertyType::Number {..}, Value::Number(v)) if matches!(key, "value" | "background_opacity") => {
                             let r = ui.add(egui::Slider::new(v, 0.0..=1.0).fixed_decimals(2));
                             finish = r.lost_focus() || r.drag_stopped() || (r.changed() && !r.dragged());
                         }

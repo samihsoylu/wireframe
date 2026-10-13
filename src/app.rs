@@ -1024,7 +1024,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
         scale: f32,
     ) {
         for item in &drawing.items {
-            let clipped = item.clip.map_or_else(
+            let mut clipped = item.clip.map_or_else(
                 || painter.clone(),
                 |b| {
                     painter.with_clip_rect(
@@ -1036,6 +1036,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     )
                 },
             );
+            clipped.multiply_opacity(item.opacity);
             if !clipped.clip_rect().is_positive() {
                 continue;
             }

@@ -372,6 +372,8 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
         ],
         "tag_cloud" => &["text"],
         "text_area" => &[
+            "background_opacity",
+            "border_color",
             "align",
             "bold",
             "fill",
@@ -386,6 +388,8 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "vertical_scrollbar",
         ],
         "text_input" => &[
+            "background_opacity",
+            "border_color",
             "align",
             "bold",
             "border",

@@ -38,10 +38,16 @@ impl Scene {
             if let Some(b) = item.clip {
                 out.push_str(&format!("<defs><clipPath id=\"c{i}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\"/></clipPath></defs><g clip-path=\"url(#c{i})\">",b.x,b.y,b.w,b.h));
             }
+            if item.opacity != 1. {
+                out.push_str(&format!("<g opacity=\"{}\">", item.opacity));
+            }
             match &item.drawing {
     Drawing::Primitive(p)=>out.push_str(&crate::scene::primitive_svg(p.clone())),
     Drawing::Glyph(g)=>out.push_str(&format!("<text x=\"{}\" y=\"{}\" font-family=\"Comic Neue,Ubuntu,sans-serif\" font-size=\"{}\" font-weight=\"{}\" font-style=\"{}\" fill=\"{}\" fill-opacity=\"{}\" xml:space=\"preserve\">{}</text>",g.x,g.baseline,g.size,if g.bold{700}else{400},if g.italic{"italic"}else{"normal"},color([g.color[0],g.color[1],g.color[2]]),g.color[3]as f32/255.,escape(&g.text))),
    }
+            if item.opacity != 1. {
+                out.push_str("</g>");
+            }
             if item.clip.is_some() {
                 out.push_str("</g>");
             }

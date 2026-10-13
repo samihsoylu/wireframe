@@ -980,6 +980,35 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             number("value", "Scroll position", 0., 0., 1., false),
         ]);
     }
+    if matches!(c.id, "text_input" | "text_area") {
+        c.properties.push(number(
+            "background_opacity",
+            "Fill opacity",
+            1.,
+            0.,
+            1.,
+            false,
+        ));
+        let mut border = prop(
+            "border_color",
+            "Border color",
+            PropertyType::Color,
+            Value::Color([0, 0, 0, 255]),
+        );
+        border.default = DefaultValue::FormInk;
+        c.properties.push(border);
+        if let Some(text) = c.properties.iter_mut().find(|p| p.key == "text_color") {
+            text.default = DefaultValue::FormInk;
+        }
+    }
+    if c.id == "text_input" {
+        c.properties.push(choice(
+            "border",
+            "Border",
+            &["rectangle", "line"],
+            "rectangle",
+        ));
+    }
     if c.id == "dropdown" {
         c.properties
             .push(number("selected_index", "Selection", 0., 0., 10000., true));

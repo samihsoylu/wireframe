@@ -18,13 +18,24 @@ pub struct ResolvedNode<'a> {
 impl Project {
     /// Expand inherited definitions first, then apply the outer instance's overrides.
     pub fn resolve(&self, node: &Node) -> Result<Resolution, String> {
+        self.resolve_all(std::slice::from_ref(node))
+            .map(|mut nodes| nodes.remove(0))
+    }
+    /// One budget spans the entire page, not just each individual instance.
+    pub fn resolve_all(&self, nodes: &[Node]) -> Result<Vec<Resolution>, String> {
         let mut budget = MAX_NODES;
-        let mut misses = vec![];
-        let root = self.expand(node, &mut vec![], &mut vec![], &mut budget, &mut misses, 0)?;
-        Ok(Resolution {
-            root,
-            orphan_overrides: misses,
-        })
+        nodes
+            .iter()
+            .map(|node| {
+                let mut misses = vec![];
+                let root =
+                    self.expand(node, &mut vec![], &mut vec![], &mut budget, &mut misses, 0)?;
+                Ok(Resolution {
+                    root,
+                    orphan_overrides: misses,
+                })
+            })
+            .collect()
     }
     fn expand(
         &self,

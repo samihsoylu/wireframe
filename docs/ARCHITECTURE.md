@@ -17,3 +17,5 @@ References for the chosen libraries: https://docs.rs/eframe/0.36.2/eframe/ and h
 ## Recursive document transition
 
 The `document` module now defines version-2 recursive data, validation, component expansion and legacy migration. `ProjectStore` is an opt-in storage API. The current application/editor still use the version-1 `model` and `JsonStore`. This boundary prevents partial editor support from overwriting richer data. See DOCUMENT-FORMAT.md for scoped IDs, parent-local geometry and verification. Next integrate effective properties and shared layout before switching the application.
+
+The catalog now owns control identity, common property contracts, defaults, inspector visibility and resize policies. The layout engine consumes expanded recursive content plus a TextMeasurer and emits geometry/clip information without changing documents. The egui adapter measures actual glyph advances. Catalog inventory, layout support and rendered control support are separate acceptance measures; see CATALOG-AND-LAYOUT.md.

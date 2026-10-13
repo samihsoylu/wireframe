@@ -153,6 +153,13 @@ impl Check<'_> {
                         return Err("Missing control kind".into());
                     }
                     size(*s)?;
+                    if let Some(spec) = crate::catalog::get(kind) {
+                        for (key, value) in &n.properties {
+                            if let Some(property) = spec.property(key) {
+                                property.validate(value).map_err(|e| e.to_string())?;
+                            }
+                        }
+                    }
                 }
                 NodeContent::Group { children } => self.nodes(children, depth + 1)?,
                 NodeContent::Instance {

@@ -10,12 +10,12 @@ Component expansion applies inner overrides before outer overrides. Reset remove
 
 Version-1 migration retains all existing properties, geometry, IDs, groups, links and text. Group children become parent-local. When old logical groups interleave in drawing order, an explicit leaf-path order preserves their original layering; ordinary recursive order remains the default. Migration does not write its input. Component definitions currently reject this legacy ordering extension; converting such a selection to a component needs an explicit normalization operation in the editor.
 
-Validation bounds file size, asset bytes, hierarchy depth, node count and text sizes. It rejects invalid coordinates, dimensions, crops, IDs, parent cycles and resource references. Catalog-specific enum and property schemas will add semantic validation during catalog integration; the current typed value representation alone does not establish every control's valid states.
+Validation bounds file size, asset bytes, hierarchy depth, node count and text sizes. It rejects invalid coordinates, dimensions, crops, IDs, parent cycles and resource references. Known catalog property types and states are checked during validation. Specialized schemas remain incomplete; unknown fields are preserved.
 
 ProjectStore reads either format and writes version 2 using the existing atomic file replacement path. Encoding/validation occurs before any file replacement. A failed validation therefore preserves the previous file. The application's recovery ownership and version-1 store remain unchanged until integration.
 
 ## Verification
 
-Nine document tests cover full legacy-kind migration and interleaved layering, nested movement/ungrouping, nested override precedence/reset/propagation/detachment, stale paths, cyclic/missing references, expansion growth, assets/alternates/context values, failed save preservation, malformed geometry/order and depth limits. The existing 14 application/workflow tests still pass. `cargo clippy --locked --all-targets -- -D warnings` passes.
+Ten document tests cover full legacy-kind migration and interleaved layering, nested movement/ungrouping, nested override precedence/reset/propagation/detachment, stale paths, cyclic/missing references, expansion growth, assets/alternates/context values, failed save preservation, malformed geometry/order and depth limits, including a shared page expansion budget. Ten catalog/layout tests and the existing 14 application/workflow tests also pass. `cargo clippy --locked --all-targets -- -D warnings` passes.
 
 The read-only `check_migration` example also passed against five saved native test documents, verifying order, positions, text, round trips and unchanged source bytes. These are document-model and storage checks; no version-2 native editor or rendering behavior is claimed yet.

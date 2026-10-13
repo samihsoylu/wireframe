@@ -73,3 +73,11 @@ Baseline before foundation migration: `cargo test --locked` passes all 14 tests 
 Version-2 data/storage API now supports recursive groups, scoped paths, typed sparse values, automatic/fixed dimensions, component definitions and nested overrides, crop metadata, embedded assets and independent alternate trees. Legacy migration preserves all 24 kinds and interleaved group layering. Missing/cyclic references, malformed data and excessive expansion are bounded. A depth-order regression was found and fixed.
 
 Verification: 23 tests pass (the 14 existing checks plus nine document tests); Clippy passes with warnings denied. Read-only migration checks pass on five saved native test documents, with source bytes unchanged. The desktop editor still uses version 1. No version-2 visual/native behavior is claimed. Next integrate catalog property resolution and shared layout, then the editor, preserving unsupported data until the switch is complete. See docs/DOCUMENT-FORMAT.md.
+
+## Catalog and layout checkpoint
+
+The catalog includes 86 insertable families with neutral IDs, names/aliases, sizing policies and the implemented common property schemas. Known state/type errors block saving; unknown stored fields remain preserved. Inspector visibility is per-control. Ordinary default normalization and component inherited-value comparisons are distinct. Legacy checked flags no longer affect unrelated button states.
+
+The initial shared layout engine uses actual font measurement, computes recursive bounds and clip intersections, and preserves migrated layering. Component expansion is bounded across the whole page. Specialized automatic layouts return explicit errors; fixed geometry carries warnings. Rich/structured text, image intrinsic layout/rotation and full per-control rendering remain incomplete. The live desktop editor still uses version 1.
+
+Verification: 34 tests pass, Clippy with warnings denied passes, and five saved native test documents still migrate without modifying their inputs. No version-2 native or visual acceptance is claimed. Next priority is rich/structured text and measurement for the existing UI controls, then recursive editor/renderer integration so the new model becomes usable in the desktop app. See docs/CATALOG-AND-LAYOUT.md.

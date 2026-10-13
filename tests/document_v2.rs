@@ -252,26 +252,30 @@ fn assets_alternates_and_sparse_context_values_round_trip() {
     assert_eq!(p.pages[0].content.nodes[1].origin.x, 50.);
     assert_eq!(decode(&p.encode().unwrap()).unwrap(), p);
     let mut node = leaf(6, 0., 0.);
-    let defaults = BTreeMap::from([("fill".into(), Value::Color([255; 4]))]);
+    let spec = wireframe::catalog::get("label").unwrap();
+    let mut context = wireframe::catalog::Context {
+        font_size: p.settings.font_size,
+        ..Default::default()
+    };
     assert_eq!(
-        p.effective_properties(&node, &defaults)["font_size"],
+        spec.effective(&node, &context).unwrap()["font_size"],
         Value::Number(13.)
     );
     node.properties
         .insert("font_size".into(), Value::Number(24.));
-    node.properties.insert("fill".into(), Value::Null);
+    node.properties.insert("link".into(), Value::Null);
     assert_eq!(
-        p.effective_properties(&node, &defaults)["fill"],
+        spec.effective(&node, &context).unwrap()["link"],
         Value::Null
     );
     assert_eq!(
-        p.effective_properties(&node, &defaults)["font_size"],
+        spec.effective(&node, &context).unwrap()["font_size"],
         Value::Number(24.)
     );
     node.properties.remove("font_size");
-    p.settings.font_size = 18.;
+    context.font_size = 18.;
     assert_eq!(
-        p.effective_properties(&node, &defaults)["font_size"],
+        spec.effective(&node, &context).unwrap()["font_size"],
         Value::Number(18.)
     );
 }
@@ -368,4 +372,33 @@ fn depth_limit_matches_file_round_trip_and_does_not_depend_on_definition_order()
     assert!(p.validate().is_err());
     p.definitions.reverse();
     assert!(p.validate().is_err());
+}
+
+#[test]
+fn a_page_cannot_multiply_the_expansion_budget_across_instances() {
+    let mut p = Project {
+        next_id: 100,
+        ..Project::default()
+    };
+    p.definitions.push(Definition {
+        id: 10,
+        name: "Base".into(),
+        content: Content {
+            nodes: vec![leaf(2, 0., 0.)],
+            ..Content::default()
+        },
+    });
+    for id in 11..24 {
+        p.definitions.push(Definition {
+            id,
+            name: "Pair".into(),
+            content: Content {
+                nodes: vec![instance(2, id - 1, vec![]), instance(3, id - 1, vec![])],
+                ..Content::default()
+            },
+        });
+    }
+    let nodes: Vec<_> = (30..34).map(|id| instance(id, 23, vec![])).collect();
+    assert!(p.resolve(&nodes[0]).is_ok());
+    assert!(p.resolve_all(&nodes).unwrap_err().contains("limit"));
 }

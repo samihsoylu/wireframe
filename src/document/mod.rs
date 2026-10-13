@@ -272,13 +272,4 @@ impl Project {
         }
         Ok(bytes)
     }
-    /// Explicit values override context/catalog defaults; Null is an explicit value.
-    pub fn effective_properties(&self, node: &Node, defaults: &Properties) -> Properties {
-        let mut values = defaults.clone();
-        values
-            .entry("font_size".into())
-            .or_insert(Value::Number(self.settings.font_size as f64));
-        values.extend(node.properties.clone());
-        values
-    }
 }

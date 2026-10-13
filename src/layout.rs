@@ -6,6 +6,7 @@ use crate::{
     document::{
         Content, Dimension, Node, NodeContent, NodePath, Point, Project, Properties, Value,
     },
+    rich_text::RichText,
 };
 use eframe::egui;
 
@@ -52,6 +53,16 @@ pub struct TextMetrics {
 }
 pub trait TextMeasurer {
     fn measure(&self, text: &str, style: TextStyle, wrap_width: Option<f32>) -> TextMetrics;
+    /// Fallback for simple metric providers. Font-backed providers should preserve span styles.
+    fn measure_rich(
+        &self,
+        text: &RichText,
+        style: TextStyle,
+        wrap_width: Option<f32>,
+        soft_breaks: bool,
+    ) -> TextMetrics {
+        self.measure(&text.display_text(soft_breaks), style, wrap_width)
+    }
 }
 /// Uses the same font system as the canvas, with its glyph advances and wrapping.
 /// Font family selection is supplied by the app so loaded bold faces can be measured.
@@ -62,24 +73,18 @@ pub struct EguiMeasurer<'a> {
 }
 impl TextMeasurer for EguiMeasurer<'_> {
     fn measure(&self, text: &str, style: TextStyle, wrap_width: Option<f32>) -> TextMetrics {
-        let font = egui::FontId::new(
-            style.size,
-            if style.bold {
-                self.bold.clone()
-            } else {
-                self.regular.clone()
-            },
-        );
-        let mut job = egui::text::LayoutJob::simple(
-            text.into(),
-            font,
-            egui::Color32::BLACK,
-            wrap_width.unwrap_or(f32::INFINITY),
-        );
-        for section in &mut job.sections {
-            section.format.italics = style.italic;
-        }
-        let galley = self.context.fonts_mut(|f| f.layout_job(job));
+        self.measure_rich(&RichText::plain(text), style, wrap_width, true)
+    }
+    fn measure_rich(
+        &self,
+        text: &RichText,
+        style: TextStyle,
+        wrap_width: Option<f32>,
+        soft_breaks: bool,
+    ) -> TextMetrics {
+        let galley = self
+            .rich_galley(text, style, wrap_width, soft_breaks)
+            .galley;
         TextMetrics {
             width: galley.size().x,
             height: galley.size().y,
@@ -221,6 +226,28 @@ impl<M: TextMeasurer> Engine<'_, M> {
             bold: boolean(props, "bold"),
             italic: boolean(props, "italic"),
         };
+        if kind == "table" {
+            let grid = crate::rich_text::structured::Grid::parse(text);
+            let available = match width {
+                Dimension::Fixed(w) => Some(w),
+                Dimension::Auto => None,
+            };
+            let mut measured = grid.measure(self.measurer, style, available, (12., 8.))?;
+            let body_start = usize::from(boolean(props, "header"));
+            for height in measured.row_heights.iter_mut().skip(body_start) {
+                *height = height.max(number(props, "row_height", 30.));
+            }
+            let w = match width {
+                Dimension::Fixed(w) => w,
+                Dimension::Auto => measured.width().max(1.),
+            };
+            let h = match height {
+                Dimension::Fixed(h) => h,
+                Dimension::Auto => measured.height().max(1.),
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         let multiline = matches!(
             kind,
             "paragraph" | "text_area" | "multiline_button" | "sticky_note"
@@ -254,7 +281,13 @@ impl<M: TextMeasurer> Engine<'_, M> {
         } else {
             None
         };
-        let measured = self.measurer.measure(text, style, wrap);
+        let parsed = RichText::parse(text, kind == "paragraph");
+        if parsed.complexity_limited {
+            warnings.push(format!(
+                "{kind}: complex text preserved literally after parser limit"
+            ));
+        }
+        let measured = self.measurer.measure_rich(&parsed, style, wrap, multiline);
         if ![measured.width, measured.height]
             .iter()
             .all(|v| v.is_finite() && *v >= 0.)
@@ -269,14 +302,18 @@ impl<M: TextMeasurer> Engine<'_, M> {
             Dimension::Auto => (measured.height + pad_y).max(min_h),
             Dimension::Fixed(h) => h,
         };
-        if ![w, h]
-            .iter()
-            .all(|v| v.is_finite() && *v > 0. && *v <= 100_000.)
-        {
-            return Err("Layout dimensions exceed the supported range".into());
-        }
+        validate_size(w, h)?;
         Ok((w, h))
     }
+}
+fn validate_size(w: f32, h: f32) -> Result<(), String> {
+    if ![w, h]
+        .iter()
+        .all(|v| v.is_finite() && *v > 0. && *v <= 100_000.)
+    {
+        return Err("Layout dimensions exceed the supported range".into());
+    }
+    Ok(())
 }
 fn number(props: &Properties, key: &str, fallback: f32) -> f32 {
     match props.get(key) {

@@ -18,9 +18,9 @@ The initial Rust foundation has 24 controls, local projects, pages, notes, prope
 
 The initial behavior-specification gate was met on 2026-10-13. Feature development may resume. The user explicitly authorizes an automatic transition to implementation once the readiness gate below is met; no further approval is needed for that transition. The current implementation is provisional and has not met fidelity acceptance. Preserve it and all user/test projects. The app currently has a saved synthetic gesture document open.
 
-## Next gate
+## Readiness gate — met
 
-Complete the behavior specification, coverage matrix and representative fixtures before further feature implementation. Establish control/property coverage, editing rules, text syntax, grouping, reusable components, assets, persistence and exports. Each requirement needs an explicit evidence status and an acceptance case. Keep source material and investigation artifacts outside this product repository. Translate established findings into neutral product requirements only.
+The initial behavior specification, coverage matrix and representative fixtures are complete enough to resume implementation. Establish control/property coverage, editing rules, text syntax, grouping, reusable components, assets, persistence and exports. Each requirement needs an explicit evidence status and an acceptance case. Keep source material and investigation artifacts outside this product repository. Translate established findings into neutral product requirements only.
 
 ### Readiness decision
 
@@ -81,3 +81,10 @@ The catalog includes 86 insertable families with neutral IDs, names/aliases, siz
 The initial shared layout engine uses actual font measurement, computes recursive bounds and clip intersections, and preserves migrated layering. Component expansion is bounded across the whole page. Specialized automatic layouts return explicit errors; fixed geometry carries warnings. Rich/structured text, image intrinsic layout/rotation and full per-control rendering remain incomplete. The live desktop editor still uses version 1.
 
 Verification: 34 tests pass, Clippy with warnings denied passes, and five saved native test documents still migrate without modifying their inputs. No version-2 native or visual acceptance is claimed. Next priority is rich/structured text and measurement for the existing UI controls, then recursive editor/renderer integration so the new model becomes usable in the desktop app. See docs/CATALOG-AND-LAYOUT.md.
+
+
+## Rich-text checkpoint
+
+Source-preserving inline parsing, grid/tree structure, a shared font-backed galley with per-line link regions and initial table measurement are implemented. The layout engine measures rich spans, including inline font-size changes. Complexity limits retain remaining literal input. All 43 tests pass; Clippy is clean with warnings denied. See docs/RICH-TEXT.md for scope and gaps.
+
+The desktop app still uses the original editor/renderer. The immediate next step is recursive editor integration and a shared scene bridge for existing controls. Keep save/reopen, history and native drag behavior intact, and retain unknown data. Do not count unused APIs as completed user workflows. Native text/style and table visual acceptance remains outstanding.

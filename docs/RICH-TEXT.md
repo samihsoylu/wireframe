@@ -1,0 +1,13 @@
+# Rich text and structured text
+
+The parser retains the original source and derives styled spans, distinct hard/soft line breaks and optional bullets. Supported inline syntax includes bold, italic, underline, strikethrough, disabled text, color/size tags and links with optional targets. Escaped punctuation and unmatched syntax remain literal. Nested formatting combines styles. Parsing has a bounded work budget and depth; remaining text is retained literally if either limit is reached.
+
+The font-backed measurer and drawing API share one egui galley. It contains positioned glyphs and per-line link rectangles, including wrapped Unicode text. Link target strings are retained; navigating or executing a target is a separate editor/presentation responsibility. Regular and bold font families are supplied by the caller. Inline colors support hexadecimal and a limited set of common names. Color/theme defaults, full color-name coverage, hanging bullet indentation, icon/macros and final font matching remain unfinished.
+
+Grid text is parsed before inline formatting: comma/tab columns, escaped commas, empty cells, bare checkbox/radio tokens, first-row sort suffixes and an optional final column-weight/alignment row. Zero-weight columns keep intrinsic size; positive weights divide remaining width. Grid measurement derives intrinsic widths and natural row heights from rich text. The layout engine applies minimum body-row height and keeps an optional header natural. Padding, fixed-height row distribution, clipping and visual painting still require acceptance. Tree parsing records leading indentation and token-boundary markers; tree measurement and drawing remain unfinished.
+
+The shared layout engine uses rich text for initial basic-control measurements and structured cells for tables. Requested geometry remains separate from measured output, and parsing never rewrites stored text. The desktop editor still uses its original renderer; this checkpoint does not claim that markup is now visible in the main app or exports.
+
+Verification: eight text tests cover nested styles, Unicode/escaping, incomplete syntax, links/tags, line breaks/bullets, complexity limits, grid/tree interpretation and shared font/link geometry. A layout integration test verifies styled grid content changes automatic geometry without changing source. The complete suite has 43 passing tests; Clippy passes with warnings denied. `examples/inspect_text.rs` reads JSON lines and exposes the intermediate representation for external comparisons.
+
+Next integrate recursive editing and a shared scene into the desktop interface, then compare representative rendering and export fixtures. Native visual fidelity, complete control rendering and platform acceptance remain open.

@@ -317,7 +317,10 @@ fn group_layout_tracks_child_edits_overrides_and_clip_intersection() {
 fn unsupported_automatic_layout_is_explicit_not_a_fake_completed_renderer() {
     with_fonts(|fonts| {
         let p = Project::default();
-        let node = catalog::get("table").unwrap().create(2, Point::default());
+        let mut node = catalog::get("image").unwrap().create(2, Point::default());
+        if let NodeContent::Control { size, .. } = &mut node.content {
+            size.width = Dimension::Auto;
+        }
         let content = Content {
             nodes: vec![node],
             ..Content::default()
@@ -329,7 +332,7 @@ fn unsupported_automatic_layout_is_explicit_not_a_fake_completed_renderer() {
         }
         .layout(&content)
         .unwrap_err();
-        assert!(error.contains("not implemented for table"));
+        assert!(error.contains("not implemented for image"));
     });
 }
 
@@ -347,4 +350,41 @@ fn inspector_fields_and_legacy_flags_do_not_leak_between_control_types() {
         button.effective(&node, &Context::default()).unwrap()["state"],
         Value::Choice("normal".into())
     );
+}
+
+#[test]
+fn structured_grid_and_formatted_text_drive_automatic_layout() {
+    with_fonts(|fonts| {
+        let p = Project::default();
+        let mut node = catalog::get("table").unwrap().create(2, Point::default());
+        node.properties.insert(
+            "text".into(),
+            Value::Text("Title, Count\nA, 42\nB, [x]".into()),
+        );
+        node.properties
+            .insert("row_height".into(), Value::Number(40.));
+        let content = Content {
+            nodes: vec![node],
+            ..Content::default()
+        };
+        let engine = layout::Engine {
+            project: &p,
+            measurer: fonts,
+            context: Context::default(),
+        };
+        let first = engine.layout(&content).unwrap();
+        assert!(first.nodes[0].bounds.height >= 80.);
+        let mut changed = content.clone();
+        changed.nodes[0].properties.insert(
+            "text".into(),
+            Value::Text("Title, Count\n{size:48}Wide body text{size}, 42\nB, [x]".into()),
+        );
+        let second = engine.layout(&changed).unwrap();
+        assert!(second.nodes[0].bounds.width > first.nodes[0].bounds.width);
+        assert!(second.nodes[0].bounds.height > first.nodes[0].bounds.height);
+        assert_eq!(
+            content.nodes[0].properties["text"],
+            Value::Text("Title, Count\nA, 42\nB, [x]".into())
+        );
+    });
 }

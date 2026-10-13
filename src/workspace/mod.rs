@@ -231,11 +231,17 @@ impl Editor {
                 e.error = Some("Project ID space exhausted".into());
                 return;
             };
-            if matches!(kind, Kind::Checkbox | Kind::Radio) {
-                let kind_id = if kind == Kind::Checkbox {
-                    "checkbox"
-                } else {
-                    "radio"
+            if matches!(
+                kind,
+                Kind::Checkbox | Kind::Radio | Kind::Button | Kind::TextInput | Kind::TextArea
+            ) {
+                let kind_id = match kind {
+                    Kind::Checkbox => "checkbox",
+                    Kind::Radio => "radio",
+                    Kind::Button => "button",
+                    Kind::TextInput => "text_input",
+                    Kind::TextArea => "text_area",
+                    _ => unreachable!(),
                 };
                 let parent = e.context_origin();
                 let node = catalog::get(kind_id)

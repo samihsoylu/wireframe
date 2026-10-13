@@ -54,17 +54,21 @@ pub struct TextPlacement {
     pub middle: bool,
     pub wrap: bool,
 }
-pub fn text_placement(kind: &str) -> TextPlacement {
+pub fn text_placement(kind: &str, sketch: bool) -> TextPlacement {
     let (left, right, top, bottom, middle, wrap) = match kind {
         "paragraph" => (0., 0., 0., 0., false, true),
-        "text_area" | "sticky_note" => (8., 8., 8., 8., false, true),
-        "button" | "pointed_button" => (8., 8., 5., 5., true, false),
+        "text_area" if sketch => (8., 6., 8., 4., false, true),
+        "text_area" => (6., 6., 6., 2., false, true),
+        "sticky_note" => (8., 8., 8., 8., false, true),
+        "button" if sketch => (11., 13., 4., 4., true, false),
+        "button" => (11., 11., 4.5, 4.5, true, false),
+        "pointed_button" => (8., 8., 5., 5., true, false),
         "multiline_button" => (8., 8., 5., 5., true, true),
         "checkbox" | "radio" => (20., 0., 6., 4., true, false),
         "search" => (30., 24., 4., 4., true, false),
-        "text_input" | "dropdown" | "numeric_stepper" | "date_chooser" => {
-            (10., 24., 4., 4., true, false)
-        }
+        "text_input" if sketch => (7., 7., 7., 7., false, false),
+        "text_input" => (5., 5., 6., 5., false, false),
+        "dropdown" | "numeric_stepper" | "date_chooser" => (10., 24., 4., 4., true, false),
         _ => (0., 0., 0., 0., false, false),
     };
     TextPlacement {
@@ -186,6 +190,7 @@ impl<M: TextMeasurer> Engine<'_, M> {
                     catalog::get(kind).ok_or_else(|| format!("Unknown control type: {kind}"))?;
                 let mut context = self.context;
                 context.font_size = self.project.settings.font_size;
+                context.sketch = self.project.settings.sketch;
                 let props = spec.effective(node, &context).map_err(|e| e.to_string())?;
                 let (w, h) = self.measure(kind, &props, size.width, size.height, warnings)?;
                 (
@@ -280,15 +285,24 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(w, h)?;
             return Ok((w, h));
         }
-        let placement = text_placement(kind);
+        let placement = text_placement(kind, self.project.settings.sketch);
         let multiline = placement.wrap;
         let (_, _, min_w, min_h) = match kind {
             "label" | "heading" | "subtitle" | "link" | "paragraph" => (0., 0., 1., 1.),
-            "button" | "pointed_button" | "multiline_button" => (16., 10., 20., 20.),
+            "button" => (
+                0.,
+                0.,
+                1.,
+                if self.project.settings.sketch {
+                    27.
+                } else {
+                    24.
+                },
+            ),
+            "pointed_button" | "multiline_button" => (16., 10., 20., 20.),
             "checkbox" | "radio" => (20., 10., 20., 1.),
-            "text_input" | "dropdown" | "search" | "numeric_stepper" | "date_chooser" => {
-                (12., 8., 24., 24.)
-            }
+            "text_input" => (0., 0., 1., 1.),
+            "dropdown" | "search" | "numeric_stepper" | "date_chooser" => (12., 8., 24., 24.),
             "text_area" | "sticky_note" => (12., 12., 40., 30.),
             "shape" | "rectangle" | "ellipse" | "line" | "horizontal_rule" | "vertical_rule" => {
                 (0., 0., 1., 1.)
@@ -327,6 +341,7 @@ impl<M: TextMeasurer> Engine<'_, M> {
             return Err("Text measurement returned invalid geometry".into());
         }
         let w = match width {
+            Dimension::Auto if kind == "text_input" && text.is_empty() => 79.,
             Dimension::Auto => (measured.width + pad_x).max(min_w),
             Dimension::Fixed(w) => w,
         };

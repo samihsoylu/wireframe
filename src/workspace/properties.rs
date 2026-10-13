@@ -6,6 +6,7 @@ impl Editor {
     fn property_context(&self) -> catalog::Context {
         catalog::Context {
             font_size: self.document.settings.font_size,
+            sketch: self.document.settings.sketch,
             ..catalog::Context::default()
         }
     }

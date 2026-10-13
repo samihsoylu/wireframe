@@ -53,6 +53,7 @@ pub enum DefaultValue {
     FontSize,
     Ink,
     Fill,
+    ButtonFill,
     LinkColor,
 }
 #[derive(Clone, Debug)]
@@ -78,6 +79,7 @@ pub struct ControlSpec {
 }
 #[derive(Clone, Copy, Debug)]
 pub struct Context {
+    pub sketch: bool,
     pub font_size: f32,
     pub ink: [u8; 4],
     pub fill: [u8; 4],
@@ -86,6 +88,7 @@ pub struct Context {
 impl Default for Context {
     fn default() -> Self {
         Self {
+            sketch: true,
             font_size: 13.,
             ink: [0, 0, 0, 255],
             fill: [255; 4],
@@ -152,6 +155,11 @@ impl PropertySpec {
             DefaultValue::FontSize => Value::Number(context.font_size as f64),
             DefaultValue::Ink => Value::Color(context.ink),
             DefaultValue::Fill => Value::Color(context.fill),
+            DefaultValue::ButtonFill => Value::Color(if context.sketch {
+                context.fill
+            } else {
+                [221, 221, 221, 255]
+            }),
             DefaultValue::LinkColor => Value::Color(context.link_color),
         }
     }

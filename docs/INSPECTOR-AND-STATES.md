@@ -13,3 +13,11 @@ Native macOS checks: insert a checkbox; select mixed disabled; undo/redo; Reset 
 Five property/state tests cover sparse legacy transitions, unknown-field retention, storage round trips, undo/reset, nested contexts, locks, invalid states, project-font inheritance, auto-size undo/rollback, all twelve checkbox/radio state combinations, symbol dimensions and disabled link colors. Combined with existing checks, 68 tests pass and Clippy is clean with warnings denied. A reproducible editable gallery and PNG/SVG are generated with examples/render_choices.rs.
 
 Remaining: complete inspector/rendering coverage, exact glyph metrics and contours, clean/sketch style rules, icons/rotation, group/component override inspectors, richer link targets, multi-selection property editing and native Windows/Linux checks. This is developer verification, not independent review or complete product acceptance.
+
+## Basic form controls
+
+Button now exposes Normal, Selected, Focused and Disabled; text input and text area expose Normal, Focused and Disabled. The shared scene renders selected button fill, focused borders, disabled borders/labels, and readable button text on dark fills. Clean buttons default to gray; explicit fill overrides and Reset use the same drawing-style context as layout. Font and padding rules determine automatic sizes. New empty inputs start at 79×27 in sketch style or 79×24 in clean style; text areas start at 200×140. Existing explicit text and dimensions remain intact. The input catalog default is now empty instead of the initial placeholder.
+
+The generated two-style gallery, native state-change/Undo and drawing-style checks passed. Three additional regression tests cover inserted families/default sizes, fill Reset, automatic font-height changes, round-trip geometry, all ten form-state combinations in both styles, stable text placement, and contrast. The complete suite has 77 passing tests. Native reference equivalence is not established by those tests.
+
+Remaining form work includes menu icons, input border style/color/opacity, text-area scrollbars and inherited text contrast on filled inputs. Native clean-font selection and original sketch contours remain incomplete. Library previews currently use older drawing code.

@@ -6,6 +6,158 @@ use wireframe::{
 };
 
 #[test]
+fn form_insertion_defaults_and_style_specific_dimensions_survive_reopen() {
+    for sketch in [true, false] {
+        let mut e = Editor::default();
+        e.document.settings.sketch = sketch;
+        for kind in [Kind::Button, Kind::TextInput, Kind::TextArea] {
+            e.add(kind, 10., 20.);
+        }
+        let controls = e.current().controls;
+        assert_eq!(
+            controls.iter().map(|c| c.kind).collect::<Vec<_>>(),
+            [Kind::Button, Kind::TextInput, Kind::TextArea]
+        );
+        assert_eq!(controls[0].bounds.h, if sketch { 27. } else { 24. });
+        assert_eq!(
+            (controls[1].bounds.w, controls[1].bounds.h),
+            (79., if sketch { 27. } else { 24. })
+        );
+        assert!(controls[1].text.is_empty());
+        assert_eq!(
+            controls[0].fill,
+            if sketch {
+                [255, 255, 255]
+            } else {
+                [221, 221, 221]
+            }
+        );
+        let button = controls[0].id;
+        e.set_control_property(button, "fill", Value::Color([10, 20, 30, 255]))
+            .unwrap();
+        assert_eq!(e.current().controls[0].fill, [10, 20, 30]);
+        e.reset_control_property(button, "fill").unwrap();
+        assert_eq!(e.current().controls[0].fill, controls[0].fill);
+        assert_eq!((controls[2].bounds.w, controls[2].bounds.h), (200., 140.));
+        let id = controls[1].id;
+        e.begin("Enter input text");
+        e.set_control_property(id, "text", Value::Text("Account".into()))
+            .unwrap();
+        e.set_control_property(id, "font_size", Value::Number(24.))
+            .unwrap();
+        e.commit();
+        assert_eq!(
+            e.current().controls[1].bounds.h,
+            if sketch { 38. } else { 35. }
+        );
+        let bytes = e.document.encode().unwrap();
+        let reopened = Editor::new(wireframe::document::decode(&bytes).unwrap());
+        assert_eq!(reopened.current().controls, e.current().controls);
+        e.undo();
+        assert!(e.current().controls[1].text.is_empty());
+    }
+}
+
+#[test]
+fn form_states_change_border_and_fill_without_moving_the_text() {
+    for sketch in [true, false] {
+        let accent = if sketch {
+            [149, 188, 242]
+        } else {
+            [151, 189, 240]
+        };
+        for kind in [Kind::Button, Kind::TextInput, Kind::TextArea] {
+            let mut e = Editor::default();
+            e.document.settings.sketch = sketch;
+            e.add(kind, 20., 30.);
+            let id = e.nodes()[0].id;
+            e.set_control_property(id, "text", Value::Text("Account".into()))
+                .unwrap();
+            let mut baseline = None;
+            for state in ["normal", "focused", "disabled", "selected"] {
+                if state == "selected" && kind != Kind::Button {
+                    continue;
+                }
+                e.set_control_property(id, "state", Value::Choice(state.into()))
+                    .unwrap();
+                let scene = e.rendered_scene(1).unwrap();
+                let color = match state {
+                    "focused" => accent,
+                    "disabled" if kind == Kind::Button && !sketch => [204, 204, 204],
+                    "disabled" => [128, 128, 139],
+                    _ if sketch => [0, 0, 0],
+                    _ => [51, 51, 51],
+                };
+                let border = scene
+                    .items
+                    .iter()
+                    .find_map(|i| match &i.drawing {
+                        Drawing::Primitive(Primitive::Line { color, .. }) => Some(*color),
+                        _ => None,
+                    })
+                    .unwrap();
+                assert_eq!(border, color, "{kind:?} {state}");
+                let fill = scene
+                    .items
+                    .iter()
+                    .find_map(|i| match &i.drawing {
+                        Drawing::Primitive(Primitive::Rect { fill, .. }) => Some(*fill),
+                        _ => None,
+                    })
+                    .unwrap();
+                assert_eq!(
+                    fill,
+                    if state == "selected" {
+                        accent
+                    } else if kind == Kind::Button && !sketch {
+                        [221, 221, 221]
+                    } else {
+                        [255, 255, 255]
+                    }
+                );
+                let glyph = scene
+                    .items
+                    .iter()
+                    .find_map(|i| match &i.drawing {
+                        Drawing::Glyph(g) => Some(g),
+                        _ => None,
+                    })
+                    .unwrap();
+                let pos = (glyph.x, glyph.baseline);
+                assert_eq!(*baseline.get_or_insert(pos), pos);
+                if state == "disabled" {
+                    assert_eq!(glyph.color, [128, 128, 139, 255]);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn dark_button_fill_uses_readable_text_and_selected_state_uses_its_own_fill() {
+    let mut e = Editor::default();
+    e.add(Kind::Button, 10., 20.);
+    let id = e.nodes()[0].id;
+    e.set_control_property(id, "fill", Value::Color([0, 0, 0, 255]))
+        .unwrap();
+    let text_color = |e: &Editor| {
+        e.rendered_scene(1)
+            .unwrap()
+            .items
+            .iter()
+            .find_map(|i| match &i.drawing {
+                Drawing::Glyph(g) => Some(g.color),
+                _ => None,
+            })
+            .unwrap()
+    };
+    assert_eq!(text_color(&e), [255, 255, 255, 255]);
+    e.set_control_property(id, "state", Value::Choice("selected".into()))
+        .unwrap();
+    assert_eq!(text_color(&e), [0, 0, 0, 255]);
+}
+
+#[test]
 fn typed_state_edits_clear_legacy_flags_and_round_trip_with_undo() {
     let mut e = Editor::default();
     e.add(Kind::Checkbox, 20., 30.);

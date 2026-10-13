@@ -2,6 +2,7 @@
 // Copyright 2026 Wireframe contributors
 //! Shared positioned drawing data for the canvas and vector/raster exports.
 mod choice;
+mod forms;
 mod svg;
 mod table;
 use crate::{
@@ -163,6 +164,8 @@ impl Scene {
         );
         if matches!(c.kind, Kind::Checkbox | Kind::Radio) {
             self.choice_control(layer);
+        } else if matches!(c.kind, Kind::Button | Kind::TextInput | Kind::TextArea) {
+            self.form_control(layer, sketch);
         } else if !text_only {
             let mut background = c.clone();
             background.text.clear();
@@ -183,7 +186,7 @@ impl Scene {
             Kind::Paragraph => "paragraph",
             _ => "label",
         };
-        let placement = crate::layout::text_placement(kind);
+        let placement = crate::layout::text_placement(kind, sketch);
         let style = TextStyle {
             size: c.font_size,
             bold: c.bold,
@@ -198,6 +201,9 @@ impl Scene {
         );
         let parsed = RichText::parse(&c.text, c.kind == Kind::Paragraph);
         let mut options = paint_options(&layer.properties);
+        if c.kind == Kind::Button {
+            forms::button_text_colors(layer, sketch, &mut options);
+        }
         options.underline |= c.kind == Kind::Link;
         self.text(
             &parsed,
@@ -208,7 +214,10 @@ impl Scene {
                 middle: placement.middle,
                 wrap,
                 soft_breaks: wrap,
-                truncate: matches!(c.kind, Kind::Checkbox | Kind::Radio),
+                truncate: matches!(
+                    c.kind,
+                    Kind::Checkbox | Kind::Radio | Kind::Button | Kind::TextInput
+                ),
                 clip: clip_with(layer.clip, b),
             },
             fonts,

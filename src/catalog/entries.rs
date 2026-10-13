@@ -885,7 +885,11 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     let mut font = number("font_size", "Font size", 13., 6., 120., false);
     font.default = DefaultValue::FontSize;
     let mut fill = prop("fill", "Fill", PropertyType::Color, Value::Color([255; 4]));
-    fill.default = DefaultValue::Fill;
+    fill.default = if c.id == "button" {
+        DefaultValue::ButtonFill
+    } else {
+        DefaultValue::Fill
+    };
     let mut ink = prop(
         "text_color",
         "Text color",
@@ -905,7 +909,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "heading" => "Title",
         "subtitle" => "Subtitle",
         "paragraph" => "Write your ideas here.",
-        "text_input" => "Text",
+        "text_input" => "",
         "search" => "Search",
         "link" => "Link",
         "table" => "Name, Status\nItem one, Ready\nItem two, Draft",

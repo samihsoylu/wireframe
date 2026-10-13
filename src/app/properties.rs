@@ -8,7 +8,17 @@ use wireframe::{catalog::PropertyType, document::Value};
 fn supported(kind: &str, key: &str) -> bool {
     match key {
         "text" | "font_size" | "bold" | "italic" | "underline" | "text_color" | "align" => true,
-        "state" => matches!(kind, "checkbox" | "radio" | "label" | "link" | "paragraph"),
+        "state" => matches!(
+            kind,
+            "checkbox"
+                | "radio"
+                | "label"
+                | "link"
+                | "paragraph"
+                | "button"
+                | "text_input"
+                | "text_area"
+        ),
         "fill" => matches!(
             kind,
             "button" | "text_input" | "text_area" | "dropdown" | "search" | "table"
@@ -22,6 +32,7 @@ fn choice_label(value: &str) -> &str {
     match value {
         "normal" => "Normal",
         "selected" => "Selected",
+        "focused" => "Focused",
         "disabled" => "Disabled",
         "disabled_selected" => "Selected and disabled",
         "indeterminate" => "Indeterminate",

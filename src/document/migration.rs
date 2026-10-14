@@ -119,6 +119,7 @@ fn migrate_control(c: legacy::Control) -> Node {
         legacy::Kind::RadioGroup => "radio_group",
         legacy::Kind::Menu => "menu",
         legacy::Kind::MenuBar => "menu_bar",
+        legacy::Kind::Tree => "tree",
         legacy::Kind::Dropdown => "dropdown",
         legacy::Kind::Search => "search",
         legacy::Kind::Rectangle => "rectangle",

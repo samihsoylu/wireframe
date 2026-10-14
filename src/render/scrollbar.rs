@@ -11,6 +11,27 @@ impl Scene {
         sketch: bool,
         parent_clip: Option<Bounds>,
     ) {
+        self.draw_vertical_scrollbar(b, value, disabled, (sketch, false), parent_clip);
+    }
+    pub(super) fn tree_scrollbar(
+        &mut self,
+        b: Bounds,
+        value: f32,
+        disabled: bool,
+        sketch: bool,
+        parent_clip: Option<Bounds>,
+    ) {
+        self.draw_vertical_scrollbar(b, value, disabled, (sketch, true), parent_clip);
+    }
+    fn draw_vertical_scrollbar(
+        &mut self,
+        b: Bounds,
+        value: f32,
+        disabled: bool,
+        appearance: (bool, bool),
+        parent_clip: Option<Bounds>,
+    ) {
+        let (sketch, tree) = appearance;
         if b.h <= 0. || b.w <= 0. {
             return;
         }
@@ -20,6 +41,8 @@ impl Scene {
             [128, 128, 139]
         } else if sketch {
             [0; 3]
+        } else if tree {
+            [81; 3]
         } else {
             [51; 3]
         };
@@ -35,18 +58,20 @@ impl Scene {
         );
         // Covered inline links must not remain interactive through the track.
         let cover = clip.map_or(b, |c| intersect(b, c));
-        self.links = self
-            .links
-            .drain(..)
-            .flat_map(|link| {
-                subtract(link.bounds, cover)
-                    .into_iter()
-                    .map(move |bounds| LinkRegion {
-                        target: link.target.clone(),
-                        bounds,
-                    })
-            })
-            .collect();
+        if !tree {
+            self.links = self
+                .links
+                .drain(..)
+                .flat_map(|link| {
+                    subtract(link.bounds, cover)
+                        .into_iter()
+                        .map(move |bounds| LinkRegion {
+                            target: link.target.clone(),
+                            bounds,
+                        })
+                })
+                .collect();
+        }
         let width = if sketch { 1.5 } else { 1. };
         let inset = width / 2.;
         self.primitive(
@@ -63,7 +88,14 @@ impl Scene {
             },
             clip,
         );
-        for y in [b.y + 12., b.y + b.h - 12.] {
+        let separators = if tree && !sketch {
+            vec![]
+        } else if tree {
+            vec![b.y + 14., b.y + b.h - 15.]
+        } else {
+            vec![b.y + 12., b.y + b.h - 12.]
+        };
+        for y in separators {
             self.primitive(
                 Primitive::Line {
                     points: vec![[b.x, y], [b.x + b.w, y]],
@@ -75,12 +107,13 @@ impl Scene {
         }
         let x = b.x + b.w / 2.;
         for (y, direction) in [(b.y + 6., -1.), (b.y + b.h - 6., 1.)] {
+            let half_height = if tree && !sketch { 2. } else { 2.5 };
             self.primitive(
                 Primitive::Polygon {
                     points: vec![
-                        [x - 4., y - direction * 2.5],
-                        [x + 4., y - direction * 2.5],
-                        [x, y + direction * 2.5],
+                        [x - 4., y - direction * half_height],
+                        [x + 4., y - direction * half_height],
+                        [x, y + direction * half_height],
                     ],
                     fill: color,
                 },
@@ -98,7 +131,13 @@ impl Scene {
                     ),
                     fill: color,
                     stroke: false,
-                    radius: if sketch { 2. } else { 0. },
+                    radius: if tree && !sketch {
+                        4.
+                    } else if sketch {
+                        2.
+                    } else {
+                        0.
+                    },
                 },
                 clip,
             );

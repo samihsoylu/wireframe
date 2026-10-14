@@ -345,6 +345,20 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(w, h)?;
             return Ok((w, h));
         }
+        if kind == "tree" {
+            let tree = crate::tree::Tree::parse(text)?;
+            let m = tree.measure(self.measurer, style);
+            let w = match width {
+                Dimension::Auto => 300.,
+                Dimension::Fixed(w) => w,
+            };
+            let h = match height {
+                Dimension::Auto => m.height,
+                Dimension::Fixed(h) => h,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         if kind == "button_bar" {
             let bar = crate::button_bar::ButtonBar::parse(text)?;
             let metrics = bar.measure(self.measurer, style, self.project.settings.sketch);

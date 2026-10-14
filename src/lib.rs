@@ -18,6 +18,7 @@ pub mod rich_text;
 pub mod scene;
 pub mod storage;
 pub mod tabs;
+pub mod tree;
 
 pub mod workspace;
 

@@ -486,6 +486,9 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
         ],
         "tooltip" => &["align", "bold", "font_size", "italic", "text", "underline"],
         "tree" => &[
+            "row_links",
+            "vertical_scrollbar",
+            "background_opacity",
             "bold",
             "border",
             "fill",

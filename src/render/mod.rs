@@ -21,6 +21,7 @@ mod standalone_icons;
 mod svg;
 mod table;
 mod tabs;
+mod tree;
 use crate::{
     document::{Properties, Value},
     layout::{EguiMeasurer, TextStyle},
@@ -311,6 +312,9 @@ impl Scene {
         }
         if matches!(c.kind, Kind::Menu | Kind::MenuBar) {
             return self.menu(layer, sketch, fonts, rasters);
+        }
+        if c.kind == Kind::Tree {
+            return self.tree(layer, sketch, fonts);
         }
         if c.kind == Kind::ButtonBar {
             return self.button_bar(layer, sketch, fonts);

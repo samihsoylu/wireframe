@@ -932,6 +932,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "radio_group" => crate::choice_group::RADIO,
         "menu" => crate::menu::MENU,
         "menu_bar" => crate::menu::BAR,
+        "tree" => crate::tree::DEFAULT,
         "label" => "Some text",
         "heading" => "Title",
         "subtitle" => "Subtitle",
@@ -1000,7 +1001,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     }
     if matches!(
         c.id,
-        "dropdown" | "text_area" | "list" | "tabs" | "vertical_tabs"
+        "dropdown" | "text_area" | "list" | "tabs" | "vertical_tabs" | "tree"
     ) {
         c.properties.extend([
             boolean("vertical_scrollbar", "Scrollbar", false),
@@ -1146,7 +1147,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             c.properties.push(boolean("menu_icon", "Menu arrow", false));
         }
     }
-    if c.id == "multiline_button" {
+    if matches!(c.id, "multiline_button" | "tree") {
         c.properties.push(number(
             "background_opacity",
             "Fill opacity",
@@ -1156,7 +1157,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             false,
         ));
     }
-    if c.id == "menu_bar" {
+    if matches!(c.id, "menu_bar" | "tree") {
         c.properties.retain(|p| p.key != "border");
         c.properties
             .push(choice("border", "Border", &["solid", "none"], "solid"));
@@ -1203,12 +1204,13 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             | "radio_group"
             | "menu"
             | "menu_bar"
+            | "tree"
     ) {
         c.properties.push(prop(
             "row_links",
             if c.id == "button_bar" {
                 "Segment links"
-            } else if matches!(c.id, "checkbox_group" | "radio_group" | "menu") {
+            } else if matches!(c.id, "checkbox_group" | "radio_group" | "menu" | "tree") {
                 "Row links"
             } else {
                 "Item links"

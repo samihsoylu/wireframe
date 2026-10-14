@@ -101,6 +101,7 @@ pub enum Kind {
     RadioGroup,
     Menu,
     MenuBar,
+    Tree,
     Dropdown,
     Search,
     Rectangle,
@@ -128,7 +129,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 37] = [
+    pub const ALL: [Kind; 38] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -141,6 +142,7 @@ impl Kind {
         Self::RadioGroup,
         Self::Menu,
         Self::MenuBar,
+        Self::Tree,
         Self::Dropdown,
         Self::Search,
         Self::Rectangle,
@@ -181,6 +183,7 @@ impl Kind {
             Self::RadioGroup => "Radio group",
             Self::Menu => "Menu",
             Self::MenuBar => "Menu bar",
+            Self::Tree => "Tree pane",
             Self::Dropdown => "Dropdown",
             Self::Search => "Search box",
             Self::Rectangle => "Rectangle",
@@ -256,6 +259,7 @@ impl Kind {
             Self::RadioGroup => (165., 181.),
             Self::Menu => (150., 167.),
             Self::MenuBar => (192., 32.),
+            Self::Tree => (300., 285.),
             Self::Line | Self::Arrow => (180., 20.),
             Self::Browser => (600., 420.),
             Self::Phone => (240., 440.),
@@ -286,6 +290,7 @@ impl Kind {
             Self::RadioGroup => crate::choice_group::RADIO,
             Self::Menu => crate::menu::MENU,
             Self::MenuBar => crate::menu::BAR,
+            Self::Tree => crate::tree::DEFAULT,
             Self::Dropdown => "Choose an option",
             Self::Search => "Search…",
             Self::Browser => "https://example.com",

@@ -1,0 +1,15 @@
+# Tree panes
+
+Tree panes describe a hierarchy using one row per line. Leading spaces, dots and tabs indent a row; each character advances one level. Use `f`/`F` for folders, `-` for files, `<`/`>`/`v` for arrows, square markers for checkbox-like symbols, and `_` to reserve an empty icon slot. A marker must end the row or be followed by a space. Formatting applies to the remaining label.
+
+Automatic width is 300; automatic height follows row content. Fixed dimensions clip the content. Hiding the border removes drawing insets while preserving the automatic height allowance. Folder and arrow markers do not expand or collapse rows. The scrollbar is part of the diagram: its position changes the thumb without scrolling the text.
+
+Each row can own a destination. Destinations and selection follow repeated label occurrences during source edits, including edits within one text transaction. Changing an indentation or marker does not change the label's destination. Removing the selected row clears selection unless an equal-length replacement retains its slot. Disabled rows still retain their explicit destinations. Inline link formatting does not create a second navigation target.
+
+Tree uses the same document, component overrides, history and export scene as other controls. The existing licensed icon catalog supplies its symbols. No additional font or asset is needed.
+
+Five focused tests cover grammar, geometry, clipping, destination ownership, colors, transaction history, components and serialization. The full 238-test suite passes. Native macOS acceptance covers Quick Add insertion, source and selection editing, row-link remapping, fixed dimensions, auto-size, Undo/Redo, both styles, disabled-row navigation, scrollbar exclusion, clipped navigation, PNG/SVG export and full process restart. Native exports match generated exports byte for byte. Both the gallery and the manually edited project resave unchanged after reopening.
+
+Reproduce the neutral example with `cargo run --locked --example render_trees -- /absolute/output/directory`. The command writes an editable project and clean/sketch PNG/SVG exports.
+
+Typography, sketch contours and rasterization still need fidelity work. Component behavior is tested headlessly; native component editing and Windows/Linux runtime acceptance are not claimed. The scrollbar and expansion symbols are diagram elements, not interactive hierarchy widgets.

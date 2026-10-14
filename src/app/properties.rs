@@ -22,6 +22,7 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "radio_group"
                 | "menu"
                 | "menu_bar"
+                | "tree"
         ),
         "row_icons" => kind == "list",
         "icon" | "icon_size" | "icon_rotation" => {
@@ -58,15 +59,17 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "icon_label"
                 | "circle_button"
                 | "pointed_button"
+                | "tree"
         ),
         "vertical_scrollbar" | "value" => matches!(
             kind,
-            "dropdown" | "text_area" | "list" | "tabs" | "vertical_tabs"
+            "dropdown" | "text_area" | "list" | "tabs" | "vertical_tabs" | "tree"
         ),
         "border_color" => matches!(kind, "dropdown" | "text_input" | "text_area" | "link_bar"),
         "border" => matches!(
             kind,
             "menu_bar"
+                | "tree"
                 | "text_input"
                 | "list"
                 | "icon"
@@ -78,7 +81,7 @@ fn supported(kind: &str, key: &str) -> bool {
         ),
         "background_opacity" => matches!(
             kind,
-            "text_input" | "text_area" | "multiline_button" | "tabs" | "vertical_tabs"
+            "text_input" | "text_area" | "multiline_button" | "tabs" | "vertical_tabs" | "tree"
         ),
         "selected_index" => matches!(
             kind,
@@ -91,6 +94,7 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "vertical_tabs"
                 | "menu"
                 | "menu_bar"
+                | "tree"
         ),
         "shape" | "search_icon" | "microphone_icon" => kind == "search",
         "fill" => matches!(
@@ -107,6 +111,7 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "multiline_button"
                 | "tabs"
                 | "vertical_tabs"
+                | "tree"
         ),
         "alternate_fill" | "header" | "row_height" => matches!(kind, "table" | "list"),
         "horizontal_lines" | "vertical_lines" => kind == "table",
@@ -169,6 +174,7 @@ impl WireframeApp {
                 | "radio_group"
                 | "menu"
                 | "menu_bar"
+                | "tree"
                 | "table"
                 | "list"
                 | "button_bar"
@@ -243,7 +249,7 @@ impl WireframeApp {
                         }
                         (PropertyType::Links, Value::Links(links)) => {
                             let source=match values.get("text") {Some(Value::Text(s))=>s.as_str(),_=>""};
-                            let labels:Vec<String>=if matches!(spec.id,"menu"|"menu_bar") {wireframe::menu::labels(source,spec.id=="menu_bar")} else if matches!(spec.id,"tabs"|"vertical_tabs") {wireframe::tabs::labels(source,spec.id=="vertical_tabs")} else if matches!(spec.id,"breadcrumbs"|"link_bar") {wireframe::navigation::labels(source,spec.id=="breadcrumbs")} else if spec.id=="button_bar" {wireframe::button_bar::labels(source).into_iter().map(str::to_owned).collect()} else {source.split('\n').map(str::to_owned).collect()};
+                            let labels:Vec<String>=if spec.id=="tree" {wireframe::tree::labels(source)} else if matches!(spec.id,"menu"|"menu_bar") {wireframe::menu::labels(source,spec.id=="menu_bar")} else if matches!(spec.id,"tabs"|"vertical_tabs") {wireframe::tabs::labels(source,spec.id=="vertical_tabs")} else if matches!(spec.id,"breadcrumbs"|"link_bar") {wireframe::navigation::labels(source,spec.id=="breadcrumbs")} else if spec.id=="button_bar" {wireframe::button_bar::labels(source).into_iter().map(str::to_owned).collect()} else {source.split('\n').map(str::to_owned).collect()};
                             links.resize(labels.len(),None);
                             // Keep partial URL input outside document history until Apply.
                             egui::CollapsingHeader::new(if matches!(spec.id,"tabs"|"vertical_tabs") {"Edit tab links"} else if spec.id=="button_bar" {"Edit segment links"} else if matches!(spec.id,"breadcrumbs"|"link_bar"|"menu_bar") {"Edit item links"} else {"Edit row links"}).show(ui,|ui| {
@@ -282,9 +288,9 @@ impl WireframeApp {
                             let r = wireframe::text_entry::multiline(ui, v, 4, false);
                             finish = r.lost_focus();
                         }
-                        (PropertyType::Number {..}, Value::Number(v)) if key == "selected_index" && matches!(spec.id, "list" | "button_bar" | "link_bar" | "tabs" | "vertical_tabs" | "menu" | "menu_bar") => {
+                        (PropertyType::Number {..}, Value::Number(v)) if key == "selected_index" && matches!(spec.id, "list" | "button_bar" | "link_bar" | "tabs" | "vertical_tabs" | "menu" | "menu_bar" | "tree") => {
                             let source=match values.get("text") {Some(Value::Text(s))=>s.as_str(),_=>""};
-                            let raw:Vec<String>=if matches!(spec.id,"menu"|"menu_bar") {wireframe::menu::labels(source,spec.id=="menu_bar")} else if matches!(spec.id,"tabs"|"vertical_tabs") {wireframe::tabs::labels(source,spec.id=="vertical_tabs")} else if spec.id=="link_bar" {wireframe::navigation::labels(source,false)} else if spec.id=="button_bar" {wireframe::button_bar::labels(source).into_iter().map(str::to_owned).collect()} else {wireframe::list::labels(source,values.get("header")==Some(&Value::Bool(true))).into_iter().map(str::to_owned).collect()};
+                            let raw:Vec<String>=if spec.id=="tree" {wireframe::tree::labels(source)} else if matches!(spec.id,"menu"|"menu_bar") {wireframe::menu::labels(source,spec.id=="menu_bar")} else if matches!(spec.id,"tabs"|"vertical_tabs") {wireframe::tabs::labels(source,spec.id=="vertical_tabs")} else if spec.id=="link_bar" {wireframe::navigation::labels(source,false)} else if spec.id=="button_bar" {wireframe::button_bar::labels(source).into_iter().map(str::to_owned).collect()} else {wireframe::list::labels(source,values.get("header")==Some(&Value::Bool(true))).into_iter().map(str::to_owned).collect()};
                             let labels=raw.iter().map(|s|wireframe::rich_text::RichText::parse(s,false).display_text(false)).collect::<Vec<_>>();
                             let current=if *v<0. {"None"} else {labels.get(*v as usize).map_or("No matching item",String::as_str)};
                             ui_text::combo_box(ui,"selection",if current.is_empty(){"(Empty item)"}else{current},|ui| {

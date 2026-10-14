@@ -197,6 +197,7 @@ fn parse_columns(text: &str) -> Option<Vec<Column>> {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct TreeRow {
+    pub source: String,
     pub depth: usize,
     pub marker: Option<String>,
     pub text: RichText,
@@ -205,7 +206,7 @@ pub fn tree(text: &str) -> Vec<TreeRow> {
     if text.is_empty() {
         return vec![];
     }
-    text.trim_end()
+    text.trim_end_matches(|c: char| matches!(c, '\u{0009}'..='\u{000d}' | ' ' | '\u{00a0}' | '\u{1680}' | '\u{2000}'..='\u{200a}' | '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{feff}'))
         .split('\n')
         .map(|line| {
             let depth = line
@@ -237,6 +238,7 @@ pub fn tree(text: &str) -> Vec<TreeRow> {
                 {
                     let content = rest.get(prefix.len() + 1..).unwrap_or("");
                     return TreeRow {
+                        source: content.into(),
                         depth,
                         marker: Some(marker.into()),
                         text: RichText::parse(content, false),
@@ -244,6 +246,7 @@ pub fn tree(text: &str) -> Vec<TreeRow> {
                 }
             }
             TreeRow {
+                source: rest.into(),
                 depth,
                 marker: None,
                 text: RichText::parse(rest, false),

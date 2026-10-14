@@ -271,6 +271,7 @@ impl Editor {
                     | Kind::RadioGroup
                     | Kind::Menu
                     | Kind::MenuBar
+                    | Kind::Tree
                     | Kind::Button
                     | Kind::TextInput
                     | Kind::TextArea
@@ -296,6 +297,7 @@ impl Editor {
                     Kind::RadioGroup => "radio_group",
                     Kind::Menu => "menu",
                     Kind::MenuBar => "menu_bar",
+                    Kind::Tree => "tree",
                     Kind::Button => "button",
                     Kind::TextInput => "text_input",
                     Kind::TextArea => "text_area",
@@ -497,6 +499,7 @@ impl Editor {
                                 | Kind::RadioGroup
                                 | Kind::Menu
                                 | Kind::MenuBar
+                                | Kind::Tree
                                 | Kind::ButtonBar
                                 | Kind::Breadcrumbs
                                 | Kind::LinkBar
@@ -512,6 +515,8 @@ impl Editor {
                                 crate::choice_group::apply_text
                             } else if matches!(c.kind, Kind::Menu | Kind::MenuBar) {
                                 crate::menu::apply_text
+                            } else if c.kind == Kind::Tree {
+                                crate::tree::apply_text
                             } else if c.kind == Kind::ButtonBar {
                                 crate::button_bar::apply_text
                             } else {

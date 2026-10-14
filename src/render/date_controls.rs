@@ -16,7 +16,7 @@ fn selection(sketch: bool) -> [u8; 3] {
     }
 }
 impl Scene {
-    fn date_rect(&mut self, b: Bounds, color: [u8; 3], clip: Option<Bounds>) {
+    pub(super) fn date_rect(&mut self, b: Bounds, color: [u8; 3], clip: Option<Bounds>) {
         self.primitive(
             Primitive::Rect {
                 b,
@@ -27,7 +27,13 @@ impl Scene {
             clip,
         );
     }
-    fn date_outline(&mut self, b: Bounds, color: [u8; 3], width: f32, clip: Option<Bounds>) {
+    pub(super) fn date_outline(
+        &mut self,
+        b: Bounds,
+        color: [u8; 3],
+        width: f32,
+        clip: Option<Bounds>,
+    ) {
         let i = (width / 2.).min(b.w / 2.).min(b.h / 2.);
         self.primitive(
             Primitive::Line {

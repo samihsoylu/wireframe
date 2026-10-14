@@ -46,3 +46,5 @@ pub mod mobile_picker;
 pub mod phone;
 pub mod smartphone;
 pub mod tablet;
+
+pub mod pickers;

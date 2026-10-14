@@ -237,7 +237,7 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "text",
             "underline",
         ],
-        "date_picker" => &[],
+        "date_picker" => &["date_mode", "row_links"],
         "field_set" => &[
             "background_opacity",
             "bold",
@@ -566,7 +566,7 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "close",
             "resize_handle",
         ],
-        "time_picker" => &[],
+        "time_picker" => &["row_links"],
         _ => &[],
     };
     fields.contains(&key)

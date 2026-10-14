@@ -129,6 +129,8 @@ pub enum Kind {
     MobilePicker,
     Calendar,
     DateChooser,
+    DatePicker,
+    TimePicker,
     Panel,
     FieldSet,
     List,
@@ -140,7 +142,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 49] = [
+    pub const ALL: [Kind; 51] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -181,6 +183,8 @@ impl Kind {
         Self::MobilePicker,
         Self::Calendar,
         Self::DateChooser,
+        Self::DatePicker,
+        Self::TimePicker,
         Self::Panel,
         Self::FieldSet,
         Self::List,
@@ -233,6 +237,8 @@ impl Kind {
             Self::MobilePicker => "Mobile picker",
             Self::Calendar => "Calendar",
             Self::DateChooser => "Date chooser",
+            Self::DatePicker => "Date picker",
+            Self::TimePicker => "Time picker",
             Self::Panel => "Window",
             Self::FieldSet => "Field set",
             Self::List => "List",
@@ -308,6 +314,7 @@ impl Kind {
             Self::MobilePicker => crate::mobile_picker::SIZE,
             Self::Calendar => (96., 96.),
             Self::DateChooser => (90., 25.),
+            Self::DatePicker | Self::TimePicker => (320., 473.),
             Self::Panel => (450., 400.),
             Self::FieldSet => (200., 170.),
             Self::List | Self::Table => (300., 180.),
@@ -336,7 +343,7 @@ impl Kind {
             Self::RadioGroup => crate::choice_group::RADIO,
             Self::MobileMenu => crate::mobile_menu::DEFAULT,
             Self::MobilePicker => crate::mobile_picker::DEFAULT,
-            Self::Calendar => "",
+            Self::Calendar | Self::DatePicker | Self::TimePicker => "",
             Self::DateChooser => crate::date_controls::CHOOSER_DEFAULT,
             Self::Menu => crate::menu::MENU,
             Self::MenuBar => crate::menu::BAR,

@@ -299,6 +299,8 @@ impl Editor {
                     | Kind::MobileMenu
                     | Kind::MobilePicker
                     | Kind::Calendar
+                    | Kind::DatePicker
+                    | Kind::TimePicker
                     | Kind::DateChooser
                     | Kind::FieldSet
                     | Kind::Button
@@ -341,6 +343,8 @@ impl Editor {
                     Kind::MobilePicker => "mobile_picker",
                     Kind::Calendar => "calendar",
                     Kind::DateChooser => "date_chooser",
+                    Kind::DatePicker => "date_picker",
+                    Kind::TimePicker => "time_picker",
                     Kind::Button => "button",
                     Kind::TextInput => "text_input",
                     Kind::TextArea => "text_area",

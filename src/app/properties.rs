@@ -20,6 +20,7 @@ fn fraction_slider(ui: &mut egui::Ui, value: &mut f64) -> (egui::Response, bool)
 // catalog's full field inventory remains separate from completed rendering.
 fn supported(kind: &str, key: &str) -> bool {
     match key {
+        "date_mode" => kind == "date_picker",
         "device_model" | "background_pattern" => kind == "phone",
         "keyboard_device" => kind == "mobile_keyboard",
         "orientation" => matches!(kind, "phone" | "tablet" | "smartphone" | "mobile_keyboard"),
@@ -41,6 +42,8 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "mobile_menu"
                 | "tree"
                 | "accordion"
+                | "date_picker"
+                | "time_picker"
                 | "alert"
                 | "app_bar"
         ),
@@ -255,6 +258,8 @@ impl WireframeApp {
                 | "smartphone"
                 | "mobile_keyboard"
                 | "mobile_picker"
+                | "date_picker"
+                | "time_picker"
                 | "calendar"
                 | "browser"
                 | "window"
@@ -287,7 +292,7 @@ impl WireframeApp {
                 if let Err(error) = self.editor.auto_size_control(id) { self.error = Some(error); }
                 self.editor.commit();
             }
-            for key in ["keyboard_device", "device_model", "orientation", "device_resizing", "background_pattern", "transparent_background", "status_bar", "image_border", "sketch_filter", "text", "header_height", "footer_height", "minimize", "maximize", "close", "resize_handle", "button_style", "tab_position", "direction", "label_position", "icon", "icon_size", "icon_rotation", "nav_icon", "filter_icon", "menu_icon", "icons", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+            for key in ["date_mode", "keyboard_device", "device_model", "orientation", "device_resizing", "background_pattern", "transparent_background", "status_bar", "image_border", "sketch_filter", "text", "header_height", "footer_height", "minimize", "maximize", "close", "resize_handle", "button_style", "tab_position", "direction", "label_position", "icon", "icon_size", "icon_rotation", "nav_icon", "filter_icon", "menu_icon", "icons", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
                 if matches!(key, "icon_size" | "icon_rotation") && !matches!(values.get("icon"),Some(Value::Icon(_))) {continue;}
                 if key == "value" && values.get("vertical_scrollbar") != Some(&Value::Bool(true)) { continue; }
                 let Some(field) = spec.property(key).filter(|f| f.visible && supported(spec.id, key)) else { continue; };
@@ -359,10 +364,10 @@ impl WireframeApp {
                         }
                         (PropertyType::Links, Value::Links(links)) => {
                             let source=match values.get("text") {Some(Value::Text(s))=>s.as_str(),_=>""};
-                            let labels:Vec<String>=if spec.id=="app_bar" {wireframe::app_bar::labels(&values)} else if spec.id=="alert" {wireframe::alert::labels(source)} else if spec.id=="accordion" {wireframe::accordion::labels(source)} else if spec.id=="tree" {wireframe::tree::labels(source)} else if matches!(spec.id,"menu"|"menu_bar") {wireframe::menu::labels(source,spec.id=="menu_bar")} else if matches!(spec.id,"tabs"|"vertical_tabs") {wireframe::tabs::labels(source,spec.id=="vertical_tabs")} else if matches!(spec.id,"breadcrumbs"|"link_bar") {wireframe::navigation::labels(source,spec.id=="breadcrumbs")} else if spec.id=="button_bar" {wireframe::button_bar::labels(source).into_iter().map(str::to_owned).collect()} else {source.split('\n').map(str::to_owned).collect()};
+                            let labels:Vec<String>=if matches!(spec.id,"date_picker"|"time_picker") {wireframe::pickers::BUTTONS.iter().map(|s|s.to_string()).collect()} else if spec.id=="app_bar" {wireframe::app_bar::labels(&values)} else if spec.id=="alert" {wireframe::alert::labels(source)} else if spec.id=="accordion" {wireframe::accordion::labels(source)} else if spec.id=="tree" {wireframe::tree::labels(source)} else if matches!(spec.id,"menu"|"menu_bar") {wireframe::menu::labels(source,spec.id=="menu_bar")} else if matches!(spec.id,"tabs"|"vertical_tabs") {wireframe::tabs::labels(source,spec.id=="vertical_tabs")} else if matches!(spec.id,"breadcrumbs"|"link_bar") {wireframe::navigation::labels(source,spec.id=="breadcrumbs")} else if spec.id=="button_bar" {wireframe::button_bar::labels(source).into_iter().map(str::to_owned).collect()} else {source.split('\n').map(str::to_owned).collect()};
                             links.resize(labels.len(),None);
                             // Keep partial URL input outside document history until Apply.
-                            egui::CollapsingHeader::new(if spec.id=="app_bar" {"Edit icon links"} else if spec.id=="alert" {"Edit button links"} else if matches!(spec.id,"tabs"|"vertical_tabs") {"Edit tab links"} else if spec.id=="button_bar" {"Edit segment links"} else if matches!(spec.id,"breadcrumbs"|"link_bar"|"menu_bar") {"Edit item links"} else {"Edit row links"}).show(ui,|ui| {
+                            egui::CollapsingHeader::new(if spec.id=="app_bar" {"Edit icon links"} else if matches!(spec.id,"alert"|"date_picker"|"time_picker") {"Edit button links"} else if matches!(spec.id,"tabs"|"vertical_tabs") {"Edit tab links"} else if spec.id=="button_bar" {"Edit segment links"} else if matches!(spec.id,"breadcrumbs"|"link_bar"|"menu_bar") {"Edit item links"} else {"Edit row links"}).show(ui,|ui| {
                                 egui::ScrollArea::vertical().max_height(280.).show(ui,|ui| {
                                     for (row,label) in labels.iter().enumerate() {
                                         ui.push_id(row,|ui| {

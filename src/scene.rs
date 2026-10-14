@@ -128,6 +128,8 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
         | Kind::MenuBar
         | Kind::Tree
         | Kind::Accordion
+        | Kind::DatePicker
+        | Kind::TimePicker
         | Kind::Alert
         | Kind::AppBar
         | Kind::FieldSet

@@ -25,6 +25,8 @@ struct ClockLayout {
 #[derive(Clone, PartialEq)]
 enum ClockOptions {
     Calendar(f32),
+    DatePicker(f32, bool),
+    TimePicker,
     Tablet(crate::tablet::Options),
     Smartphone(crate::smartphone::Options),
 }
@@ -32,6 +34,11 @@ impl ClockOptions {
     fn for_layer(layer: &Layer) -> Option<Self> {
         match layer.control.kind {
             Kind::Calendar => Some(Self::Calendar(layer.control.font_size)),
+            Kind::DatePicker => Some(Self::DatePicker(
+                layer.control.font_size,
+                matches!(layer.properties.get("date_mode"),Some(Value::Choice(s)) if s=="year"),
+            )),
+            Kind::TimePicker => Some(Self::TimePicker),
             Kind::Tablet => Some(Self::Tablet(crate::tablet::Options::from_properties(
                 &layer.properties,
             ))),
@@ -123,7 +130,7 @@ impl Editor {
                     font: self.document.font.clone(),
                 };
                 let key = (id, layer.path.clone());
-                if layer.control.kind == Kind::Calendar {
+                if matches!(layer.control.kind, Kind::Calendar | Kind::DatePicker) {
                     let record = cache
                         .dates
                         .entry(key)
@@ -207,7 +214,7 @@ impl Editor {
                 control: {
                     let mut c = control(node);
                     c.bounds = bounds(node.uncropped);
-                    if c.kind == Kind::Calendar {
+                    if matches!(c.kind, Kind::Calendar | Kind::DatePicker) {
                         c.font_size = self.document.settings.font_size;
                     }
                     c
@@ -337,6 +344,8 @@ pub(super) fn control(node: &LayoutNode) -> Control {
         "mobile_picker" => Kind::MobilePicker,
         "calendar" => Kind::Calendar,
         "date_chooser" => Kind::DateChooser,
+        "date_picker" => Kind::DatePicker,
+        "time_picker" => Kind::TimePicker,
         "panel" | "window" => Kind::Panel,
         "field_set" => Kind::FieldSet,
         "list" => Kind::List,

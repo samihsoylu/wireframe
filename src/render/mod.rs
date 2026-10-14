@@ -23,6 +23,7 @@ mod mobile_rows;
 mod multiline_button;
 mod navigation;
 mod phone;
+mod pickers;
 mod pointed_button;
 mod rasters;
 mod scrollbar;
@@ -363,6 +364,9 @@ impl Scene {
         }
         if c.kind == Kind::AppBar {
             return self.app_bar(layer, fonts, rasters);
+        }
+        if matches!(c.kind, Kind::DatePicker | Kind::TimePicker) {
+            return self.picker(layer, sketch, fonts);
         }
         if c.kind == Kind::Alert {
             return self.alert(layer, sketch, fonts);

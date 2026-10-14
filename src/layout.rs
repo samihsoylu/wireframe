@@ -315,13 +315,18 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(w, h)?;
             return Ok((w, h));
         }
-        if kind == "calendar" {
+        if matches!(kind, "calendar" | "date_picker" | "time_picker") {
+            let default = if kind == "calendar" {
+                (96., 96.)
+            } else {
+                (320., 473.)
+            };
             let w = match width {
-                Dimension::Auto => 96.,
+                Dimension::Auto => default.0,
                 Dimension::Fixed(w) => w,
             };
             let h = match height {
-                Dimension::Auto => 96.,
+                Dimension::Auto => default.1,
                 Dimension::Fixed(h) => h,
             };
             validate_size(w, h)?;

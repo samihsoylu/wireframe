@@ -45,6 +45,12 @@ impl Clock {
     pub fn label_24(self) -> String {
         format!("{}:{:02}", self.hour, self.minute)
     }
+    pub fn hour_12(self) -> u8 {
+        match self.hour % 12 {
+            0 => 12,
+            h => h,
+        }
+    }
     pub fn label(self) -> String {
         let hour = match self.hour % 12 {
             0 => 12,

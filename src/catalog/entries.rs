@@ -1052,6 +1052,10 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             text.default = DefaultValue::FormInk;
         }
     }
+    if c.id == "date_picker" {
+        c.properties
+            .push(choice("date_mode", "Kind", &["month", "year"], "month"));
+    }
     if c.id == "date_chooser" {
         let mut border = prop(
             "border_color",
@@ -1358,13 +1362,15 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             | "tree"
             | "accordion"
             | "alert"
+            | "date_picker"
+            | "time_picker"
             | "app_bar"
     ) {
         c.properties.push(prop(
             "row_links",
             if c.id == "app_bar" {
                 "Icon links"
-            } else if c.id == "alert" {
+            } else if matches!(c.id, "alert" | "date_picker" | "time_picker") {
                 "Button links"
             } else if c.id == "button_bar" {
                 "Segment links"

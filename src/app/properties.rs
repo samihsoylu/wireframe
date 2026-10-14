@@ -38,6 +38,7 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "radio_group"
                 | "menu"
                 | "menu_bar"
+                | "mobile_menu"
                 | "tree"
                 | "accordion"
                 | "alert"
@@ -101,6 +102,7 @@ fn supported(kind: &str, key: &str) -> bool {
         "border" => matches!(
             kind,
             "menu_bar"
+                | "mobile_menu"
                 | "browser"
                 | "alert"
                 | "app_bar"
@@ -237,6 +239,7 @@ impl WireframeApp {
                 | "radio_group"
                 | "menu"
                 | "menu_bar"
+                | "mobile_menu"
                 | "tree"
                 | "accordion"
                 | "alert"
@@ -246,6 +249,7 @@ impl WireframeApp {
                 | "tablet"
                 | "smartphone"
                 | "mobile_keyboard"
+                | "mobile_picker"
                 | "browser"
                 | "window"
                 | "table"

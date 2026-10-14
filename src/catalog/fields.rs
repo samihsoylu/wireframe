@@ -295,7 +295,15 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "status_bar",
         ],
         "mobile_keyboard" => &["keyboard_device", "orientation"],
-        "mobile_menu" => &["bold", "border", "font_size", "italic", "text", "underline"],
+        "mobile_menu" => &[
+            "bold",
+            "border",
+            "font_size",
+            "italic",
+            "text",
+            "underline",
+            "row_links",
+        ],
         "mobile_picker" => &["text"],
         "label" => &[
             "align",

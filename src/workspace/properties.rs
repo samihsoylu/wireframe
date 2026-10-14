@@ -38,6 +38,7 @@ impl Editor {
                 | "radio_group"
                 | "menu"
                 | "menu_bar"
+                | "mobile_menu"
                 | "tree"
                 | "accordion"
                 | "alert"
@@ -70,7 +71,7 @@ impl Editor {
             .collect::<Vec<_>>();
         let nodes = children(&resolved, &self.context)?;
         let node = nodes.iter().find(|n| n.id == id)?;
-        if !matches!(&node.content,NodeContent::Control{kind,..} if matches!(kind.as_str(), "list" | "button_bar" | "breadcrumbs" | "link_bar" | "tabs" | "vertical_tabs" | "checkbox_group" | "radio_group" | "menu" | "menu_bar" | "tree" | "accordion" | "alert" | "app_bar"))
+        if !matches!(&node.content,NodeContent::Control{kind,..} if matches!(kind.as_str(), "list" | "button_bar" | "breadcrumbs" | "link_bar" | "tabs" | "vertical_tabs" | "checkbox_group" | "radio_group" | "menu" | "menu_bar" | "mobile_menu" | "tree" | "accordion" | "alert" | "app_bar"))
         {
             return None;
         }
@@ -153,6 +154,9 @@ impl Editor {
             } else if matches!(&edited.content,NodeContent::Control {kind,..} if matches!(kind.as_str(),"menu"|"menu_bar"))
             {
                 crate::menu::apply_text(&mut edited, &text, &baseline)?;
+            } else if matches!(&edited.content,NodeContent::Control {kind,..} if kind=="mobile_menu")
+            {
+                crate::mobile_menu::apply_text(&mut edited, &text, &baseline)?;
             } else if matches!(&edited.content,NodeContent::Control {kind,..} if kind=="accordion")
             {
                 crate::accordion::apply_text(&mut edited, &text, &baseline)?;

@@ -936,6 +936,8 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "radio" => "Radio button",
         "checkbox_group" => crate::choice_group::CHECKBOX,
         "radio_group" => crate::choice_group::RADIO,
+        "mobile_menu" => crate::mobile_menu::DEFAULT,
+        "mobile_picker" => crate::mobile_picker::DEFAULT,
         "menu" => crate::menu::MENU,
         "menu_bar" => crate::menu::BAR,
         "tree" => crate::tree::DEFAULT,
@@ -1294,7 +1296,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             false,
         ));
     }
-    if matches!(c.id, "menu_bar" | "tree") {
+    if matches!(c.id, "menu_bar" | "tree" | "mobile_menu") {
         c.properties.retain(|p| p.key != "border");
         c.properties
             .push(choice("border", "Border", &["solid", "none"], "solid"));
@@ -1341,6 +1343,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             | "radio_group"
             | "menu"
             | "menu_bar"
+            | "mobile_menu"
             | "tree"
             | "accordion"
             | "alert"
@@ -1356,7 +1359,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
                 "Segment links"
             } else if matches!(
                 c.id,
-                "checkbox_group" | "radio_group" | "menu" | "tree" | "accordion"
+                "checkbox_group" | "radio_group" | "menu" | "mobile_menu" | "tree" | "accordion"
             ) {
                 "Row links"
             } else {

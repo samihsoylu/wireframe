@@ -308,6 +308,8 @@ pub(super) fn control(node: &LayoutNode) -> Control {
         "tablet" => Kind::Tablet,
         "smartphone" => Kind::Smartphone,
         "mobile_keyboard" => Kind::MobileKeyboard,
+        "mobile_menu" => Kind::MobileMenu,
+        "mobile_picker" => Kind::MobilePicker,
         "panel" | "window" => Kind::Panel,
         "field_set" => Kind::FieldSet,
         "list" => Kind::List,

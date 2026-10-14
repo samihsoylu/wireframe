@@ -40,6 +40,8 @@ pub mod text_entry;
 pub mod ui_text;
 
 pub mod mobile_keyboard;
+pub mod mobile_menu;
+pub mod mobile_picker;
 pub mod phone;
 pub mod smartphone;
 pub mod tablet;

@@ -315,6 +315,18 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(w, h)?;
             return Ok((w, h));
         }
+        if kind == "mobile_picker" {
+            return Ok(crate::mobile_picker::SIZE);
+        }
+        if kind == "mobile_menu" {
+            let fixed = match width {
+                Dimension::Fixed(w) => Some(w),
+                Dimension::Auto => None,
+            };
+            let m = crate::mobile_menu::Menu::parse(text)?.layout(self.measurer, style, fixed);
+            validate_size(m.width, m.height)?;
+            return Ok((m.width, m.height));
+        }
         if matches!(kind, "menu" | "menu_bar") {
             let (intrinsic_w, intrinsic_h) = if kind == "menu" {
                 let menu = crate::menu::Menu::parse(text)?;

@@ -18,6 +18,7 @@ mod list;
 pub mod mask;
 mod menu;
 mod mobile_keyboard;
+mod mobile_rows;
 mod multiline_button;
 mod navigation;
 mod phone;
@@ -325,6 +326,12 @@ impl Scene {
         }
         if matches!(c.kind, Kind::Menu | Kind::MenuBar) {
             return self.menu(layer, sketch, fonts, rasters);
+        }
+        if c.kind == Kind::MobileMenu {
+            return self.mobile_menu(layer, sketch, fonts);
+        }
+        if c.kind == Kind::MobilePicker {
+            return self.mobile_picker(layer, sketch, fonts);
         }
         if c.kind == Kind::MobileKeyboard {
             return self.mobile_keyboard(layer, sketch, fonts);

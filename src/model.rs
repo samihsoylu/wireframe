@@ -125,6 +125,8 @@ pub enum Kind {
     Tablet,
     Smartphone,
     MobileKeyboard,
+    MobileMenu,
+    MobilePicker,
     Panel,
     FieldSet,
     List,
@@ -136,7 +138,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 45] = [
+    pub const ALL: [Kind; 47] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -173,6 +175,8 @@ impl Kind {
         Self::Tablet,
         Self::Smartphone,
         Self::MobileKeyboard,
+        Self::MobileMenu,
+        Self::MobilePicker,
         Self::Panel,
         Self::FieldSet,
         Self::List,
@@ -221,6 +225,8 @@ impl Kind {
             Self::Tablet => "Tablet",
             Self::Smartphone => "Smartphone",
             Self::MobileKeyboard => "Mobile keyboard",
+            Self::MobileMenu => "Mobile menu",
+            Self::MobilePicker => "Mobile picker",
             Self::Panel => "Window",
             Self::FieldSet => "Field set",
             Self::List => "List",
@@ -290,6 +296,8 @@ impl Kind {
             Self::Tablet => (616., 916.),
             Self::Smartphone => (356., 725.),
             Self::MobileKeyboard => (226., 160.),
+            Self::MobileMenu => (215., 381.),
+            Self::MobilePicker => crate::mobile_picker::SIZE,
             Self::Panel => (450., 400.),
             Self::FieldSet => (200., 170.),
             Self::List | Self::Table => (300., 180.),
@@ -316,6 +324,8 @@ impl Kind {
             Self::Checkbox | Self::Radio => "Option",
             Self::CheckboxGroup => crate::choice_group::CHECKBOX,
             Self::RadioGroup => crate::choice_group::RADIO,
+            Self::MobileMenu => crate::mobile_menu::DEFAULT,
+            Self::MobilePicker => crate::mobile_picker::DEFAULT,
             Self::Menu => crate::menu::MENU,
             Self::MenuBar => crate::menu::BAR,
             Self::Tree => crate::tree::DEFAULT,

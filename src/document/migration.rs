@@ -143,6 +143,8 @@ fn migrate_control(c: legacy::Control) -> Node {
         legacy::Kind::Tablet => "tablet",
         legacy::Kind::Smartphone => "smartphone",
         legacy::Kind::MobileKeyboard => "mobile_keyboard",
+        legacy::Kind::MobileMenu => "mobile_menu",
+        legacy::Kind::MobilePicker => "mobile_picker",
         legacy::Kind::Panel => "panel",
         legacy::Kind::FieldSet => "field_set",
         legacy::Kind::List => "list",

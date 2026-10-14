@@ -288,6 +288,8 @@ impl Editor {
                     | Kind::Tablet
                     | Kind::Smartphone
                     | Kind::MobileKeyboard
+                    | Kind::MobileMenu
+                    | Kind::MobilePicker
                     | Kind::FieldSet
                     | Kind::Button
                     | Kind::TextInput
@@ -325,6 +327,8 @@ impl Editor {
                     Kind::Tablet => "tablet",
                     Kind::Smartphone => "smartphone",
                     Kind::MobileKeyboard => "mobile_keyboard",
+                    Kind::MobileMenu => "mobile_menu",
+                    Kind::MobilePicker => "mobile_picker",
                     Kind::Button => "button",
                     Kind::TextInput => "text_input",
                     Kind::TextArea => "text_area",
@@ -533,6 +537,7 @@ impl Editor {
                                 | Kind::RadioGroup
                                 | Kind::Menu
                                 | Kind::MenuBar
+                                | Kind::MobileMenu
                                 | Kind::Tree
                                 | Kind::Accordion
                                 | Kind::Alert
@@ -550,6 +555,8 @@ impl Editor {
                                 crate::navigation::apply_text
                             } else if matches!(c.kind, Kind::CheckboxGroup | Kind::RadioGroup) {
                                 crate::choice_group::apply_text
+                            } else if c.kind == Kind::MobileMenu {
+                                crate::mobile_menu::apply_text
                             } else if matches!(c.kind, Kind::Menu | Kind::MenuBar) {
                                 crate::menu::apply_text
                             } else if c.kind == Kind::Alert {

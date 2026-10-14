@@ -229,7 +229,7 @@ impl Scene {
             opacity: 1.,
         });
     }
-    fn menu_link(
+    pub(super) fn menu_link(
         &mut self,
         properties: &Properties,
         index: usize,

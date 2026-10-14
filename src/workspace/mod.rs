@@ -163,7 +163,8 @@ impl Editor {
             return;
         }
         if let Err(error) = self
-            .normalize_source_order()
+            .repair_empty_order(&before)
+            .and_then(|()| self.normalize_source_order())
             .and_then(|()| self.document.validate())
         {
             self.restore(before);
@@ -770,6 +771,30 @@ impl Editor {
         }
         point
     }
+    fn repair_empty_order(&mut self, before: &Snapshot) -> Result<(), String> {
+        let id = self.surface_id();
+        if self.surface(id).is_none() {
+            return Ok(());
+        }
+        let content = before
+            .document
+            .pages
+            .iter()
+            .find(|p| p.id == id)
+            .map(|p| &p.content)
+            .or_else(|| {
+                before
+                    .document
+                    .definitions
+                    .iter()
+                    .find(|d| d.id == id)
+                    .map(|d| &d.content)
+            });
+        if let Some(content) = content {
+            self.active_content_mut().repair_empty_order(content)?;
+        }
+        Ok(())
+    }
     fn leaf_order(&self) -> Vec<NodePath> {
         self.active_content().paint_paths().unwrap_or_default()
     }
@@ -841,7 +866,9 @@ fn transform(
         to.x + (world.x - from.x) * sx,
         to.y + (world.y - from.y) * sy,
     );
-    if node.properties.get(MISSING_COMPONENT) == Some(&Value::Bool(true)) {
+    if node.properties.get(MISSING_COMPONENT) == Some(&Value::Bool(true))
+        || matches!(&node.content, NodeContent::Group { children } if children.is_empty())
+    {
         node.origin = Point::new(next.x - new_parent.x, next.y - new_parent.y);
         return Ok(());
     }

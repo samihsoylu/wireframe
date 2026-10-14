@@ -29,6 +29,7 @@ impl Editor {
         };
         let parent = self.context_origin();
         for n in &mut copy.nodes {
+            n.clear_empty_component_markers();
             n.origin = n.origin.translated(parent);
         }
         let mut defs = HashSet::new();

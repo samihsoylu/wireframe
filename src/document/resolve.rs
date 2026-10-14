@@ -62,6 +62,7 @@ impl Project {
             properties: node.properties.clone(),
             content: NodeContent::Group { children: vec![] },
         };
+        result.properties.remove(EMPTY_COMPONENT);
         result.content = match &node.content {
             NodeContent::Control { .. } => node.content.clone(),
             NodeContent::Group { children } => NodeContent::Group {
@@ -103,6 +104,12 @@ impl Project {
                     .map(|c| self.expand(c, definitions, path, budget, misses, depth + 1))
                     .collect::<Result<Vec<_>, _>>()?;
                 definitions.pop();
+                if children.is_empty() {
+                    result.crop = None;
+                    result
+                        .properties
+                        .insert(EMPTY_COMPONENT.into(), Value::Bool(true));
+                }
                 for patch in overrides {
                     if let Some(target) = find_mut(&mut children, &patch.path) {
                         target.properties.extend(patch.patch.properties.clone());
@@ -155,11 +162,12 @@ impl Content {
         if self.paint_order.is_empty() {
             return Ok(leaves);
         }
-        if self.paint_order.len() != leaves.len() {
+        let order = self.paint_paths()?;
+        if order.len() != leaves.len() {
             return Err("Incomplete paint order".into());
         }
         let mut by_path: BTreeMap<_, _> = leaves.into_iter().map(|n| (n.path.clone(), n)).collect();
-        self.paint_order
+        order
             .iter()
             .map(|p| {
                 by_path
@@ -191,7 +199,16 @@ fn collect<'a>(
                 locked: locked || node.locked,
             }),
             NodeContent::Group { children } => {
-                collect(children, world, locked || node.locked, path, out, depth + 1)?
+                if children.is_empty() {
+                    out.push(ResolvedNode {
+                        path: path.clone(),
+                        node,
+                        world_origin: world,
+                        locked: locked || node.locked,
+                    });
+                } else {
+                    collect(children, world, locked || node.locked, path, out, depth + 1)?;
+                }
             }
             NodeContent::Instance { .. } => {
                 return Err("Expand component instances before traversing leaves".into());

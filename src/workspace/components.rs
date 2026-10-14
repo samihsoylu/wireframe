@@ -61,6 +61,7 @@ impl Editor {
         self.commit();
         let before = self.snapshot();
         let result = f(self).and_then(|value| {
+            self.repair_empty_order(&before)?;
             self.normalize_source_order()?;
             self.document.validate()?;
             Ok(value)
@@ -92,6 +93,11 @@ impl Editor {
             || self.nodes().iter().any(|n| {
                 n.id == id && n.properties.get(MISSING_COMPONENT) == Some(&Value::Bool(true))
             })
+    }
+    pub fn empty_container(&self, id: Id) -> bool {
+        self.nodes().iter().find(|n| n.id == id)
+            .and_then(|n| self.document.resolve(n).ok())
+            .is_some_and(|r| matches!(r.root.content, NodeContent::Group { children } if children.is_empty()))
     }
     pub fn delete_definition(&mut self, id: Id) -> Result<(), String> {
         self.component_change("Delete component", |e| {
@@ -266,12 +272,13 @@ impl Editor {
             if !matches!(node.content, NodeContent::Instance { .. }) {
                 return Err("Select a component instance".into());
             }
-            let resolved = e.document.resolve(node)?.root;
+            let mut resolved = e.document.resolve(node)?.root;
             fn missing(n: &Node) -> bool {
                 n.properties.get(MISSING_COMPONENT) == Some(&Value::Bool(true))
                     || matches!(&n.content, NodeContent::Group { children } if children.iter().any(missing))
             }
             if missing(&resolved) { return Err("Restore the missing component source before detaching".into()); }
+            resolved.clear_empty_component_markers();
             let mut path = e.context.clone();
             path.push(id);
             let replacements = Content {

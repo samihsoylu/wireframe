@@ -14,7 +14,7 @@ The editor locates the first canonical instance crossed by the canvas context. E
 
 Canvas, thumbnails and exports use the same resolved layout. History captures context and selection as well as the document. Tests cover deep paths, two levels of competing inheritance, explicit defaults over nondefault inherited values, per-property/subtree/whole-instance reset, geometry, copy, locked edits, structural guards and storage. Native macOS checks cover local text, shared propagation, reset/history and reopening. See SESSION-SPEC.md for current totals and evidence scope.
 
-Empty-source behavior, some crop/lock/resize combinations, large-project performance and Windows/Linux native acceptance remain open. Existing-format import is deferred.
+Some crop/lock/resize combinations, large-project performance and Windows/Linux native acceptance remain open. Existing-format import is deferred.
 
 ## Resizing
 
@@ -27,3 +27,9 @@ Native macOS resized one of two synthetic instances265×113→530×226, verified
 Open a component source, clear the selection, and choose **Delete component source** in its inspector. Existing instances remain as150×150 missing-component placeholders. Their references and local changes are preserved in the saved file. Undo restores the source during the current session; reopening does not retain Undo history. Missing instances can move, copy or be deleted, but their size is fixed and source editing/reset/detach is unavailable. A parent with missing descendants cannot be detached. Copying missing references assigns fresh missing IDs to prevent unrelated destination components from being substituted.
 
 Native macOS checks cover deletion, Undo restoring resized/local content, Redo, saving and reopening. Four regression tests additionally cover nested references, alternates, crop preservation, context recovery, shared SVG/PNG rendering, allocator/clipboard collisions and no-op Ungroup. See SESSION-SPEC.md for scoped evidence and remaining acceptance.
+
+## Empty components and groups
+
+Removing every source child keeps the definition and shows an **Empty component** frame on its instances. Add new source content to populate them again. Local changes for removed child IDs remain stored but do not attach to fresh children. Empty instances can be detached into ordinary empty groups. Empty groups remain selectable and editable; enter them and add a first child through the library or Quick Add. Empty fallback dimensions are150×150. Position, lock state and stored crop data remain intact; inherited ancestor clipping still applies.
+
+Empty/populated transitions preserve explicit layer position. Older files may omit empty groups in their paint order; they load unchanged and newly visible empty groups draw last. New edits include them as paint units. Root pages and source workspaces with no content remain blank. Native checks and regression coverage are recorded in SESSION-SPEC.md.

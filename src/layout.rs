@@ -152,7 +152,11 @@ pub struct Engine<'a, M: TextMeasurer> {
 impl<M: TextMeasurer> Engine<'_, M> {
     pub fn layout(&self, content: &Content) -> Result<Layout, String> {
         let mut result = Layout {
-            paint_order: content.paint_order.clone(),
+            paint_order: if content.paint_order.is_empty() {
+                vec![]
+            } else {
+                content.paint_paths()?
+            },
             ..Layout::default()
         };
         for expanded in self.project.resolve_all(&content.nodes)? {
@@ -218,13 +222,15 @@ impl<M: TextMeasurer> Engine<'_, M> {
                     .unwrap_or(Rect {
                         x: origin.x,
                         y: origin.y,
-                        ..Rect::default()
+                        width: 150.,
+                        height: 150.,
                     });
                 (None, node.properties.clone(), layouts, bounds)
             }
             NodeContent::Instance { .. } => return Err("Unresolved component instance".into()),
         };
-        let clip = node.crop.map(|c| Rect {
+        let empty = matches!(&node.content, NodeContent::Group { children } if children.is_empty());
+        let clip = node.crop.filter(|_| !empty).map(|c| Rect {
             x: uncropped.x + c.x * uncropped.width,
             y: uncropped.y + c.y * uncropped.height,
             width: c.width * uncropped.width,
@@ -410,7 +416,7 @@ impl Layout {
                     (a, None) => a,
                     (None, b) => b,
                 };
-                if n.kind.is_some() {
+                if n.kind.is_some() || n.children.is_empty() {
                     out.push((n, clip.map_or(n.bounds, |c| n.bounds.intersect(c))));
                 } else {
                     collect(&n.children, clip, out);

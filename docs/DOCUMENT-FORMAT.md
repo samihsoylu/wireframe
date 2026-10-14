@@ -19,3 +19,7 @@ ProjectStore reads either format and writes version 2 using the existing atomic 
 Ten document tests cover migration, recursive geometry, expansion/overrides, assets/alternates, validation and failure preservation. The complete suite now has 55 passing tests, including recursive workspace and live app workflow checks. Clippy passes with warnings denied.
 
 The read-only check_migration example passed against five saved native test documents, including the live editor's derived controls. It verifies order, geometry, text, round trips and unchanged source bytes. A native macOS nested-edit/save/close/reopen check also passed; see RECURSIVE-EDITOR.md. Full rendering fidelity and other-platform runtime checks remain open.
+
+Empty existing definitions resolve to real empty groups with disposable component-label metadata; canonical instances and overrides remain unchanged. Empty groups measure150×150 and count as visible paint units. Detach/copy remove derived component metadata. Old explicit orders that omit only empty groups remain valid, with those placeholders appended to effective drawing order without file mutation. Other missing paths remain invalid. First/last-child edits replace the empty-group paint unit in place. Empty document roots are not group nodes and remain blank.
+
+New ID allocation skips identities still present in component override paths across pages, alternates and definitions. This preserves orphaned child identities even when an imported path is above the stored allocator; loading itself does not rewrite the document.

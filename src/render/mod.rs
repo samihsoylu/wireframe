@@ -140,7 +140,9 @@ impl Scene {
     ) -> Result<(), String> {
         let c = &layer.control;
         let b = c.bounds;
-        if layer.properties.get(crate::document::MISSING_COMPONENT) == Some(&Value::Bool(true)) {
+        let missing =
+            layer.properties.get(crate::document::MISSING_COMPONENT) == Some(&Value::Bool(true));
+        if missing || c.group.is_some() {
             self.primitive(
                 Primitive::Rect {
                     b,
@@ -176,7 +178,16 @@ impl Scene {
                 Primitive::Text {
                     x: b.x + b.w / 2.,
                     y: b.y + b.h / 2. + 5.,
-                    text: "Component not found".into(),
+                    text: if missing {
+                        "Component not found"
+                    } else if layer.properties.get(crate::document::EMPTY_COMPONENT)
+                        == Some(&Value::Bool(true))
+                    {
+                        "Empty component"
+                    } else {
+                        "Empty group"
+                    }
+                    .into(),
                     size: 13.,
                     bold: false,
                     color: [44, 48, 55],

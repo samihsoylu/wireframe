@@ -18,6 +18,7 @@ pub type Properties = BTreeMap<String, Value>;
 pub const FORMAT_VERSION: u32 = 2;
 /// Internal marker on disposable resolved placeholders; canonical instances retain their data.
 pub const MISSING_COMPONENT: &str = "_missing_component";
+pub const EMPTY_COMPONENT: &str = "_empty_component";
 pub const MAX_FILE_BYTES: usize = 64 * 1024 * 1024;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -144,6 +145,15 @@ impl Node {
             content: NodeContent::Group { children },
         }
     }
+    /// Remove derived identity when materializing a resolved group as ordinary content.
+    pub fn clear_empty_component_markers(&mut self) {
+        self.properties.remove(EMPTY_COMPONENT);
+        if let NodeContent::Group { children } = &mut self.content {
+            for child in children {
+                child.clear_empty_component_markers();
+            }
+        }
+    }
     /// Translate immediate children into the parent's coordinate system.
     /// Cropped groups need an explicit layout-aware operation instead.
     pub fn ungroup(self) -> Result<Vec<Node>, String> {
@@ -257,12 +267,38 @@ impl Default for Project {
 }
 impl Project {
     pub fn allocate_id(&mut self) -> Result<Id, String> {
-        let next = self
-            .next_id
+        fn reserved(nodes: &[Node], ids: &mut std::collections::HashSet<Id>) {
+            for node in nodes {
+                match &node.content {
+                    NodeContent::Group { children } => reserved(children, ids),
+                    NodeContent::Instance { overrides, .. } => {
+                        for patch in overrides {
+                            ids.extend(patch.path.iter().copied());
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        // Removed child identities still belong to retained overrides, including imported ones.
+        let mut ids = std::collections::HashSet::new();
+        for page in &self.pages {
+            reserved(&page.content.nodes, &mut ids);
+            for alternate in &page.alternates {
+                reserved(&alternate.content.nodes, &mut ids);
+            }
+        }
+        for definition in &self.definitions {
+            reserved(&definition.content.nodes, &mut ids);
+        }
+        let mut id = self.next_id;
+        while ids.contains(&id) {
+            id = id.checked_add(1).ok_or("Project ID space exhausted")?;
+        }
+        let next = id
             .checked_add(1)
-            .filter(|id| *id < u64::MAX)
+            .filter(|n| *n < u64::MAX)
             .ok_or("Project ID space exhausted")?;
-        let id = self.next_id;
         self.next_id = next;
         Ok(id)
     }
@@ -277,39 +313,95 @@ impl Project {
 }
 
 impl Content {
-    /// Structural paint units: controls and component instances are atomic; groups recurse.
-    pub fn paint_paths(&self) -> Result<Vec<NodePath>, String> {
+    /// Empty groups are visible atomic units. Nonempty groups retain leaf ordering.
+    fn structural_paths(&self) -> Result<(Vec<NodePath>, Vec<NodePath>), String> {
         fn collect(
             nodes: &[Node],
-            prefix: &mut NodePath,
-            out: &mut Vec<NodePath>,
+            path: &mut NodePath,
+            all: &mut Vec<NodePath>,
+            empty: &mut Vec<NodePath>,
         ) -> Result<(), String> {
-            if prefix.len() > MAX_DEPTH {
+            if path.len() > MAX_DEPTH {
                 return Err("Control hierarchy is too deep".into());
             }
-            for n in nodes {
-                prefix.push(n.id);
-                match &n.content {
-                    NodeContent::Group { children } => collect(children, prefix, out)?,
-                    _ => out.push(prefix.clone()),
-                };
-                prefix.pop();
+            for node in nodes {
+                path.push(node.id);
+                match &node.content {
+                    NodeContent::Group { children } if !children.is_empty() => {
+                        collect(children, path, all, empty)?
+                    }
+                    NodeContent::Group { .. } => {
+                        all.push(path.clone());
+                        empty.push(path.clone());
+                    }
+                    _ => all.push(path.clone()),
+                }
+                path.pop();
             }
             Ok(())
         }
-        let mut paths = vec![];
-        collect(&self.nodes, &mut vec![], &mut paths)?;
+        let (mut all, mut empty) = (vec![], vec![]);
+        collect(&self.nodes, &mut vec![], &mut all, &mut empty)?;
+        Ok((all, empty))
+    }
+    pub fn paint_paths(&self) -> Result<Vec<NodePath>, String> {
+        let (paths, empty) = self.structural_paths()?;
         if self.paint_order.is_empty() {
             return Ok(paths);
         }
         let expected: std::collections::BTreeSet<_> = paths.iter().collect();
         let actual: std::collections::BTreeSet<_> = self.paint_order.iter().collect();
-        if paths.len() != self.paint_order.len()
-            || actual.len() != self.paint_order.len()
-            || expected != actual
+        // Older files omitted invisible empty groups. Preserve existing relative order;
+        // their newly visible placeholders are appended without rewriting the file.
+        if actual.len() != self.paint_order.len()
+            || !actual.is_subset(&expected)
+            || expected.difference(&actual).any(|p| !empty.contains(p))
         {
             return Err("Invalid or incomplete paint order".into());
         }
-        Ok(self.paint_order.clone())
+        let mut order = self.paint_order.clone();
+        order.extend(paths.into_iter().filter(|p| !actual.contains(p)));
+        Ok(order)
+    }
+    /// Keep the layer position when a group loses its last child or gains its first.
+    /// Other stale or malformed paths remain validation errors.
+    pub fn repair_empty_order(&mut self, before: &Content) -> Result<(), String> {
+        if self.paint_order.is_empty() {
+            return Ok(());
+        }
+        let (now, new_empty) = self.structural_paths()?;
+        let (_, old_empty) = before.structural_paths()?;
+        for path in old_empty {
+            if !now.contains(&path)
+                && let Some(index) = self.paint_order.iter().position(|p| *p == path)
+            {
+                let children: Vec<_> = now
+                    .iter()
+                    .filter(|p| p.starts_with(&path))
+                    .cloned()
+                    .collect();
+                self.paint_order.remove(index);
+                self.paint_order.retain(|p| !children.contains(p));
+                let index = index.min(self.paint_order.len());
+                self.paint_order.splice(index..index, children);
+            }
+        }
+        let old_order = before.paint_paths()?;
+        for path in new_empty {
+            if self.paint_order.contains(&path) {
+                continue;
+            }
+            let index = old_order
+                .iter()
+                .position(|p| p.starts_with(&path))
+                .and_then(|start| {
+                    old_order[start..]
+                        .iter()
+                        .find_map(|p| self.paint_order.iter().position(|q| q == p))
+                })
+                .unwrap_or(self.paint_order.len());
+            self.paint_order.insert(index, path);
+        }
+        Ok(())
     }
 }

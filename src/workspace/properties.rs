@@ -24,8 +24,9 @@ impl Editor {
         let effective = spec.effective(node, &self.property_context()).ok()?;
         Some((spec, effective))
     }
-    pub(super) fn list_text_baseline(&self, id: Id) -> Option<Properties> {
-        if self.control_properties(id)?.0.id != "list" {
+    pub(super) fn structured_text_baseline(&self, id: Id) -> Option<Properties> {
+        let kind = self.control_properties(id)?.0.id;
+        if !matches!(kind, "list" | "button_bar") {
             return None;
         }
         let snapshot = self.pending.as_ref().map(|(_, s)| s).filter(|s| {
@@ -53,20 +54,21 @@ impl Editor {
             .collect::<Vec<_>>();
         let nodes = children(&resolved, &self.context)?;
         let node = nodes.iter().find(|n| n.id == id)?;
-        if !matches!(&node.content,NodeContent::Control{kind,..} if kind=="list") {
+        if !matches!(&node.content,NodeContent::Control{kind,..} if matches!(kind.as_str(), "list" | "button_bar"))
+        {
             return None;
         }
-        catalog::get("list")?
+        catalog::get(kind)?
             .effective(node, &self.property_context())
             .ok()
     }
     /// Participates in the caller's begin/commit transaction for continuous input.
     pub fn set_control_property(&mut self, id: Id, key: &str, value: Value) -> Result<(), String> {
         if key == "text"
-            && let Some(baseline) = self.list_text_baseline(id)
+            && let Some(baseline) = self.structured_text_baseline(id)
         {
             let Value::Text(text) = value else {
-                return Err("List text must be text".into());
+                return Err("Control text must be text".into());
             };
             let before = self
                 .nodes()
@@ -78,7 +80,11 @@ impl Editor {
                 return Err("Unlock the control before editing its properties".into());
             }
             let mut edited = before.clone();
-            crate::list::apply_text(&mut edited, &text, &baseline)?;
+            if matches!(&edited.content,NodeContent::Control {kind,..} if kind=="button_bar") {
+                crate::button_bar::apply_text(&mut edited, &text, &baseline)?;
+            } else {
+                crate::list::apply_text(&mut edited, &text, &baseline)?;
+            }
             if self.editing_instance() {
                 return self.write_local_node(id, &before, &edited);
             }

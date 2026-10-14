@@ -109,6 +109,7 @@ pub enum Kind {
     CircleButton,
     PointedButton,
     MultilineButton,
+    ButtonBar,
     Browser,
     Phone,
     Panel,
@@ -120,7 +121,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 29] = [
+    pub const ALL: [Kind; 30] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -141,6 +142,7 @@ impl Kind {
         Self::CircleButton,
         Self::PointedButton,
         Self::MultilineButton,
+        Self::ButtonBar,
         Self::Browser,
         Self::Phone,
         Self::Panel,
@@ -173,6 +175,7 @@ impl Kind {
             Self::CircleButton => "Circle button",
             Self::PointedButton => "Pointed button",
             Self::MultilineButton => "Multiline button",
+            Self::ButtonBar => "Button bar",
             Self::Browser => "Browser",
             Self::Phone => "Phone",
             Self::Panel => "Panel",
@@ -192,6 +195,7 @@ impl Kind {
             | Self::CircleButton
             | Self::PointedButton
             | Self::MultilineButton
+            | Self::ButtonBar
             | Self::TextInput
             | Self::TextArea
             | Self::Checkbox
@@ -210,6 +214,7 @@ impl Kind {
             Self::CircleButton => (48., 48.),
             Self::PointedButton => (69., 27.),
             Self::MultilineButton => (118., 66.),
+            Self::ButtonBar => (159., 21.),
             Self::IconLabel => (65., 63.),
             Self::Label | Self::Link => (140., 28.),
             Self::Heading => (300., 48.),
@@ -233,6 +238,7 @@ impl Kind {
             Self::Button | Self::PointedButton => "Button",
             Self::IconLabel => "Icon Name",
             Self::MultilineButton => "Multiline Button\nSecond line of text",
+            Self::ButtonBar => "One, Two, Three",
             Self::Label => "Some text",
             Self::Heading => "Your next great idea",
             Self::Paragraph => "Describe the idea here.\nKeep it simple and make it clear.",

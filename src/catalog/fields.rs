@@ -40,6 +40,7 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
         "breadcrumbs" => &["bold", "font_size", "italic", "text", "underline"],
         "browser" => &["border", "fill", "text", "value"],
         "button_bar" => &[
+            "row_links",
             "bold",
             "font_size",
             "italic",

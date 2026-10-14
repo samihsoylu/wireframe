@@ -909,6 +909,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     };
     let text = match c.id {
         "button" | "pointed_button" => "Button",
+        "button_bar" => "One, Two, Three",
         "icon_label" => "Icon Name",
         "multiline_button" => "Multiline Button\nSecond line of text",
         "dropdown" => "Dropdown",
@@ -1031,7 +1032,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         c.properties.push(number(
             "selected_index",
             "Selection",
-            -1.,
+            if c.id == "button_bar" { 0. } else { -1. },
             -1.,
             10000.,
             true,
@@ -1164,6 +1165,14 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
                 "bottom",
             ));
         }
+    }
+    if c.id == "button_bar" {
+        c.properties.push(prop(
+            "row_links",
+            "Segment links",
+            PropertyType::Links,
+            Value::Links(vec![]),
+        ));
     }
     if c.id == "list" {
         if let Some(text) = c.properties.iter_mut().find(|p| p.key == "text_color") {

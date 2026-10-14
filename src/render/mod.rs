@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 //! Shared positioned drawing data for the canvas and vector/raster exports.
+mod button_bar;
 mod choice;
 mod circle_button;
 mod control_icons;
@@ -291,6 +292,9 @@ impl Scene {
         }
         if c.kind == Kind::CircleButton {
             return self.circle_button(layer, sketch, fonts, rasters);
+        }
+        if c.kind == Kind::ButtonBar {
+            return self.button_bar(layer, sketch, fonts);
         }
         if c.kind == Kind::MultilineButton {
             return self.multiline_button(layer, sketch, fonts, rasters);

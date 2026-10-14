@@ -10,7 +10,8 @@ use wireframe::{
 // catalog's full field inventory remains separate from completed rendering.
 fn supported(kind: &str, key: &str) -> bool {
     match key {
-        "row_links" | "row_icons" => kind == "list",
+        "row_links" => matches!(kind, "list" | "button_bar"),
+        "row_icons" => kind == "list",
         "icon" | "icon_size" | "icon_rotation" => {
             matches!(
                 kind,
@@ -51,7 +52,7 @@ fn supported(kind: &str, key: &str) -> bool {
             "text_input" | "list" | "icon" | "icon_label" | "circle_button" | "pointed_button"
         ),
         "background_opacity" => matches!(kind, "text_input" | "text_area" | "multiline_button"),
-        "selected_index" => matches!(kind, "table" | "dropdown" | "list"),
+        "selected_index" => matches!(kind, "table" | "dropdown" | "list" | "button_bar"),
         "shape" | "search_icon" | "microphone_icon" => kind == "search",
         "fill" => matches!(
             kind,
@@ -124,6 +125,7 @@ impl WireframeApp {
                 | "radio"
                 | "table"
                 | "list"
+                | "button_bar"
         ) {
             return false;
         }
@@ -191,15 +193,15 @@ impl WireframeApp {
                         }
                         (PropertyType::Links, Value::Links(links)) => {
                             let source=match values.get("text") {Some(Value::Text(s))=>s.as_str(),_=>""};
-                            let labels:Vec<_>=source.split('\n').collect();
+                            let labels:Vec<_>=if spec.id=="button_bar" {wireframe::button_bar::labels(source)} else {source.split('\n').collect()};
                             links.resize(labels.len(),None);
                             // Keep partial URL input outside document history until Apply.
-                            egui::CollapsingHeader::new("Edit row links").show(ui,|ui| {
+                            egui::CollapsingHeader::new(if spec.id=="button_bar" {"Edit segment links"} else {"Edit row links"}).show(ui,|ui| {
                                 egui::ScrollArea::vertical().max_height(280.).show(ui,|ui| {
                                     for (row,label) in labels.iter().enumerate() {
                                         ui.push_id(row,|ui| {
                                             let label=wireframe::rich_text::RichText::parse(label,false).display_text(false);
-                                            ui.label(if label.is_empty(){format!("Row {} (empty)",row+1)}else{label});
+                                            ui.label(if label.is_empty(){format!("{} {} (empty)",if spec.id=="button_bar" {"Segment"} else {"Row"},row+1)}else{label});
                                             let key=ui.make_persistent_id(("link-draft",id,self.editor.surface_id(),&self.editor.context));
                                             let saved=links[row].clone();
                                             let cached=ui.ctx().data_mut(|d|d.get_temp::<(Option<Link>,Option<Link>)>(key));
@@ -230,14 +232,15 @@ impl WireframeApp {
                             let r = ui.add(egui::TextEdit::multiline(v).desired_rows(4).desired_width(f32::INFINITY));
                             finish = r.lost_focus();
                         }
-                        (PropertyType::Number {..}, Value::Number(v)) if key == "selected_index" && spec.id == "list" => {
+                        (PropertyType::Number {..}, Value::Number(v)) if key == "selected_index" && matches!(spec.id, "list" | "button_bar") => {
                             let source=match values.get("text") {Some(Value::Text(s))=>s.as_str(),_=>""};
-                            let labels=wireframe::list::labels(source,values.get("header")==Some(&Value::Bool(true))).iter().map(|s|wireframe::rich_text::RichText::parse(s,false).display_text(false)).collect::<Vec<_>>();
-                            let current=if *v<0. {"None"} else {labels.get(*v as usize).map_or("No matching row",String::as_str)};
-                            egui::ComboBox::from_id_salt("selection").selected_text(if current.is_empty(){"(Empty row)"}else{current}).show_ui(ui,|ui| {
+                            let raw=if spec.id=="button_bar" {wireframe::button_bar::labels(source)} else {wireframe::list::labels(source,values.get("header")==Some(&Value::Bool(true)))};
+                            let labels=raw.iter().map(|s|wireframe::rich_text::RichText::parse(s,false).display_text(false)).collect::<Vec<_>>();
+                            let current=if *v<0. {"None"} else {labels.get(*v as usize).map_or("No matching item",String::as_str)};
+                            egui::ComboBox::from_id_salt("selection").selected_text(if current.is_empty(){"(Empty item)"}else{current}).show_ui(ui,|ui| {
                                 if ui.selectable_value(v,-1.,"None").clicked(){ui.close();}
                                 for (index,label) in labels.iter().enumerate() {
-                                    if ui.selectable_value(v,index as f64,if label.is_empty(){"(Empty row)"}else{label}).clicked(){ui.close();}
+                                    if ui.selectable_value(v,index as f64,if label.is_empty(){"(Empty item)"}else{label}).clicked(){ui.close();}
                                 }
                             });
                             finish=value!=original;

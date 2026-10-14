@@ -220,6 +220,7 @@ fn control(node: &LayoutNode) -> Control {
         "circle_button" => Kind::CircleButton,
         "pointed_button" => Kind::PointedButton,
         "multiline_button" => Kind::MultilineButton,
+        "button_bar" => Kind::ButtonBar,
         "browser" => Kind::Browser,
         "phone" => Kind::Phone,
         "panel" | "window" => Kind::Panel,

@@ -280,6 +280,20 @@ impl<M: TextMeasurer> Engine<'_, M> {
             bold: boolean(props, "bold"),
             italic: boolean(props, "italic"),
         };
+        if kind == "button_bar" {
+            let bar = crate::button_bar::ButtonBar::parse(text)?;
+            let metrics = bar.measure(self.measurer, style, self.project.settings.sketch);
+            let w = match width {
+                Dimension::Auto => metrics.width,
+                Dimension::Fixed(w) => w,
+            };
+            let h = match height {
+                Dimension::Auto => metrics.height,
+                Dimension::Fixed(h) => h,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         if kind == "multiline_button" {
             let (title, secondary, second_style) = multiline_text(text, style);
             let measured = self.measurer.measure_rich(&title, style, None, false);

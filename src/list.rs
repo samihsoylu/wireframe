@@ -129,6 +129,12 @@ pub fn remap_rows<T: Clone>(old: &str, new: &str, values: &[Option<T>]) -> Vec<O
     }
     let old: Vec<_> = old.split('\n').collect();
     let new: Vec<_> = new.split('\n').collect();
+    remap_labels(&old, &new, values)
+}
+pub fn remap_labels<T: Clone>(old: &[&str], new: &[&str], values: &[Option<T>]) -> Vec<Option<T>> {
+    if values.is_empty() {
+        return vec![];
+    }
     let same_count = old.len() == new.len();
     let mut queues =
         std::collections::HashMap::<&str, std::collections::VecDeque<Option<T>>>::new();

@@ -3832,6 +3832,7 @@ dependencies = [
 name = "wireframe"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "directories",
  "eframe",
  "image",
@@ -3840,6 +3841,7 @@ dependencies = [
  "rfd",
  "serde",
  "serde_json",
+ "skrifa",
  "tempfile",
 ]
 

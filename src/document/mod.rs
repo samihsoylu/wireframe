@@ -317,6 +317,8 @@ pub struct Project {
     pub definitions: Vec<Definition>,
     #[serde(default)]
     pub assets: Vec<Asset>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font: Option<std::sync::Arc<crate::fonts::ProjectFont>>,
 }
 impl Default for Project {
     fn default() -> Self {
@@ -338,6 +340,7 @@ impl Default for Project {
             }],
             definitions: vec![],
             assets: vec![],
+            font: None,
         }
     }
 }

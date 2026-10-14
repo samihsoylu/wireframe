@@ -55,7 +55,7 @@ impl Default for Editor {
 impl Editor {
     pub fn new(document: Project) -> Self {
         let fonts = eframe::egui::Context::default();
-        crate::fonts::install(&fonts);
+        crate::fonts::install_project(&fonts, document.font.as_deref());
         Self {
             page: document.pages[0].id,
             definition: None,

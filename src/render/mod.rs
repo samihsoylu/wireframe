@@ -71,6 +71,7 @@ pub struct Scene {
     pub bounds: Bounds,
     pub items: Vec<Item>,
     pub links: Vec<LinkRegion>,
+    pub font: Option<std::sync::Arc<crate::fonts::ProjectFont>>,
 }
 #[derive(Clone, Copy)]
 pub struct TextBox {
@@ -119,6 +120,7 @@ impl Scene {
             bounds,
             items: vec![],
             links: vec![],
+            font: None,
         };
         let mut rasters = rasters::Rasters::new(assets);
         for layer in layers {

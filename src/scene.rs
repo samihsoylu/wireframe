@@ -577,19 +577,19 @@ pub fn png_svg(svg: &str) -> Result<Vec<u8>, String> {
     png_svg_with_attribution(svg, None)
 }
 pub fn png_svg_with_attribution(svg: &str, attribution: Option<&str>) -> Result<Vec<u8>, String> {
+    png_svg_with_fonts(svg, attribution, None)
+}
+pub fn png_svg_with_fonts(
+    svg: &str,
+    attribution: Option<&str>,
+    font: Option<&crate::fonts::ProjectFont>,
+) -> Result<Vec<u8>, String> {
     let mut options = resvg::usvg::Options::default();
     // Use the same bundled fonts as the canvas, including on minimal Linux systems.
     for font in eframe::egui::FontDefinitions::default().font_data.values() {
         options.fontdb_mut().load_font_data(font.font.to_vec());
     }
-    for bytes in [
-        crate::fonts::REGULAR,
-        crate::fonts::BOLD,
-        crate::fonts::ITALIC,
-        crate::fonts::BOLD_ITALIC,
-    ] {
-        options.fontdb_mut().load_font_data(bytes.to_vec());
-    }
+    crate::fonts::install_export(options.fontdb_mut(), font);
     options.fontdb_mut().set_sans_serif_family("Ubuntu");
     let tree = resvg::usvg::Tree::from_str(svg, &options).map_err(|e| e.to_string())?;
     let size = tree.size().to_int_size();

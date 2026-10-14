@@ -98,6 +98,7 @@ impl TryFrom<legacy::Document> for Project {
             pages,
             definitions: vec![],
             assets: vec![],
+            font: None,
         };
         project.validate()?;
         Ok(project)

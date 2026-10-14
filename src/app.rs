@@ -2,6 +2,7 @@
 // Copyright 2026 Wireframe contributors
 
 mod components;
+mod fonts;
 mod icon_picker;
 mod images;
 mod previews;
@@ -54,6 +55,8 @@ enum Drag {
 }
 pub struct WireframeApp {
     editor: Editor,
+    installed_font: Option<std::sync::Arc<wireframe::fonts::ProjectFont>>,
+    font_import: Option<fonts::FontImport>,
     store: Box<dyn ProjectRepository>,
     file: Option<PathBuf>,
     quick: String,
@@ -120,6 +123,8 @@ impl WireframeApp {
         let recovery_offer = recovery.as_ref().and_then(|p| ProjectStore.load(p).ok());
         Self {
             editor: Editor::default(),
+            installed_font: None,
+            font_import: None,
             store: Box::new(ProjectStore),
             file: None,
             quick: String::new(),
@@ -690,6 +695,9 @@ impl WireframeApp {
                         self.editor
                             .edit("Change style", |e| e.document.settings.sketch = sketch);
                     }
+                    if ui.button("Project font…").clicked() {
+                        self.font_import = Some(fonts::FontImport::default());
+                    }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         self.quick_add_ui(ui);
                         if ui
@@ -872,8 +880,11 @@ impl WireframeApp {
                                         ui.painter().rect_filled(r, 3, Color32::from_gray(222));
                                     }
                                     let painter = ui.painter().with_clip_rect(r);
-                                    match self.previews.scene(kind, &self.editor.document.settings)
-                                    {
+                                    match self.previews.scene(
+                                        kind,
+                                        &self.editor.document.settings,
+                                        &self.editor.document.font,
+                                    ) {
                                         Ok(drawing) => {
                                             let b = drawing.bounds;
                                             let scale =
@@ -1890,6 +1901,13 @@ impl eframe::App for WireframeApp {
         self.shortcuts(&ctx);
         let cropping = self.image_crop.is_some();
         self.toolbar(ui);
+        self.font_dialog(&ctx);
+        if self.installed_font != self.editor.document.font {
+            wireframe::fonts::install_project(&ctx, self.editor.document.font.as_deref());
+            self.installed_font = self.editor.document.font.clone();
+            ctx.request_discard("Project font changed");
+            return;
+        }
         if !self.present {
             if self.show_library {
                 self.library(ui);

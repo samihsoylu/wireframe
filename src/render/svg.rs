@@ -2,24 +2,24 @@
 // Copyright 2026 Wireframe contributors
 use super::*;
 use crate::scene::{color, escape};
-use std::sync::LazyLock;
-static EMBEDDED_FONTS: LazyLock<String> = LazyLock::new(|| {
+fn embedded_fonts(font: Option<&crate::fonts::ProjectFont>) -> String {
     let mut css = String::from("<style>");
-    for (weight, style, data) in [
-        (400, "normal", crate::fonts::REGULAR),
-        (700, "normal", crate::fonts::BOLD),
-        (400, "italic", crate::fonts::ITALIC),
-        (700, "italic", crate::fonts::BOLD_ITALIC),
-    ] {
-        css.push_str(&format!("@font-face{{font-family:'Comic Neue';font-weight:{weight};font-style:{style};src:url(data:font/ttf;base64,{}) format('truetype');}}",base64(data)));
+    let family = crate::fonts::export_family(font);
+    for (index, data) in crate::fonts::faces(font).into_iter().enumerate() {
+        let weight = if index % 2 == 1 { 700 } else { 400 };
+        let style = if index >= 2 { "italic" } else { "normal" };
+        let (media, format) = if data.starts_with(b"OTTO") {
+            ("font/otf", "opentype")
+        } else {
+            ("font/ttf", "truetype")
+        };
+        css.push_str(&format!("@font-face{{font-family:'{family}';font-weight:{weight};font-style:{style};src:url(data:{media};base64,{}) format('{format}');}}",base64(data)));
     }
     css.push_str("</style><metadata>");
-    css.push_str(&escape(include_str!(
-        "../../assets/fonts/comic-neue/OFL.txt"
-    )));
+    css.push_str(&escape(crate::fonts::notices(font)));
     css.push_str("</metadata>");
     css
-});
+}
 impl Scene {
     pub fn svg(&self) -> String {
         let b = self.bounds;
@@ -30,7 +30,7 @@ impl Scene {
             b.x - 24.,
             b.y - 24.,
             escape(&self.title),
-            *EMBEDDED_FONTS,
+            embedded_fonts(self.font.as_deref()),
             b.x - 24.,
             b.y - 24.
         );
@@ -60,7 +60,7 @@ impl Scene {
     },
     Drawing::Image { bounds: b, data } => out.push_str(&format!("<image x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" preserveAspectRatio=\"none\" href=\"data:image/png;base64,{}\"/>", b.x,b.y,b.w,b.h,base64(&data.png))),
     Drawing::Primitive(p)=>out.push_str(&crate::scene::primitive_svg(p.clone())),
-    Drawing::Glyph(g)=>out.push_str(&format!("<text x=\"{}\" y=\"{}\" font-family=\"Comic Neue,Ubuntu,sans-serif\" font-size=\"{}\" font-weight=\"{}\" font-style=\"{}\" fill=\"{}\" fill-opacity=\"{}\" xml:space=\"preserve\">{}</text>",g.x,g.baseline,g.size,if g.bold{700}else{400},if g.italic{"italic"}else{"normal"},color([g.color[0],g.color[1],g.color[2]]),g.color[3]as f32/255.,escape(&g.text))),
+    Drawing::Glyph(g)=>out.push_str(&format!("<text x=\"{}\" y=\"{}\" font-family=\"{},Ubuntu,sans-serif\" font-size=\"{}\" font-weight=\"{}\" font-style=\"{}\" fill=\"{}\" fill-opacity=\"{}\" xml:space=\"preserve\">{}</text>",g.x,g.baseline,crate::fonts::export_family(self.font.as_deref()),g.size,if g.bold{700}else{400},if g.italic{"italic"}else{"normal"},color([g.color[0],g.color[1],g.color[2]]),g.color[3]as f32/255.,escape(&g.text))),
    }
             if item.opacity != 1. {
                 out.push_str("</g>");
@@ -84,7 +84,7 @@ impl Scene {
             .iter()
             .any(|item| matches!(item.drawing, Drawing::Icon { .. }))
             .then_some(crate::icons::ATTRIBUTION);
-        crate::scene::png_svg_with_attribution(&self.svg(), attribution)
+        crate::scene::png_svg_with_fonts(&self.svg(), attribution, self.font.as_deref())
     }
 }
 fn base64(bytes: &[u8]) -> String {

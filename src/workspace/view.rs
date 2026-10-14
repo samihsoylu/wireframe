@@ -25,6 +25,9 @@ impl Editor {
     pub fn layout_page(&self, id: Id) -> Result<Layout, String> {
         let mut cache = self.cache.borrow_mut();
         if cache.project.as_ref() != Some(&self.document) {
+            if cache.project.as_ref().and_then(|p| p.font.as_ref()) != self.document.font.as_ref() {
+                crate::fonts::install_project(&self.fonts, self.document.font.as_deref());
+            }
             cache.project = Some(self.document.clone());
             cache.pages.clear();
             cache.scenes.clear();
@@ -74,6 +77,9 @@ impl Editor {
             );
         });
         output.drop_without_applying_deltas();
+        if let Ok(scene) = &mut result {
+            scene.font = self.document.font.clone();
+        }
         self.cache.borrow_mut().scenes.insert(id, result.clone());
         result
     }

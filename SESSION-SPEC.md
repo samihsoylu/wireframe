@@ -293,3 +293,11 @@ Original ui_text captions now cover project titles, thumbnail/list page names, l
 All219 tests pass, along with formatting and all-target Clippy. The macOS development bundle is rebuilt and signature-verified. Native screenshots confirm visible Hebrew/Arabic, joined color emoji and flags in toolbar/page captions, with long titles clipped to an ellipsis and Help/Save/Present remaining visible. List/presentation views and presentation page/Back controls work. Saving retains exact full names and all other project values; full process reopen was not repeated for this display-only checkpoint.
 
 Remaining caption migration includes page-link combo boxes and ancillary dialogs. Native Windows/Linux, screen readers, complete pixel fidelity, shared font-cache/large-document performance, IME, history coalescence and broader controls/recovery/release acceptance remain open. See docs/UI-TEXT.md. GPL-3.0-only and external investigation separation remain intact; overall goal active.
+
+## Unicode destination and item selectors
+
+Page-link, segment/row-link and selected-item menus now paint shaped captions while retaining standard combo-box roles, arrows and popup behavior. Row/segment labels, project-asset choices and current font/file names use the bounded caption path. Whole-control link selection closes explicitly after pointer, keyboard or accessibility activation. Document schema and link semantics are unchanged.
+
+All 220 tests, formatting and all-target Clippy pass. The signed macOS development bundle matches the tested build UUID. Native acceptance covers multilingual destination choices, assignment/clear, undo/redo, saved-link full process reopen, and control-link presentation navigation. A multilingual button bar additionally verifies segment-link assignment, selected-index captions, saved values and presentation return navigation. Font/asset dialogs share the tested primitives but were not separately exercised natively. No Windows/Linux or screen-reader acceptance is claimed.
+
+The next substantial work returns to missing control families and their observed editing/rendering behavior. Remaining text, recovery, cross-platform backend and release gaps above remain open. Overall goal active; GPL-3.0-only and external research separation unchanged.

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 use eframe::egui::{self, Color32};
-use wireframe::text_entry::TextInput;
 use wireframe::{
     document::{Asset, IconSource},
     icons,
 };
+use wireframe::{text_entry::TextInput, ui_text};
 
 pub(super) fn choice(ui: &mut egui::Ui, value: &mut Option<IconSource>, assets: &[Asset]) -> bool {
     let mut import = false;
@@ -77,7 +77,7 @@ pub(super) fn choice(ui: &mut egui::Ui, value: &mut Option<IconSource>, assets: 
                             let asset = found[row];
                             ui.horizontal(|ui| {
                                 preview(ui,asset,32.);
-                                if ui.selectable_label(matches!(value,Some(IconSource::Asset(id)) if *id==asset.id), &asset.name).clicked() {
+                                if ui_text::selectable(ui,matches!(value,Some(IconSource::Asset(id)) if *id==asset.id), &asset.name, ui.available_width()).clicked() {
                                     *value = Some(IconSource::Asset(asset.id)); ui.close();
                                 }
                             });

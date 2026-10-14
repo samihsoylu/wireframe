@@ -26,14 +26,18 @@ impl WireframeApp {
             .resizable(false)
             .default_width(440.)
             .show(ctx, |ui| {
-                ui.label(format!(
-                    "Current: {}",
-                    self.editor
-                        .document
-                        .font
-                        .as_ref()
-                        .map_or("Comic Neue", |f| f.name())
-                ));
+                ui_text::label(
+                    ui,
+                    &format!(
+                        "Current: {}",
+                        self.editor
+                            .document
+                            .font
+                            .as_ref()
+                            .map_or("Comic Neue", |f| f.name())
+                    ),
+                    ui.available_width(),
+                );
                 ui.label(
                     "Imported fonts are saved in this project and used for its canvas and exports.",
                 );
@@ -71,11 +75,15 @@ impl WireframeApp {
                                 Err(error) => draft.error = Some(error),
                             }
                         }
-                        ui.label(if draft.filenames[i].is_empty() {
-                            "No file chosen"
-                        } else {
-                            &draft.filenames[i]
-                        });
+                        ui_text::label(
+                            ui,
+                            if draft.filenames[i].is_empty() {
+                                "No file chosen"
+                            } else {
+                                &draft.filenames[i]
+                            },
+                            ui.available_width(),
+                        );
                     });
                 }
                 ui.horizontal(|ui| {

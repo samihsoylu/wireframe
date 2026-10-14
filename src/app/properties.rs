@@ -208,7 +208,7 @@ impl WireframeApp {
                                     for (row,label) in labels.iter().enumerate() {
                                         ui.push_id(row,|ui| {
                                             let label=wireframe::rich_text::RichText::parse(label,false).display_text(false);
-                                            ui.label(if label.is_empty(){format!("Row {} (empty)",row+1)}else{label});
+                                            ui_text::label(ui,&if label.is_empty(){format!("Row {} (empty)",row+1)}else{label},ui.available_width());
                                             let before=icons[row].clone();
                                             if super::icon_picker::choice(ui,&mut icons[row],&self.editor.document.assets) {import_row = Some(row);}
                                             finish |= before != icons[row];
@@ -228,18 +228,18 @@ impl WireframeApp {
                                     for (row,label) in labels.iter().enumerate() {
                                         ui.push_id(row,|ui| {
                                             let label=wireframe::rich_text::RichText::parse(label,false).display_text(false);
-                                            ui.label(if label.is_empty(){format!("{} {} (empty)",if matches!(spec.id,"tabs"|"vertical_tabs") {"Tab"} else if spec.id=="button_bar" {"Segment"} else if matches!(spec.id,"breadcrumbs"|"link_bar") {"Item"} else {"Row"},row+1)}else{label});
+                                            ui_text::label(ui,&if label.is_empty(){format!("{} {} (empty)",if matches!(spec.id,"tabs"|"vertical_tabs") {"Tab"} else if spec.id=="button_bar" {"Segment"} else if matches!(spec.id,"breadcrumbs"|"link_bar") {"Item"} else {"Row"},row+1)}else{label},ui.available_width());
                                             let key=ui.make_persistent_id(("link-draft",id,self.editor.surface_id(),&self.editor.context));
                                             let saved=links[row].clone();
                                             let cached=ui.ctx().data_mut(|d|d.get_temp::<(Option<Link>,Option<Link>)>(key));
                                             let mut draft=cached.filter(|(baseline,_)|baseline==&saved).map_or(saved.clone(),|(_,draft)|draft);
                                             let title=match &draft {None=>"No link".into(),Some(Link::Back)=>"Go back".into(),Some(Link::Url(_))=>"Web address".into(),Some(Link::Page(id))=>self.editor.document.pages.iter().find(|p|p.id==*id).map_or("Missing page".into(),|p|p.name.clone())};
-                                            egui::ComboBox::from_id_salt("target").selected_text(title).show_ui(ui,|ui| {
-                                                if ui.selectable_value(&mut draft,None,"No link").clicked(){ui.close();}
+                                            ui_text::combo_box(ui,"target",&title,|ui| {
+                                                if ui_text::selectable_value(ui,&mut draft,None,"No link").clicked(){ui.close();}
                                                 for page in &self.editor.document.pages {
-                                                    if ui.selectable_value(&mut draft,Some(Link::Page(page.id)),&page.name).clicked(){ui.close();}
+                                                    if ui_text::selectable_value(ui,&mut draft,Some(Link::Page(page.id)),&page.name).clicked(){ui.close();}
                                                 }
-                                                if ui.selectable_value(&mut draft,Some(Link::Back),"Go back").clicked(){ui.close();}
+                                                if ui_text::selectable_value(ui,&mut draft,Some(Link::Back),"Go back").clicked(){ui.close();}
                                                 if ui.selectable_label(matches!(draft,Some(Link::Url(_))),"Web address…").clicked(){if !matches!(draft,Some(Link::Url(_))){draft=Some(Link::Url(String::new()));}ui.close();}
                                             });
                                             let apply=if let Some(Link::Url(url))=&mut draft {
@@ -264,10 +264,10 @@ impl WireframeApp {
                             let raw:Vec<String>=if matches!(spec.id,"tabs"|"vertical_tabs") {wireframe::tabs::labels(source,spec.id=="vertical_tabs")} else if spec.id=="link_bar" {wireframe::navigation::labels(source,false)} else if spec.id=="button_bar" {wireframe::button_bar::labels(source).into_iter().map(str::to_owned).collect()} else {wireframe::list::labels(source,values.get("header")==Some(&Value::Bool(true))).into_iter().map(str::to_owned).collect()};
                             let labels=raw.iter().map(|s|wireframe::rich_text::RichText::parse(s,false).display_text(false)).collect::<Vec<_>>();
                             let current=if *v<0. {"None"} else {labels.get(*v as usize).map_or("No matching item",String::as_str)};
-                            egui::ComboBox::from_id_salt("selection").selected_text(if current.is_empty(){"(Empty item)"}else{current}).show_ui(ui,|ui| {
-                                if ui.selectable_value(v,-1.,"None").clicked(){ui.close();}
+                            ui_text::combo_box(ui,"selection",if current.is_empty(){"(Empty item)"}else{current},|ui| {
+                                if ui_text::selectable_value(ui,v,-1.,"None").clicked(){ui.close();}
                                 for (index,label) in labels.iter().enumerate() {
-                                    if ui.selectable_value(v,index as f64,if label.is_empty(){"(Empty item)"}else{label}).clicked(){ui.close();}
+                                    if ui_text::selectable_value(ui,v,index as f64,if label.is_empty(){"(Empty item)"}else{label}).clicked(){ui.close();}
                                 }
                             });
                             finish=value!=original;
@@ -276,9 +276,9 @@ impl WireframeApp {
                             let source = match values.get("text") {Some(Value::Text(s)) => s.as_str(),_=>""};
                             let labels = wireframe::dropdown::selectable_labels(source);
                             let current = labels.get(*v as usize).copied().unwrap_or("No matching item");
-                            egui::ComboBox::from_id_salt("selection").selected_text(if current.is_empty() {"(Empty title)"} else {current}).show_ui(ui, |ui| {
+                            ui_text::combo_box(ui,"selection",if current.is_empty() {"(Empty title)"} else {current}, |ui| {
                                 for (index,label) in labels.iter().enumerate() {
-                                    if ui.selectable_value(v,index as f64,if label.is_empty() {"(Empty title)"} else {label}).clicked() {ui.close();}
+                                    if ui_text::selectable_value(ui,v,index as f64,if label.is_empty() {"(Empty title)"} else {label}).clicked() {ui.close();}
                                 }
                             });
                             finish = value != original;

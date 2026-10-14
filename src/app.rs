@@ -1121,7 +1121,8 @@ if c.kind==Kind::Tabs {ui.small("Separate tabs with commas.");}
                     }
                     if !self.editor.editing_instance() {ui.checkbox(&mut c.locked,"Lock position and content");}
                     if c.group.is_none() && !matches!(c.kind, Kind::ButtonBar | Kind::Breadcrumbs | Kind::LinkBar | Kind::Tabs | Kind::VerticalTabs) {
-                    egui::ComboBox::from_id_salt("page-link").selected_text(c.link.and_then(|id|self.editor.document.pages.iter().find(|p|p.id==id).map(|p|p.name.clone())).unwrap_or("No page link".into())).show_ui(ui,|ui|{ui.selectable_value(&mut c.link,None,"No page link");for p in &self.editor.document.pages {ui.selectable_value(&mut c.link,Some(p.id),&p.name);}});
+                    let link_caption=c.link.and_then(|id|self.editor.document.pages.iter().find(|p|p.id==id).map(|p|p.name.clone())).unwrap_or("No page link".into());
+                    ui_text::combo_box(ui,"page-link",&link_caption,|ui|{if ui_text::selectable_value(ui,&mut c.link,None,"No page link").clicked(){ui.close();}for p in &self.editor.document.pages {if ui_text::selectable_value(ui,&mut c.link,Some(p.id),&p.name).clicked(){ui.close();}}});
                     } else if self.editor.is_group(c.id) && ui.button("Edit group contents").clicked(){self.editor.enter(c.id);}
                     if c!=original {self.editor.begin("Edit properties");if original.locked {c.bounds=original.bounds;c.text=original.text;c.font_size=original.font_size;c.bold=original.bold;c.fill=original.fill;c.checked=original.checked;c.link=original.link;}
                         self.editor.update_control(c);}

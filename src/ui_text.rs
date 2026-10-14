@@ -260,6 +260,56 @@ pub fn selectable(ui: &mut Ui, selected: bool, source: &str, width: f32) -> Resp
     response
 }
 
+/// Standard combo-box popup and keyboard behavior, with a shaped caption in
+/// the text area. The native arrow and full accessible value are retained.
+pub fn combo_box<R>(
+    ui: &mut Ui,
+    salt: impl egui::AsIdSalt,
+    selected: &str,
+    contents: impl FnOnce(&mut Ui) -> R,
+) -> egui::InnerResponse<Option<R>> {
+    let width = ui.available_width().clamp(40., 300.);
+    let result = egui::ComboBox::from_id_salt(salt)
+        .width(width)
+        .selected_text("")
+        .show_ui(ui, contents);
+    let mut rect = result.response.rect.shrink2(ui.spacing().button_padding);
+    rect.max.x -= ui.spacing().icon_width + ui.spacing().icon_spacing;
+    let size = egui::TextStyle::Button.resolve(ui.style()).size;
+    let visuals = if egui::ComboBox::is_open(ui.ctx(), result.response.id) {
+        &ui.visuals().widgets.open
+    } else {
+        ui.style().interact(&result.response)
+    };
+    paint(ui, rect, selected, size, visuals.text_color(), false);
+    result.response.widget_info(|| {
+        let mut info = egui::WidgetInfo::new(egui::WidgetType::ComboBox);
+        info.enabled = ui.is_enabled();
+        info.current_text_value = Some(selected.to_owned());
+        info
+    });
+    result
+}
+
+pub fn selectable_value<T: PartialEq>(
+    ui: &mut Ui,
+    value: &mut T,
+    option: T,
+    caption: &str,
+) -> Response {
+    let mut response = selectable(
+        ui,
+        *value == option,
+        caption,
+        ui.available_width().clamp(40., 300.),
+    );
+    if response.clicked() && *value != option {
+        *value = option;
+        response.mark_changed();
+    }
+    response
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

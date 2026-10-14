@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     e.add(Kind::Button, 50., 50.);
     let back = *e.selection.iter().next().unwrap();
     e.set_control_property(back, "text", Value::Text("Back to choices".into()))?;
-    e.set_control_property(back, "link", Value::Link(Link::Back))?;
+    e.set_control_property(back, "link", Value::Link(Link::Page(first)))?;
     e.switch_page(first);
     for i in 0..12 {
         let kind = if matches!(i, 1 | 4 | 7 | 9 | 11) {

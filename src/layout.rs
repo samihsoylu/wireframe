@@ -315,6 +315,20 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(w, h)?;
             return Ok((w, h));
         }
+        if matches!(kind, "horizontal_slider" | "vertical_slider") {
+            let vertical = kind == "vertical_slider";
+            let length = match if vertical { height } else { width } {
+                Dimension::Auto => 33.,
+                Dimension::Fixed(n) => n,
+            };
+            let (w, h) = if vertical {
+                (12., length)
+            } else {
+                (length, 12.)
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         if matches!(kind, "calendar" | "date_picker" | "time_picker") {
             let default = if kind == "calendar" {
                 (96., 96.)

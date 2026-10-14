@@ -130,6 +130,8 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
         | Kind::Accordion
         | Kind::DatePicker
         | Kind::TimePicker
+        | Kind::HorizontalSlider
+        | Kind::VerticalSlider
         | Kind::Alert
         | Kind::AppBar
         | Kind::FieldSet

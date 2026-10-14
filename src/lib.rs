@@ -48,3 +48,5 @@ pub mod smartphone;
 pub mod tablet;
 
 pub mod pickers;
+
+pub mod sliders;

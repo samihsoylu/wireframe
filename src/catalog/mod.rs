@@ -59,6 +59,7 @@ pub enum DefaultValue {
     ButtonFill,
     SearchInk,
     FormInk,
+    SliderInk,
     LinkColor,
 }
 #[derive(Clone, Debug)]
@@ -169,6 +170,11 @@ impl PropertySpec {
                 [128, 128, 139, 255]
             } else {
                 [51, 51, 51, 255]
+            }),
+            DefaultValue::SliderInk => Value::Color(if context.sketch {
+                [0, 0, 0, 255]
+            } else {
+                [102, 102, 102, 255]
             }),
             DefaultValue::FormInk => Value::Color(if context.sketch {
                 context.ink

@@ -1052,6 +1052,17 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             text.default = DefaultValue::FormInk;
         }
     }
+    if matches!(c.id, "horizontal_slider" | "vertical_slider") {
+        c.properties.push(choice(
+            "slider_thumb",
+            "Shape",
+            &["pointy", "rectangle", "circle"],
+            "pointy",
+        ));
+        let fill = c.properties.iter_mut().find(|p| p.key == "fill").unwrap();
+        fill.default = DefaultValue::SliderInk;
+        fill.label = "Color";
+    }
     if c.id == "date_picker" {
         c.properties
             .push(choice("date_mode", "Kind", &["month", "year"], "month"));
@@ -1473,8 +1484,18 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             | "vertical_scrollbar"
             | "volume_slider"
     ) {
-        c.properties
-            .push(number("value", "Value", 0.5, 0., 1., false));
+        c.properties.push(number(
+            "value",
+            "Value",
+            if matches!(c.id, "horizontal_slider" | "vertical_slider") {
+                0.05
+            } else {
+                0.5
+            },
+            0.,
+            1.,
+            false,
+        ));
     }
     if c.id == "heading" {
         let p = c

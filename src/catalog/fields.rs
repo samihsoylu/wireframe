@@ -435,8 +435,8 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "underline",
         ],
         "site_map" => &["bold", "font_size", "italic", "text", "underline"],
-        "vertical_slider" => &["fill", "state", "value"],
-        "horizontal_slider" => &["fill", "state", "value"],
+        "vertical_slider" => &["fill", "state", "value", "slider_thumb"],
+        "horizontal_slider" => &["fill", "state", "value", "slider_thumb"],
         "horizontal_splitter" => &[],
         "vertical_splitter" => &[],
         "sticky_note" => &[

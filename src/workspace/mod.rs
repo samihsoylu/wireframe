@@ -301,6 +301,8 @@ impl Editor {
                     | Kind::Calendar
                     | Kind::DatePicker
                     | Kind::TimePicker
+                    | Kind::HorizontalSlider
+                    | Kind::VerticalSlider
                     | Kind::DateChooser
                     | Kind::FieldSet
                     | Kind::Button
@@ -345,6 +347,8 @@ impl Editor {
                     Kind::DateChooser => "date_chooser",
                     Kind::DatePicker => "date_picker",
                     Kind::TimePicker => "time_picker",
+                    Kind::HorizontalSlider => "horizontal_slider",
+                    Kind::VerticalSlider => "vertical_slider",
                     Kind::Button => "button",
                     Kind::TextInput => "text_input",
                     Kind::TextArea => "text_area",

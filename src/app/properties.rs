@@ -20,6 +20,7 @@ fn fraction_slider(ui: &mut egui::Ui, value: &mut f64) -> (egui::Response, bool)
 // catalog's full field inventory remains separate from completed rendering.
 fn supported(kind: &str, key: &str) -> bool {
     match key {
+        "slider_thumb" => matches!(kind, "horizontal_slider" | "vertical_slider"),
         "date_mode" => kind == "date_picker",
         "device_model" | "background_pattern" => kind == "phone",
         "keyboard_device" => kind == "mobile_keyboard",
@@ -83,6 +84,8 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "text_input"
                 | "text_area"
                 | "search"
+                | "horizontal_slider"
+                | "vertical_slider"
                 | "date_chooser"
                 | "dropdown"
                 | "icon_label"
@@ -90,6 +93,7 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "pointed_button"
                 | "tree"
         ),
+        "value" if matches!(kind, "horizontal_slider" | "vertical_slider") => true,
         "vertical_scrollbar" | "value" => matches!(
             kind,
             "dropdown"
@@ -151,6 +155,8 @@ fn supported(kind: &str, key: &str) -> bool {
         "fill" => matches!(
             kind,
             "app_bar"
+                | "horizontal_slider"
+                | "vertical_slider"
                 | "field_set"
                 | "browser"
                 | "button"
@@ -240,6 +246,8 @@ impl WireframeApp {
                 | "pointed_button"
                 | "multiline_button"
                 | "search"
+                | "horizontal_slider"
+                | "vertical_slider"
                 | "date_chooser"
                 | "checkbox"
                 | "radio"
@@ -292,9 +300,9 @@ impl WireframeApp {
                 if let Err(error) = self.editor.auto_size_control(id) { self.error = Some(error); }
                 self.editor.commit();
             }
-            for key in ["date_mode", "keyboard_device", "device_model", "orientation", "device_resizing", "background_pattern", "transparent_background", "status_bar", "image_border", "sketch_filter", "text", "header_height", "footer_height", "minimize", "maximize", "close", "resize_handle", "button_style", "tab_position", "direction", "label_position", "icon", "icon_size", "icon_rotation", "nav_icon", "filter_icon", "menu_icon", "icons", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+            for key in ["slider_thumb", "date_mode", "keyboard_device", "device_model", "orientation", "device_resizing", "background_pattern", "transparent_background", "status_bar", "image_border", "sketch_filter", "text", "header_height", "footer_height", "minimize", "maximize", "close", "resize_handle", "button_style", "tab_position", "direction", "label_position", "icon", "icon_size", "icon_rotation", "nav_icon", "filter_icon", "menu_icon", "icons", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
                 if matches!(key, "icon_size" | "icon_rotation") && !matches!(values.get("icon"),Some(Value::Icon(_))) {continue;}
-                if key == "value" && values.get("vertical_scrollbar") != Some(&Value::Bool(true)) { continue; }
+                if key == "value" && !matches!(spec.id,"horizontal_slider"|"vertical_slider") && values.get("vertical_scrollbar") != Some(&Value::Bool(true)) { continue; }
                 let Some(field) = spec.property(key).filter(|f| f.visible && supported(spec.id, key)) else { continue; };
                 let Some(mut value) = values.get(key).cloned() else { continue; };
                 let original = value.clone();

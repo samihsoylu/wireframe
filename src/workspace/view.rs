@@ -346,6 +346,8 @@ pub(super) fn control(node: &LayoutNode) -> Control {
         "date_chooser" => Kind::DateChooser,
         "date_picker" => Kind::DatePicker,
         "time_picker" => Kind::TimePicker,
+        "horizontal_slider" => Kind::HorizontalSlider,
+        "vertical_slider" => Kind::VerticalSlider,
         "panel" | "window" => Kind::Panel,
         "field_set" => Kind::FieldSet,
         "list" => Kind::List,

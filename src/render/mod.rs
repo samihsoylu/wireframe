@@ -28,6 +28,7 @@ mod pointed_button;
 mod rasters;
 mod scrollbar;
 mod search;
+mod sliders;
 mod smartphone;
 mod standalone_icons;
 mod svg;
@@ -364,6 +365,10 @@ impl Scene {
         }
         if c.kind == Kind::AppBar {
             return self.app_bar(layer, fonts, rasters);
+        }
+        if matches!(c.kind, Kind::HorizontalSlider | Kind::VerticalSlider) {
+            self.slider(layer, sketch);
+            return Ok(());
         }
         if matches!(c.kind, Kind::DatePicker | Kind::TimePicker) {
             return self.picker(layer, sketch, fonts);

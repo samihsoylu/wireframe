@@ -158,7 +158,7 @@ fn standalone_import_is_atomic_and_survives_components_copy_and_reset() {
     .write_to(&mut output, image::ImageFormat::Png)
     .unwrap();
     let bytes = output.into_inner();
-    for kind in [Kind::Icon, Kind::IconLabel] {
+    for kind in [Kind::Icon, Kind::IconLabel, Kind::CircleButton] {
         let (mut e, id) = add(kind);
         let baseline = e.document.clone();
         let image = wireframe::images::Prepared::from_bytes("Local.png", &bytes).unwrap();
@@ -169,6 +169,14 @@ fn standalone_import_is_atomic_and_survives_components_copy_and_reset() {
         assert_eq!(e.document, baseline);
         e.redo();
         assert_eq!(e.document.assets[0].bytes, bytes);
+        if kind == Kind::CircleButton {
+            e.begin("Enlarge circle");
+            e.selected_mut(|c| {
+                c.bounds.w = 96.;
+                c.bounds.h = 96.;
+            });
+            e.commit();
+        }
         e.create_component("Symbol".into()).unwrap();
         let source = e.document.definitions.clone();
         assert!(e.enter(id));

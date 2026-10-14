@@ -224,13 +224,15 @@ impl Editor {
                 let (spec, _) = self
                     .control_properties(id)
                     .ok_or("Control no longer exists")?;
-                if !matches!(spec.id, "button" | "dropdown" | "icon" | "icon_label")
-                    || self
-                        .current()
-                        .controls
-                        .iter()
-                        .find(|c| c.id == id)
-                        .is_none_or(|c| c.locked)
+                if !matches!(
+                    spec.id,
+                    "button" | "dropdown" | "icon" | "icon_label" | "circle_button"
+                ) || self
+                    .current()
+                    .controls
+                    .iter()
+                    .find(|c| c.id == id)
+                    .is_none_or(|c| c.locked)
                 {
                     return Err("Select an unlocked control with an icon".into());
                 }

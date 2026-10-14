@@ -12,10 +12,13 @@ fn supported(kind: &str, key: &str) -> bool {
     match key {
         "row_links" | "row_icons" => kind == "list",
         "icon" | "icon_size" | "icon_rotation" => {
-            matches!(kind, "button" | "dropdown" | "icon" | "icon_label")
+            matches!(
+                kind,
+                "button" | "dropdown" | "icon" | "icon_label" | "circle_button"
+            )
         }
         "menu_icon" => kind == "button",
-        "label_position" => kind == "icon_label",
+        "label_position" => matches!(kind, "icon_label" | "circle_button"),
         "text" | "font_size" | "bold" | "italic" | "underline" | "text_color" | "align" => true,
         "sketch_filter" | "image_border" => kind == "image",
         "state" => matches!(
@@ -31,16 +34,27 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "search"
                 | "dropdown"
                 | "icon_label"
+                | "circle_button"
         ),
         "vertical_scrollbar" | "value" => matches!(kind, "dropdown" | "text_area" | "list"),
         "border_color" => matches!(kind, "dropdown" | "text_input" | "text_area"),
-        "border" => matches!(kind, "text_input" | "list" | "icon" | "icon_label"),
+        "border" => matches!(
+            kind,
+            "text_input" | "list" | "icon" | "icon_label" | "circle_button"
+        ),
         "background_opacity" => matches!(kind, "text_input" | "text_area"),
         "selected_index" => matches!(kind, "table" | "dropdown" | "list"),
         "shape" | "search_icon" | "microphone_icon" => kind == "search",
         "fill" => matches!(
             kind,
-            "button" | "text_input" | "text_area" | "dropdown" | "search" | "table" | "list"
+            "button"
+                | "text_input"
+                | "text_area"
+                | "dropdown"
+                | "search"
+                | "table"
+                | "list"
+                | "circle_button"
         ),
         "alternate_fill" | "header" | "row_height" => matches!(kind, "table" | "list"),
         "horizontal_lines" | "vertical_lines" => kind == "table",
@@ -92,6 +106,7 @@ impl WireframeApp {
                 | "text_input"
                 | "dropdown"
                 | "icon_label"
+                | "circle_button"
                 | "search"
                 | "checkbox"
                 | "radio"

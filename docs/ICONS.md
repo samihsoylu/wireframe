@@ -16,7 +16,7 @@ Four integration tests cover all 2,060 icon rasters/search/aspect ratios, row ma
 
 Native macOS acceptance covers camera search, Regular heart filtering, assignment/Undo/Redo, Reset shrinking an automatic List from 142 to 102 units and Undo restoring 142, text-row reordering with assignments retained, save/quit/restart/reopen, and PNG/SVG exports. The reopened fixture has Camera on Title, Asterisk on Bravo, Cloud on Alpha and Asterisk on Disabled; Undo/Redo are empty after restart. Export metadata and all three distinct icon path sets were checked, and the PNG was visually inspected. Local evidence: evidence/list-icons/; fixture generator: examples/render_list_icons.rs.
 
-Icon properties beyond Lists, Buttons and Dropdowns, broader artwork coverage, typography/contour fidelity and Windows/Linux native acceptance remain open. No independent review is claimed.
+Icon properties beyond the currently implemented families, broader artwork coverage, typography/contour fidelity and Windows/Linux native acceptance remain open. No independent review is claimed.
 
 ## Custom project images
 
@@ -51,3 +51,10 @@ Icon dimensions come from the selected source size; width/height fields and resi
 Three integration tests cover sizes/rotation/removal, width-only geometry, boundary visibility, border inset, disabled color, rich web links, attributed SVG/PNG, atomic import/history, component-local styling/reset and copying embedded resources. The full suite has141 passing tests, formatting and all-target Clippy with warnings denied pass. Native macOS verified library insertion/Undo,24→48 square sizing, removal→24/Undo, Bottom→Right/Undo/Redo (48×63→68×48), width47→48 visibility, save/full quit/restart/reopen and PNG/SVG export. Reopened history is empty and saved bytes are unchanged. Both SVG image instances embed identical rotated80×120 payloads at40×40 and48×48 drawing sizes; original source bytes are unchanged. The868×531 PNG was visually inspected. Evidence: evidence/standalone-icons/; example: render_standalone_icons.
 
 Exact typography, outline contours, color-profile/interpolation coverage and broader macros/inline-color/link behavior remain fidelity work. Native direct import and component editing were not repeated for these families; automated tests cover their targets. Windows/Linux native and independent review were not performed. Overall product scope remains open.
+
+
+## Circular buttons
+
+Circle button is available in Buttons and Forms. New circles are48×48 with an independently sourced plus icon at24. Width and height can be changed; Auto size restores48×48 regardless of text or icon size. The circle stays centered in non-square bounds. Fill defaults to gray, with automatic light/dark content contrast. Selected changes fill, focused changes outline, and disabled changes outline and content ink. The border uses1unit in clean style and3 in sketch; turning it off retains the corresponding inset.
+
+Optional text goes below, left or right. Both icon and label must fit strictly inside the diameter's square bounds: an icon equal to the diameter is hidden. A hidden label recenters the icon. Empty text reserves no line. Rich multiline text and visible links use the shared renderer; hidden labels do not leave interactive link regions. Image sources, rotation, ownership, history, component overrides and exports reuse the existing icon path. Exact typography, broader artwork coverage and all-platform native acceptance remain open.

@@ -267,6 +267,18 @@ impl<M: TextMeasurer> Engine<'_, M> {
             bold: boolean(props, "bold"),
             italic: boolean(props, "italic"),
         };
+        if kind == "circle_button" {
+            let w = match width {
+                Dimension::Auto => 48.,
+                Dimension::Fixed(w) => w,
+            };
+            let h = match height {
+                Dimension::Auto => 48.,
+                Dimension::Fixed(h) => h,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         if matches!(kind, "icon" | "icon_label") {
             let icon = crate::icons::standalone_size(props, kind == "icon_label");
             if kind == "icon" {

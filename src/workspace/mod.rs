@@ -275,6 +275,7 @@ impl Editor {
                     | Kind::Image
                     | Kind::Icon
                     | Kind::IconLabel
+                    | Kind::CircleButton
                     | Kind::List
             ) {
                 let kind_id = match kind {
@@ -288,6 +289,7 @@ impl Editor {
                     Kind::Image => "image",
                     Kind::Icon => "icon",
                     Kind::IconLabel => "icon_label",
+                    Kind::CircleButton => "circle_button",
                     Kind::List => "list",
                     _ => unreachable!(),
                 };

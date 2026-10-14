@@ -2,6 +2,7 @@
 // Copyright 2026 Wireframe contributors
 //! Shared positioned drawing data for the canvas and vector/raster exports.
 mod choice;
+mod circle_button;
 mod control_icons;
 mod dropdown;
 mod forms;
@@ -285,6 +286,9 @@ impl Scene {
         }
         if matches!(c.kind, Kind::Icon | Kind::IconLabel) {
             return self.standalone_icon(layer, fonts, rasters);
+        }
+        if c.kind == Kind::CircleButton {
+            return self.circle_button(layer, sketch, fonts, rasters);
         }
         if c.kind == Kind::Button {
             return self.button_control(layer, sketch, fonts, rasters);

@@ -36,3 +36,6 @@ Button and Dropdown `icon` use `{ "type": "icon", "value": { "source": "catalog"
 
 
 Standalone `icon` and `icon_label` control kinds reuse the single `icon`, `icon_size` and `icon_rotation` properties. `icon_label` adds `label_position` choices bottom/left/right; both have border choices none/solid. Icon size is always derived, and icon-label height is always derived even when an incoming file has a fixed requested height. Width-only resizing follows the catalog. Empty sources use24/48-unit fallbacks respectively. No new format version or copied artwork is required.
+
+
+The `circle_button` kind supports both fixed and automatic dimensions; each automatic dimension resolves to48. It reuses nullable `icon`, `icon_size`, `icon_rotation`, `label_position` and `border`, plus fill, text and state. New insertion explicitly stores `plus-solid`; absent or null icon data stays empty when loading existing nodes. Native circles use the shared styled ellipse in canvas and exports. This adds no new serialized format version.

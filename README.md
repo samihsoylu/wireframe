@@ -4,13 +4,13 @@ A local desktop workspace for turning rough ideas into clear wireframes. Built i
 
 ## Features
 
-- 26 controls for forms, text, shapes, navigation and layout.
+- 27 controls for forms, text, shapes, navigation and layout.
 - Pages, notes, searchable library and layers.
 - Move, resize, align, nest groups, duplicate and lock controls.
 - Undo/redo, local project files and recovery copies.
 - Sketch and clean styles; PNG and SVG export.
 - Page links and presentation mode.
-- Searchable offline icons and imported project images for Lists, Buttons, Dropdowns, Icons and Icon labels, with size/rotation controls, undoable assignments and self-contained exports.
+- Searchable offline icons and imported project images for Lists, Buttons, Dropdowns, circular buttons, Icons and Icon labels, with size/rotation controls, undoable assignments and self-contained exports.
 - Embedded PNG/JPEG/GIF images, shared sources and replacement with Undo.
 - Canvas image cropping and quarter-turn rotation, including local component edits.
 

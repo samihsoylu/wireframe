@@ -887,6 +887,8 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     let mut fill = prop("fill", "Fill", PropertyType::Color, Value::Color([255; 4]));
     fill.default = if c.id == "button" {
         DefaultValue::ButtonFill
+    } else if c.id == "circle_button" {
+        DefaultValue::Literal(Value::Color([204, 204, 204, 255]))
     } else {
         DefaultValue::Fill
     };
@@ -1090,7 +1092,10 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             true,
         ));
     }
-    if matches!(c.id, "button" | "dropdown" | "icon" | "icon_label") {
+    if matches!(
+        c.id,
+        "button" | "dropdown" | "icon" | "icon_label" | "circle_button"
+    ) {
         let mut icon = prop("icon", "Icon", PropertyType::Icon, Value::Null);
         icon.nullable = true;
         c.properties.extend([
@@ -1112,11 +1117,19 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             c.properties.push(boolean("menu_icon", "Menu arrow", false));
         }
     }
-    if matches!(c.id, "icon" | "icon_label") {
+    if matches!(c.id, "icon" | "icon_label" | "circle_button") {
         c.properties.retain(|p| p.key != "border");
-        c.properties
-            .push(choice("border", "Border", &["none", "solid"], "none"));
-        if c.id == "icon_label" {
+        c.properties.push(choice(
+            "border",
+            "Border",
+            &["none", "solid"],
+            if c.id == "circle_button" {
+                "solid"
+            } else {
+                "none"
+            },
+        ));
+        if matches!(c.id, "icon_label" | "circle_button") {
             c.properties.push(choice(
                 "label_position",
                 "Label position",

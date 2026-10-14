@@ -106,6 +106,7 @@ pub enum Kind {
     Image,
     Icon,
     IconLabel,
+    CircleButton,
     Browser,
     Phone,
     Panel,
@@ -117,7 +118,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 26] = [
+    pub const ALL: [Kind; 27] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -135,6 +136,7 @@ impl Kind {
         Self::Image,
         Self::Icon,
         Self::IconLabel,
+        Self::CircleButton,
         Self::Browser,
         Self::Phone,
         Self::Panel,
@@ -164,6 +166,7 @@ impl Kind {
             Self::Image => "Image",
             Self::Icon => "Icon",
             Self::IconLabel => "Icon and label",
+            Self::CircleButton => "Circle button",
             Self::Browser => "Browser",
             Self::Phone => "Phone",
             Self::Panel => "Panel",
@@ -180,6 +183,7 @@ impl Kind {
             Self::Label | Self::Heading | Self::Paragraph | Self::Link => "Text",
             Self::Icon | Self::IconLabel => "Icons",
             Self::Button
+            | Self::CircleButton
             | Self::TextInput
             | Self::TextArea
             | Self::Checkbox
@@ -195,6 +199,7 @@ impl Kind {
         match self {
             Self::Button => (120., 38.),
             Self::Icon => (24., 24.),
+            Self::CircleButton => (48., 48.),
             Self::IconLabel => (65., 63.),
             Self::Label | Self::Link => (140., 28.),
             Self::Heading => (300., 48.),

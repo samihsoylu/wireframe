@@ -835,7 +835,11 @@ impl WireframeApp {
                                     "All" => true,
                                     "Buttons" => matches!(
                                         kind,
-                                        Kind::Button | Kind::Checkbox | Kind::Radio | Kind::Toggle
+                                        Kind::Button
+                                            | Kind::CircleButton
+                                            | Kind::Checkbox
+                                            | Kind::Radio
+                                            | Kind::Toggle
                                     ),
                                     "Common" => matches!(
                                         kind,
@@ -1212,6 +1216,29 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     },
                     StrokeKind::Inside,
                 );
+            }
+            Primitive::StyledEllipse {
+                b,
+                fill,
+                stroke,
+                width,
+            } => {
+                let r = screen_rect(b);
+                painter.add(egui::epaint::EllipseShape::filled(
+                    r.center(),
+                    r.size() / 2.,
+                    Color32::from_rgb(fill[0], fill[1], fill[2]),
+                ));
+                if width > 0. {
+                    painter.add(egui::epaint::EllipseShape::stroke(
+                        r.center(),
+                        r.size() / 2.,
+                        Stroke::new(
+                            width * scale,
+                            Color32::from_rgb(stroke[0], stroke[1], stroke[2]),
+                        ),
+                    ));
+                }
             }
             Primitive::Ellipse { b, fill } => {
                 let r = screen_rect(b);

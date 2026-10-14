@@ -20,6 +20,12 @@ pub enum Primitive {
         b: Bounds,
         fill: [u8; 3],
     },
+    StyledEllipse {
+        b: Bounds,
+        fill: [u8; 3],
+        stroke: [u8; 3],
+        width: f32,
+    },
     Line {
         points: Vec<[f32; 2]>,
         color: [u8; 3],
@@ -104,7 +110,7 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
         .cloned()
         .unwrap_or_default();
     match c.kind {
-        Kind::Icon | Kind::IconLabel => {
+        Kind::Icon | Kind::IconLabel | Kind::CircleButton => {
             // Legacy scene fallback; the live editor uses the shared icon renderer.
             rect(&mut out, Bounds::new(x, y, w.min(h), w.min(h)), white, 2.);
         }
@@ -647,6 +653,25 @@ pub fn primitive_svg(p: Primitive) -> String {
             radius,
             color(fill),
             if stroke { color(INK) } else { "none".into() }
+        ),
+        Primitive::StyledEllipse {
+            b,
+            fill,
+            stroke,
+            width,
+        } => format!(
+            "<ellipse cx=\"{}\" cy=\"{}\" rx=\"{}\" ry=\"{}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{}\"/>",
+            b.x + b.w / 2.,
+            b.y + b.h / 2.,
+            b.w / 2.,
+            b.h / 2.,
+            color(fill),
+            if width > 0. {
+                color(stroke)
+            } else {
+                "none".into()
+            },
+            width
         ),
         Primitive::Ellipse { b, fill } => format!(
             "<ellipse cx=\"{}\" cy=\"{}\" rx=\"{}\" ry=\"{}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"1.5\"/>",

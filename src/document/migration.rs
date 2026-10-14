@@ -123,6 +123,7 @@ fn migrate_control(c: legacy::Control) -> Node {
         legacy::Kind::Image => "image",
         legacy::Kind::Icon => "icon",
         legacy::Kind::IconLabel => "icon_label",
+        legacy::Kind::CircleButton => "circle_button",
         legacy::Kind::Browser => "browser",
         legacy::Kind::Phone => "phone",
         legacy::Kind::Panel => "panel",

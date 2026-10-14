@@ -222,7 +222,14 @@ impl ControlSpec {
         self.properties.iter().find(|p| p.key == key)
     }
     pub fn create(&self, id: u64, origin: Point) -> Node {
-        Node::control(id, self.id, origin, self.default_size)
+        let mut node = Node::control(id, self.id, origin, self.default_size);
+        if self.id == "circle_button" {
+            node.properties.insert(
+                "icon".into(),
+                Value::Icon(crate::document::IconSource::Catalog("plus-solid".into())),
+            );
+        }
+        node
     }
     pub fn defaults(&self, context: &Context) -> Properties {
         self.properties

@@ -203,6 +203,8 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "underline",
         ],
         "image" => &[
+            "image_border",
+            "sketch_filter",
             "bold",
             "border",
             "font_size",

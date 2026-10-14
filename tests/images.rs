@@ -280,6 +280,174 @@ fn crop_validation_locks_and_legacy_patch_inheritance_are_preserved() {
 }
 
 #[test]
+fn sketch_filter_expands_extent_preserves_source_and_processes_premultiplied_alpha() {
+    let input = image::RgbaImage::from_fn(120, 80, |x, y| {
+        image::Rgba(match (x < 60, y < 40) {
+            (true, true) => [220, 40, 40, 255],
+            (false, true) => [30, 180, 70, 255],
+            (true, false) => [40, 80, 220, 255],
+            _ => [0, 0, 0, 0],
+        })
+    });
+    let mut bytes = Cursor::new(vec![]);
+    input.write_to(&mut bytes, image::ImageFormat::Png).unwrap();
+    let data = wireframe::images::decoded_styled(bytes.get_ref(), 0, true).unwrap();
+    assert_eq!(data.pixels.size, [124, 84]);
+    let p = |x: usize, y: usize| data.pixels.pixels[y * 124 + x].to_array();
+    assert_eq!(p(10, 10), [228, 228, 228, 255]);
+    assert_eq!(p(90, 10), [255, 255, 255, 255]);
+    assert_eq!(p(10, 60), [189, 189, 189, 255]);
+    assert_eq!(p(90, 60), [0, 0, 0, 0]);
+    assert_eq!(p(0, 0), [0, 0, 0, 0]);
+    assert!((i16::from(p(60, 20)[0]) - 28).abs() <= 1); // darker side of a contrast edge
+    assert_eq!(p(61, 20)[0], 0);
+    let input = image::RgbaImage::from_pixel(24, 24, image::Rgba([200, 100, 30, 100]));
+    let mut bytes = Cursor::new(vec![]);
+    input.write_to(&mut bytes, image::ImageFormat::Png).unwrap();
+    let result = wireframe::images::decoded_styled(bytes.get_ref(), 0, true).unwrap();
+    let pixel = image::load_from_memory(&result.png)
+        .unwrap()
+        .to_rgba8()
+        .get_pixel(10, 10)
+        .0;
+    assert!((i16::from(pixel[0]) - 128).abs() <= 1);
+    assert!((i16::from(pixel[3]) - 200).abs() <= 1);
+}
+
+#[test]
+fn image_style_frame_crop_text_and_local_reset_share_canvas_export_data() {
+    let spec = wireframe::catalog::get("image").unwrap();
+    for key in ["image_border", "sketch_filter", "text"] {
+        assert!(spec.property(key).unwrap().visible);
+    }
+    let mut e = Editor::default();
+    let id = add(&mut e, 50.);
+    e.import_image(id, prepare("picture.png", 120, 80), ImportChoice::KeepBoth)
+        .unwrap();
+    e.crop_image(
+        id,
+        Some(Crop {
+            x: 0.25,
+            y: 0.,
+            width: 0.5,
+            height: 0.8,
+        }),
+    )
+    .unwrap();
+    let assets = e.document.assets.clone();
+    let before = e.document.clone();
+    e.begin("Style image");
+    e.set_control_property(id, "image_border", Value::Bool(true))
+        .unwrap();
+    e.set_control_property(id, "sketch_filter", Value::Bool(true))
+        .unwrap();
+    e.set_control_property(id, "text", Value::Text("*Photo*".into()))
+        .unwrap();
+    e.commit();
+    let scene = e.rendered_scene(e.page).unwrap();
+    let (b, data) = scene
+        .items
+        .iter()
+        .find_map(|i| match &i.drawing {
+            Drawing::Image { bounds, data } => Some((bounds, data)),
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(data.pixels.size, [124, 84]);
+    // Visible crop is (80,50,60,64), inset to (85,55,50,54).
+    assert_eq!((b.x, b.y, b.w, b.h), (60., 55., 100., 67.5));
+    let clip = scene
+        .items
+        .iter()
+        .find(|i| matches!(i.drawing, Drawing::Image { .. }))
+        .unwrap()
+        .clip
+        .unwrap();
+    assert_eq!((clip.x, clip.y, clip.w, clip.h), (85., 55., 50., 54.));
+    let label: String = scene
+        .items
+        .iter()
+        .filter_map(|i| match &i.drawing {
+            Drawing::Glyph(g) => Some(g.text.as_str()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(label, "Photo");
+    assert!(
+        scene
+            .items
+            .iter()
+            .filter_map(|i| match &i.drawing {
+                Drawing::Glyph(g) => Some(g),
+                _ => None,
+            })
+            .all(|g| g.bold)
+    );
+    assert!(scene.svg().contains("data:image/png;base64,"));
+    assert!(scene.png().is_ok());
+    e.undo();
+    assert_eq!(e.document, before);
+    e.redo();
+    assert_eq!(e.document.assets, assets);
+    let svg = e.rendered_scene(e.page).unwrap().svg();
+    let reopened = Editor::new(wireframe::document::decode(&e.document.encode().unwrap()).unwrap());
+    assert_eq!(reopened.rendered_scene(reopened.page).unwrap().svg(), svg);
+    // An ancestor clip hides part of the frame without creating a new border.
+    let mut clipped = e.document.clone();
+    let children = std::mem::take(&mut clipped.pages[0].content.nodes);
+    let group_id = clipped.allocate_id().unwrap();
+    let mut group = Node::group(group_id, Point::default(), children);
+    group.crop = Some(Crop {
+        x: 0.5,
+        y: 0.,
+        width: 0.5,
+        height: 1.,
+    });
+    clipped.pages[0].content.nodes.push(group);
+    let clipped = Editor::new(clipped);
+    let layer = &clipped.layers(clipped.page).unwrap()[0];
+    assert_eq!((layer.frame.x, layer.frame.w), (80., 60.));
+    let clipped_scene = clipped.rendered_scene(clipped.page).unwrap();
+    let item = clipped_scene
+        .items
+        .iter()
+        .find(|i| matches!(i.drawing, Drawing::Image { .. }))
+        .unwrap();
+    let Drawing::Image { bounds, .. } = item.drawing else {
+        unreachable!()
+    };
+    assert_eq!((bounds.x, bounds.w), (60., 100.));
+    let clip = item.clip.unwrap();
+    assert_eq!((clip.x, clip.w), (110., 25.));
+    e.select(id, false);
+    let def = e.create_component("Photo".into()).unwrap();
+    let other = e.insert_component(def, 300., 50.).unwrap();
+    let source = e.document.definitions.clone();
+    e.enter(id);
+    let child = e.nodes()[0].id;
+    e.begin("Local style");
+    e.set_control_property(child, "sketch_filter", Value::Bool(false))
+        .unwrap();
+    e.set_control_property(child, "image_border", Value::Bool(false))
+        .unwrap();
+    e.commit();
+    assert_eq!(e.document.definitions, source);
+    e.leave();
+    e.enter(other);
+    assert_eq!(
+        e.control_properties(e.nodes()[0].id).unwrap().1["sketch_filter"],
+        Value::Bool(true)
+    );
+    e.leave();
+    e.enter(id);
+    e.reset_local_changes(child).unwrap();
+    assert_eq!(
+        e.control_properties(child).unwrap().1["sketch_filter"],
+        Value::Bool(true)
+    );
+}
+
+#[test]
 fn embedded_alpha_renders_in_shared_scene_and_exports_and_survives_source_removal() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("alpha.png");

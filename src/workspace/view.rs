@@ -15,6 +15,8 @@ pub(super) struct Cache {
 #[derive(Clone)]
 pub struct Layer {
     pub control: Control,
+    /// This control's visible frame before its ancestors clip it.
+    pub frame: Bounds,
     pub clip: Option<Bounds>,
     pub path: NodePath,
     pub properties: Properties,
@@ -109,6 +111,7 @@ impl Editor {
             .leaves()
             .into_iter()
             .map(|(node, _)| Layer {
+                frame: bounds(node.bounds),
                 control: {
                     let mut c = control(node);
                     c.bounds = bounds(node.uncropped);

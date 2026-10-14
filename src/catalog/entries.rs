@@ -1048,6 +1048,10 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     }
     if c.id == "image" {
         c.properties.push(boolean("grayscale", "Grayscale", false));
+        c.properties
+            .push(boolean("sketch_filter", "Sketch filter", false));
+        c.properties
+            .push(boolean("image_border", "Show border", false));
     }
     if c.id == "search" {
         c.properties.extend([

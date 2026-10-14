@@ -4,6 +4,7 @@
 mod choice;
 mod dropdown;
 mod forms;
+mod images;
 mod scrollbar;
 mod search;
 mod svg;
@@ -128,14 +129,17 @@ impl Scene {
             let image = if layer.control.kind == Kind::Image && layer.control.group.is_none() {
                 if let Some(Value::Asset(id)) = layer.properties.get("image") {
                     let turns = crate::images::quarter_turns(&layer.properties);
-                    let data = decoded.entry((*id, turns)).or_insert_with(|| {
+                    let filter = boolean(&layer.properties, "sketch_filter");
+                    let data = decoded.entry((*id, turns, filter)).or_insert_with(|| {
                         assets.iter().find(|a| a.id == *id).and_then(|a| {
                             let (w, h) = crate::images::dimensions(&a.bytes).ok()?;
-                            let bytes = w as usize * h as usize * 4;
+                            let pad = if filter { 4 } else { 0 };
+                            let bytes = (w as usize + pad) * (h as usize + pad) * 4;
                             if bytes + decoded_bytes > 128 * 1024 * 1024 {
                                 return None;
                             }
-                            let image = crate::images::decoded_oriented(&a.bytes, turns).ok()?;
+                            let image =
+                                crate::images::decoded_styled(&a.bytes, turns, filter).ok()?;
                             decoded_bytes += bytes;
                             Some(std::sync::Arc::new(image))
                         })
@@ -151,11 +155,12 @@ impl Scene {
                 scene.items.push(Item {
                     opacity: 1.,
                     drawing: Drawing::Image {
-                        bounds: layer.control.bounds,
+                        bounds: images::raster_bounds(layer),
                         data,
                     },
-                    clip: layer.clip,
+                    clip: images::raster_clip(layer),
                 });
+                scene.image_decoration(layer, sketch, fonts)?;
             } else {
                 scene.control(layer, sketch, fonts)?;
                 if layer.control.kind == Kind::Image

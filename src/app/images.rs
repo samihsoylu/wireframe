@@ -96,9 +96,10 @@ impl WireframeApp {
                             .iter()
                             .find(|a| Some(a.id) == selected)
                             .ok_or("Image unavailable")?;
-                        let image = wireframe::images::decoded_oriented(
+                        let image = wireframe::images::decoded_styled(
                             &asset.bytes,
                             wireframe::images::quarter_turns(props),
+                            props.get("sketch_filter") == Some(&Value::Bool(true)),
                         )?;
                         Ok::<_, String>(CropEdit {
                             id,

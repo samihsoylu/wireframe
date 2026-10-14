@@ -8,6 +8,7 @@ use wireframe::{catalog::PropertyType, document::Value};
 fn supported(kind: &str, key: &str) -> bool {
     match key {
         "text" | "font_size" | "bold" | "italic" | "underline" | "text_color" | "align" => true,
+        "sketch_filter" | "image_border" => kind == "image",
         "state" => matches!(
             kind,
             "checkbox"
@@ -65,11 +66,11 @@ impl WireframeApp {
         };
         if spec.id == "image" {
             self.image_properties(ui, id, &values);
-            return true;
         }
         if !matches!(
             spec.id,
-            "label"
+            "image"
+                | "label"
                 | "heading"
                 | "link"
                 | "paragraph"
@@ -95,13 +96,13 @@ impl WireframeApp {
         let local = self.editor.editing_instance();
         ui.add_space(10.);
         ui.add_enabled_ui(!locked, |ui| {
-            if spec.autosize != wireframe::catalog::AutoSize::None && ui.button("Auto-size").clicked() {
+            if spec.id != "image" && spec.autosize != wireframe::catalog::AutoSize::None && ui.button("Auto-size").clicked() {
                 self.editor.commit();
                 self.editor.begin("Auto-size control");
                 if let Err(error) = self.editor.auto_size_control(id) { self.error = Some(error); }
                 self.editor.commit();
             }
-            for key in ["text", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+            for key in ["image_border", "sketch_filter", "text", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
                 if key == "value" && values.get("vertical_scrollbar") != Some(&Value::Bool(true)) { continue; }
                 let Some(field) = spec.property(key).filter(|f| f.visible && supported(spec.id, key)) else { continue; };
                 let Some(mut value) = values.get(key).cloned() else { continue; };

@@ -2,6 +2,7 @@
 // Copyright 2026 Wireframe contributors
 //! Bounded image decoding and project-owned import data.
 use eframe::egui;
+mod filter;
 use image::{DynamicImage, ImageFormat, ImageReader};
 use std::{
     io::{Cursor, Read},
@@ -95,7 +96,15 @@ pub fn decoded(bytes: &[u8]) -> Result<Decoded, String> {
     decoded_oriented(bytes, 0)
 }
 pub fn decoded_oriented(bytes: &[u8], turns: u8) -> Result<Decoded, String> {
+    decoded_styled(bytes, turns, false)
+}
+pub fn decoded_styled(bytes: &[u8], turns: u8, sketch: bool) -> Result<Decoded, String> {
     let image = decode(bytes)?;
+    let image = if sketch {
+        DynamicImage::ImageRgba8(filter::sketch(&image.to_rgba8())?)
+    } else {
+        image
+    };
     let image = match turns % 4 {
         1 => image.rotate90(),
         2 => image.rotate180(),

@@ -185,6 +185,11 @@ impl Check<'_> {
                             return Err("Invalid or duplicate override path".into());
                         }
                         self.properties(&o.patch.properties)?;
+                        if let Some(CropOverride::Region(c)) = o.patch.crop
+                            && !c.valid()
+                        {
+                            return Err("Invalid crop override".into());
+                        }
                         if let Some(p) = o.patch.origin {
                             point(p)?;
                         }

@@ -72,6 +72,7 @@ pub struct WireframeApp {
     error: Option<String>,
     pending: Option<Pending>,
     image_import: Option<(Id, wireframe::images::Prepared)>,
+    image_crop: Option<images::CropEdit>,
     quit_allowed: bool,
     text_edit: Option<(Id, String)>,
     clipboard: Clipboard,
@@ -133,6 +134,7 @@ impl WireframeApp {
             error: None,
             pending: None,
             image_import: None,
+            image_crop: None,
             quit_allowed: false,
             text_edit: None,
             clipboard: Clipboard::default(),
@@ -333,7 +335,11 @@ impl WireframeApp {
         }
     }
     fn shortcuts(&mut self, ctx: &egui::Context) {
-        if self.pending.is_some() || self.text_edit.is_some() || self.recovery_offer.is_some() {
+        if self.pending.is_some()
+            || self.text_edit.is_some()
+            || self.recovery_offer.is_some()
+            || self.image_crop.is_some()
+        {
             return;
         }
         let take = |m, k| ctx.input_mut(|i| i.consume_key(m, k));
@@ -441,6 +447,9 @@ impl WireframeApp {
     fn toolbar(&mut self, ui: &mut egui::Ui) {
         if self.present {
             egui::Panel::top("presentation").show(ui, |ui| {
+                if self.image_crop.is_some() {
+                    ui.disable();
+                }
                 ui.horizontal(|ui| {
                     if ui.button("Back to editor").clicked() {
                         self.present = false;
@@ -474,6 +483,9 @@ impl WireframeApp {
                     .inner_margin(8),
             )
             .show(ui, |ui| {
+                if self.image_crop.is_some() {
+                    ui.disable();
+                }
                 *ui.visuals_mut() = egui::Visuals::dark();
                 ui.visuals_mut().override_text_color = Some(Color32::from_gray(235));
                 ui.spacing_mut().button_padding = Vec2::new(8., 4.);
@@ -658,6 +670,9 @@ impl WireframeApp {
                 });
             });
         egui::Panel::bottom("status").show(ui, |ui| {
+            if self.image_crop.is_some() {
+                ui.disable();
+            }
             ui.horizontal(|ui| {
                 ui.small(&self.status);
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -744,9 +759,15 @@ impl WireframeApp {
                     .inner_margin(6),
             )
             .show(ui, |ui| {
+                if self.image_crop.is_some() {
+                    ui.disable();
+                }
                 egui::ScrollArea::horizontal()
                     .id_salt("library-categories")
                     .show(ui, |ui| {
+                        if self.image_crop.is_some() {
+                            ui.disable();
+                        }
                         ui.horizontal(|ui| {
                             for cat in [
                                 "All",
@@ -765,6 +786,9 @@ impl WireframeApp {
                 egui::ScrollArea::horizontal()
                     .id_salt("library-previews")
                     .show(ui, |ui| {
+                        if self.image_crop.is_some() {
+                            ui.disable();
+                        }
                         ui.horizontal(|ui| {
                             let mut kinds: Vec<_> = Kind::ALL
                                 .into_iter()
@@ -868,6 +892,9 @@ impl WireframeApp {
             .default_size(192.)
             .size_range(160.0..=300.0)
             .show(ui, |ui| {
+                if self.image_crop.is_some() {
+                    ui.disable();
+                }
                 ui.horizontal(|ui| {
                     ui.strong("Wireframes");
                     if ui
@@ -890,6 +917,9 @@ impl WireframeApp {
                     .id_salt("page-navigator")
                     .max_height((ui.available_height() - 120.).max(140.))
                     .show(ui, |ui| {
+                        if self.image_crop.is_some() {
+                            ui.disable();
+                        }
                         for page in pages {
                             let page = self.editor.rendered_page(page.id).unwrap_or(Page {
                                 id: page.id,
@@ -959,6 +989,9 @@ impl WireframeApp {
                 egui::CollapsingHeader::new("Layers")
                     .default_open(false)
                     .show(ui, |ui| {
+                        if self.image_crop.is_some() {
+                            ui.disable();
+                        }
                         let controls = self.editor.current().controls.clone();
                         for c in controls.iter().rev() {
                             let label = format!(
@@ -1249,6 +1282,10 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     if pinch != 1.0 {
                         self.zoom = (self.zoom * pinch).clamp(0.2, 4.);
                     }
+                }
+                if self.image_crop.is_some() {
+                    self.crop_canvas(ui, &response, &painter);
+                    return;
                 }
                 // Native automation and fast mice can deliver a complete drag between
                 // paints. Preserve the press origin even after egui releases its state.
@@ -1695,7 +1732,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     ui.label(include_str!("../LICENSE"));
                 });
             });
-        egui::Window::new("Working with Wireframe").open(&mut self.help).default_width(470.).show(ctx,|ui|{ui.label("Copyright 2026 Wireframe contributors · GNU GPL v3.0 only · No warranty.");if ui.button("View license").clicked(){self.about=true;}ui.separator();ui.label("Everything stays on your computer. Save editable projects as .wireframe files; export the current page as PNG or SVG.");ui.separator();for (keys,what)in [("Click / Shift-click","Select one or several controls"),("Drag empty canvas","Select an area"),("Drag a selection","Move controls"),("Eight resize handles","Resize; hold Shift for aspect ratio"),("Arrow / Shift+Arrow","Move by 1 / 10 units"),("Double-click / Enter","Edit selected control text"),("⌘/Ctrl Z · Shift Z","Undo · Redo"),("⌘/Ctrl D · G · Shift G","Duplicate · Group · Ungroup"),("Space + drag","Pan the canvas"),("⌘/Ctrl + scroll","Zoom around the pointer")]{ui.horizontal(|ui|{ui.strong(keys);ui.label(what);});}ui.separator();ui.label("Groups move and resize together. Double-click a group to edit its children; Escape or Exit group returns to its parent. Image controls are placeholders. Click page links in Present mode.");});
+        egui::Window::new("Working with Wireframe").open(&mut self.help).default_width(470.).show(ctx,|ui|{ui.label("Copyright 2026 Wireframe contributors · GNU GPL v3.0 only · No warranty.");if ui.button("View license").clicked(){self.about=true;}ui.separator();ui.label("Everything stays on your computer. Save editable projects as .wireframe files; export the current page as PNG or SVG.");ui.separator();for (keys,what)in [("Click / Shift-click","Select one or several controls"),("Drag empty canvas","Select an area"),("Drag a selection","Move controls"),("Eight resize handles","Resize; hold Shift for aspect ratio"),("Arrow / Shift+Arrow","Move by 1 / 10 units"),("Double-click / Enter","Edit selected control text"),("⌘/Ctrl Z · Shift Z","Undo · Redo"),("⌘/Ctrl D · G · Shift G","Duplicate · Group · Ungroup"),("Space + drag","Pan the canvas"),("⌘/Ctrl + scroll","Zoom around the pointer")]{ui.horizontal(|ui|{ui.strong(keys);ui.label(what);});}ui.separator();ui.label("Groups move and resize together. Double-click a group to edit its children; Escape or Exit group returns to its parent. Images are embedded in the project. Rotate or crop them from the inspector. Click page links in Present mode.");});
     }
 }
 impl eframe::App for WireframeApp {
@@ -1717,6 +1754,7 @@ impl eframe::App for WireframeApp {
         if self.pending.is_none()
             && self.text_edit.is_none()
             && self.recovery_offer.is_none()
+            && self.image_crop.is_none()
             && let Some(path) =
                 ctx.input(|i| i.raw.dropped_files.first().map(|f| f.path().to_path_buf()))
         {
@@ -1748,6 +1786,7 @@ impl eframe::App for WireframeApp {
             }
         }
         self.shortcuts(&ctx);
+        let cropping = self.image_crop.is_some();
         self.toolbar(ui);
         if !self.present {
             if self.show_library {
@@ -1756,7 +1795,9 @@ impl eframe::App for WireframeApp {
             if self.show_navigator {
                 self.sidebar(ui);
             }
-            if self.show_inspector {
+            if cropping {
+                self.crop_controls(ui);
+            } else if self.show_inspector {
                 self.inspector(ui);
             }
         }

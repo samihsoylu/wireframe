@@ -85,8 +85,23 @@ fn png(image: &DynamicImage) -> Result<Vec<u8>, String> {
         .map_err(|e| e.to_string())?;
     Ok(out.into_inner())
 }
+pub fn quarter_turns(props: &crate::document::Properties) -> u8 {
+    match props.get("rotation") {
+        Some(crate::document::Value::Number(v)) => ((v / 90.).round() as i32).rem_euclid(4) as u8,
+        _ => 0,
+    }
+}
 pub fn decoded(bytes: &[u8]) -> Result<Decoded, String> {
+    decoded_oriented(bytes, 0)
+}
+pub fn decoded_oriented(bytes: &[u8], turns: u8) -> Result<Decoded, String> {
     let image = decode(bytes)?;
+    let image = match turns % 4 {
+        1 => image.rotate90(),
+        2 => image.rotate180(),
+        3 => image.rotate270(),
+        _ => image,
+    };
     let rgba = image.to_rgba8();
     Ok(Decoded {
         pixels: egui::ColorImage::from_rgba_unmultiplied(

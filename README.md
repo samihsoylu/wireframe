@@ -11,6 +11,7 @@ A local desktop workspace for turning rough ideas into clear wireframes. Built i
 - Sketch and clean styles; PNG and SVG export.
 - Page links and presentation mode.
 - Embedded PNG/JPEG/GIF images, shared sources and replacement with Undo.
+- Canvas image cropping and quarter-turn rotation, including local component edits.
 
 ## Run from source
 

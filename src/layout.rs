@@ -282,6 +282,11 @@ impl<M: TextMeasurer> Engine<'_, M> {
                 warnings.push(error);
                 (77, 79)
             });
+            let (w, h) = if crate::images::quarter_turns(props) % 2 == 1 {
+                (h, w)
+            } else {
+                (w, h)
+            };
             let w = match width {
                 Dimension::Auto => w as f32,
                 Dimension::Fixed(v) => v,

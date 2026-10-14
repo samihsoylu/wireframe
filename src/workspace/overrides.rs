@@ -179,6 +179,9 @@ impl Editor {
         collect_changes(before, after, &inherited, path, &mut changes);
         for (path, change) in changes {
             self.change_patch(&root, &path, |p| {
+                if let Some(crop) = change.crop {
+                    p.crop = crop;
+                }
                 if let Some(origin) = change.origin {
                     p.origin = origin;
                 }
@@ -245,6 +248,7 @@ fn find_node<'a>(root: &'a Node, path: &[Id]) -> Option<&'a Node> {
 }
 #[derive(Default)]
 struct Delta {
+    crop: Option<Option<CropOverride>>,
     origin: Option<Option<Point>>,
     size: Option<Option<Size>>,
     properties: Vec<(String, Option<Value>)>,
@@ -257,6 +261,12 @@ fn collect_changes(
     changes: &mut Vec<(NodePath, Delta)>,
 ) {
     let mut delta = Delta::default();
+    if before.crop != after.crop {
+        delta.crop = Some(
+            (after.crop != inherited.crop)
+                .then(|| after.crop.map_or(CropOverride::Clear, CropOverride::Region)),
+        );
+    }
     if before.origin != after.origin {
         delta.origin = Some((after.origin != inherited.origin).then_some(after.origin));
     }
@@ -334,7 +344,11 @@ pub(super) fn transform_instance(
         unreachable!()
     };
     for (path, delta) in changes.into_iter().filter(|(p, _)| !p.is_empty()) {
-        if delta.origin.is_none() && delta.size.is_none() && delta.properties.is_empty() {
+        if delta.origin.is_none()
+            && delta.size.is_none()
+            && delta.crop.is_none()
+            && delta.properties.is_empty()
+        {
             continue;
         }
         let index = overrides
@@ -348,6 +362,9 @@ pub(super) fn transform_instance(
                 overrides.len() - 1
             });
         let patch = &mut overrides[index].patch;
+        if let Some(crop) = delta.crop {
+            patch.crop = crop;
+        }
         if let Some(origin) = delta.origin {
             patch.origin = origin;
         }

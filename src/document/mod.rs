@@ -62,13 +62,45 @@ impl Default for Size {
     }
 }
 
-/// Normalized nondestructive crop within the uncropped content, before rotation.
+/// Normalized nondestructive crop within the oriented uncropped content.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Crop {
     pub x: f32,
     pub y: f32,
     pub width: f32,
     pub height: f32,
+}
+impl Crop {
+    pub const ALL: Self = Self {
+        x: 0.,
+        y: 0.,
+        width: 1.,
+        height: 1.,
+    };
+    pub fn valid(self) -> bool {
+        [self.x, self.y, self.width, self.height]
+            .iter()
+            .all(|v| v.is_finite() && (0.0..=1.0).contains(v))
+            && self.width > 0.
+            && self.height > 0.
+            && self.x + self.width <= 1.00001
+            && self.y + self.height <= 1.00001
+    }
+}
+/// Missing patch inherits; Clear explicitly removes an inherited crop.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "value", rename_all = "snake_case")]
+pub enum CropOverride {
+    Clear,
+    Region(Crop),
+}
+impl CropOverride {
+    pub fn value(self) -> Option<Crop> {
+        match self {
+            Self::Clear => None,
+            Self::Region(c) => Some(c),
+        }
+    }
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "value", rename_all = "snake_case")]
@@ -174,6 +206,8 @@ impl Node {
 }
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Patch {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub crop: Option<CropOverride>,
     #[serde(default)]
     pub properties: Properties,
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -67,6 +67,9 @@ impl Editor {
         let (spec, _) = self
             .control_properties(id)
             .ok_or("Select a known control")?;
+        if spec.id == "image" {
+            return self.auto_size_image(id);
+        }
         let mut edited = self
             .nodes()
             .iter()

@@ -88,3 +88,12 @@ Large-document profiling and revision-based cache invalidation remain open. Curr
 - docs/RECURSIVE-EDITOR.md: current live editing/storage boundary and verification.
 
 Keep product-only fixtures/evidence local unless explicitly selected for distribution. Update this checkpoint and commit completed product work. No unattended supervision beyond active goal execution is implied.
+
+
+## Image transforms checkpoint — 2026-10-14
+
+Quarter-turn image rendering now uses one oriented decoded image per asset/orientation across canvas, thumbnails and SVG/PNG. Image rotation preserves visible center, rotates normalized crop and swaps full bounds without modifying asset bytes. Crop uses eight canvas handles, movable selection, explicit Apply/Cancel and Enter/Escape. Preview changes do not mutate document/history. Remove crop retains visible top-left; automatic-size handles quarter-turned crops. Typed crop patches distinguish inheritance, a local region and explicit clear, retaining compatibility with older v2 patches. Local changes participate in reset, history and detach.
+
+116 tests and Clippy all targets with warnings denied pass. Nine image tests cover crop geometry, pixels, save/reopen, component patches/reset/detach, locks and existing import behavior. Native macOS:100×160 at50,50 rotates to160×100 at20,80; left crop becomes98×80 at50,80; Remove crop restores160×100 at50,80; Undo restores crop. Editing preview to78×80 then Escape leaves saved bytes unchanged. Another rotation yields80×98 at59,71; save/quit/restart/reopen retains it and empty Undo history. Native PNG/SVG exports visually preserve crop/orientation. Product remains running this saved synthetic fixture, first image selected. Evidence: evidence/image-transforms/. A panel layout regression in the first UI build was fixed before the recorded complete sequence. No independent review or Windows/Linux native verification is claimed.
+
+Remaining image work includes border/filter styling, native component crop and odd-size checks, clipboard/resource lifecycle and metadata processing. Other unresolved families, fidelity, hierarchy/alternates, export options, performance, accessibility and platform acceptance retain their prior scope. Goal remains active; GPL-3.0-only and external research separation preserved.

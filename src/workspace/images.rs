@@ -10,6 +10,151 @@ pub enum ImportChoice {
     UseExisting,
 }
 impl Editor {
+    /// Full and visible rectangles in workspace coordinates, plus the effective crop.
+    pub fn image_geometry(&self, id: Id) -> Result<(Bounds, Bounds, Option<Crop>), String> {
+        self.editable_image(id)?;
+        let mut path = self.context.clone();
+        path.push(id);
+        let layout = self.layout_page(self.surface_id())?;
+        let n = view::find_layout(&layout.nodes, &path).ok_or("Image no longer exists")?;
+        let rect = |b: crate::layout::Rect| Bounds::new(b.x, b.y, b.width, b.height);
+        let crop = self
+            .nodes()
+            .iter()
+            .find(|n| n.id == id)
+            .and_then(|n| n.crop);
+        Ok((rect(n.uncropped), rect(n.bounds), crop))
+    }
+    fn write_image_node(&mut self, before: &Node, after: Node) -> Result<(), String> {
+        if self.editing_instance() {
+            self.write_local_node(before.id, before, &after)?;
+        } else {
+            *self
+                .nodes_mut()
+                .iter_mut()
+                .find(|n| n.id == before.id)
+                .ok_or("Image no longer exists")? = after;
+        }
+        self.layout_page(self.surface_id())?;
+        self.document.validate()?;
+        Ok(())
+    }
+    pub fn crop_image(&mut self, id: Id, crop: Option<Crop>) -> Result<(), String> {
+        if crop.is_some_and(|c| !c.valid()) {
+            return Err("Choose a crop inside the image".into());
+        }
+        let (full, visible, _) = self.image_geometry(id)?;
+        let before = self
+            .nodes()
+            .iter()
+            .find(|n| n.id == id)
+            .cloned()
+            .ok_or("Image no longer exists")?;
+        let parent = self.context_origin();
+        self.component_change(
+            if crop.is_some() {
+                "Crop image"
+            } else {
+                "Remove image crop"
+            },
+            |e| {
+                let mut after = before.clone();
+                after.crop = crop.filter(|c| *c != Crop::ALL);
+                if crop.is_none() {
+                    after.origin = Point {
+                        x: visible.x - parent.x,
+                        y: visible.y - parent.y,
+                    };
+                }
+                if let NodeContent::Control { size, .. } = &mut after.content {
+                    *size = Size::fixed(full.w, full.h);
+                }
+                e.write_image_node(&before, after)
+            },
+        )
+    }
+    pub fn rotate_image(&mut self, id: Id) -> Result<(), String> {
+        let (full, visible, crop) = self.image_geometry(id)?;
+        let before = self
+            .nodes()
+            .iter()
+            .find(|n| n.id == id)
+            .cloned()
+            .ok_or("Image no longer exists")?;
+        let (_, props) = self.control_properties(id).ok_or("Select an image")?;
+        let turns = (crate::images::quarter_turns(&props) + 3) % 4;
+        let parent = self.context_origin();
+        self.component_change("Rotate image", |e| {
+            let mut after = before.clone();
+            let crop = crop.map(|c| Crop {
+                x: c.y,
+                y: (1. - c.x - c.width).max(0.),
+                width: c.height,
+                height: c.width,
+            });
+            let c = crop.unwrap_or(Crop::ALL);
+            let dx = (visible.w / 2.).round();
+            let dy = (visible.h / 2.).round();
+            after.origin = Point {
+                x: visible.x + dx - dy - c.x * full.h - parent.x,
+                y: visible.y + dy - (visible.w - dx) - c.y * full.w - parent.y,
+            };
+            after.crop = crop;
+            after
+                .properties
+                .insert("rotation".into(), Value::Number(f64::from(turns) * 90.));
+            if let NodeContent::Control { size, .. } = &mut after.content {
+                *size = Size::fixed(full.h, full.w);
+            }
+            e.write_image_node(&before, after)
+        })
+    }
+    pub(super) fn auto_size_image(&mut self, id: Id) -> Result<(), String> {
+        let (_, visible, crop) = self.image_geometry(id)?;
+        let before = self
+            .nodes()
+            .iter()
+            .find(|n| n.id == id)
+            .cloned()
+            .ok_or("Image no longer exists")?;
+        let (_, props) = self.control_properties(id).ok_or("Select an image")?;
+        let dims = match props.get("image") {
+            Some(Value::Asset(id)) => self
+                .document
+                .assets
+                .iter()
+                .find(|a| a.id == *id)
+                .and_then(|a| crate::images::dimensions(&a.bytes).ok()),
+            _ => None,
+        }
+        .unwrap_or((77, 79));
+        let quarter = crate::images::quarter_turns(&props) % 2 == 1;
+        let (w, h) = if quarter {
+            (dims.1 as f32, dims.0 as f32)
+        } else {
+            (dims.0 as f32, dims.1 as f32)
+        };
+        let c = crop.unwrap_or(Crop::ALL);
+        let (w, h) = if quarter {
+            (w / c.width, h / c.height)
+        } else {
+            (w, h)
+        };
+        let parent = self.context_origin();
+        let mut after = before.clone();
+        after.origin = Point {
+            x: visible.x - c.x * w - parent.x,
+            y: visible.y - c.y * h - parent.y,
+        };
+        if let NodeContent::Control { size, .. } = &mut after.content {
+            *size = if quarter && crop.is_some() {
+                Size::fixed(w, h)
+            } else {
+                Size::default()
+            };
+        }
+        self.write_image_node(&before, after)
+    }
     fn editable_image(&self, id: Id) -> Result<(), String> {
         let c = self
             .current()

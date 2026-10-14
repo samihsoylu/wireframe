@@ -113,6 +113,9 @@ impl Project {
                 for patch in overrides {
                     if let Some(target) = find_mut(&mut children, &patch.path) {
                         target.properties.extend(patch.patch.properties.clone());
+                        if let Some(crop) = patch.patch.crop {
+                            target.crop = crop.value();
+                        }
                         if let Some(origin) = patch.patch.origin {
                             target.origin = origin;
                         }

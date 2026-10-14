@@ -127,14 +127,15 @@ impl Scene {
             }
             let image = if layer.control.kind == Kind::Image && layer.control.group.is_none() {
                 if let Some(Value::Asset(id)) = layer.properties.get("image") {
-                    let data = decoded.entry(*id).or_insert_with(|| {
+                    let turns = crate::images::quarter_turns(&layer.properties);
+                    let data = decoded.entry((*id, turns)).or_insert_with(|| {
                         assets.iter().find(|a| a.id == *id).and_then(|a| {
                             let (w, h) = crate::images::dimensions(&a.bytes).ok()?;
                             let bytes = w as usize * h as usize * 4;
                             if bytes + decoded_bytes > 128 * 1024 * 1024 {
                                 return None;
                             }
-                            let image = crate::images::decoded(&a.bytes).ok()?;
+                            let image = crate::images::decoded_oriented(&a.bytes, turns).ok()?;
                             decoded_bytes += bytes;
                             Some(std::sync::Arc::new(image))
                         })

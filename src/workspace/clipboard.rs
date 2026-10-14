@@ -62,6 +62,9 @@ impl Editor {
         copy
     }
     pub fn paste(&mut self, copy: &Clipboard, offset: f32) {
+        if !self.structure_edit_allowed() {
+            return;
+        }
         if copy.nodes.is_empty() {
             return;
         }

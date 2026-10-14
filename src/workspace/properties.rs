@@ -3,7 +3,7 @@
 use super::*;
 
 impl Editor {
-    fn property_context(&self) -> catalog::Context {
+    pub(super) fn property_context(&self) -> catalog::Context {
         catalog::Context {
             font_size: self.document.settings.font_size,
             sketch: self.document.settings.sketch,
@@ -15,7 +15,8 @@ impl Editor {
         &self,
         id: Id,
     ) -> Option<(&'static catalog::ControlSpec, Properties)> {
-        let node = self.nodes().iter().find(|n| n.id == id)?;
+        let nodes = self.nodes();
+        let node = nodes.iter().find(|n| n.id == id)?;
         let NodeContent::Control { kind, .. } = &node.content else {
             return None;
         };
@@ -25,6 +26,9 @@ impl Editor {
     }
     /// Participates in the caller's begin/commit transaction for continuous input.
     pub fn set_control_property(&mut self, id: Id, key: &str, value: Value) -> Result<(), String> {
+        if self.editing_instance() {
+            return self.set_local_property(id, key, value);
+        }
         let context = self.property_context();
         let node = self
             .nodes_mut()
@@ -42,6 +46,9 @@ impl Editor {
             .map_err(|e| e.to_string())
     }
     pub fn reset_control_property(&mut self, id: Id, key: &str) -> Result<(), String> {
+        if self.editing_instance() {
+            return self.reset_local_property(id, key);
+        }
         let (spec, _) = self
             .control_properties(id)
             .ok_or("Select a known control")?;
@@ -60,11 +67,14 @@ impl Editor {
         let (spec, _) = self
             .control_properties(id)
             .ok_or("Select a known control")?;
-        let node = self
-            .nodes_mut()
-            .iter_mut()
+        let mut edited = self
+            .nodes()
+            .iter()
             .find(|n| n.id == id)
+            .cloned()
             .ok_or("Control no longer exists")?;
+        let original = edited.clone();
+        let node = &mut edited;
         if node.locked {
             return Err("Unlock the control before resizing".into());
         }
@@ -79,6 +89,10 @@ impl Editor {
             AutoSize::Height => size.height = Dimension::Auto,
             _ => *size = Size::default(),
         }
+        if self.editing_instance() {
+            return self.write_local_node(id, &original, &edited);
+        }
+        *self.nodes_mut().iter_mut().find(|n| n.id == id).unwrap() = edited;
         if let Err(error) = self.layout_page(self.surface_id()) {
             if let Some(Node {
                 content: NodeContent::Control { size, .. },

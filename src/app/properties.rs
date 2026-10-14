@@ -80,9 +80,15 @@ impl WireframeApp {
         ) {
             return false;
         }
-        let node = self.editor.nodes().iter().find(|n| n.id == id).unwrap();
-        let locked = node.locked;
-        let explicit = node.properties.clone();
+        let locked = self
+            .editor
+            .current()
+            .controls
+            .iter()
+            .find(|n| n.id == id)
+            .is_none_or(|n| n.locked);
+        let explicit = self.editor.explicit_control_properties(id);
+        let local = self.editor.editing_instance();
         ui.add_space(10.);
         ui.add_enabled_ui(!locked, |ui| {
             if spec.autosize != wireframe::catalog::AutoSize::None && ui.button("Auto-size").clicked() {
@@ -102,9 +108,9 @@ impl WireframeApp {
                     ui.horizontal(|ui| {
                         if let Value::Bool(v) = &mut value {
                             finish = ui.checkbox(v, field.label).changed();
-                        } else { ui.label(field.label); }
+                        } else if local && explicit.contains_key(key) { ui.colored_label(Color32::from_rgb(30,120,70), field.label); } else {ui.label(field.label);}
                         if explicit.contains_key(key) {
-                            reset = ui.small_button("Reset").on_hover_text("Use the default value").clicked();
+                            reset = ui.small_button("Reset").on_hover_text(if local {"Use the component source value"} else {"Use the default value"}).clicked();
                         }
                     });
                     match (&field.kind, &mut value) {

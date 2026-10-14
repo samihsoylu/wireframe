@@ -53,7 +53,7 @@ impl Editor {
         }
         Ok(())
     }
-    fn component_change<T>(
+    pub(super) fn component_change<T>(
         &mut self,
         name: &str,
         f: impl FnOnce(&mut Self) -> Result<T, String>,
@@ -111,6 +111,7 @@ impl Editor {
         })
     }
     pub fn create_component(&mut self, name: String) -> Result<Id, String> {
+        self.require_structure_edit()?;
         if name.trim().is_empty() {
             return Err("Give the component a name".into());
         }
@@ -210,6 +211,7 @@ impl Editor {
         })
     }
     pub fn insert_component(&mut self, definition: Id, x: f32, y: f32) -> Result<Id, String> {
+        self.require_structure_edit()?;
         if !x.is_finite() || !y.is_finite() {
             return Err("Invalid component position".into());
         }
@@ -231,9 +233,10 @@ impl Editor {
         })
     }
     pub fn detach_component(&mut self, id: Id) -> Result<(), String> {
+        self.require_structure_edit()?;
         self.component_change("Detach component", |e| {
-            let node = e
-                .nodes()
+            let nodes = e.nodes();
+            let node = nodes
                 .iter()
                 .find(|n| n.id == id)
                 .ok_or("Control no longer exists")?;

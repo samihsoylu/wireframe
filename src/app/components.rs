@@ -91,7 +91,24 @@ impl WireframeApp {
         }
         let id = *self.editor.selection.iter().next().unwrap();
         ui.separator();
+        if self.editor.editing_instance() {
+            ui.small("Local changes affect only this instance.");
+            if ui.button("Reset local changes").clicked()
+                && let Err(error) = self.editor.reset_local_changes(id)
+            {
+                self.error = Some(error);
+            }
+            return;
+        }
         if let Some(definition) = self.editor.instance_definition(id) {
+            if ui.button("Edit this instance").clicked() {
+                self.editor.enter(id);
+            }
+            if ui.button("Reset instance overrides").clicked()
+                && let Err(error) = self.editor.reset_instance(id)
+            {
+                self.error = Some(error);
+            }
             if ui.button("Edit component source").clicked()
                 && let Err(error) = self.editor.edit_definition(definition)
             {

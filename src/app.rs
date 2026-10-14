@@ -605,7 +605,18 @@ impl WireframeApp {
                             self.editor.switch_page(self.editor.page);
                         }
                     }
-                    if !self.editor.context.is_empty() && ui.button("Exit group").clicked() {
+                    if self.editor.editing_instance() {
+                        ui.strong("Editing this instance");
+                    }
+                    if !self.editor.context.is_empty()
+                        && ui
+                            .button(if self.editor.editing_instance() {
+                                "Exit component level"
+                            } else {
+                                "Exit group"
+                            })
+                            .clicked()
+                    {
                         self.editor.leave();
                     }
                     if ui.button("+").clicked() {
@@ -966,6 +977,7 @@ impl WireframeApp {
         egui::Panel::right("inspector").resizable(true).default_size(250.).size_range(220.0..=340.0).show(ui,|ui|{
             ui.add_space(10.);egui::ScrollArea::vertical().show(ui,|ui|{
                 let selected=self.editor.selected_views();
+                if selected.is_empty() && self.editor.editing_instance() {ui.heading("Component instance");ui.label("Select a child to change this instance. Reset returns a property to its source value.");return;}
                 if selected.is_empty() && self.editor.definition.is_some() { self.component_source_inspector(ui); return; }
                 if selected.is_empty(){ui.heading("Page");ui.label("Project title");let mut title=self.editor.document.title.clone();let r=ui.text_edit_singleline(&mut title);if r.changed(){self.editor.begin("Rename project");self.editor.document.title=title;}
 if r.lost_focus(){self.editor.commit();}
@@ -983,7 +995,7 @@ if c.kind==Kind::Tabs {ui.small("Separate tabs with commas.");}
                     ui.horizontal(|ui|{ui.label("Size");ui.add(egui::DragValue::new(&mut c.font_size).range(6.0..=120.0));ui.checkbox(&mut c.bold,"Bold");});
                     ui.horizontal(|ui|{ui.label("Fill");ui.color_edit_button_srgb(&mut c.fill);});if matches!(c.kind,Kind::Checkbox|Kind::Radio|Kind::Toggle){ui.checkbox(&mut c.checked,"Selected state");}
                     }
-                    ui.checkbox(&mut c.locked,"Lock position and content");
+                    if !self.editor.editing_instance() {ui.checkbox(&mut c.locked,"Lock position and content");}
                     if c.group.is_none() {
                     egui::ComboBox::from_id_salt("page-link").selected_text(c.link.and_then(|id|self.editor.document.pages.iter().find(|p|p.id==id).map(|p|p.name.clone())).unwrap_or("No page link".into())).show_ui(ui,|ui|{ui.selectable_value(&mut c.link,None,"No page link");for p in &self.editor.document.pages {ui.selectable_value(&mut c.link,Some(p.id),&p.name);}});
                     } else if self.editor.is_group(c.id) && ui.button("Edit group contents").clicked(){self.editor.enter(c.id);}
@@ -993,6 +1005,7 @@ if c.kind==Kind::Tabs {ui.small("Separate tabs with commas.");}
                 }else {ui.label("Align");ui.horizontal(|ui|{for(i,name)in ["Left","Center","Right"].iter().enumerate(){if ui.button(*name).clicked(){self.editor.align(0,i);}}});ui.horizontal(|ui|{for(i,name)in ["Top","Middle","Bottom"].iter().enumerate(){if ui.button(*name).clicked(){self.editor.align(1,i);}}});ui.horizontal(|ui|{if ui.button("Spread X").clicked(){self.editor.distribute(0);}
 if ui.button("Spread Y").clicked(){self.editor.distribute(1);}});}
                 self.component_actions(ui);
+                if self.editor.editing_instance() {ui.small("Edit the source to add, remove or rearrange children.");return;}
                 ui.add_space(14.);ui.separator();ui.horizontal(|ui|{if ui.button("Group").clicked(){self.editor.group();}
 if ui.button("Ungroup").clicked(){self.editor.ungroup();}});ui.horizontal(|ui|{if ui.button("To front").clicked(){self.editor.reorder(true);}
 if ui.button("To back").clicked(){self.editor.reorder(false);}});ui.horizontal(|ui|{if ui.button("Duplicate").clicked(){self.editor.duplicate();}

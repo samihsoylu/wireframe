@@ -3,6 +3,7 @@
 //! Recursive editing owns project data; renderer projections never become saved documents.
 mod clipboard;
 mod components;
+mod overrides;
 mod properties;
 mod view;
 use crate::{
@@ -101,8 +102,8 @@ impl Editor {
             .unwrap_or(0);
         &mut self.document.pages[i]
     }
-    pub fn nodes(&self) -> &[Node] {
-        children(&self.active_content().nodes, &self.context).unwrap_or(&[])
+    pub fn nodes(&self) -> std::borrow::Cow<'_, [Node]> {
+        self.context_nodes().unwrap_or_default()
     }
     fn nodes_mut(&mut self) -> &mut Vec<Node> {
         let context = self.context.clone();
@@ -121,7 +122,7 @@ impl Editor {
             self.page = self.document.pages[0].id;
             self.context.clear();
         }
-        while children(&self.active_content().nodes, &self.context).is_none() {
+        while self.context_nodes().is_none() {
             self.context.pop();
         }
         let ids: HashSet<_> = self.nodes().iter().map(|n| n.id).collect();
@@ -216,11 +217,14 @@ impl Editor {
     }
     pub fn enter(&mut self, id: Id) -> bool {
         self.commit();
-        if self
-            .nodes()
-            .iter()
-            .any(|n| n.id == id && !n.locked && matches!(n.content, NodeContent::Group { .. }))
-        {
+        if self.nodes().iter().any(|n| {
+            n.id == id
+                && !n.locked
+                && matches!(
+                    n.content,
+                    NodeContent::Group { .. } | NodeContent::Instance { .. }
+                )
+        }) {
             self.context.push(id);
             self.selection.clear();
             true
@@ -246,6 +250,9 @@ impl Editor {
             .any(|n| n.id == id && matches!(n.content, NodeContent::Group { .. }))
     }
     pub fn add(&mut self, kind: Kind, x: f32, y: f32) {
+        if !self.structure_edit_allowed() {
+            return;
+        }
         self.edit("Add control", |e| {
             let Ok(id) = e.document.allocate_id() else {
                 e.error = Some("Project ID space exhausted".into());
@@ -423,7 +430,12 @@ impl Editor {
                 requested.h = h;
             }
         }
-        if let Some(node) = self.nodes_mut().iter_mut().find(|n| n.id == c.id) {
+        let Some(mut edited) = self.nodes().iter().find(|n| n.id == c.id).cloned() else {
+            return;
+        };
+        let before = edited.clone();
+        {
+            let node = &mut edited;
             if !node.locked {
                 if old.bounds != c.bounds {
                     transform(node, geometry, parent, parent, old.bounds, requested);
@@ -446,9 +458,16 @@ impl Editor {
                         );
                     }
                     if c.checked != old.checked {
+                        let state = if c.kind == Kind::Toggle {
+                            if c.checked { "on" } else { "off" }
+                        } else if c.checked {
+                            "selected"
+                        } else {
+                            "normal"
+                        };
                         node.properties
-                            .insert("checked".into(), Value::Bool(c.checked));
-                        node.properties.remove("state");
+                            .insert("state".into(), Value::Choice(state.into()));
+                        node.properties.remove("checked");
                     }
                     if c.link != old.link {
                         node.properties.insert(
@@ -458,7 +477,16 @@ impl Editor {
                     }
                 }
             }
-            node.locked = c.locked;
+            if !self.editing_instance() {
+                node.locked = c.locked;
+            }
+        }
+        if self.editing_instance() {
+            if let Err(error) = self.write_local_node(c.id, &before, &edited) {
+                self.error = Some(error);
+            }
+        } else if let Some(node) = self.nodes_mut().iter_mut().find(|n| n.id == c.id) {
+            *node = edited;
         }
     }
     pub fn move_by(&mut self, dx: f32, dy: f32) {
@@ -470,6 +498,9 @@ impl Editor {
         });
     }
     pub fn delete(&mut self) {
+        if !self.structure_edit_allowed() {
+            return;
+        }
         self.edit("Delete controls", |e| {
             let ids: HashSet<_> = e
                 .nodes()
@@ -487,6 +518,9 @@ impl Editor {
         });
     }
     pub fn group(&mut self) {
+        if !self.structure_edit_allowed() {
+            return;
+        }
         let ids: HashSet<_> = self
             .nodes()
             .iter()
@@ -542,6 +576,9 @@ impl Editor {
         });
     }
     pub fn ungroup(&mut self) {
+        if !self.structure_edit_allowed() {
+            return;
+        }
         self.edit("Ungroup", |e| {
             let order = e.leaf_order();
             let selected = e.selection.clone();
@@ -596,6 +633,9 @@ impl Editor {
         });
     }
     pub fn lock(&mut self, locked: bool) {
+        if !self.structure_edit_allowed() {
+            return;
+        }
         self.edit(if locked { "Lock" } else { "Unlock" }, |e| {
             let ids = e.selection.clone();
             for n in e.nodes_mut() {
@@ -606,6 +646,9 @@ impl Editor {
         });
     }
     pub fn reorder(&mut self, front: bool) {
+        if !self.structure_edit_allowed() {
+            return;
+        }
         self.edit("Change layering", |e| {
             let ids = e.selection.clone();
             e.nodes_mut().sort_by_key(|n| ids.contains(&n.id) == front);
@@ -683,7 +726,19 @@ impl Editor {
         });
     }
     fn context_origin(&self) -> Point {
-        let mut nodes = &self.active_content().nodes;
+        let resolved;
+        let mut nodes = if self.editing_instance() {
+            resolved = self
+                .document
+                .resolve_all(&self.active_content().nodes)
+                .unwrap_or_default()
+                .into_iter()
+                .map(|r| r.root)
+                .collect::<Vec<_>>();
+            &resolved
+        } else {
+            &self.active_content().nodes
+        };
         let mut point = Point::default();
         for id in &self.context {
             if let Some(n) = nodes.iter().find(|n| n.id == *id) {

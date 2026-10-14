@@ -112,45 +112,7 @@ impl Scene {
             {
                 let bounds = Bounds::new(b.x + 8., text_y, c.font_size, c.font_size);
                 let color = options.ink.to_array();
-                let drawing = match source {
-                    crate::document::IconSource::Catalog(id) => Drawing::Icon {
-                        bounds,
-                        id: id.clone(),
-                        color,
-                    },
-                    crate::document::IconSource::Asset(id) => {
-                        if let Some(data) =
-                            rasters.get(*id, rasters::Style::Icon([color[0], color[1], color[2]]))
-                        {
-                            Drawing::Image { bounds, data }
-                        } else {
-                            // The resource may be unreadable or exceed this scene's decode budget.
-                            Drawing::Primitive(Primitive::Line {
-                                points: vec![
-                                    [bounds.x, bounds.y],
-                                    [bounds.x + bounds.w, bounds.y],
-                                    [bounds.x + bounds.w, bounds.y + bounds.h],
-                                    [bounds.x, bounds.y + bounds.h],
-                                    [bounds.x, bounds.y],
-                                    [bounds.x + bounds.w, bounds.y + bounds.h],
-                                    [bounds.x + bounds.w, bounds.y],
-                                    [bounds.x, bounds.y + bounds.h],
-                                ],
-                                color: [color[0], color[1], color[2]],
-                                width: 1.,
-                            })
-                        }
-                    }
-                };
-                icon_items.push(Item {
-                    opacity: if matches!(source, crate::document::IconSource::Asset(_)) {
-                        color[3] as f32 / 255.
-                    } else {
-                        1.
-                    },
-                    clip,
-                    drawing,
-                });
+                icon_items.push(Self::icon_item(source, bounds, color, 0, clip, rasters));
             }
             let previous_links = self.links.len();
             self.text(

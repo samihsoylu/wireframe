@@ -11,6 +11,8 @@ use wireframe::{
 fn supported(kind: &str, key: &str) -> bool {
     match key {
         "row_links" | "row_icons" => kind == "list",
+        "icon" | "icon_size" | "icon_rotation" => matches!(kind, "button" | "dropdown"),
+        "menu_icon" => kind == "button",
         "text" | "font_size" | "bold" | "italic" | "underline" | "text_color" | "align" => true,
         "sketch_filter" | "image_border" => kind == "image",
         "state" => matches!(
@@ -99,6 +101,7 @@ impl WireframeApp {
             .find(|n| n.id == id)
             .is_none_or(|n| n.locked);
         let mut import_row = None;
+        let mut import_icon = false;
         let explicit = self.editor.explicit_control_properties(id);
         let local = self.editor.editing_instance();
         ui.add_space(10.);
@@ -109,7 +112,8 @@ impl WireframeApp {
                 if let Err(error) = self.editor.auto_size_control(id) { self.error = Some(error); }
                 self.editor.commit();
             }
-            for key in ["image_border", "sketch_filter", "text", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+            for key in ["image_border", "sketch_filter", "text", "icon", "icon_size", "icon_rotation", "menu_icon", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+                if matches!(key, "icon_size" | "icon_rotation") && !matches!(values.get("icon"),Some(Value::Icon(_))) {continue;}
                 if key == "value" && values.get("vertical_scrollbar") != Some(&Value::Bool(true)) { continue; }
                 let Some(field) = spec.property(key).filter(|f| f.visible && supported(spec.id, key)) else { continue; };
                 let Some(mut value) = values.get(key).cloned() else { continue; };
@@ -126,6 +130,12 @@ impl WireframeApp {
                         }
                     });
                     match (&field.kind, &mut value) {
+                        (PropertyType::Icon, v) => {
+                            let mut chosen = match v {Value::Icon(source)=>Some(source.clone()),_=>None};
+                            import_icon |= super::icon_picker::choice(ui,&mut chosen,&self.editor.document.assets);
+                            *v = chosen.map(Value::Icon).unwrap_or(Value::Null);
+                            finish = *v != original;
+                        },
                         (PropertyType::Icons, Value::Icons(icons)) => {
                             let source=match values.get("text") {Some(Value::Text(s))=>s.as_str(),_=>""};
                             let labels:Vec<_>=source.split('\n').collect();
@@ -251,6 +261,9 @@ impl WireframeApp {
                 }
             }
         });
+        if import_icon {
+            self.start_image_import(wireframe::workspace::ImageTarget::Icon(id));
+        }
         if let Some(row) = import_row {
             self.start_image_import(wireframe::workspace::ImageTarget::ListRow {
                 control: id,

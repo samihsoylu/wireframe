@@ -9,6 +9,7 @@ impl Scene {
         layer: &Layer,
         sketch: bool,
         fonts: &EguiMeasurer<'_>,
+        rasters: &mut rasters::Rasters<'_>,
     ) -> Result<(), String> {
         let c = &layer.control;
         let b = c.bounds;
@@ -27,7 +28,11 @@ impl Scene {
             bold: c.bold,
             italic: boolean(&layer.properties, "italic"),
         };
-        let metrics = menu.measure(fonts, style, sketch, closed);
+        let icon = crate::icons::setting(&layer.properties);
+        let icon_size = icon.as_ref().map_or(0., |i| i.size);
+        let metrics = menu
+            .measure(fonts, style, sketch, closed)
+            .with_icon(icon_size);
         let ink = if disabled {
             [128, 128, 139]
         } else {
@@ -64,7 +69,12 @@ impl Scene {
             &RichText::parse(&menu.title, false),
             style,
             TextBox {
-                bounds: Bounds::new(b.x + left, b.y, (b.w - arrow_width).max(0.), metrics.header),
+                bounds: Bounds::new(
+                    b.x + left + if icon.is_some() { icon_size + 3. } else { 0. },
+                    b.y,
+                    (b.w - arrow_width).max(0.),
+                    metrics.header,
+                ),
                 align: Alignment::Left,
                 middle: true,
                 wrap: false,
@@ -106,6 +116,30 @@ impl Scene {
             },
             clip,
         );
+        if let Some(icon) = icon {
+            let color = if disabled {
+                [128, 128, 139]
+            } else if focused {
+                accent
+            } else if ink == [0; 3] {
+                rgb(&layer.properties, "border_color", [0; 3])
+            } else {
+                ink
+            };
+            self.items.push(Self::icon_item(
+                icon.source,
+                Bounds::new(
+                    b.x + left,
+                    b.y + (metrics.header - icon_size) / 2.,
+                    icon_size,
+                    icon_size,
+                ),
+                [color[0], color[1], color[2], 255],
+                icon.turns,
+                clip,
+                rasters,
+            ));
+        }
         let arrow_color = if disabled {
             [128, 128, 139]
         } else {

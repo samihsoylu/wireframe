@@ -136,7 +136,9 @@ fn list_icon_geometry_color_clipping_and_vector_exports_agree() {
         .items
         .iter()
         .filter_map(|i| match &i.drawing {
-            Drawing::Icon { bounds, id, color } => Some((bounds, id, color, i.clip)),
+            Drawing::Icon {
+                bounds, id, color, ..
+            } => Some((bounds, id, color, i.clip)),
             _ => None,
         })
         .collect();

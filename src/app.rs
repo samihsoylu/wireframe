@@ -1143,16 +1143,18 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     bounds: b,
                     id,
                     color,
+                    turns,
                 } => {
                     let rect = Rect::from_min_size(
                         origin + Vec2::new(b.x, b.y) * scale,
                         Vec2::new(b.w, b.h) * scale,
                     );
                     if let Some(icon) = wireframe::icons::get(id) {
-                        icon.paint(
+                        icon.paint_rotated(
                             &clipped,
                             rect,
                             Color32::from_rgba_unmultiplied(color[0], color[1], color[2], color[3]),
+                            *turns,
                         );
                     } else {
                         clipped.rect_stroke(

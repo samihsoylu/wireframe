@@ -90,7 +90,7 @@ fn dropdown_open_closed_states_use_menu_height_palette_and_selected_title() {
             } else if state.starts_with("disabled") {
                 if sketch { [137; 3] } else { [204; 3] }
             } else {
-                [0; 3]
+                if sketch { [0; 3] } else { [51; 3] }
             };
             let color = s
                 .items

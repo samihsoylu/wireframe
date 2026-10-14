@@ -137,3 +137,13 @@ impl Menu {
         }
     }
 }
+
+impl Metrics {
+    pub fn with_icon(mut self, size: f32) -> Self {
+        let header = self.header.max(size);
+        self.height += header - self.header;
+        self.header = header;
+        self.width += size;
+        self
+    }
+}

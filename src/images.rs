@@ -124,8 +124,17 @@ pub fn decoded_styled(bytes: &[u8], turns: u8, sketch: bool) -> Result<Decoded, 
 }
 /// Tint in linear light before the scene stretches the image to its icon square.
 pub fn decoded_tinted(bytes: &[u8], color: [u8; 3]) -> Result<Decoded, String> {
+    decoded_tinted_rotated(bytes, color, 0)
+}
+pub fn decoded_tinted_rotated(bytes: &[u8], color: [u8; 3], turns: u8) -> Result<Decoded, String> {
     let mut rgba = decode(bytes)?.to_rgba8();
     tint::apply(&mut rgba, color);
+    let rgba = match turns % 4 {
+        1 => image::imageops::rotate270(&rgba),
+        2 => image::imageops::rotate180(&rgba),
+        3 => image::imageops::rotate90(&rgba),
+        _ => rgba,
+    };
     from_rgba(rgba)
 }
 pub fn thumbnail(bytes: &[u8]) -> Result<Decoded, String> {

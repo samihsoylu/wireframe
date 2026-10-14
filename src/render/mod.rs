@@ -2,6 +2,7 @@
 // Copyright 2026 Wireframe contributors
 //! Shared positioned drawing data for the canvas and vector/raster exports.
 mod choice;
+mod control_icons;
 mod dropdown;
 mod forms;
 mod images;
@@ -38,6 +39,7 @@ pub enum Drawing {
     Icon {
         bounds: Bounds,
         id: String,
+        turns: u8,
         color: [u8; 4],
     },
     Image {
@@ -275,10 +277,13 @@ impl Scene {
             return Ok(());
         }
         if c.kind == Kind::Dropdown {
-            return self.dropdown_control(layer, sketch, fonts);
+            return self.dropdown_control(layer, sketch, fonts, rasters);
         }
         if c.kind == Kind::Search {
             return self.search_control(layer, sketch, fonts);
+        }
+        if c.kind == Kind::Button {
+            return self.button_control(layer, sketch, fonts, rasters);
         }
         if c.kind == Kind::List {
             return self.list_control(layer, sketch, fonts, rasters);

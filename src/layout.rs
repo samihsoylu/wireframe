@@ -303,7 +303,9 @@ impl<M: TextMeasurer> Engine<'_, M> {
             let menu = crate::dropdown::Menu::parse(text, selected)?;
             let closed =
                 matches!(props.get("state"), Some(Value::Choice(s)) if s.ends_with("closed"));
-            let metrics = menu.measure(self.measurer, style, self.project.settings.sketch, closed);
+            let metrics = menu
+                .measure(self.measurer, style, self.project.settings.sketch, closed)
+                .with_icon(crate::icons::setting(props).map_or(0., |i| i.size));
             let w = match width {
                 Dimension::Auto => metrics.width,
                 Dimension::Fixed(w) => w,
@@ -423,13 +425,40 @@ impl<M: TextMeasurer> Engine<'_, M> {
         {
             return Err("Text measurement returned invalid geometry".into());
         }
+        let icon = (kind == "button")
+            .then(|| crate::icons::setting(props))
+            .flatten();
+        let icon_size = icon.as_ref().map_or(0., |i| i.size);
+        let gap = if text.is_empty() {
+            0.
+        } else if self.project.settings.sketch {
+            4.
+        } else {
+            3.
+        };
+        let menu = if kind == "button" {
+            crate::icons::menu_size(boolean(props, "menu_icon"), style.size)
+        } else {
+            0.
+        };
+        let extra_width = if icon.is_some() { icon_size + gap } else { 0. }
+            + if menu > 0. { menu + 3. * gap } else { 0. };
         let w = match width {
             Dimension::Auto if kind == "text_input" && text.is_empty() => 79.,
-            Dimension::Auto => (measured.width + pad_x).max(min_w),
+            Dimension::Auto => (measured.width + pad_x + extra_width).max(min_w),
             Dimension::Fixed(w) => w,
         };
         let h = match height {
-            Dimension::Auto => (measured.height + pad_y).max(min_h),
+            Dimension::Auto => {
+                (measured.height + pad_y)
+                    .max(min_h)
+                    .max(icon_size)
+                    .max(if menu > 0. {
+                        menu + if self.project.settings.sketch { 4. } else { 6. }
+                    } else {
+                        0.
+                    })
+            }
             Dimension::Fixed(h) => h,
         };
         validate_size(w, h)?;

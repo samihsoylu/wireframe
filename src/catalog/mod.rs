@@ -47,6 +47,7 @@ pub enum PropertyType {
     Link,
     Links,
     Icons,
+    Icon,
     Asset,
 }
 #[derive(Clone, Debug)]
@@ -186,6 +187,7 @@ impl PropertySpec {
                 | (PropertyType::Color, Value::Color(_))
                 | (PropertyType::Link, Value::Link(_))
                 | (PropertyType::Asset, Value::Asset(_)) => true,
+                (PropertyType::Icon, Value::Icon(icon)) => icon.valid(),
                 (PropertyType::Icons, Value::Icons(icons)) => {
                     icons.len() <= 10_001
                         && icons

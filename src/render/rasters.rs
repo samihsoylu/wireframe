@@ -9,7 +9,7 @@ use std::{collections::HashMap, sync::Arc};
 #[derive(Clone, Copy, Hash, Eq, PartialEq)]
 pub(super) enum Style {
     Image { turns: u8, sketch: bool },
-    Icon([u8; 3]),
+    Icon([u8; 3], u8),
 }
 pub(super) struct Rasters<'a> {
     assets: &'a [Asset],
@@ -43,7 +43,9 @@ impl<'a> Rasters<'a> {
                     Style::Image { turns, sketch } => {
                         crate::images::decoded_styled(&asset.bytes, turns, sketch)
                     }
-                    Style::Icon(color) => crate::images::decoded_tinted(&asset.bytes, color),
+                    Style::Icon(color, turns) => {
+                        crate::images::decoded_tinted_rotated(&asset.bytes, color, turns)
+                    }
                 }
                 .ok()?;
                 self.bytes += bytes;

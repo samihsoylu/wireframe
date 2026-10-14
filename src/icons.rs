@@ -112,6 +112,15 @@ impl Icon {
         ))
     }
     pub fn paint(&self, painter: &egui::Painter, rect: egui::Rect, color: Color32) {
+        self.paint_rotated(painter, rect, color, 0);
+    }
+    pub fn paint_rotated(
+        &self,
+        painter: &egui::Painter,
+        rect: egui::Rect,
+        color: Color32,
+        turns: u8,
+    ) {
         if !rect.is_positive() || !painter.clip_rect().intersects(rect) {
             return;
         }
@@ -161,14 +170,66 @@ impl Icon {
                 rect.width(),
                 rect.height(),
             ));
-            painter.image(
-                texture.id(),
+            let mut mesh = egui::epaint::Mesh::with_texture(texture.id());
+            mesh.add_rect_with_uv(
                 egui::Rect::from_min_size(egui::pos2(b.x, b.y), egui::vec2(b.w, b.h)),
                 egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1., 1.)),
                 color,
             );
+            let rotation =
+                egui::emath::Rot2::from_angle(-((turns % 4) as f32) * std::f32::consts::FRAC_PI_2);
+            for vertex in &mut mesh.vertices {
+                vertex.pos = rect.center() + rotation * (vertex.pos - rect.center());
+            }
+            painter.add(egui::Shape::mesh(mesh));
         }
     }
 }
 #[derive(Clone, Default)]
 struct Textures(VecDeque<(String, u32, egui::TextureHandle)>);
+
+/// An optional control icon keeps its size independently of text size.
+pub struct Setting<'a> {
+    pub source: &'a crate::document::IconSource,
+    pub size: f32,
+    pub turns: u8,
+}
+pub fn setting(props: &crate::document::Properties) -> Option<Setting<'_>> {
+    use crate::document::Value;
+    let Value::Icon(source) = props.get("icon")? else {
+        return None;
+    };
+    let size = match props.get("icon_size") {
+        Some(Value::Choice(s)) => s
+            .parse::<u16>()
+            .ok()
+            .filter(|n| [16, 24, 32, 48, 64, 128].contains(n))
+            .unwrap_or(24),
+        _ => 24,
+    };
+    let turns = match props.get("icon_rotation") {
+        Some(Value::Choice(s)) => match s.as_str() {
+            "90" => 1,
+            "180" => 2,
+            "270" => 3,
+            _ => 0,
+        },
+        _ => 0,
+    };
+    Some(Setting {
+        source,
+        size: size as f32,
+        turns,
+    })
+}
+pub fn menu_size(enabled: bool, font_size: f32) -> f32 {
+    if !enabled {
+        0.
+    } else if font_size < 28. {
+        10.
+    } else if font_size < 60. {
+        12.
+    } else {
+        24.
+    }
+}

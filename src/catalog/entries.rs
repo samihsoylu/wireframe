@@ -898,6 +898,8 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     );
     ink.default = if c.id == "link" {
         DefaultValue::LinkColor
+    } else if c.id == "dropdown" {
+        DefaultValue::FormInk
     } else if c.id == "search" {
         DefaultValue::SearchInk
     } else {
@@ -1018,7 +1020,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             PropertyType::Color,
             Value::Color([0, 0, 0, 255]),
         );
-        border.default = DefaultValue::Ink;
+        border.default = DefaultValue::FormInk;
         c.properties.push(border);
     }
     if matches!(c.family, Family::Rows) {
@@ -1086,6 +1088,28 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             359.,
             true,
         ));
+    }
+    if matches!(c.id, "button" | "dropdown") {
+        let mut icon = prop("icon", "Icon", PropertyType::Icon, Value::Null);
+        icon.nullable = true;
+        c.properties.extend([
+            icon,
+            choice(
+                "icon_size",
+                "Icon size",
+                &["16", "24", "32", "48", "64", "128"],
+                "24",
+            ),
+            choice(
+                "icon_rotation",
+                "Icon rotation",
+                &["0", "90", "180", "270"],
+                "0",
+            ),
+        ]);
+        if c.id == "button" {
+            c.properties.push(boolean("menu_icon", "Menu arrow", false));
+        }
     }
     if c.id == "list" {
         if let Some(text) = c.properties.iter_mut().find(|p| p.key == "text_color") {

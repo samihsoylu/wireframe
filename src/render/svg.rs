@@ -52,9 +52,11 @@ impl Scene {
                 out.push_str(&format!("<g opacity=\"{}\">", item.opacity));
             }
             match &item.drawing {
-    Drawing::Icon { bounds, id, color } => {
+    Drawing::Icon { bounds, id, color, turns } => {
+        out.push_str(&format!("<g transform=\"rotate({} {} {})\">",-90*i32::from(*turns),bounds.x+bounds.w/2.,bounds.y+bounds.h/2.));
         if let Some(icon) = crate::icons::get(id) {out.push_str(&icon.svg(*bounds,*color));}
         else {out.push_str(&format!("<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"none\" stroke=\"{}\"/>",bounds.x,bounds.y,bounds.w,bounds.h,crate::scene::color([color[0],color[1],color[2]])));}
+        out.push_str("</g>");
     },
     Drawing::Image { bounds: b, data } => out.push_str(&format!("<image x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" preserveAspectRatio=\"none\" href=\"data:image/png;base64,{}\"/>", b.x,b.y,b.w,b.h,base64(&data.png))),
     Drawing::Primitive(p)=>out.push_str(&crate::scene::primitive_svg(p.clone())),

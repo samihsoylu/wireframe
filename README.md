@@ -10,7 +10,7 @@ A local desktop workspace for turning rough ideas into clear wireframes. Built i
 - Undo/redo, local project files and recovery copies.
 - Sketch and clean styles; PNG and SVG export.
 - Page links and presentation mode.
-- Searchable offline List row icons and imported project images, with undoable assignments and self-contained exports.
+- Searchable offline icons and imported project images for Lists, Buttons and Dropdowns, with size/rotation controls, undoable assignments and self-contained exports.
 - Embedded PNG/JPEG/GIF images, shared sources and replacement with Undo.
 - Canvas image cropping and quarter-turn rotation, including local component edits.
 

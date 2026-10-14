@@ -230,6 +230,10 @@ impl Check<'_> {
                         return Err("Unsupported link URL".into());
                     }
                 }
+                Value::Icon(icon) if !icon.valid() => return Err("Invalid control icon".into()),
+                Value::Icon(IconSource::Asset(id)) if !self.assets.contains(id) => {
+                    return Err("Missing control icon asset".into());
+                }
                 Value::Icons(icons)
                     if icons.len() > 10_001 || !icons.iter().flatten().all(IconSource::valid) =>
                 {

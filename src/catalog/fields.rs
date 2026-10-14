@@ -48,6 +48,10 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "underline",
         ],
         "button" => &[
+            "icon",
+            "icon_size",
+            "icon_rotation",
+            "menu_icon",
             "align",
             "bold",
             "fill",
@@ -136,6 +140,10 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
         ],
         "color_picker" => &["fill"],
         "dropdown" => &[
+            "icon",
+            "icon_size",
+            "icon_rotation",
+            "menu_icon",
             "border_color",
             "bold",
             "font_size",

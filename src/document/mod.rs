@@ -160,6 +160,7 @@ pub enum Value {
     Asset(Id),
     Links(Vec<Option<Link>>),
     Icons(Vec<Option<IconSource>>),
+    Icon(IconSource),
     Null,
 }
 

@@ -6,6 +6,7 @@ use crate::images::Prepared;
 #[derive(Clone, Copy)]
 pub enum ImageTarget {
     Control(Id),
+    Icon(Id),
     ListRow { control: Id, row: usize },
 }
 #[derive(Clone, Copy)]
@@ -219,6 +220,21 @@ impl Editor {
     ) -> Result<Id, String> {
         match target {
             ImageTarget::Control(id) => self.editable_image(id)?,
+            ImageTarget::Icon(id) => {
+                let (spec, _) = self
+                    .control_properties(id)
+                    .ok_or("Control no longer exists")?;
+                if !matches!(spec.id, "button" | "dropdown")
+                    || self
+                        .current()
+                        .controls
+                        .iter()
+                        .find(|c| c.id == id)
+                        .is_none_or(|c| c.locked)
+                {
+                    return Err("Select an unlocked control with an icon".into());
+                }
+            }
             ImageTarget::ListRow { control, row } => {
                 let (spec, props) = self
                     .control_properties(control)
@@ -284,6 +300,9 @@ impl Editor {
                 id
             };
             match target {
+                ImageTarget::Icon(id) => {
+                    e.set_control_property(id, "icon", Value::Icon(IconSource::Asset(asset)))?;
+                }
                 ImageTarget::Control(id) => {
                     e.set_control_property(id, "image", Value::Asset(asset))?
                 }

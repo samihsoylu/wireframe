@@ -218,7 +218,7 @@ fn references(nodes: &[Node], defs: &mut HashSet<Id>, assets: &mut HashSet<Id>) 
     fn props(p: &Properties, assets: &mut HashSet<Id>) {
         for v in p.values() {
             match v {
-                Value::Asset(id) => {
+                Value::Asset(id) | Value::Icon(IconSource::Asset(id)) => {
                     assets.insert(*id);
                 }
                 Value::Icons(icons) => {
@@ -253,7 +253,7 @@ fn remap(nodes: &mut [Node], map: &HashMap<Id, Id>) {
     fn props(p: &mut Properties, map: &HashMap<Id, Id>) {
         for v in p.values_mut() {
             match v {
-                Value::Asset(id) => {
+                Value::Asset(id) | Value::Icon(IconSource::Asset(id)) => {
                     if let Some(new) = map.get(id) {
                         *id = *new;
                     }

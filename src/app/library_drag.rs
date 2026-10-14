@@ -10,11 +10,24 @@ impl WireframeApp {
         rect: Rect,
         response: &egui::Response,
     ) {
-        if response.enabled()
-            && (response.drag_started_by(egui::PointerButton::Primary)
-                || Self::instant_drag(ui, rect.intersect(ui.clip_rect())).is_some())
-            && !ui.input(|i| i.key_pressed(Key::Escape))
-        {
+        if !response.enabled() || ui.input(|i| i.key_pressed(Key::Escape)) {
+            return;
+        }
+        let visible = rect.intersect(ui.clip_rect());
+        for event in ui.input(|i| i.events.clone()) {
+            if let egui::Event::PointerButton {
+                pos,
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                ..
+            } = event
+                && visible.contains(pos)
+                && ui.ctx().layer_id_at(pos) == Some(ui.layer_id())
+            {
+                self.library_press = Some((kind, pos));
+            }
+        }
+        if response.drag_started_by(egui::PointerButton::Primary) {
             self.library_drag = Some(kind);
         }
     }
@@ -22,9 +35,6 @@ impl WireframeApp {
     // Resolve after viewport layout and before painting, so release has no
     // empty frame between the transient preview and the committed control.
     pub(super) fn library_drag_update(&mut self, ctx: &egui::Context) {
-        let Some(kind) = self.library_drag else {
-            return;
-        };
         let (focused, escape, held, released, pointer) = ctx.input(|i| {
             (
                 i.focused,
@@ -45,10 +55,21 @@ impl WireframeApp {
             || self.recovery_offer.is_some()
         {
             self.library_drag = None;
+            self.library_press = None;
             return;
         }
         if released || !held {
-            self.library_drag = None;
+            if released
+                && self.library_drag.is_none()
+                && let Some((kind, start)) = self.library_press
+                && pointer.is_some_and(|pos| pos.distance(start) > 6.)
+            {
+                self.library_drag = Some(kind);
+            }
+            self.library_press = None;
+            let Some(kind) = self.library_drag.take() else {
+                return;
+            };
             if released && let Some(pos) = pointer.filter(|p| self.canvas_rect.contains(*p)) {
                 let point = self.world(pos);
                 self.editor.add(kind, point.x, point.y);
@@ -284,5 +305,91 @@ mod tests {
         assert_eq!((b.x, b.y), (expected.x, expected.y));
         app.editor.undo();
         assert!(app.editor.current().controls.is_empty());
+    }
+    #[test]
+    fn library_drag_with_press_in_previous_frame_inserts_once() {
+        for zoom in [0.5, 1., 2.] {
+            let ctx = egui::Context::default();
+            let mut app = WireframeApp::workspace(&ctx, None);
+            app.zoom = zoom;
+            let before = app.editor.document.clone();
+            begin(&ctx, &mut app);
+            let target = app.screen([160., 200.]);
+            frame(
+                &ctx,
+                &mut app,
+                vec![egui::Event::PointerMoved(target), pointer(target, false)],
+                true,
+            );
+            assert_eq!(app.editor.current().controls.len(), 1);
+            let b = app.editor.current().controls[0].bounds;
+            assert_eq!((b.x, b.y), (160., 200.));
+            frame(&ctx, &mut app, vec![], true);
+            assert_eq!(app.editor.current().controls.len(), 1);
+            app.editor.undo();
+            assert_eq!(app.editor.document, before);
+        }
+    }
+    #[test]
+    fn pending_library_press_cancels_without_late_insertion() {
+        for mode in ["escape", "focus", "hidden", "click", "outside"] {
+            let ctx = egui::Context::default();
+            let mut app = WireframeApp::workspace(&ctx, None);
+            app.editor.add(Kind::Label, 10., 20.);
+            let before = app.editor.document.clone();
+            let selection = app.editor.selection.clone();
+            let start = begin(&ctx, &mut app);
+            let target = app.canvas_rect.center();
+            match mode {
+                "escape" => {
+                    frame(
+                        &ctx,
+                        &mut app,
+                        vec![egui::Event::Key {
+                            key: Key::Escape,
+                            physical_key: None,
+                            pressed: true,
+                            repeat: false,
+                            modifiers: Modifiers::NONE,
+                        }],
+                        true,
+                    );
+                }
+                "focus" => {
+                    frame(&ctx, &mut app, vec![], false);
+                }
+                "hidden" => {
+                    app.show_library = false;
+                    frame(&ctx, &mut app, vec![], true);
+                    app.show_library = true;
+                }
+                "click" => {
+                    frame(&ctx, &mut app, vec![pointer(start, false)], true);
+                }
+                _ => {
+                    frame(
+                        &ctx,
+                        &mut app,
+                        vec![
+                            egui::Event::PointerMoved(Pos2::new(-20., -20.)),
+                            pointer(Pos2::new(-20., -20.), false),
+                        ],
+                        true,
+                    );
+                }
+            }
+            frame(
+                &ctx,
+                &mut app,
+                vec![egui::Event::PointerMoved(target), pointer(target, false)],
+                true,
+            );
+            assert_eq!(app.editor.document, before, "{mode}");
+            assert_eq!(app.editor.selection, selection, "{mode}");
+            assert!(
+                app.library_drag.is_none() && app.library_press.is_none(),
+                "{mode}"
+            );
+        }
     }
 }

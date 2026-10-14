@@ -78,6 +78,7 @@ pub struct WireframeApp {
     pan: Vec2,
     drag: Option<Drag>,
     library_drag: Option<Kind>,
+    library_press: Option<(Kind, Pos2)>,
     alignment_guides: Vec<snapping::Guide>,
     canvas_press: Option<Pos2>,
     grid: bool,
@@ -149,6 +150,7 @@ impl WireframeApp {
             pan: Vec2::ZERO,
             drag: None,
             library_drag: None,
+            library_press: None,
             alignment_guides: Vec::new(),
             canvas_press: None,
             grid: false,
@@ -361,9 +363,10 @@ impl WireframeApp {
     fn shortcuts(&mut self, ctx: &egui::Context) {
         // A held library control is transient. Escape must not leave a group or
         // clear the existing selection, and shortcuts must not edit underneath it.
-        if self.library_drag.is_some() {
+        if self.library_drag.is_some() || self.library_press.is_some() {
             if ctx.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape)) {
                 self.library_drag = None;
+                self.library_press = None;
             }
             return;
         }

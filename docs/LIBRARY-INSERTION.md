@@ -6,4 +6,6 @@ Release over the canvas to insert and select it. Undo removes that insertion in 
 
 The preview is transient: it never enters the document, undo history, recovery file or export. Release commits before canvas painting to avoid an empty frame between preview and placed control.
 
-Validation covers actual egui pointer events across frames, preview paint bounds following the pointer, placement at 50/100/200% zoom with panning, small pre-drag movement, Escape/focus/outside cancellation, one-frame coalesced drags and one-step history. Native macOS validates drop, Undo/Redo, outside rejection and double-click. A held native preview capture and native Windows/Linux testing remain outstanding.
+Validation covers actual egui pointer events across frames, preview paint bounds following the pointer, placement at 50/100/200% zoom with panning, small pre-drag movement, Escape/focus/outside cancellation, one-frame coalesced drags, press/move/release split across render frames, cancellation before the drag threshold, and one-step history. Native macOS validates drop, Undo/Redo, outside rejection and double-click. A held native preview capture and native Windows/Linux testing remain outstanding.
+
+The source press is retained until release or cancellation. This keeps fast drops reliable when the press arrives in one render frame and movement plus release arrive together in the next.

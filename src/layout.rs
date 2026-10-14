@@ -267,6 +267,40 @@ impl<M: TextMeasurer> Engine<'_, M> {
             bold: boolean(props, "bold"),
             italic: boolean(props, "italic"),
         };
+        if kind == "pointed_button" {
+            let measured =
+                self.measurer
+                    .measure_rich(&RichText::parse(text, false), style, None, false);
+            let icon = crate::icons::setting(props);
+            let icon_size = icon.as_ref().map_or(0., |i| i.size);
+            let menu = crate::icons::menu_size(boolean(props, "menu_icon"), style.size);
+            let padding = if matches!(props.get("direction"), Some(Value::Choice(s)) if s == "center")
+            {
+                20.
+            } else {
+                30.
+            };
+            let w = match width {
+                Dimension::Auto => {
+                    measured.width
+                        + padding
+                        + icon_size
+                        + if icon.is_some() && measured.width > 0. {
+                            3.
+                        } else {
+                            0.
+                        }
+                        + if menu > 0. { menu + 3. } else { 0. }
+                }
+                Dimension::Fixed(w) => w,
+            };
+            let h = match height {
+                Dimension::Auto => 27_f32.max(measured.height).max(icon_size).max(menu),
+                Dimension::Fixed(h) => h,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         if kind == "circle_button" {
             let w = match width {
                 Dimension::Auto => 48.,

@@ -39,3 +39,5 @@ Standalone `icon` and `icon_label` control kinds reuse the single `icon`, `icon_
 
 
 The `circle_button` kind supports both fixed and automatic dimensions; each automatic dimension resolves to48. It reuses nullable `icon`, `icon_size`, `icon_rotation`, `label_position` and `border`, plus fill, text and state. New insertion explicitly stores `plus-solid`; absent or null icon data stays empty when loading existing nodes. Native circles use the shared styled ellipse in canvas and exports. This adds no new serialized format version.
+
+The `pointed_button` kind resizes horizontally and calculates automatic height from text, icon and menu sizes with a27-unit minimum. Stored fixed heights are respected. `direction` accepts left/center/right; `border` accepts none/solid. New insertion stores left/none explicitly; unset values resolve to right/solid. Optional icons use the shared typed source/size/rotation properties. A `menu_icon` boolean adds an independent down arrow. State supports normal/disabled. Whole-control links are active; label markup does not create inline hotspots.

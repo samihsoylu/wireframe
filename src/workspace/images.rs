@@ -226,7 +226,12 @@ impl Editor {
                     .ok_or("Control no longer exists")?;
                 if !matches!(
                     spec.id,
-                    "button" | "dropdown" | "icon" | "icon_label" | "circle_button"
+                    "button"
+                        | "dropdown"
+                        | "icon"
+                        | "icon_label"
+                        | "circle_button"
+                        | "pointed_button"
                 ) || self
                     .current()
                     .controls

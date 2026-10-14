@@ -64,6 +64,11 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "underline",
         ],
         "pointed_button" => &[
+            "icon",
+            "icon_size",
+            "icon_rotation",
+            "menu_icon",
+            "direction",
             "bold",
             "border",
             "fill",

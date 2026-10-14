@@ -218,6 +218,7 @@ fn control(node: &LayoutNode) -> Control {
         "icon" => Kind::Icon,
         "icon_label" => Kind::IconLabel,
         "circle_button" => Kind::CircleButton,
+        "pointed_button" => Kind::PointedButton,
         "browser" => Kind::Browser,
         "phone" => Kind::Phone,
         "panel" | "window" => Kind::Panel,

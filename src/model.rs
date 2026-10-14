@@ -107,6 +107,7 @@ pub enum Kind {
     Icon,
     IconLabel,
     CircleButton,
+    PointedButton,
     Browser,
     Phone,
     Panel,
@@ -118,7 +119,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 27] = [
+    pub const ALL: [Kind; 28] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -137,6 +138,7 @@ impl Kind {
         Self::Icon,
         Self::IconLabel,
         Self::CircleButton,
+        Self::PointedButton,
         Self::Browser,
         Self::Phone,
         Self::Panel,
@@ -167,6 +169,7 @@ impl Kind {
             Self::Icon => "Icon",
             Self::IconLabel => "Icon and label",
             Self::CircleButton => "Circle button",
+            Self::PointedButton => "Pointed button",
             Self::Browser => "Browser",
             Self::Phone => "Phone",
             Self::Panel => "Panel",
@@ -184,6 +187,7 @@ impl Kind {
             Self::Icon | Self::IconLabel => "Icons",
             Self::Button
             | Self::CircleButton
+            | Self::PointedButton
             | Self::TextInput
             | Self::TextArea
             | Self::Checkbox
@@ -200,6 +204,7 @@ impl Kind {
             Self::Button => (120., 38.),
             Self::Icon => (24., 24.),
             Self::CircleButton => (48., 48.),
+            Self::PointedButton => (69., 27.),
             Self::IconLabel => (65., 63.),
             Self::Label | Self::Link => (140., 28.),
             Self::Heading => (300., 48.),
@@ -220,7 +225,7 @@ impl Kind {
     }
     pub fn initial_text(self) -> &'static str {
         match self {
-            Self::Button => "Button",
+            Self::Button | Self::PointedButton => "Button",
             Self::IconLabel => "Icon Name",
             Self::Label => "Some text",
             Self::Heading => "Your next great idea",

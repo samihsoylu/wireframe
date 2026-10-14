@@ -8,6 +8,7 @@ mod dropdown;
 mod forms;
 mod images;
 mod list;
+mod pointed_button;
 mod rasters;
 mod scrollbar;
 mod search;
@@ -289,6 +290,9 @@ impl Scene {
         }
         if c.kind == Kind::CircleButton {
             return self.circle_button(layer, sketch, fonts, rasters);
+        }
+        if c.kind == Kind::PointedButton {
+            return self.pointed_button(layer, sketch, fonts, rasters);
         }
         if c.kind == Kind::Button {
             return self.button_control(layer, sketch, fonts, rasters);

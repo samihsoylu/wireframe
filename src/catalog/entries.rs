@@ -908,7 +908,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         DefaultValue::Ink
     };
     let text = match c.id {
-        "button" => "Button",
+        "button" | "pointed_button" => "Button",
         "icon_label" => "Icon Name",
         "dropdown" => "Dropdown",
         "checkbox" => "Checkbox",
@@ -1094,7 +1094,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     }
     if matches!(
         c.id,
-        "button" | "dropdown" | "icon" | "icon_label" | "circle_button"
+        "button" | "dropdown" | "icon" | "icon_label" | "circle_button" | "pointed_button"
     ) {
         let mut icon = prop("icon", "Icon", PropertyType::Icon, Value::Null);
         icon.nullable = true;
@@ -1113,9 +1113,19 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
                 "0",
             ),
         ]);
-        if c.id == "button" {
+        if matches!(c.id, "button" | "pointed_button") {
             c.properties.push(boolean("menu_icon", "Menu arrow", false));
         }
+    }
+    if c.id == "pointed_button" {
+        c.properties.push(choice(
+            "direction",
+            "Direction",
+            &["left", "center", "right"],
+            "right",
+        ));
+        c.properties
+            .push(choice("border", "Border", &["none", "solid"], "solid"));
     }
     if matches!(c.id, "icon" | "icon_label" | "circle_button") {
         c.properties.retain(|p| p.key != "border");

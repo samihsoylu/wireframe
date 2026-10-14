@@ -229,6 +229,12 @@ impl ControlSpec {
                 Value::Icon(crate::document::IconSource::Catalog("plus-solid".into())),
             );
         }
+        if self.id == "pointed_button" {
+            node.properties
+                .insert("direction".into(), Value::Choice("left".into()));
+            node.properties
+                .insert("border".into(), Value::Choice("none".into()));
+        }
         node
     }
     pub fn defaults(&self, context: &Context) -> Properties {

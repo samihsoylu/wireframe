@@ -158,7 +158,12 @@ fn standalone_import_is_atomic_and_survives_components_copy_and_reset() {
     .write_to(&mut output, image::ImageFormat::Png)
     .unwrap();
     let bytes = output.into_inner();
-    for kind in [Kind::Icon, Kind::IconLabel, Kind::CircleButton] {
+    for kind in [
+        Kind::Icon,
+        Kind::IconLabel,
+        Kind::CircleButton,
+        Kind::PointedButton,
+    ] {
         let (mut e, id) = add(kind);
         let baseline = e.document.clone();
         let image = wireframe::images::Prepared::from_bytes("Local.png", &bytes).unwrap();

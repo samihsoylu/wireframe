@@ -4,7 +4,7 @@ A local desktop workspace for turning rough ideas into clear wireframes. Built i
 
 ## Features
 
-- 27 controls for forms, text, shapes, navigation and layout.
+- 28 controls for forms, text, shapes, navigation and layout.
 - Pages, notes, searchable library and layers.
 - Move, resize, align, nest groups, duplicate and lock controls.
 - Undo/redo, local project files and recovery copies.

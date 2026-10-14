@@ -138,7 +138,14 @@ fn bullet_recognition_is_explicit_and_column_sensitive() {
 fn adversarial_unclosed_tags_have_bounded_work_and_preserve_text() {
     for source in ["{".repeat(100_000), "[".repeat(100_000)] {
         let parsed = RichText::parse(&source, false);
-        assert!(parsed.complexity_limited);
+        if source.starts_with('{') {
+            assert!(parsed.complexity_limited);
+        } else {
+            assert!(
+                !parsed.complexity_limited,
+                "Invalid opening boundaries are skipped in linear time"
+            );
+        }
         assert_eq!(parsed.display_text(true), source);
     }
 }
@@ -260,6 +267,7 @@ fn wrapping_preserves_source_graphemes_even_when_glyph_metadata_expands() {
         ] {
             for width in [1., 30., 70., 200.] {
                 let text = m.rich_galley(&RichText::plain(source), style, Some(width), true);
+                assert!(text.error.is_none(), "{:?}", text.error);
                 let actual: String = text
                     .runs
                     .iter()
@@ -310,11 +318,12 @@ fn truncation_keeps_whole_graphemes_and_reshapes_the_prefix() {
                 width: measure(&source),
                 face: "canvas-regular".into(),
                 face_scale: 1.,
+                positioned: None,
             };
-            run.truncate(&ctx, measure(cluster) + 0.01);
+            run.truncate(&ctx, measure(cluster) + 0.01).unwrap();
             assert_eq!(run.text, cluster);
             assert!((run.width - measure(cluster)).abs() < 0.01);
-            run.truncate(&ctx, 0.);
+            run.truncate(&ctx, 0.).unwrap();
             assert!(run.text.is_empty());
             assert_eq!(run.width, 0.);
         }
@@ -323,7 +332,7 @@ fn truncation_keeps_whole_graphemes_and_reshapes_the_prefix() {
 }
 
 #[test]
-fn ordinary_wrap_keeps_original_line_widths_and_link_targets_can_share_a_style() {
+fn wrap_uses_the_selected_engine_and_link_targets_can_share_a_style() {
     let ctx = egui::Context::default();
     wireframe::fonts::install(&ctx);
     ctx.run_ui(Default::default(), |_| {
@@ -339,16 +348,27 @@ fn ordinary_wrap_keeps_original_line_widths_and_link_targets_can_share_a_style()
         };
         let painted = m.rich_galley(
             &RichText::parse(
-                "one two three [first](page:2)[second](page:3) four five",
+                "one two three [first](page:2) [second](page:3) four five",
                 false,
             ),
             style,
             Some(70.),
             true,
         );
-        assert_eq!(painted.rows.len(), painted.galley.rows.len());
-        for (source, actual) in painted.galley.rows.iter().zip(&painted.rows) {
-            assert_eq!(source.size.x.ceil(), actual.width);
+        assert!(painted.error.is_none(), "{:?}", painted.error);
+        if cfg!(target_os = "macos") {
+            for (runs, row) in painted.runs.iter().zip(&painted.rows) {
+                let total: f64 = runs
+                    .iter()
+                    .map(|r| r.positioned.as_ref().unwrap().width)
+                    .sum();
+                assert_eq!(total.ceil() as f32, row.width);
+            }
+        } else {
+            assert_eq!(painted.rows.len(), painted.galley.rows.len());
+            for (source, actual) in painted.galley.rows.iter().zip(&painted.rows) {
+                assert_eq!(source.size.x.ceil(), actual.width);
+            }
         }
         assert!(painted.links.iter().any(|l| l.target == "page:2"));
         assert!(painted.links.iter().any(|l| l.target == "page:3"));
@@ -358,7 +378,21 @@ fn ordinary_wrap_keeps_original_line_widths_and_link_targets_can_share_a_style()
             }
         }
         let adjacent = m.rich_galley(
-            &RichText::parse("[f](page:2)[fi](page:3)", false),
+            &RichText {
+                source: "ffi".into(),
+                items: [("f", "page:2"), ("fi", "page:3")]
+                    .into_iter()
+                    .map(|(text, target)| Inline::Span {
+                        text: text.into(),
+                        style: wireframe::rich_text::Style {
+                            link: true,
+                            target: Some(target.into()),
+                            ..Default::default()
+                        },
+                    })
+                    .collect(),
+                complexity_limited: false,
+            },
             style,
             None,
             true,
@@ -378,6 +412,156 @@ fn ordinary_wrap_keeps_original_line_widths_and_link_targets_can_share_a_style()
                 .collect::<String>(),
             source
         );
+    })
+    .drop_without_applying_deltas();
+}
+
+#[test]
+fn formatting_boundaries_survive_equal_styles_and_trailing_spaces() {
+    use wireframe::rich_text::Style;
+    let spans = |s: &str| {
+        RichText::parse(s, false)
+            .items
+            .into_iter()
+            .filter_map(|item| match item {
+                Inline::Span { text, style } => Some((text, style)),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+    };
+    let bold = Style {
+        bold: true,
+        ..Default::default()
+    };
+    assert_eq!(
+        spans("*left *right"),
+        vec![
+            ("left ".into(), bold.clone()),
+            ("right".into(), Style::default())
+        ]
+    );
+    assert_eq!(
+        spans("*a**b*"),
+        vec![("a".into(), bold.clone()), ("b".into(), bold)]
+    );
+    assert_eq!(spans("{size:24}a{size}{size:24}b{size}").len(), 2);
+    for source in [
+        "f[i]",
+        "[[x]",
+        "a_b_",
+        "a~b~",
+        "a-b-",
+        ".[x]",
+        "é[x]",
+        "\u{00a0}[x]",
+    ] {
+        assert_eq!(RichText::parse(source, false).display_text(true), source);
+        assert!(spans(source).iter().all(|(_, s)| s == &Style::default()));
+    }
+    for source in ["[x]", " ([x])", ") [x]", "\t[x]", "\n[x]", "line\\n[x]"] {
+        assert!(spans(source).iter().any(|(_, s)| s.link), "{source}");
+    }
+    let adjacent = RichText::parse("[one](page:2)[two](page:3)", false);
+    assert_eq!(adjacent.display_text(true), "one[two](page:3)");
+    assert_eq!(
+        adjacent
+            .items
+            .iter()
+            .filter(|i| matches!(i, Inline::Span { style, .. } if style.target.is_some()))
+            .count(),
+        1
+    );
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn positioned_rich_runs_share_measurement_truncation_and_bidi_link_bounds() {
+    let ctx = egui::Context::default();
+    wireframe::fonts::install(&ctx);
+    ctx.run_ui(Default::default(), |_| {
+        let m = EguiMeasurer {
+            context: &ctx,
+            regular: wireframe::fonts::family(false, false),
+            bold: wireframe::fonts::family(true, false),
+        };
+        let style = TextStyle {
+            size: 24.,
+            bold: false,
+            italic: false,
+        };
+        for source in [
+            "ABC [שלום 123](page:2) end",
+            "[مرحبا ABC 123](page:2)",
+            "*a**b*",
+            "{size:24}f{size}i",
+            "👩‍💻ABC",
+        ] {
+            let painted = m.rich_galley(&RichText::parse(source, false), style, None, true);
+            assert!(painted.error.is_none(), "{:?}", painted.error);
+            let runs = &painted.runs[0];
+            let mut x = 0.;
+            for run in runs {
+                let ink = run.positioned.as_ref().unwrap();
+                assert_eq!(run.text, ink.source);
+                assert!((f64::from(run.x) - x).abs() < 0.0001);
+                x += ink.width;
+            }
+            assert_eq!(painted.rows[0].width, x.ceil() as f32);
+            for link in &painted.links {
+                let run = runs.iter().find(|r| r.x == link.rect.left()).unwrap();
+                assert!(link.rect.width() > 0.);
+                assert!((link.rect.width() - run.width).abs() < 0.0001);
+            }
+            if source == "👩‍💻ABC" {
+                let mut run = runs[0].clone();
+                let single = wireframe::text_engine::shape_cached(&ctx, &run.format.font_id, "👩‍💻")
+                    .unwrap()
+                    .unwrap();
+                run.truncate(&ctx, single.width as f32 + 0.01).unwrap();
+                assert_eq!(run.text, "👩‍💻");
+                assert_eq!(run.positioned.as_ref().unwrap().source, run.text);
+                assert!((run.width - single.width as f32).abs() < 0.001);
+                run.truncate(&ctx, 0.).unwrap();
+                assert!(run.text.is_empty());
+                assert_eq!(run.positioned.as_ref().unwrap().width, 0.);
+            }
+        }
+    })
+    .drop_without_applying_deltas();
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn positioned_layout_reports_limits_without_legacy_fallback() {
+    let ctx = egui::Context::default();
+    wireframe::fonts::install(&ctx);
+    ctx.run_ui(Default::default(), |_| {
+        let m = EguiMeasurer {
+            context: &ctx,
+            regular: wireframe::fonts::family(false, false),
+            bold: wireframe::fonts::family(true, false),
+        };
+        let style = TextStyle {
+            size: 24.,
+            bold: false,
+            italic: false,
+        };
+        let oversized = RichText::plain(&"a".repeat(wireframe::text_engine::MAX_TEXT_BYTES + 1));
+        let failed = m.rich_galley(&oversized, style, None, true);
+        assert!(failed.error.unwrap().contains("64 KB"));
+        assert!(failed.runs.is_empty());
+        assert!(!failed.size.is_finite());
+        let invalid_size = m.rich_galley(
+            &RichText::plain("text"),
+            TextStyle {
+                size: 513.,
+                ..style
+            },
+            None,
+            true,
+        );
+        assert!(invalid_size.error.is_some());
+        assert!(invalid_size.runs.is_empty());
     })
     .drop_without_applying_deltas();
 }

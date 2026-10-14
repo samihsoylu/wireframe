@@ -69,6 +69,7 @@ pub struct TextPlacement {
 }
 pub fn text_placement(kind: &str, sketch: bool) -> TextPlacement {
     let (left, right, top, bottom, middle, wrap) = match kind {
+        "label" => (0., 0., 4., 4., false, false),
         "paragraph" => (0., 0., 0., 0., false, true),
         "text_area" if sketch => (8., 6., 8., 4., false, true),
         "text_area" => (6., 6., 6., 2., false, true),

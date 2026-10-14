@@ -131,7 +131,13 @@ fn embedded_svg_faces_and_notices_are_portable() {
     for face in font.faces() {
         assert!(svg.contains(&STANDARD.encode(face)));
     }
-    assert!(svg.contains("font-family=\"Project Font\""));
+    if cfg!(target_os = "macos") {
+        assert!(svg.contains("<path"));
+        assert!(!svg.contains("<text "));
+        assert!(svg.contains("aria-label=\"Checkbox\""));
+    } else {
+        assert!(svg.contains("font-family=\"Project Font\""));
+    }
     assert!(svg.contains("Retained &lt;notice&gt; &amp; attribution"));
     assert!(!svg.contains("file:"));
 }

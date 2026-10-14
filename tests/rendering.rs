@@ -37,13 +37,13 @@ fn glyphs(scene: &Scene) -> Vec<&Glyph> {
 
 #[test]
 fn mixed_sizes_share_a_baseline_and_links_use_the_line_box() {
-    let p = specimen("paragraph", "{size:24}B{size}[é](page:3)\nx", 200., 80.);
+    let p = specimen("paragraph", "{size:24}B{size} [é](page:3)\nx", 200., 80.);
     let scene = Editor::new(p).rendered_scene(1).unwrap();
     let g = glyphs(&scene);
-    assert_eq!(g.len(), 3);
-    assert_eq!(g[0].baseline, g[1].baseline);
+    assert_eq!(g.len(), 4);
+    assert_eq!(g[0].baseline, g[2].baseline);
     assert!((g[0].baseline - (50. + 24. / 1.27)).abs() < 0.001);
-    assert!((g[2].baseline - (50. + 28.8 + 13. / 1.27)).abs() < 0.001);
+    assert!((g[3].baseline - (50. + 28.8 + 13. / 1.27)).abs() < 0.001);
     assert_eq!(scene.links[0].bounds.y, 50.);
     assert_eq!(scene.links[0].bounds.h, 24.);
     assert_eq!(scene.hit_link(scene.links[0].bounds.x + 1., 74.1), None);
@@ -215,7 +215,12 @@ fn svg_and_png_preserve_positioned_text_fonts_color_and_safe_links() {
     assert!(svg.contains("SIL OPEN FONT LICENSE"));
     assert!(svg.contains("https://example.org/?a=1&amp;b=2"));
     for g in glyphs(&scene) {
-        assert!(svg.contains(&format!("<text x=\"{}\" y=\"{}\"", g.x, g.baseline)));
+        if let Some(text) = &g.positioned {
+            assert!(svg.contains(&format!("transform=\"translate({} {})\"", g.x, g.baseline)));
+            assert!(svg.contains(&text.svg(g.color)));
+        } else {
+            assert!(svg.contains(&format!("<text x=\"{}\" y=\"{}\"", g.x, g.baseline)));
+        }
     }
     let png = scene.png().unwrap();
     let pixels = resvg::tiny_skia::Pixmap::decode_png(&png).unwrap();
@@ -253,7 +258,19 @@ fn shaped_runs_preserve_original_unicode_and_styles_after_joined_text() {
         runs.iter()
             .any(|g| g.text == "After" && g.color == [255, 0, 0, 255])
     );
-    assert!(scene.svg().contains(">👩\u{200d}💻</text>"));
+    if cfg!(target_os = "macos") {
+        assert!(
+            runs.iter()
+                .filter_map(|g| g.positioned.as_ref())
+                .flat_map(|s| &s.runs)
+                .flat_map(|r| &r.glyphs)
+                .any(|g| matches!(&*g.ink, wireframe::text_engine::Ink::Bitmap { .. }))
+        );
+        assert!(scene.svg().contains("data:image/png;base64,"));
+        assert!(!scene.svg().contains("<text "));
+    } else {
+        assert!(scene.svg().contains(">👩\u{200d}💻</text>"));
+    }
     let linked = runs.iter().find(|g| g.text == "שלום").unwrap();
     assert_eq!(scene.links.len(), 1);
     assert_eq!(scene.links[0].target, "page:2");
@@ -264,6 +281,7 @@ fn shaped_runs_preserve_original_unicode_and_styles_after_joined_text() {
     assert_eq!(editor.document.encode().unwrap(), bytes);
 }
 
+#[cfg(not(target_os = "macos"))]
 #[test]
 fn fallback_exports_keep_the_canvas_face_scale_and_original_clusters() {
     use eframe::egui;
@@ -308,5 +326,62 @@ fn fallback_exports_keep_the_canvas_face_scale_and_original_clusters() {
             }
         }
         assert_eq!(scene.png().unwrap(), explicit.png().unwrap());
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn positioned_fallback_exports_are_independent_of_available_fonts() {
+    for source in ["Ελληνικά", "👩\u{200d}💻", "ABC שלום 123", "你好世界"] {
+        let scene = Editor::new(specimen("label", source, 240., 80.))
+            .rendered_scene(1)
+            .unwrap();
+        let runs = glyphs(&scene);
+        assert_eq!(runs.len(), 1);
+        let positioned = runs[0].positioned.as_ref().unwrap();
+        assert_eq!(positioned.source, source);
+        assert!(
+            positioned
+                .runs
+                .iter()
+                .any(|r| !r.font_name.starts_with("ComicNeue"))
+        );
+        let svg = scene.svg();
+        assert!(!svg.contains("<text "));
+        // Render with an empty font database: positioned paths/bitmaps must be sufficient.
+        let tree = resvg::usvg::Tree::from_str(&svg, &resvg::usvg::Options::default()).unwrap();
+        let mut isolated =
+            resvg::tiny_skia::Pixmap::new(tree.size().width() as u32, tree.size().height() as u32)
+                .unwrap();
+        resvg::render(
+            &tree,
+            resvg::tiny_skia::Transform::identity(),
+            &mut isolated.as_mut(),
+        );
+        let exported = resvg::tiny_skia::Pixmap::decode_png(&scene.png().unwrap()).unwrap();
+        assert_eq!(isolated.data(), exported.data());
+    }
+}
+
+#[test]
+fn automatic_label_includes_vertical_padding_and_preserves_requested_linebox() {
+    let mut project = Project::default();
+    let mut label = catalog::get("label")
+        .unwrap()
+        .create(2, Point::new(50., 50.));
+    label
+        .properties
+        .insert("font_size".into(), Value::Number(24.));
+    label
+        .properties
+        .insert("text".into(), Value::Text("Example".into()));
+    project.pages[0].content.nodes.push(label);
+    project.next_id = 3;
+    for sketch in [false, true] {
+        project.settings.sketch = sketch;
+        let editor = Editor::new(project.clone());
+        assert_eq!(editor.layout_page(1).unwrap().nodes[0].bounds.height, 32.);
+        let scene = editor.rendered_scene(1).unwrap();
+        assert!((glyphs(&scene)[0].baseline - (50. + 4. + 24. / 1.27)).abs() < 0.001);
     }
 }

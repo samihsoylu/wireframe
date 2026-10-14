@@ -41,6 +41,7 @@ pub struct Glyph {
     pub advance: f32,
     pub face: String,
     pub face_scale: f32,
+    pub positioned: Option<std::sync::Arc<crate::text_engine::ShapedText>>,
 }
 #[derive(Clone, Debug)]
 pub enum Drawing {
@@ -370,7 +371,10 @@ impl Scene {
             Kind::Checkbox => "checkbox",
             Kind::Radio => "radio",
             Kind::Paragraph => "paragraph",
-            _ => "label",
+            Kind::Label => "label",
+            Kind::Heading => "heading",
+            Kind::Link => "link",
+            _ => "other",
         };
         let mut placement = crate::layout::text_placement(kind, sketch);
         if c.kind == Kind::TextInput
@@ -446,6 +450,9 @@ impl Scene {
             area.soft_breaks,
             options,
         );
+        if let Some(error) = &painted.error {
+            return Err(error.clone());
+        }
         let vertical = if area.middle {
             (area.bounds.h - painted.size.y) / 2.
         } else {
@@ -463,7 +470,7 @@ impl Scene {
                         continue;
                     }
                     if run.x + run.width > area.bounds.w {
-                        run.truncate(fonts.context, (area.bounds.w - run.x).max(0.));
+                        run.truncate(fonts.context, (area.bounds.w - run.x).max(0.))?;
                         stopped = true;
                     }
                 }
@@ -495,11 +502,12 @@ impl Scene {
                         advance: run.width,
                         face: run.face,
                         face_scale: run.face_scale,
+                        positioned: run.positioned,
                     }),
                     clip: area.clip,
                 });
                 for (stroke, y) in [
-                    (format.underline, baseline + style.size * 0.12),
+                    (format.underline, baseline + format.font_id.size * 0.15),
                     (format.strikethrough, baseline - format.font_id.size * 0.3),
                 ] {
                     if stroke.width > 0. {
@@ -630,9 +638,22 @@ fn paint_options(p: &Properties) -> PaintOptions {
         underline: boolean(p, "underline"),
     }
 }
-/// Draw complete positioned text runs using this canvas's own font atlas. Cached atlas coordinates
-/// from the measurement context are intentionally never reused.
+/// Draw portable positioned ink where available. The legacy platform fallback
+/// reshapes complete source runs using this canvas's own font atlas.
 pub fn paint_glyph(painter: &egui::Painter, g: &Glyph, origin: egui::Pos2, scale: f32) {
+    if let Some(text) = &g.positioned {
+        let baseline = origin + egui::vec2(g.x, g.baseline) * scale;
+        if let Err(error) = crate::text_engine::paint(painter, text, g.color, baseline, scale) {
+            painter.text(
+                baseline,
+                egui::Align2::LEFT_BOTTOM,
+                error,
+                egui::FontId::proportional(12.),
+                Color32::DARK_RED,
+            );
+        }
+        return;
+    }
     let color = Color32::from_rgba_unmultiplied(g.color[0], g.color[1], g.color[2], g.color[3]);
     let font = egui::FontId::new(g.size * scale, crate::fonts::family(g.bold, g.italic));
     let galley = painter.layout_no_wrap(g.text.clone(), font, color);

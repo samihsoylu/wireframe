@@ -81,9 +81,13 @@ impl Scene {
     Drawing::Image { bounds: b, data } => out.push_str(&format!("<image x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" preserveAspectRatio=\"none\" href=\"data:image/png;base64,{}\"/>", b.x,b.y,b.w,b.h,base64(&data.png))),
     Drawing::Primitive(p)=>out.push_str(&crate::scene::primitive_svg(p.clone())),
     Drawing::Glyph(g) => {
+        if let Some(text) = &g.positioned {
+            out.push_str(&format!("<g aria-label=\"{}\" transform=\"translate({} {})\">{}</g>",escape(&g.text),g.x,g.baseline,text.svg(g.color)));
+        } else {
         let primary = g.face.starts_with("canvas-");
         let family = if primary { crate::fonts::export_family(self.font.as_deref()).to_owned() } else { crate::fonts::export_fallback_family(&g.face) };
         out.push_str(&format!("<text x=\"{}\" y=\"{}\" font-family=\"{}\" font-size=\"{}\" font-weight=\"{}\" font-style=\"{}\" fill=\"{}\" fill-opacity=\"{}\" xml:space=\"preserve\">{}</text>",g.x,g.baseline,escape(&family),g.size*g.face_scale,if primary && g.bold{700}else{400},if primary && g.italic{"italic"}else{"normal"},color([g.color[0],g.color[1],g.color[2]]),g.color[3]as f32/255.,escape(&g.text)));
+        }
     },
    }
             if item.opacity != 1. {

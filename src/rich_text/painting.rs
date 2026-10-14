@@ -33,6 +33,7 @@ pub struct PaintedText {
     pub runs: Vec<Vec<TextRun>>,
     pub size: egui::Vec2,
     pub links: Vec<LinkArea>,
+    pub error: Option<String>,
 }
 #[derive(Clone, Copy, Debug)]
 pub struct TextRow {
@@ -50,12 +51,25 @@ pub struct TextRun {
     pub width: f32,
     pub face: String,
     pub face_scale: f32,
+    pub positioned: Option<Arc<crate::text_engine::ShapedText>>,
 }
 impl TextRun {
-    pub fn truncate(&mut self, context: &egui::Context, available: f32) {
+    pub fn truncate(&mut self, context: &egui::Context, available: f32) -> Result<(), String> {
         if self.width <= available {
-            return;
+            return Ok(());
         }
+        let measure = |text: &str| -> Result<f32, String> {
+            if self.positioned.is_some() {
+                return Ok(
+                    crate::text_engine::shape_cached(context, &self.format.font_id, text)?
+                        .ok_or("The selected canvas font is unavailable")?
+                        .width as f32,
+                );
+            }
+            let mut job = egui::text::LayoutJob::default();
+            job.append(text, 0., self.format.clone());
+            Ok(source_lines::layout(context, job).size().x)
+        };
         let boundaries: Vec<_> = self
             .text
             .grapheme_indices(true)
@@ -66,9 +80,7 @@ impl TextRun {
         let mut hi = boundaries.len();
         while lo < hi {
             let mid = (lo + hi) / 2;
-            let mut job = egui::text::LayoutJob::default();
-            job.append(&self.text[..boundaries[mid]], 0., self.format.clone());
-            let width = source_lines::layout(context, job).size().x;
+            let width = measure(&self.text[..boundaries[mid]])?;
             if width <= available {
                 lo = mid + 1;
             } else {
@@ -76,9 +88,12 @@ impl TextRun {
             }
         }
         self.text.truncate(boundaries[lo.saturating_sub(1)]);
-        let mut job = egui::text::LayoutJob::default();
-        job.append(&self.text, 0., self.format.clone());
-        self.width = source_lines::layout(context, job).size().x;
+        self.width = measure(&self.text)?;
+        if self.positioned.is_some() {
+            self.positioned =
+                crate::text_engine::shape_cached(context, &self.format.font_id, &self.text)?;
+        }
+        Ok(())
     }
 }
 impl EguiMeasurer<'_> {
@@ -102,7 +117,6 @@ impl EguiMeasurer<'_> {
         let mut job = egui::text::LayoutJob::default();
         job.wrap.max_width = width.unwrap_or(f32::INFINITY);
         let mut links: Vec<(Range<usize>, String)> = vec![];
-        let mut previous_target = None;
         let empty = Style::default();
         for item in &text.items {
             let (value, style) = match item {
@@ -141,31 +155,48 @@ impl EguiMeasurer<'_> {
                 color,
                 italics: italic && !sketch,
                 underline: if style.underline || style.link || options.underline {
-                    Stroke::new(1., color)
+                    Stroke::new((size * 0.065).max(1.), color)
                 } else {
                     Stroke::NONE
                 },
                 strikethrough: if style.strike {
-                    Stroke::new(1., color)
+                    Stroke::new((size * 0.065).max(1.), color)
                 } else {
                     Stroke::NONE
                 },
                 ..Default::default()
             };
             let start = job.text.len();
-            if previous_target != style.target.as_deref() {
-                // Distinct destinations must not share a ligature with zero-width
-                // continuation characters: each link needs its own visible hit area.
-                source_lines::append_section(&mut job, value, format);
-            } else {
-                job.append(value, 0., format);
-            }
-            previous_target = style.target.as_deref();
+            // Formatting boundaries are shaping boundaries, even if appearances match.
+            source_lines::append_section(&mut job, value, format);
             if let Some(target) = &style.target {
                 links.push((start..job.text.len(), target.clone()));
             }
         }
+        let native =
+            cfg!(target_os = "macos") && self.regular == crate::fonts::family(false, false);
+        let failed = |error: String| PaintedText {
+            galley: self
+                .context
+                .fonts_mut(|f| f.layout_job(egui::text::LayoutJob::default())),
+            rows: Vec::new(),
+            runs: Vec::new(),
+            links: Vec::new(),
+            size: egui::vec2(f32::NAN, f32::NAN),
+            error: Some(error),
+        };
+        if native
+            && (job.text.len() > crate::text_engine::MAX_TEXT_BYTES || job.sections.len() > 4096)
+        {
+            return failed("Text exceeds the layout limit (64 KB or 4096 spans)".into());
+        }
         let galley = self.context.fonts_mut(|f| f.layout_job(job));
+        if native {
+            return match super::positioned::layout(self.context, galley.clone(), base, &links) {
+                Ok(painted) => painted,
+                Err(problem) => failed(problem),
+            };
+        }
         let mut rows = Vec::new();
         let mut runs = Vec::new();
         let mut areas = Vec::new();
@@ -203,6 +234,7 @@ impl EguiMeasurer<'_> {
                         width: (source_lines::caret(self.context, &line, b) - x).max(0.),
                         face,
                         face_scale,
+                        positioned: None,
                     });
                 }
             }
@@ -243,6 +275,7 @@ impl EguiMeasurer<'_> {
             runs,
             size,
             links: areas,
+            error: None,
         }
     }
 }

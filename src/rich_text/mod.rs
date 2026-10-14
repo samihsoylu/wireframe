@@ -2,6 +2,7 @@
 // Copyright 2026 Wireframe contributors
 //! Source-preserving rich text. Parsing and drawing use the same styled spans.
 pub mod painting;
+mod positioned;
 mod source_lines;
 pub mod structured;
 
@@ -53,6 +54,7 @@ impl RichText {
             },
             budget: text.len().saturating_mul(32).max(1),
             bullets,
+            boundary: true,
         };
         parser.segment(text, Style::default(), 0);
         parser.output
@@ -79,6 +81,7 @@ struct Parser {
     output: RichText,
     budget: usize,
     bullets: bool,
+    boundary: bool,
 }
 impl Parser {
     fn push(&mut self, text: &str, style: &Style) {
@@ -90,6 +93,7 @@ impl Parser {
             style: old,
         }) = self.output.items.last_mut()
             && old == style
+            && !self.boundary
         {
             previous.push_str(text);
         } else {
@@ -98,6 +102,7 @@ impl Parser {
                 style: style.clone(),
             });
         }
+        self.boundary = false;
     }
     fn find(&mut self, text: &str, needle: &str, case_insensitive: bool) -> Option<usize> {
         let mut escaped = false;
@@ -125,6 +130,11 @@ impl Parser {
         None
     }
     fn segment(&mut self, text: &str, style: Style, depth: usize) {
+        self.boundary = true;
+        self.segment_inner(text, style, depth);
+        self.boundary = true;
+    }
+    fn segment_inner(&mut self, text: &str, style: Style, depth: usize) {
         if depth >= 24 {
             self.output.complexity_limited = true;
             self.push(text, &style);
@@ -172,7 +182,11 @@ impl Parser {
                     continue;
                 }
             }
-            if "*_&~-".contains(ch) {
+            let opening_boundary = i == 0
+                || text[..i].ends_with('\n')
+                || matches!(self.output.items.last(), Some(Inline::Break(Break::Soft)))
+                || (!self.boundary && text[..i].ends_with([' ', '\t', '(', ')']));
+            if "*_&~-".contains(ch) && ("*&".contains(ch) || opening_boundary) {
                 let after = &rest[ch.len_utf8()..];
                 if after
                     .chars()
@@ -181,8 +195,7 @@ impl Parser {
                     && let Some(end) = self.find(after, &ch.to_string(), false)
                 {
                     let inner = &after[..end];
-                    if !inner.is_empty() && inner.chars().last().is_some_and(|c| !c.is_whitespace())
-                    {
+                    if !inner.is_empty() {
                         let mut child = style.clone();
                         match ch {
                             '*' => child.bold = true,
@@ -199,10 +212,14 @@ impl Parser {
                 }
             }
             if ch == '['
+                && opening_boundary
                 && let Some(end) = self.find(&rest[1..], "]", false)
             {
                 let inner = &rest[1..1 + end];
-                if !inner.is_empty() && inner.trim() == inner {
+                if !inner.is_empty()
+                    && !inner.starts_with('[')
+                    && !inner.chars().next().is_some_and(char::is_whitespace)
+                {
                     let mut length = end + 2;
                     let mut child = style.clone();
                     child.link = true;

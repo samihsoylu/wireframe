@@ -271,6 +271,15 @@ fn remap(nodes: &mut [Node], map: &HashMap<Id, Id>) {
 fn strip_missing_links(nodes: &mut [Node], pages: &HashSet<Id>) {
     fn props(p: &mut Properties, pages: &HashSet<Id>) {
         for v in p.values_mut() {
+            if let Value::Links(links) = v {
+                for target in links {
+                    if let Some(Link::Page(id)) = target
+                        && !pages.contains(id)
+                    {
+                        *target = None;
+                    }
+                }
+            }
             if let Value::Link(Link::Page(id)) = v
                 && !pages.contains(id)
             {

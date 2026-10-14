@@ -49,6 +49,12 @@ pub fn apply_text(node: &mut Node, source: &str, baseline: &Properties) -> Resul
     };
     let header = baseline.get("header") == Some(&Value::Bool(true));
     let next = selection_after_edit(old, source, selected, header);
+    if let Some(Value::Links(links)) = baseline.get("row_links") {
+        node.properties.insert(
+            "row_links".into(),
+            Value::Links(remap_rows(old, source, links)),
+        );
+    }
     node.properties
         .insert("text".into(), Value::Text(source.into()));
     // Keep explicit None when editing a component whose source selects a row.
@@ -100,4 +106,32 @@ impl List {
             header: if header { top + 6. + first } else { 0. },
         }
     }
+}
+
+/// Match repeated raw labels in occurrence order; new labels retain position only
+/// when the total row count is unchanged. Empty text clears row destinations.
+pub fn remap_rows<T: Clone>(old: &str, new: &str, values: &[Option<T>]) -> Vec<Option<T>> {
+    if new.is_empty() || values.is_empty() {
+        return vec![];
+    }
+    let old: Vec<_> = old.split('\n').collect();
+    let new: Vec<_> = new.split('\n').collect();
+    let same_count = old.len() == new.len();
+    let mut queues =
+        std::collections::HashMap::<&str, std::collections::VecDeque<Option<T>>>::new();
+    for (label, value) in old.iter().zip(values) {
+        queues.entry(label).or_default().push_back(value.clone());
+    }
+    new.iter()
+        .enumerate()
+        .map(|(index, label)| {
+            if let Some(queue) = queues.get_mut(label) {
+                queue.pop_front().flatten()
+            } else if same_count {
+                values.get(index).cloned().flatten()
+            } else {
+                None
+            }
+        })
+        .collect()
 }

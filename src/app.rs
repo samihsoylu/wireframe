@@ -85,6 +85,7 @@ pub struct WireframeApp {
     help: bool,
     about: bool,
     present: bool,
+    presentation_history: Vec<Id>,
     canvas_rect: Rect,
 }
 impl WireframeApp {
@@ -147,6 +148,7 @@ impl WireframeApp {
             help: false,
             about: false,
             present: false,
+            presentation_history: vec![],
             canvas_rect: Rect::NOTHING,
         }
     }
@@ -378,6 +380,7 @@ impl WireframeApp {
         }
         if take(Modifiers::COMMAND | Modifiers::SHIFT, Key::F) {
             self.editor.commit();
+            self.presentation_history.clear();
             self.present = true;
         }
         if ctx.egui_wants_keyboard_input() {
@@ -444,6 +447,36 @@ impl WireframeApp {
             self.text_edit = Some((c.id, c.text.clone()));
         }
     }
+    fn navigate_page(&mut self, id: Id) {
+        if self.editor.document.pages.iter().any(|p| p.id == id) {
+            if id != self.editor.page {
+                self.presentation_history.push(self.editor.page);
+            }
+            self.editor.switch_page(id);
+        } else {
+            self.status = "This page is no longer available".into();
+        }
+    }
+    fn follow_target(&mut self, target: &str, ctx: &egui::Context) {
+        if let Some(id) = target
+            .strip_prefix("page:")
+            .and_then(|s| s.parse::<Id>().ok())
+        {
+            self.navigate_page(id);
+        } else if target == "back:" {
+            while let Some(id) = self.presentation_history.pop() {
+                if self.editor.document.pages.iter().any(|p| p.id == id) {
+                    self.editor.switch_page(id);
+                    return;
+                }
+            }
+            self.status = "No previous page in this presentation".into();
+        } else if target.starts_with("https://") || target.starts_with("http://") {
+            ctx.open_url(egui::OpenUrl::new_tab(target));
+        } else {
+            self.status = "This link destination is not available".into();
+        }
+    }
     fn toolbar(&mut self, ui: &mut egui::Ui) {
         if self.present {
             egui::Panel::top("presentation").show(ui, |ui| {
@@ -465,7 +498,7 @@ impl WireframeApp {
                         .collect();
                     for (id, name) in pages {
                         if ui.selectable_label(self.editor.page == id, name).clicked() {
-                            self.editor.switch_page(id);
+                            self.navigate_page(id);
                         }
                     }
                     if ui.button("Fit").clicked() {
@@ -604,6 +637,7 @@ impl WireframeApp {
                             .button(if self.present { "Edit" } else { "Present" })
                             .clicked()
                         {
+                            self.presentation_history.clear();
                             self.present = !self.present;
                         }
                     });
@@ -1485,20 +1519,11 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                         })
                         .flatten();
                     if let Some(target) = inline {
-                        if let Some(id) = target
-                            .strip_prefix("page:")
-                            .and_then(|s| s.parse::<Id>().ok())
-                        {
-                            self.editor.switch_page(id);
-                        } else if target.starts_with("https://") || target.starts_with("http://") {
-                            ctx.open_url(egui::OpenUrl::new_tab(target));
-                        } else {
-                            self.status = "This link destination is not available".into();
-                        }
+                        self.follow_target(&target, &ctx);
                     } else if let Some(c) = hit {
                         if self.present {
                             if let Some(id) = c.link {
-                                self.editor.switch_page(id);
+                                self.navigate_page(id);
                             }
                         } else {
                             self.editor.select(c.id, ui.input(|i| i.modifiers.shift));
@@ -1919,6 +1944,55 @@ mod tests {
         frame(&ctx, &mut app, vec![pointer(position, false)]);
         assert_eq!(app.editor.page, 3);
         assert!(!app.editor.dirty());
+    }
+    #[test]
+    fn presentation_row_links_follow_background_and_back_history() {
+        use wireframe::document::{Link, Value};
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        let first = app.editor.page;
+        app.editor.add_page();
+        let second = app.editor.page;
+        app.editor.add(Kind::List, 50., 50.);
+        let back = *app.editor.selection.iter().next().unwrap();
+        app.editor.begin("Back row");
+        app.editor
+            .set_control_property(back, "row_links", Value::Links(vec![Some(Link::Back)]))
+            .unwrap();
+        app.editor.commit();
+        app.editor.switch_page(first);
+        app.editor.add(Kind::List, 50., 50.);
+        let forward = *app.editor.selection.iter().next().unwrap();
+        app.editor.begin("Forward row");
+        app.editor
+            .set_control_property(
+                forward,
+                "row_links",
+                Value::Links(vec![Some(Link::Page(second))]),
+            )
+            .unwrap();
+        app.editor.commit();
+        let saved = app.editor.document.clone();
+        app.present = true;
+        app.zoom = 1.5;
+        frame(&ctx, &mut app, vec![]);
+        for expected in [second, first] {
+            let b = app.editor.rendered_scene(app.editor.page).unwrap().links[0].bounds;
+            let pos = app.screen([b.x + b.w - 3., b.y + b.h / 2.]);
+            frame(
+                &ctx,
+                &mut app,
+                vec![egui::Event::PointerMoved(pos), pointer(pos, true)],
+            );
+            frame(&ctx, &mut app, vec![pointer(pos, false)]);
+            assert_eq!(app.editor.page, expected);
+        }
+        assert_eq!(app.editor.document, saved);
+        assert!(app.presentation_history.is_empty());
+        app.follow_target("back:", &ctx);
+        assert_eq!(app.editor.page, first);
+        app.follow_target("page:999999", &ctx);
+        assert_eq!(app.editor.page, first);
     }
     #[test]
     fn actual_canvas_drag_resize_and_undo() {

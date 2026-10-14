@@ -843,6 +843,15 @@ fn children_mut<'a>(nodes: &'a mut Vec<Node>, path: &[Id]) -> Option<&'a mut Vec
 fn clear_links(nodes: &mut [Node], page: Id) {
     fn clear(p: &mut Properties, page: Id) {
         for v in p.values_mut() {
+            if let Value::Links(links) = v {
+                for target in links {
+                    if let Some(Link::Page(id)) = target
+                        && *id == page
+                    {
+                        *target = None;
+                    }
+                }
+            }
             if *v == Value::Link(Link::Page(page)) {
                 *v = Value::Null;
             }

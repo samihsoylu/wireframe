@@ -1088,6 +1088,12 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         ));
     }
     if c.id == "list" {
+        c.properties.push(prop(
+            "row_links",
+            "Row links",
+            PropertyType::Links,
+            Value::Links(vec![]),
+        ));
         c.properties.extend([
             boolean("header", "Header row", false),
             number("row_height", "Row height", 21., 1., 1000., true),

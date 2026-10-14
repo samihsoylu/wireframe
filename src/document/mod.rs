@@ -109,6 +109,25 @@ pub enum Link {
     Url(String),
     Back,
 }
+impl Link {
+    pub fn target(&self) -> String {
+        match self {
+            Self::Page(id) => format!("page:{id}"),
+            Self::Url(url) => url.clone(),
+            Self::Back => "back:".into(),
+        }
+    }
+    pub fn valid(&self) -> bool {
+        match self {
+            Self::Url(url) => {
+                url.len() <= 10_000
+                    && (url.starts_with("https://") || url.starts_with("http://"))
+                    && !url.chars().any(char::is_control)
+            }
+            _ => true,
+        }
+    }
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "value", rename_all = "snake_case")]
 pub enum Value {
@@ -119,6 +138,7 @@ pub enum Value {
     Choice(String),
     Link(Link),
     Asset(Id),
+    Links(Vec<Option<Link>>),
     Null,
 }
 

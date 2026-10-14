@@ -230,6 +230,21 @@ impl Check<'_> {
                         return Err("Unsupported link URL".into());
                     }
                 }
+                Value::Links(links) => {
+                    if links.len() > 10_001 {
+                        return Err("Too many row links".into());
+                    }
+                    for link in links.iter().flatten() {
+                        if !link.valid() {
+                            return Err("Unsupported row link URL".into());
+                        }
+                        if let Link::Page(id) = link
+                            && !self.pages.contains(id)
+                        {
+                            return Err("Row link points to a missing page".into());
+                        }
+                    }
+                }
                 Value::Asset(id) if !self.assets.contains(id) => {
                     return Err("Missing image asset".into());
                 }

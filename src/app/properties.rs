@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 use super::*;
-use wireframe::{catalog::PropertyType, document::Value};
+use wireframe::{
+    catalog::PropertyType,
+    document::{Link, Value},
+};
 
 // Expose fields whose behavior the shared renderer currently implements. The
 // catalog's full field inventory remains separate from completed rendering.
 fn supported(kind: &str, key: &str) -> bool {
     match key {
+        "row_links" => kind == "list",
         "text" | "font_size" | "bold" | "italic" | "underline" | "text_color" | "align" => true,
         "sketch_filter" | "image_border" => kind == "image",
         "state" => matches!(
@@ -104,7 +108,7 @@ impl WireframeApp {
                 if let Err(error) = self.editor.auto_size_control(id) { self.error = Some(error); }
                 self.editor.commit();
             }
-            for key in ["image_border", "sketch_filter", "text", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+            for key in ["image_border", "sketch_filter", "text", "row_links", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
                 if key == "value" && values.get("vertical_scrollbar") != Some(&Value::Bool(true)) { continue; }
                 let Some(field) = spec.property(key).filter(|f| f.visible && supported(spec.id, key)) else { continue; };
                 let Some(mut value) = values.get(key).cloned() else { continue; };
@@ -121,6 +125,43 @@ impl WireframeApp {
                         }
                     });
                     match (&field.kind, &mut value) {
+                        (PropertyType::Links, Value::Links(links)) => {
+                            let source=match values.get("text") {Some(Value::Text(s))=>s.as_str(),_=>""};
+                            let labels:Vec<_>=source.split('\n').collect();
+                            links.resize(labels.len(),None);
+                            // Keep partial URL input outside document history until Apply.
+                            egui::CollapsingHeader::new("Edit row links").show(ui,|ui| {
+                                egui::ScrollArea::vertical().max_height(280.).show(ui,|ui| {
+                                    for (row,label) in labels.iter().enumerate() {
+                                        ui.push_id(row,|ui| {
+                                            let label=wireframe::rich_text::RichText::parse(label,false).display_text(false);
+                                            ui.label(if label.is_empty(){format!("Row {} (empty)",row+1)}else{label});
+                                            let key=ui.make_persistent_id(("link-draft",id,self.editor.surface_id(),&self.editor.context));
+                                            let saved=links[row].clone();
+                                            let cached=ui.ctx().data_mut(|d|d.get_temp::<(Option<Link>,Option<Link>)>(key));
+                                            let mut draft=cached.filter(|(baseline,_)|baseline==&saved).map_or(saved.clone(),|(_,draft)|draft);
+                                            let title=match &draft {None=>"No link".into(),Some(Link::Back)=>"Go back".into(),Some(Link::Url(_))=>"Web address".into(),Some(Link::Page(id))=>self.editor.document.pages.iter().find(|p|p.id==*id).map_or("Missing page".into(),|p|p.name.clone())};
+                                            egui::ComboBox::from_id_salt("target").selected_text(title).show_ui(ui,|ui| {
+                                                if ui.selectable_value(&mut draft,None,"No link").clicked(){ui.close();}
+                                                for page in &self.editor.document.pages {
+                                                    if ui.selectable_value(&mut draft,Some(Link::Page(page.id)),&page.name).clicked(){ui.close();}
+                                                }
+                                                if ui.selectable_value(&mut draft,Some(Link::Back),"Go back").clicked(){ui.close();}
+                                                if ui.selectable_label(matches!(draft,Some(Link::Url(_))),"Web address…").clicked(){if !matches!(draft,Some(Link::Url(_))){draft=Some(Link::Url(String::new()));}ui.close();}
+                                            });
+                                            let apply=if let Some(Link::Url(url))=&mut draft {
+                                                ui.add(egui::TextEdit::singleline(url).hint_text("https://…"));
+                                                ui.add_enabled(Link::Url(url.clone()).valid(),egui::Button::new("Apply link")).clicked()
+                                            }else{draft!=saved};
+                                            if apply {links[row]=draft.clone();finish=true;}
+                                            ui.ctx().data_mut(|d|d.insert_temp(key,(links[row].clone(),draft)));
+                                        });
+                                    }
+                                });
+                            });
+                            // Do not create a property solely to pad absent trailing slots.
+                            if !finish && let Value::Links(old)=&original {*links=old.clone();}
+                        }
                         (PropertyType::Text, Value::Text(v)) => {
                             let r = ui.add(egui::TextEdit::multiline(v).desired_rows(4).desired_width(f32::INFINITY));
                             finish = r.lost_focus();

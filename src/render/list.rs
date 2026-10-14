@@ -38,6 +38,10 @@ impl Scene {
                 alternate
             }
         };
+        let mut link_bounds = Vec::new();
+        if header {
+            link_bounds.push(Bounds::new(b.x, b.y, b.w, m.header));
+        }
         let start = if header { m.header } else { m.top };
         self.primitive(
             Primitive::Rect {
@@ -60,6 +64,7 @@ impl Scene {
                 },
                 clip,
             );
+            link_bounds.push(Bounds::new(b.x, y, b.w, m.row.min(b.y + b.h - y)));
             index += 1;
             y += m.row;
         }
@@ -132,6 +137,19 @@ impl Scene {
                 sketch,
                 clip,
             );
+        }
+        if let Some(Value::Links(links)) = p.get("row_links") {
+            for (bounds, target) in link_bounds.into_iter().zip(links) {
+                if let Some(target) = target {
+                    let bounds = clip.map_or(bounds, |c| intersect(bounds, c));
+                    if bounds.w > 0. && bounds.h > 0. {
+                        self.links.push(LinkRegion {
+                            target: target.target(),
+                            bounds,
+                        });
+                    }
+                }
+            }
         }
         Ok(())
     }

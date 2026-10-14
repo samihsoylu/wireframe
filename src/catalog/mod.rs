@@ -45,6 +45,7 @@ pub enum PropertyType {
     Number { min: f64, max: f64, integer: bool },
     Choice(&'static [&'static str]),
     Link,
+    Links,
     Asset,
 }
 #[derive(Clone, Debug)]
@@ -184,6 +185,10 @@ impl PropertySpec {
                 | (PropertyType::Color, Value::Color(_))
                 | (PropertyType::Link, Value::Link(_))
                 | (PropertyType::Asset, Value::Asset(_)) => true,
+                (PropertyType::Links, Value::Links(links)) => {
+                    links.len() <= 10_001
+                        && links.iter().flatten().all(crate::document::Link::valid)
+                }
                 (PropertyType::Text, Value::Text(s)) => s.len() <= 100_000,
                 (PropertyType::Number { min, max, integer }, Value::Number(n)) => {
                     n.is_finite() && *n >= min && *n <= max && (!integer || n.fract() == 0.)

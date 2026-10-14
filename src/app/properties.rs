@@ -98,6 +98,7 @@ impl WireframeApp {
             .iter()
             .find(|n| n.id == id)
             .is_none_or(|n| n.locked);
+        let mut import_row = None;
         let explicit = self.editor.explicit_control_properties(id);
         let local = self.editor.editing_instance();
         ui.add_space(10.);
@@ -136,7 +137,7 @@ impl WireframeApp {
                                             let label=wireframe::rich_text::RichText::parse(label,false).display_text(false);
                                             ui.label(if label.is_empty(){format!("Row {} (empty)",row+1)}else{label});
                                             let before=icons[row].clone();
-                                            super::icon_picker::choice(ui,&mut icons[row]);
+                                            if super::icon_picker::choice(ui,&mut icons[row],&self.editor.document.assets) {import_row = Some(row);}
                                             finish |= before != icons[row];
                                         });
                                     }
@@ -250,6 +251,12 @@ impl WireframeApp {
                 }
             }
         });
+        if let Some(row) = import_row {
+            self.start_image_import(wireframe::workspace::ImageTarget::ListRow {
+                control: id,
+                row,
+            });
+        }
         true
     }
 }

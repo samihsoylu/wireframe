@@ -132,10 +132,12 @@ impl Link {
 #[serde(tag = "source", content = "id", rename_all = "snake_case")]
 pub enum IconSource {
     Catalog(String),
+    Asset(Id),
 }
 impl IconSource {
     pub fn valid(&self) -> bool {
         match self {
+            Self::Asset(id) => *id != 0,
             Self::Catalog(id) => {
                 !id.is_empty()
                     && id.len() <= 128

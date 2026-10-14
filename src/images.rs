@@ -3,6 +3,7 @@
 //! Bounded image decoding and project-owned import data.
 use eframe::egui;
 mod filter;
+mod tint;
 use image::{DynamicImage, ImageFormat, ImageReader};
 use std::{
     io::{Cursor, Read},
@@ -118,6 +119,25 @@ pub fn decoded_styled(bytes: &[u8], turns: u8, sketch: bool) -> Result<Decoded, 
             rgba.as_raw(),
         ),
         png: png(&image)?,
+        texture: OnceLock::new(),
+    })
+}
+/// Tint in linear light before the scene stretches the image to its icon square.
+pub fn decoded_tinted(bytes: &[u8], color: [u8; 3]) -> Result<Decoded, String> {
+    let mut rgba = decode(bytes)?.to_rgba8();
+    tint::apply(&mut rgba, color);
+    from_rgba(rgba)
+}
+pub fn thumbnail(bytes: &[u8]) -> Result<Decoded, String> {
+    from_rgba(decode(bytes)?.thumbnail(64, 64).to_rgba8())
+}
+fn from_rgba(rgba: image::RgbaImage) -> Result<Decoded, String> {
+    Ok(Decoded {
+        pixels: egui::ColorImage::from_rgba_unmultiplied(
+            [rgba.width() as usize, rgba.height() as usize],
+            rgba.as_raw(),
+        ),
+        png: png(&DynamicImage::ImageRgba8(rgba))?,
         texture: OnceLock::new(),
     })
 }

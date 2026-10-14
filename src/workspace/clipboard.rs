@@ -217,8 +217,18 @@ impl Editor {
 fn references(nodes: &[Node], defs: &mut HashSet<Id>, assets: &mut HashSet<Id>) {
     fn props(p: &Properties, assets: &mut HashSet<Id>) {
         for v in p.values() {
-            if let Value::Asset(id) = v {
-                assets.insert(*id);
+            match v {
+                Value::Asset(id) => {
+                    assets.insert(*id);
+                }
+                Value::Icons(icons) => {
+                    for icon in icons.iter().flatten() {
+                        if let IconSource::Asset(id) = icon {
+                            assets.insert(*id);
+                        }
+                    }
+                }
+                _ => {}
             }
         }
     }
@@ -242,10 +252,22 @@ fn references(nodes: &[Node], defs: &mut HashSet<Id>, assets: &mut HashSet<Id>) 
 fn remap(nodes: &mut [Node], map: &HashMap<Id, Id>) {
     fn props(p: &mut Properties, map: &HashMap<Id, Id>) {
         for v in p.values_mut() {
-            if let Value::Asset(id) = v
-                && let Some(new) = map.get(id)
-            {
-                *id = *new;
+            match v {
+                Value::Asset(id) => {
+                    if let Some(new) = map.get(id) {
+                        *id = *new;
+                    }
+                }
+                Value::Icons(icons) => {
+                    for icon in icons.iter_mut().flatten() {
+                        if let IconSource::Asset(id) = icon
+                            && let Some(new) = map.get(id)
+                        {
+                            *id = *new;
+                        }
+                    }
+                }
+                _ => {}
             }
         }
     }

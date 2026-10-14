@@ -4,6 +4,11 @@ use super::*;
 use crate::images::Prepared;
 
 #[derive(Clone, Copy)]
+pub enum ImageTarget {
+    Control(Id),
+    ListRow { control: Id, row: usize },
+}
+#[derive(Clone, Copy)]
 pub enum ImportChoice {
     KeepBoth,
     Replace,
@@ -204,7 +209,39 @@ impl Editor {
         image: Prepared,
         choice: ImportChoice,
     ) -> Result<Id, String> {
-        self.editable_image(id)?;
+        self.import_image_at(ImageTarget::Control(id), image, choice)
+    }
+    pub fn import_image_at(
+        &mut self,
+        target: ImageTarget,
+        image: Prepared,
+        choice: ImportChoice,
+    ) -> Result<Id, String> {
+        match target {
+            ImageTarget::Control(id) => self.editable_image(id)?,
+            ImageTarget::ListRow { control, row } => {
+                let (spec, props) = self
+                    .control_properties(control)
+                    .ok_or("List no longer exists")?;
+                if spec.id != "list"
+                    || self
+                        .current()
+                        .controls
+                        .iter()
+                        .find(|c| c.id == control)
+                        .is_none_or(|c| c.locked)
+                {
+                    return Err("Select an unlocked List".into());
+                }
+                let rows = match props.get("text") {
+                    Some(Value::Text(text)) => text.split('\n').count(),
+                    _ => 0,
+                };
+                if row >= rows {
+                    return Err("List row no longer exists".into());
+                }
+            }
+        }
         crate::images::decoded(&image.bytes)?;
         self.component_change("Import image", |e| {
             let conflict = e.image_conflict(&image);
@@ -246,7 +283,25 @@ impl Editor {
                 });
                 id
             };
-            e.set_control_property(id, "image", Value::Asset(asset))?;
+            match target {
+                ImageTarget::Control(id) => {
+                    e.set_control_property(id, "image", Value::Asset(asset))?
+                }
+                ImageTarget::ListRow { control, row } => {
+                    let (_, props) = e
+                        .control_properties(control)
+                        .ok_or("List no longer exists")?;
+                    let mut icons = match props.get("row_icons") {
+                        Some(Value::Icons(v)) => v.clone(),
+                        _ => vec![],
+                    };
+                    if icons.len() <= row {
+                        icons.resize(row + 1, None);
+                    }
+                    icons[row] = Some(IconSource::Asset(asset));
+                    e.set_control_property(control, "row_icons", Value::Icons(icons))?;
+                }
+            }
             // JSON byte arrays may exceed the file limit before the raw asset limit.
             e.document.encode()?;
             Ok(asset)

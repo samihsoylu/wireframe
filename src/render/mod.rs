@@ -6,6 +6,7 @@ mod dropdown;
 mod forms;
 mod images;
 mod list;
+mod rasters;
 mod scrollbar;
 mod search;
 mod svg;
@@ -110,8 +111,7 @@ impl Scene {
             items: vec![],
             links: vec![],
         };
-        let mut decoded = std::collections::HashMap::new();
-        let mut decoded_bytes = 0usize;
+        let mut rasters = rasters::Rasters::new(assets);
         for layer in layers {
             let visible = layer.clip.map_or(layer.control.bounds, |clip| {
                 intersect(layer.control.bounds, clip)
@@ -136,21 +136,13 @@ impl Scene {
                 if let Some(Value::Asset(id)) = layer.properties.get("image") {
                     let turns = crate::images::quarter_turns(&layer.properties);
                     let filter = boolean(&layer.properties, "sketch_filter");
-                    let data = decoded.entry((*id, turns, filter)).or_insert_with(|| {
-                        assets.iter().find(|a| a.id == *id).and_then(|a| {
-                            let (w, h) = crate::images::dimensions(&a.bytes).ok()?;
-                            let pad = if filter { 4 } else { 0 };
-                            let bytes = (w as usize + pad) * (h as usize + pad) * 4;
-                            if bytes + decoded_bytes > 128 * 1024 * 1024 {
-                                return None;
-                            }
-                            let image =
-                                crate::images::decoded_styled(&a.bytes, turns, filter).ok()?;
-                            decoded_bytes += bytes;
-                            Some(std::sync::Arc::new(image))
-                        })
-                    });
-                    data.clone()
+                    rasters.get(
+                        *id,
+                        rasters::Style::Image {
+                            turns,
+                            sketch: filter,
+                        },
+                    )
                 } else {
                     None
                 }
@@ -168,7 +160,7 @@ impl Scene {
                 });
                 scene.image_decoration(layer, sketch, fonts)?;
             } else {
-                scene.control(layer, sketch, fonts)?;
+                scene.control(layer, sketch, fonts, &mut rasters)?;
                 if layer.control.kind == Kind::Image
                     && matches!(layer.properties.get("image"), Some(Value::Asset(_)))
                 {
@@ -221,6 +213,7 @@ impl Scene {
         layer: &Layer,
         sketch: bool,
         fonts: &EguiMeasurer<'_>,
+        rasters: &mut rasters::Rasters<'_>,
     ) -> Result<(), String> {
         let c = &layer.control;
         let b = c.bounds;
@@ -288,7 +281,7 @@ impl Scene {
             return self.search_control(layer, sketch, fonts);
         }
         if c.kind == Kind::List {
-            return self.list_control(layer, sketch, fonts);
+            return self.list_control(layer, sketch, fonts, rasters);
         }
         if c.kind == Kind::Table {
             return self.table(layer, sketch, fonts);

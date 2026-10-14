@@ -72,7 +72,10 @@ pub struct WireframeApp {
     status: String,
     error: Option<String>,
     pending: Option<Pending>,
-    image_import: Option<(Id, wireframe::images::Prepared)>,
+    image_import: Option<(
+        wireframe::workspace::ImageTarget,
+        wireframe::images::Prepared,
+    )>,
     image_crop: Option<images::CropEdit>,
     quit_allowed: bool,
     text_edit: Option<(Id, String)>,

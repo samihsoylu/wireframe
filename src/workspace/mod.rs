@@ -3,7 +3,7 @@
 //! Recursive editing owns project data; renderer projections never become saved documents.
 mod clipboard;
 mod images;
-pub use images::ImportChoice;
+pub use images::{ImageTarget, ImportChoice};
 mod components;
 mod overrides;
 mod properties;

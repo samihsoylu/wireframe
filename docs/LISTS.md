@@ -8,7 +8,7 @@ Canvas, library previews, thumbnails and exports use the same clipped scene. Tex
 
 The inspector exposes text/font styles, header, selection, row height, fill/alternate fill, border and scrollbar. Local component edits preserve source data and support per-property Reset. Tests: tests/list_control.rs. Gallery: cargo run --example render_list. Local native evidence: evidence/list-control/.
 
-Built-in row icons are available through a searchable offline picker; see [icons](ICONS.md). Custom image icons remain open. Inline text link formatting is decorative inside Lists; row navigation is configured separately. Exact fonts/contours and broader native edge-case/platform acceptance remain open.
+Built-in row icons and custom project images are available through a searchable offline picker; see [icons](ICONS.md). Inline text link formatting is decorative inside Lists; row navigation is configured separately. Exact fonts/contours and broader native edge-case/platform acceptance remain open.
 
 
 ## Row navigation
@@ -19,4 +19,4 @@ Text edits match raw labels in occurrence order, consuming duplicate labels sequ
 
 Visible row backgrounds, including the header and partially clipped rows, provide shared scene hit regions. Ancestor clips and later controls limit them; the List scrollbar column remains part of the row region. Presentation follows page/URL targets and tracks page history for Back without modifying project data. Starting a new presentation clears that history. Standalone SVG retains web links as transparent row-sized anchors. Internal page and Back links have no standalone-SVG destination and are omitted; linked multi-page/PDF export remains open.
 
-Verification: tests/list_links.rs plus the app's real-canvas presentation test; local native evidence evidence/list-links. Native macOS verifies target change/Undo, background navigation/Back, reordering, partial URL draft/Apply, save/cold reopen and SVG URL anchors. External URL browser launch and native component editing were not exercised. New/duplicate destination shortcuts, editor Alt-click navigation, custom image icons and broader platform/fidelity acceptance remain open.
+Verification: tests/list_links.rs plus the app's real-canvas presentation test; local native evidence evidence/list-links. Native macOS verifies target change/Undo, background navigation/Back, reordering, partial URL draft/Apply, save/cold reopen and SVG URL anchors. External URL browser launch and native component editing were not exercised. New/duplicate destination shortcuts, editor Alt-click navigation and broader platform/fidelity acceptance remain open.

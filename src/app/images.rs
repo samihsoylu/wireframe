@@ -4,7 +4,7 @@ use super::*;
 use wireframe::{
     document::{Crop, Properties, Value},
     images::Prepared,
-    workspace::ImportChoice,
+    workspace::{ImageTarget, ImportChoice},
 };
 
 pub(super) struct CropEdit {
@@ -51,28 +51,8 @@ impl WireframeApp {
             {
                 self.error = Some(e);
             }
-            if ui.button("Import image…").clicked()
-                && let Some(path) = rfd::FileDialog::new()
-                    .add_filter("Images", &["png", "jpg", "jpeg", "gif"])
-                    .pick_file()
-            {
-                match Prepared::read(&path) {
-                    Ok(image) => {
-                        let conflict = self
-                            .editor
-                            .image_conflict(&image)
-                            .and_then(|id| self.editor.document.assets.iter().find(|a| a.id == id));
-                        if conflict.is_some_and(|a| a.bytes != image.bytes) {
-                            self.image_import = Some((id, image));
-                        } else if let Err(e) =
-                            self.editor
-                                .import_image(id, image, ImportChoice::UseExisting)
-                        {
-                            self.error = Some(e);
-                        }
-                    }
-                    Err(e) => self.error = Some(e),
-                }
+            if ui.button("Import image…").clicked() {
+                self.start_image_import(ImageTarget::Control(id));
             }
             if selected.is_some()
                 && ui.button("Remove image").clicked()
@@ -306,6 +286,31 @@ impl WireframeApp {
         }
         self.image_crop = Some(edit);
     }
+    pub(super) fn start_image_import(&mut self, target: ImageTarget) {
+        self.editor.commit();
+        if let Some(path) = rfd::FileDialog::new()
+            .add_filter("Images", &["png", "jpg", "jpeg", "gif"])
+            .pick_file()
+        {
+            match Prepared::read(&path) {
+                Ok(image) => {
+                    let conflict = self
+                        .editor
+                        .image_conflict(&image)
+                        .and_then(|id| self.editor.document.assets.iter().find(|a| a.id == id));
+                    if conflict.is_some_and(|a| a.bytes != image.bytes) {
+                        self.image_import = Some((target, image));
+                    } else if let Err(e) =
+                        self.editor
+                            .import_image_at(target, image, ImportChoice::UseExisting)
+                    {
+                        self.error = Some(e);
+                    }
+                }
+                Err(e) => self.error = Some(e),
+            }
+        }
+    }
     pub(super) fn image_import_dialog(&mut self, ctx: &egui::Context) {
         let Some((_, image)) = &self.image_import else {
             return;
@@ -325,8 +330,8 @@ impl WireframeApp {
             });
         });
         if let Some(choice) = choice {
-            let (id, image) = self.image_import.take().unwrap();
-            if let Err(e) = self.editor.import_image(id, image, choice) {
+            let (target, image) = self.image_import.take().unwrap();
+            if let Err(e) = self.editor.import_image_at(target, image, choice) {
                 self.error = Some(e);
             }
         } else if cancel {

@@ -235,6 +235,13 @@ impl Check<'_> {
                 {
                     return Err("Invalid row icons".into());
                 }
+                Value::Icons(icons) => {
+                    if icons.iter().flatten().any(
+                        |icon| matches!(icon, IconSource::Asset(id) if !self.assets.contains(id)),
+                    ) {
+                        return Err("Missing row icon asset".into());
+                    }
+                }
                 Value::Links(links) => {
                     if links.len() > 10_001 {
                         return Err("Too many row links".into());

@@ -60,6 +60,23 @@ pub fn notices(project: Option<&ProjectFont>) -> &str {
 /// Install explicit face roles, independent of imported font metadata or system fonts.
 pub fn install_export(db: &mut resvg::usvg::fontdb::Database, project: Option<&ProjectFont>) {
     use resvg::usvg::fontdb::{Database, ID, Language, Style, Weight};
+    // Explicit aliases prevent fontdb from choosing another face with a shared
+    // family name, and preserve the canvas fallback's style and size.
+    for (name, data) in egui::FontDefinitions::default().font_data {
+        let mut parsed = Database::new();
+        parsed.load_font_data(data.font.to_vec());
+        if let Some(face) = parsed.faces().next() {
+            let mut face = face.clone();
+            face.id = ID::dummy();
+            face.families = vec![(
+                export_fallback_family(&name),
+                Language::English_UnitedStates,
+            )];
+            face.weight = Weight(400);
+            face.style = Style::Normal;
+            db.push_face_info(face);
+        }
+    }
     for (index, bytes) in faces(project).into_iter().enumerate() {
         let mut parsed = Database::new();
         parsed.load_font_data(bytes.to_vec());
@@ -79,4 +96,54 @@ pub fn install_export(db: &mut resvg::usvg::fontdb::Database, project: Option<&P
             db.push_face_info(face);
         }
     }
+}
+
+pub const FALLBACK_NOTICES: &str = include_str!("../assets/fonts/fallback-notices.txt");
+pub fn export_fallback_family(face: &str) -> String {
+    format!("Wireframe {face}")
+}
+
+/// Keep graphemes together and retain the actual face selected by the canvas.
+/// The public character coverage map lists faces in the family's fallback order.
+pub fn source_faces(
+    context: &egui::Context,
+    family: &egui::FontFamily,
+    text: &str,
+) -> Vec<(std::ops::Range<usize>, String, f32)> {
+    use unicode_segmentation::UnicodeSegmentation;
+    context.fonts_mut(|fonts| {
+        let mut runs: Vec<(std::ops::Range<usize>, String, f32)> = Vec::new();
+        {
+            let mut font = fonts.fonts.font(family);
+            let coverage = font.characters();
+            let replacement = coverage
+                .get(&'◻')
+                .or_else(|| coverage.get(&'?'))
+                .and_then(|v| v.first());
+            for (start, grapheme) in text.grapheme_indices(true) {
+                let first = grapheme.chars().next().unwrap_or(' ');
+                let face = coverage
+                    .get(&first)
+                    .and_then(|v| v.first())
+                    .or(replacement)
+                    .cloned()
+                    .unwrap_or_default();
+                if let Some(last) = runs.last_mut()
+                    && last.1 == face
+                {
+                    last.0.end = start + grapheme.len();
+                } else {
+                    runs.push((start..start + grapheme.len(), face, 1.));
+                }
+            }
+        }
+        for (_, face, scale) in &mut runs {
+            *scale = fonts
+                .definitions()
+                .font_data
+                .get(face)
+                .map_or(1., |data| data.tweak.scale);
+        }
+        runs
+    })
 }

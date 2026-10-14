@@ -208,7 +208,7 @@ fn dropdown_header_moves_menu_and_keeps_narrow_icons() {
         s.items
             .iter()
             .filter_map(|i| match &i.drawing {
-                Drawing::Glyph(g) if g.text == "A" => Some(g.baseline),
+                Drawing::Glyph(g) if g.text == "Alpha" => Some(g.baseline),
                 _ => None,
             })
             .next()

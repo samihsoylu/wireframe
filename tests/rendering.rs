@@ -61,19 +61,23 @@ fn styled_scene_retains_source_and_uses_real_faces_and_inline_colors() {
         glyphs.iter().map(|g| g.text.as_str()).collect::<String>(),
         "Bold café Red dim Big"
     );
-    assert!(glyphs.iter().any(|g| g.text == "B" && g.bold && !g.italic));
-    assert!(glyphs.iter().any(|g| g.text == "é" && g.italic));
     assert!(
         glyphs
             .iter()
-            .any(|g| g.text == "R" && g.color == [204, 34, 0, 255])
+            .any(|g| g.text == "Bold" && g.bold && !g.italic)
+    );
+    assert!(glyphs.iter().any(|g| g.text == "café" && g.italic));
+    assert!(
+        glyphs
+            .iter()
+            .any(|g| g.text == "Red" && g.color == [204, 34, 0, 255])
     );
     assert!(
         glyphs
             .iter()
-            .any(|g| g.text == "d" && g.color == [153, 153, 153, 255])
+            .any(|g| g.text == "dim" && g.color == [153, 153, 153, 255])
     );
-    assert!(glyphs.iter().any(|g| g.text == "B" && g.size == 24.));
+    assert!(glyphs.iter().any(|g| g.text == "Big" && g.size == 24.));
     assert_eq!(serde_json::to_vec(&editor.document).unwrap(), before);
 }
 
@@ -228,4 +232,81 @@ fn svg_and_png_preserve_positioned_text_fonts_color_and_safe_links() {
             .iter()
             .any(|p| p.blue() > 150 && p.red() < 80)
     );
+}
+
+#[test]
+fn shaped_runs_preserve_original_unicode_and_styles_after_joined_text() {
+    let source =
+        "office ffi fi fl cafe\u{301} 👩\u{200d}💻 *Strong* [שלום](page:2) {color:red}After{color}";
+    let p = specimen("paragraph", source, 1800., 100.);
+    let bytes = p.encode().unwrap();
+    let editor = Editor::new(p);
+    let scene = editor.rendered_scene(1).unwrap();
+    let runs = glyphs(&scene);
+    assert_eq!(
+        runs.iter().map(|g| g.text.as_str()).collect::<String>(),
+        "office ffi fi fl cafe\u{301} 👩\u{200d}💻 Strong שלום After"
+    );
+    assert!(runs.iter().any(|g| g.text.contains("office ffi fi fl")));
+    assert!(runs.iter().any(|g| g.text == "Strong" && g.bold));
+    assert!(
+        runs.iter()
+            .any(|g| g.text == "After" && g.color == [255, 0, 0, 255])
+    );
+    assert!(scene.svg().contains(">👩\u{200d}💻</text>"));
+    let linked = runs.iter().find(|g| g.text == "שלום").unwrap();
+    assert_eq!(scene.links.len(), 1);
+    assert_eq!(scene.links[0].target, "page:2");
+    assert!((scene.links[0].bounds.x - linked.x).abs() < 0.01);
+    assert!((scene.links[0].bounds.w - linked.advance).abs() < 0.01);
+    assert!(scene.svg().contains("office ffi fi fl cafe\u{301} "));
+    assert!(scene.png().is_ok());
+    assert_eq!(editor.document.encode().unwrap(), bytes);
+}
+
+#[test]
+fn fallback_exports_keep_the_canvas_face_scale_and_original_clusters() {
+    use eframe::egui;
+    use std::sync::Arc;
+    use wireframe::fonts::ProjectFont;
+    for (source, face, scale) in [
+        ("Ελληνικά", "Ubuntu-Light", 1.),
+        ("👩\u{200d}💻", "NotoEmoji-Regular", 0.81),
+    ] {
+        let scene = Editor::new(specimen("label", source, 240., 80.))
+            .rendered_scene(1)
+            .unwrap();
+        let runs = glyphs(&scene);
+        assert_eq!(runs.len(), 1);
+        assert_eq!(runs[0].text, source);
+        assert_eq!(runs[0].face, face);
+        assert_eq!(runs[0].face_scale, scale);
+        let svg = scene.svg();
+        assert!(svg.contains(&format!("font-family=\"Wireframe {face}\"")));
+        assert_eq!(svg.matches("@font-face").count(), 5);
+        assert!(svg.contains("Bundled fallback fonts"));
+        assert!(!svg.contains("lengthAdjust"));
+        // Compare the selected fallback against that exact font assigned directly
+        // as the primary face, at its effective size, in the same drawing geometry.
+        let data = egui::FontDefinitions::default().font_data[face]
+            .font
+            .to_vec();
+        let mut explicit = scene.clone();
+        explicit.font = Some(Arc::new(
+            ProjectFont::new(
+                "Explicit test face".into(),
+                std::array::from_fn(|_| data.clone()),
+                String::new(),
+            )
+            .unwrap(),
+        ));
+        for item in &mut explicit.items {
+            if let Drawing::Glyph(g) = &mut item.drawing {
+                g.face = "canvas-regular".into();
+                g.size *= g.face_scale;
+                g.face_scale = 1.;
+            }
+        }
+        assert_eq!(scene.png().unwrap(), explicit.png().unwrap());
+    }
 }

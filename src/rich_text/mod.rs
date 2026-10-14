@@ -2,6 +2,7 @@
 // Copyright 2026 Wireframe contributors
 //! Source-preserving rich text. Parsing and drawing use the same styled spans.
 pub mod painting;
+mod source_lines;
 pub mod structured;
 
 #[derive(serde::Serialize, Clone, Debug, Default, PartialEq)]

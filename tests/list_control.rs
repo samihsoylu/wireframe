@@ -160,7 +160,7 @@ fn list_rows_share_export_geometry_contrast_clipping_and_scrollbar_positions() {
             }
         })
         .collect();
-    assert!(glyphs.iter().any(|g| g.bold && g.text == "B"));
+    assert!(glyphs.iter().any(|g| g.bold && g.text == "Bravo"));
     assert!(glyphs.iter().any(|g| g.color == [153, 153, 153, 255]));
     assert!(glyphs.iter().any(|g| g.color == [255; 4]));
     let rendered: String = glyphs.iter().map(|g| g.text.as_str()).collect();

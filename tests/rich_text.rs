@@ -236,3 +236,148 @@ fn font_measurement_and_link_areas_use_the_same_wrapped_galley() {
     });
     output.drop_without_applying_deltas();
 }
+
+#[test]
+fn wrapping_preserves_source_graphemes_even_when_glyph_metadata_expands() {
+    use unicode_segmentation::UnicodeSegmentation;
+    let ctx = egui::Context::default();
+    wireframe::fonts::install(&ctx);
+    ctx.run_ui(Default::default(), |_| {
+        let m = EguiMeasurer {
+            context: &ctx,
+            regular: wireframe::fonts::family(false, false),
+            bold: wireframe::fonts::family(true, false),
+        };
+        let style = TextStyle {
+            size: 24.,
+            bold: false,
+            italic: false,
+        };
+        for source in [
+            "مرحبا بالعالم مرحبا بالعالم",
+            "ABC שלום 123 שלום",
+            "👩\u{200d}💻 a\u{301}\u{323} office ffi fi fl",
+        ] {
+            for width in [1., 30., 70., 200.] {
+                let text = m.rich_galley(&RichText::plain(source), style, Some(width), true);
+                let actual: String = text
+                    .runs
+                    .iter()
+                    .flatten()
+                    .map(|r| r.text.as_str())
+                    .collect();
+                assert_eq!(actual, source, "width {width}");
+                let mut boundary = 0;
+                let valid: Vec<_> = source
+                    .grapheme_indices(true)
+                    .map(|(i, _)| i)
+                    .chain(std::iter::once(source.len()))
+                    .collect();
+                for row in text.runs {
+                    boundary += row.iter().map(|r| r.text.len()).sum::<usize>();
+                    assert!(
+                        valid.contains(&boundary),
+                        "split grapheme at {boundary}: {source}"
+                    );
+                }
+            }
+        }
+    })
+    .drop_without_applying_deltas();
+}
+
+#[test]
+fn truncation_keeps_whole_graphemes_and_reshapes_the_prefix() {
+    use wireframe::rich_text::painting::TextRun;
+    let ctx = egui::Context::default();
+    wireframe::fonts::install(&ctx);
+    ctx.run_ui(Default::default(), |_| {
+        let format = egui::text::TextFormat {
+            font_id: egui::FontId::new(24., wireframe::fonts::family(false, false)),
+            ..Default::default()
+        };
+        let measure = |s: &str| {
+            let mut job = egui::text::LayoutJob::default();
+            job.append(s, 0., format.clone());
+            ctx.fonts_mut(|f| f.layout_job(job).size().x)
+        };
+        for cluster in ["e\u{301}", "👩\u{200d}💻"] {
+            let source = format!("{cluster}ABC");
+            let mut run = TextRun {
+                text: source.clone(),
+                format: format.clone(),
+                x: 0.,
+                width: measure(&source),
+                face: "canvas-regular".into(),
+                face_scale: 1.,
+            };
+            run.truncate(&ctx, measure(cluster) + 0.01);
+            assert_eq!(run.text, cluster);
+            assert!((run.width - measure(cluster)).abs() < 0.01);
+            run.truncate(&ctx, 0.);
+            assert!(run.text.is_empty());
+            assert_eq!(run.width, 0.);
+        }
+    })
+    .drop_without_applying_deltas();
+}
+
+#[test]
+fn ordinary_wrap_keeps_original_line_widths_and_link_targets_can_share_a_style() {
+    let ctx = egui::Context::default();
+    wireframe::fonts::install(&ctx);
+    ctx.run_ui(Default::default(), |_| {
+        let m = EguiMeasurer {
+            context: &ctx,
+            regular: wireframe::fonts::family(false, false),
+            bold: wireframe::fonts::family(true, false),
+        };
+        let style = TextStyle {
+            size: 13.,
+            bold: false,
+            italic: false,
+        };
+        let painted = m.rich_galley(
+            &RichText::parse(
+                "one two three [first](page:2)[second](page:3) four five",
+                false,
+            ),
+            style,
+            Some(70.),
+            true,
+        );
+        assert_eq!(painted.rows.len(), painted.galley.rows.len());
+        for (source, actual) in painted.galley.rows.iter().zip(&painted.rows) {
+            assert_eq!(source.size.x.ceil(), actual.width);
+        }
+        assert!(painted.links.iter().any(|l| l.target == "page:2"));
+        assert!(painted.links.iter().any(|l| l.target == "page:3"));
+        for pair in painted.links.windows(2) {
+            if pair[0].row == pair[1].row {
+                assert!(pair[0].rect.right() <= pair[1].rect.left() + 0.01);
+            }
+        }
+        let adjacent = m.rich_galley(
+            &RichText::parse("[f](page:2)[fi](page:3)", false),
+            style,
+            None,
+            true,
+        );
+        assert_eq!(adjacent.galley.job.sections.len(), 2);
+        assert_eq!(adjacent.links.len(), 2);
+        assert!(adjacent.links.iter().all(|link| link.rect.width() > 0.));
+        assert!((adjacent.links[0].rect.right() - adjacent.links[1].rect.left()).abs() < 0.01);
+        let source = "مرحبا ".repeat(256);
+        let narrow = m.rich_galley(&RichText::plain(&source), style, Some(1.), true);
+        assert_eq!(
+            narrow
+                .runs
+                .iter()
+                .flatten()
+                .map(|r| r.text.as_str())
+                .collect::<String>(),
+            source
+        );
+    })
+    .drop_without_applying_deltas();
+}

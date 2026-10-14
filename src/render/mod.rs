@@ -28,6 +28,7 @@ use crate::{
     workspace::Layer,
 };
 use eframe::egui::{self, Color32};
+/// A complete styled text run with its canvas advance (not one Unicode scalar).
 #[derive(Clone, Debug)]
 pub struct Glyph {
     pub text: String,
@@ -38,6 +39,8 @@ pub struct Glyph {
     pub italic: bool,
     pub color: [u8; 4],
     pub advance: f32,
+    pub face: String,
+    pub face_scale: f32,
 }
 #[derive(Clone, Debug)]
 pub enum Drawing {
@@ -443,56 +446,55 @@ impl Scene {
             area.soft_breaks,
             options,
         );
-        let galley = &painted.galley;
         let vertical = if area.middle {
             (area.bounds.h - painted.size.y) / 2.
         } else {
             0.
         };
-        let visible_width = |row: &egui::epaint::text::PlacedRow| {
+        let mut widths = Vec::new();
+        for (row_index, source_runs) in painted.runs.iter().enumerate() {
+            let mut runs = source_runs.clone();
             if area.truncate {
-                row.glyphs
-                    .iter()
-                    .take_while(|g| g.pos.x + g.advance_width <= area.bounds.w)
-                    .last()
-                    .map_or(0., |g| g.pos.x + g.advance_width)
-            } else {
-                row.size.x.ceil()
+                let mut stopped = false;
+                for run in &mut runs {
+                    if stopped {
+                        run.text.clear();
+                        run.width = 0.;
+                        continue;
+                    }
+                    if run.x + run.width > area.bounds.w {
+                        run.truncate(fonts.context, (area.bounds.w - run.x).max(0.));
+                        stopped = true;
+                    }
+                }
+                runs.retain(|run| !run.text.is_empty());
             }
-        };
-        let mut byte = 0;
-        let mut section = 0;
-        for (row_index, row) in galley.rows.iter().enumerate() {
-            let width = visible_width(row);
+            let width = if area.truncate {
+                runs.last().map_or(0., |r| r.x + r.width)
+            } else {
+                painted.rows[row_index].width
+            };
+            widths.push(width);
             let dx = area.bounds.x + area.align.offset(area.bounds.w, width);
             let dy = area.bounds.y + vertical;
-            for glyph in &row.glyphs {
-                while section + 1 < galley.job.sections.len()
-                    && byte >= galley.job.sections[section].byte_range.end.0
-                {
-                    section += 1;
-                }
-                let Some(format) = galley.job.sections.get(section).map(|s| &s.format) else {
-                    continue;
-                };
-                byte += glyph.chr.len_utf8();
-                if area.truncate && glyph.pos.x + glyph.advance_width > width {
-                    continue;
-                }
+            for run in runs {
+                let format = &run.format;
                 let family = format.font_id.family.to_string();
-                let x = dx + row.pos.x + glyph.pos.x;
+                let x = dx + run.x;
                 let baseline = dy + painted.rows[row_index].baseline;
                 self.items.push(Item {
                     opacity: 1.,
                     drawing: Drawing::Glyph(Glyph {
-                        text: glyph.chr.to_string(),
+                        text: run.text,
                         x,
                         baseline,
                         size: format.font_id.size,
                         bold: family.contains("bold"),
                         italic: family.contains("italic") || format.italics,
                         color: format.color.to_array(),
-                        advance: glyph.advance_width,
+                        advance: run.width,
+                        face: run.face,
+                        face_scale: run.face_scale,
                     }),
                     clip: area.clip,
                 });
@@ -503,7 +505,7 @@ impl Scene {
                     if stroke.width > 0. {
                         self.primitive(
                             Primitive::Line {
-                                points: vec![[x, y], [x + glyph.advance_width, y]],
+                                points: vec![[x, y], [x + run.width, y]],
                                 color: [stroke.color.r(), stroke.color.g(), stroke.color.b()],
                                 width: stroke.width,
                             },
@@ -512,25 +514,20 @@ impl Scene {
                     }
                 }
             }
-            if row.ends_with_newline {
-                byte += 1;
-            }
         }
         for link in painted.links {
-            let row = galley.rows.get(link.row);
-            let dx = row.map_or(0., |r| area.align.offset(area.bounds.w, visible_width(r)));
+            let width = widths[link.row];
+            let dx = area.align.offset(area.bounds.w, width);
             let mut bounds = Bounds::new(
                 area.bounds.x + dx + link.rect.min.x,
                 area.bounds.y + vertical + link.rect.min.y,
                 link.rect.width(),
                 link.rect.height(),
             );
-            if area.truncate
-                && let Some(row) = row
-            {
+            if area.truncate {
                 bounds = intersect(
                     bounds,
-                    Bounds::new(area.bounds.x + dx, bounds.y, visible_width(row), bounds.h),
+                    Bounds::new(area.bounds.x + dx, bounds.y, width, bounds.h),
                 );
             }
             if let Some(clip) = area.clip {
@@ -633,7 +630,7 @@ fn paint_options(p: &Properties) -> PaintOptions {
         underline: boolean(p, "underline"),
     }
 }
-/// Draw positioned glyphs using this canvas's own font atlas. Cached atlas coordinates
+/// Draw complete positioned text runs using this canvas's own font atlas. Cached atlas coordinates
 /// from the measurement context are intentionally never reused.
 pub fn paint_glyph(painter: &egui::Painter, g: &Glyph, origin: egui::Pos2, scale: f32) {
     let color = Color32::from_rgba_unmultiplied(g.color[0], g.color[1], g.color[2], g.color[3]);

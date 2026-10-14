@@ -2,7 +2,10 @@
 // Copyright 2026 Wireframe contributors
 use super::*;
 use crate::scene::{color, escape};
-fn embedded_fonts(font: Option<&crate::fonts::ProjectFont>) -> String {
+fn embedded_fonts(
+    font: Option<&crate::fonts::ProjectFont>,
+    fallbacks: &std::collections::BTreeSet<&str>,
+) -> String {
     let mut css = String::from("<style>");
     let family = crate::fonts::export_family(font);
     for (index, data) in crate::fonts::faces(font).into_iter().enumerate() {
@@ -15,13 +18,30 @@ fn embedded_fonts(font: Option<&crate::fonts::ProjectFont>) -> String {
         };
         css.push_str(&format!("@font-face{{font-family:'{family}';font-weight:{weight};font-style:{style};src:url(data:{media};base64,{}) format('{format}');}}",base64(data)));
     }
+    let definitions = egui::FontDefinitions::default();
+    for &face in fallbacks {
+        if let Some(data) = definitions.font_data.get(face) {
+            css.push_str(&format!("@font-face{{font-family:'{}';font-weight:400;font-style:normal;src:url(data:font/ttf;base64,{}) format('truetype');}}", crate::fonts::export_fallback_family(face), base64(&data.font)));
+        }
+    }
     css.push_str("</style><metadata>");
     css.push_str(&escape(crate::fonts::notices(font)));
+    if !fallbacks.is_empty() {
+        css.push_str(&escape(crate::fonts::FALLBACK_NOTICES));
+    }
     css.push_str("</metadata>");
     css
 }
 impl Scene {
     pub fn svg(&self) -> String {
+        let fallbacks = self
+            .items
+            .iter()
+            .filter_map(|item| match &item.drawing {
+                Drawing::Glyph(g) if !g.face.starts_with("canvas-") => Some(g.face.as_str()),
+                _ => None,
+            })
+            .collect();
         let b = self.bounds;
         let w = b.w + 48.;
         let h = b.h + 48.;
@@ -30,7 +50,7 @@ impl Scene {
             b.x - 24.,
             b.y - 24.,
             escape(&self.title),
-            embedded_fonts(self.font.as_deref()),
+            embedded_fonts(self.font.as_deref(), &fallbacks),
             b.x - 24.,
             b.y - 24.
         );
@@ -60,7 +80,11 @@ impl Scene {
     },
     Drawing::Image { bounds: b, data } => out.push_str(&format!("<image x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" preserveAspectRatio=\"none\" href=\"data:image/png;base64,{}\"/>", b.x,b.y,b.w,b.h,base64(&data.png))),
     Drawing::Primitive(p)=>out.push_str(&crate::scene::primitive_svg(p.clone())),
-    Drawing::Glyph(g)=>out.push_str(&format!("<text x=\"{}\" y=\"{}\" font-family=\"{},Ubuntu,sans-serif\" font-size=\"{}\" font-weight=\"{}\" font-style=\"{}\" fill=\"{}\" fill-opacity=\"{}\" xml:space=\"preserve\">{}</text>",g.x,g.baseline,crate::fonts::export_family(self.font.as_deref()),g.size,if g.bold{700}else{400},if g.italic{"italic"}else{"normal"},color([g.color[0],g.color[1],g.color[2]]),g.color[3]as f32/255.,escape(&g.text))),
+    Drawing::Glyph(g) => {
+        let primary = g.face.starts_with("canvas-");
+        let family = if primary { crate::fonts::export_family(self.font.as_deref()).to_owned() } else { crate::fonts::export_fallback_family(&g.face) };
+        out.push_str(&format!("<text x=\"{}\" y=\"{}\" font-family=\"{}\" font-size=\"{}\" font-weight=\"{}\" font-style=\"{}\" fill=\"{}\" fill-opacity=\"{}\" xml:space=\"preserve\">{}</text>",g.x,g.baseline,escape(&family),g.size*g.face_scale,if primary && g.bold{700}else{400},if primary && g.italic{"italic"}else{"normal"},color([g.color[0],g.color[1],g.color[2]]),g.color[3]as f32/255.,escape(&g.text)));
+    },
    }
             if item.opacity != 1. {
                 out.push_str("</g>");

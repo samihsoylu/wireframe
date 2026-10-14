@@ -3843,6 +3843,7 @@ dependencies = [
  "serde_json",
  "skrifa",
  "tempfile",
+ "unicode-segmentation",
 ]
 
 [[package]]

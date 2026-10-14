@@ -898,7 +898,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     );
     ink.default = if c.id == "link" {
         DefaultValue::LinkColor
-    } else if c.id == "dropdown" {
+    } else if matches!(c.id, "dropdown" | "icon" | "icon_label") {
         DefaultValue::FormInk
     } else if c.id == "search" {
         DefaultValue::SearchInk
@@ -907,6 +907,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     };
     let text = match c.id {
         "button" => "Button",
+        "icon_label" => "Icon Name",
         "dropdown" => "Dropdown",
         "checkbox" => "Checkbox",
         "radio" => "Radio button",
@@ -1089,7 +1090,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             true,
         ));
     }
-    if matches!(c.id, "button" | "dropdown") {
+    if matches!(c.id, "button" | "dropdown" | "icon" | "icon_label") {
         let mut icon = prop("icon", "Icon", PropertyType::Icon, Value::Null);
         icon.nullable = true;
         c.properties.extend([
@@ -1098,7 +1099,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
                 "icon_size",
                 "Icon size",
                 &["16", "24", "32", "48", "64", "128"],
-                "24",
+                if c.id == "icon_label" { "48" } else { "24" },
             ),
             choice(
                 "icon_rotation",
@@ -1109,6 +1110,19 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         ]);
         if c.id == "button" {
             c.properties.push(boolean("menu_icon", "Menu arrow", false));
+        }
+    }
+    if matches!(c.id, "icon" | "icon_label") {
+        c.properties.retain(|p| p.key != "border");
+        c.properties
+            .push(choice("border", "Border", &["none", "solid"], "none"));
+        if c.id == "icon_label" {
+            c.properties.push(choice(
+                "label_position",
+                "Label position",
+                &["bottom", "left", "right"],
+                "bottom",
+            ));
         }
     }
     if c.id == "list" {

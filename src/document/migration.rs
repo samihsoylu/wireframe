@@ -121,6 +121,8 @@ fn migrate_control(c: legacy::Control) -> Node {
         legacy::Kind::Line => "line",
         legacy::Kind::Arrow => "arrow",
         legacy::Kind::Image => "image",
+        legacy::Kind::Icon => "icon",
+        legacy::Kind::IconLabel => "icon_label",
         legacy::Kind::Browser => "browser",
         legacy::Kind::Phone => "phone",
         legacy::Kind::Panel => "panel",

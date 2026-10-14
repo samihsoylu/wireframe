@@ -233,3 +233,8 @@ pub fn menu_size(enabled: bool, font_size: f32) -> f32 {
         24.
     }
 }
+
+/// A missing standalone source has its own fixed empty frame size.
+pub fn standalone_size(props: &crate::document::Properties, label: bool) -> f32 {
+    setting(props).map_or(if label { 48. } else { 24. }, |i| i.size)
+}

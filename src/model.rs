@@ -104,6 +104,8 @@ pub enum Kind {
     Line,
     Arrow,
     Image,
+    Icon,
+    IconLabel,
     Browser,
     Phone,
     Panel,
@@ -115,7 +117,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 24] = [
+    pub const ALL: [Kind; 26] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -131,6 +133,8 @@ impl Kind {
         Self::Line,
         Self::Arrow,
         Self::Image,
+        Self::Icon,
+        Self::IconLabel,
         Self::Browser,
         Self::Phone,
         Self::Panel,
@@ -158,6 +162,8 @@ impl Kind {
             Self::Line => "Line",
             Self::Arrow => "Arrow",
             Self::Image => "Image",
+            Self::Icon => "Icon",
+            Self::IconLabel => "Icon and label",
             Self::Browser => "Browser",
             Self::Phone => "Phone",
             Self::Panel => "Panel",
@@ -172,6 +178,7 @@ impl Kind {
     pub fn category(self) -> &'static str {
         match self {
             Self::Label | Self::Heading | Self::Paragraph | Self::Link => "Text",
+            Self::Icon | Self::IconLabel => "Icons",
             Self::Button
             | Self::TextInput
             | Self::TextArea
@@ -187,6 +194,8 @@ impl Kind {
     pub fn size(self) -> (f32, f32) {
         match self {
             Self::Button => (120., 38.),
+            Self::Icon => (24., 24.),
+            Self::IconLabel => (65., 63.),
             Self::Label | Self::Link => (140., 28.),
             Self::Heading => (300., 48.),
             Self::Paragraph => (300., 100.),
@@ -207,6 +216,7 @@ impl Kind {
     pub fn initial_text(self) -> &'static str {
         match self {
             Self::Button => "Button",
+            Self::IconLabel => "Icon Name",
             Self::Label => "Some text",
             Self::Heading => "Your next great idea",
             Self::Paragraph => "Describe the idea here.\nKeep it simple and make it clear.",

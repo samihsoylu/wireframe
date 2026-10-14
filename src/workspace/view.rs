@@ -215,6 +215,8 @@ fn control(node: &LayoutNode) -> Control {
         "line" | "horizontal_rule" => Kind::Line,
         "arrow" => Kind::Arrow,
         "image" => Kind::Image,
+        "icon" => Kind::Icon,
+        "icon_label" => Kind::IconLabel,
         "browser" => Kind::Browser,
         "phone" => Kind::Phone,
         "panel" | "window" => Kind::Panel,

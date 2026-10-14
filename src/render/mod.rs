@@ -10,6 +10,7 @@ mod list;
 mod rasters;
 mod scrollbar;
 mod search;
+mod standalone_icons;
 mod svg;
 mod table;
 use crate::{
@@ -281,6 +282,9 @@ impl Scene {
         }
         if c.kind == Kind::Search {
             return self.search_control(layer, sketch, fonts);
+        }
+        if matches!(c.kind, Kind::Icon | Kind::IconLabel) {
+            return self.standalone_icon(layer, fonts, rasters);
         }
         if c.kind == Kind::Button {
             return self.button_control(layer, sketch, fonts, rasters);

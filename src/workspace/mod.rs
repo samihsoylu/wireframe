@@ -273,6 +273,8 @@ impl Editor {
                     | Kind::Search
                     | Kind::Dropdown
                     | Kind::Image
+                    | Kind::Icon
+                    | Kind::IconLabel
                     | Kind::List
             ) {
                 let kind_id = match kind {
@@ -284,6 +286,8 @@ impl Editor {
                     Kind::Search => "search",
                     Kind::Dropdown => "dropdown",
                     Kind::Image => "image",
+                    Kind::Icon => "icon",
+                    Kind::IconLabel => "icon_label",
                     Kind::List => "list",
                     _ => unreachable!(),
                 };

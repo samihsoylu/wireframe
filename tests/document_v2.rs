@@ -91,7 +91,7 @@ fn migration_preserves_every_legacy_control_and_interleaved_group_layering() {
     let new = decode(&bytes).unwrap();
     assert_eq!(new.title, old.title);
     assert_eq!(new.pages[0].notes, old.pages[0].notes);
-    assert_eq!(new.pages[0].content.paint_order.len(), 24);
+    assert_eq!(new.pages[0].content.paint_order.len(), old::Kind::ALL.len());
     let leaves = new.pages[0].content.leaves().unwrap();
     for (a, b) in leaves.iter().zip(&old.pages[0].controls) {
         assert_eq!(a.node.id, b.id);

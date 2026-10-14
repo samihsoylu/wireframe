@@ -224,7 +224,7 @@ impl Editor {
                 let (spec, _) = self
                     .control_properties(id)
                     .ok_or("Control no longer exists")?;
-                if !matches!(spec.id, "button" | "dropdown")
+                if !matches!(spec.id, "button" | "dropdown" | "icon" | "icon_label")
                     || self
                         .current()
                         .controls

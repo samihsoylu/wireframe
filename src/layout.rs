@@ -267,6 +267,35 @@ impl<M: TextMeasurer> Engine<'_, M> {
             bold: boolean(props, "bold"),
             italic: boolean(props, "italic"),
         };
+        if matches!(kind, "icon" | "icon_label") {
+            let icon = crate::icons::standalone_size(props, kind == "icon_label");
+            if kind == "icon" {
+                return Ok((icon, icon));
+            }
+            let measured =
+                self.measurer
+                    .measure_rich(&RichText::parse(text, false), style, None, false);
+            let bottom =
+                matches!(props.get("label_position"),Some(Value::Choice(s)) if s=="bottom");
+            let w = match width {
+                Dimension::Fixed(w) => w,
+                Dimension::Auto => {
+                    if bottom {
+                        icon.max(measured.width)
+                    } else {
+                        icon + measured.width + 3.
+                    }
+                }
+            };
+            let th = measured.height.max(style.size);
+            let h = if bottom {
+                icon + th + 2.
+            } else {
+                icon.max(th + 8.)
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         if kind == "image" {
             let natural = match props.get("image") {
                 Some(Value::Asset(id)) => self

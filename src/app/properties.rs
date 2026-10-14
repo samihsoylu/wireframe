@@ -11,8 +11,11 @@ use wireframe::{
 fn supported(kind: &str, key: &str) -> bool {
     match key {
         "row_links" | "row_icons" => kind == "list",
-        "icon" | "icon_size" | "icon_rotation" => matches!(kind, "button" | "dropdown"),
+        "icon" | "icon_size" | "icon_rotation" => {
+            matches!(kind, "button" | "dropdown" | "icon" | "icon_label")
+        }
         "menu_icon" => kind == "button",
+        "label_position" => kind == "icon_label",
         "text" | "font_size" | "bold" | "italic" | "underline" | "text_color" | "align" => true,
         "sketch_filter" | "image_border" => kind == "image",
         "state" => matches!(
@@ -27,10 +30,11 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "text_area"
                 | "search"
                 | "dropdown"
+                | "icon_label"
         ),
         "vertical_scrollbar" | "value" => matches!(kind, "dropdown" | "text_area" | "list"),
         "border_color" => matches!(kind, "dropdown" | "text_input" | "text_area"),
-        "border" => matches!(kind, "text_input" | "list"),
+        "border" => matches!(kind, "text_input" | "list" | "icon" | "icon_label"),
         "background_opacity" => matches!(kind, "text_input" | "text_area"),
         "selected_index" => matches!(kind, "table" | "dropdown" | "list"),
         "shape" | "search_icon" | "microphone_icon" => kind == "search",
@@ -55,6 +59,7 @@ fn choice_label(value: &str) -> &str {
         "disabled_selected" => "Selected and disabled",
         "indeterminate" => "Indeterminate",
         "disabled_indeterminate" => "Indeterminate and disabled",
+        "bottom" => "Bottom",
         "left" => "Left",
         "center" => "Center",
         "right" => "Right",
@@ -77,6 +82,7 @@ impl WireframeApp {
         if !matches!(
             spec.id,
             "image"
+                | "icon"
                 | "label"
                 | "heading"
                 | "link"
@@ -85,6 +91,7 @@ impl WireframeApp {
                 | "button"
                 | "text_input"
                 | "dropdown"
+                | "icon_label"
                 | "search"
                 | "checkbox"
                 | "radio"
@@ -106,13 +113,13 @@ impl WireframeApp {
         let local = self.editor.editing_instance();
         ui.add_space(10.);
         ui.add_enabled_ui(!locked, |ui| {
-            if spec.id != "image" && spec.autosize != wireframe::catalog::AutoSize::None && ui.button("Auto-size").clicked() {
+            if !matches!(spec.id,"image"|"icon") && spec.autosize != wireframe::catalog::AutoSize::None && ui.button("Auto-size").clicked() {
                 self.editor.commit();
                 self.editor.begin("Auto-size control");
                 if let Err(error) = self.editor.auto_size_control(id) { self.error = Some(error); }
                 self.editor.commit();
             }
-            for key in ["image_border", "sketch_filter", "text", "icon", "icon_size", "icon_rotation", "menu_icon", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+            for key in ["image_border", "sketch_filter", "text", "label_position", "icon", "icon_size", "icon_rotation", "menu_icon", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
                 if matches!(key, "icon_size" | "icon_rotation") && !matches!(values.get("icon"),Some(Value::Icon(_))) {continue;}
                 if key == "value" && values.get("vertical_scrollbar") != Some(&Value::Bool(true)) { continue; }
                 let Some(field) = spec.property(key).filter(|f| f.visible && supported(spec.id, key)) else { continue; };

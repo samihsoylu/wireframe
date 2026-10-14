@@ -104,6 +104,10 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
         .cloned()
         .unwrap_or_default();
     match c.kind {
+        Kind::Icon | Kind::IconLabel => {
+            // Legacy scene fallback; the live editor uses the shared icon renderer.
+            rect(&mut out, Bounds::new(x, y, w.min(h), w.min(h)), white, 2.);
+        }
         Kind::Button => {
             rect(
                 &mut out,

@@ -1101,7 +1101,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             "solid",
         );
     }
-    if c.id == "tablet" {
+    if matches!(c.id, "tablet" | "smartphone") {
         c.properties.extend([
             choice(
                 "orientation",

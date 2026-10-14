@@ -15,11 +15,29 @@ pub(super) struct Cache {
 }
 #[derive(Clone, PartialEq)]
 struct ClockLayout {
-    options: crate::tablet::Options,
+    options: ClockOptions,
     width: f32,
     height: f32,
     sketch: bool,
     font: Option<std::sync::Arc<crate::fonts::ProjectFont>>,
+}
+#[derive(Clone, PartialEq)]
+enum ClockOptions {
+    Tablet(crate::tablet::Options),
+    Smartphone(crate::smartphone::Options),
+}
+impl ClockOptions {
+    fn for_layer(layer: &Layer) -> Option<Self> {
+        match layer.control.kind {
+            Kind::Tablet => Some(Self::Tablet(crate::tablet::Options::from_properties(
+                &layer.properties,
+            ))),
+            Kind::Smartphone => Some(Self::Smartphone(
+                crate::smartphone::Options::from_properties(&layer.properties),
+            )),
+            _ => None,
+        }
+    }
 }
 #[derive(Clone)]
 pub struct Layer {
@@ -77,18 +95,18 @@ impl Editor {
             let mut cache = self.cache.borrow_mut();
             let paths = layers
                 .iter()
-                .filter(|l| l.control.kind == Kind::Tablet)
+                .filter(|l| ClockOptions::for_layer(l).is_some())
                 .map(|l| l.path.clone())
                 .collect::<HashSet<_>>();
             cache
                 .clocks
                 .retain(|(surface, path), _| *surface != id || paths.contains(path));
             for layer in &mut layers {
-                if layer.control.kind != Kind::Tablet {
+                let Some(options) = ClockOptions::for_layer(layer) else {
                     continue;
-                }
+                };
                 let signature = ClockLayout {
-                    options: crate::tablet::Options::from_properties(&layer.properties),
+                    options,
                     width: layer.control.bounds.w,
                     height: layer.control.bounds.h,
                     sketch: self.document.settings.sketch,
@@ -288,6 +306,7 @@ pub(super) fn control(node: &LayoutNode) -> Control {
         "browser" => Kind::Browser,
         "phone" => Kind::Phone,
         "tablet" => Kind::Tablet,
+        "smartphone" => Kind::Smartphone,
         "panel" | "window" => Kind::Panel,
         "field_set" => Kind::FieldSet,
         "list" => Kind::List,

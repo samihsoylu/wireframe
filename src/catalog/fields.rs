@@ -280,7 +280,7 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "text",
             "underline",
         ],
-        "tablet" => &[
+        "tablet" | "smartphone" => &[
             "orientation",
             "device_resizing",
             "transparent_background",
@@ -294,7 +294,6 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "transparent_background",
             "status_bar",
         ],
-        "smartphone" => &[],
         "mobile_keyboard" => &[],
         "mobile_menu" => &["bold", "border", "font_size", "italic", "text", "underline"],
         "mobile_picker" => &["text"],

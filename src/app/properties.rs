@@ -22,7 +22,7 @@ fn supported(kind: &str, key: &str) -> bool {
     match key {
         "device_model" | "background_pattern" => kind == "phone",
         "orientation" | "device_resizing" | "transparent_background" | "status_bar" => {
-            matches!(kind, "phone" | "tablet")
+            matches!(kind, "phone" | "tablet" | "smartphone")
         }
         "row_links" => matches!(
             kind,
@@ -240,6 +240,7 @@ impl WireframeApp {
                 | "field_set"
                 | "phone"
                 | "tablet"
+                | "smartphone"
                 | "browser"
                 | "window"
                 | "table"

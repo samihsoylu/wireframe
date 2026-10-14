@@ -41,6 +41,10 @@ impl Clock {
             minute: local.minute() as u8,
         }
     }
+    /// Local 24-hour time, without a leading hour zero.
+    pub fn label_24(self) -> String {
+        format!("{}:{:02}", self.hour, self.minute)
+    }
     pub fn label(self) -> String {
         let hour = match self.hour % 12 {
             0 => 12,

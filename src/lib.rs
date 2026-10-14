@@ -40,4 +40,5 @@ pub mod text_entry;
 pub mod ui_text;
 
 pub mod phone;
+pub mod smartphone;
 pub mod tablet;

@@ -1,0 +1,11 @@
+# Smartphone frames
+
+Smartphone is an editable library family with automatic portrait 356×725 or landscape 725×356 dimensions. Insertion chooses Stretch; stored documents without a resizing value use Fit. Explicit dimensions survive property changes until Auto-size is selected. Orientation, resizing, transparent screen and status bar are typed properties with normal history, reset, component override and storage behavior.
+
+Fit centers the native aspect ratio. Its status font is capped at 12 points; margins and icon spacing retain their specified rules. Stretch preserves end details and corner sections, with strict small-frame thresholds. Frames at portrait width 70 or height 167 hide the status content and hardware; crossing either boundary only reveals content if the other dimension also qualifies. The time, battery, signal and Wi-Fi appear successively as measured text and icons fit. Visibility therefore varies with the current time and installed project font.
+
+The local 24-hour clock has no leading hour zero (0:05,9:52,13:05). It is captured when a control's content is rendered and cached across movement or unrelated edits. Content geometry, orientation, resizing, status/transparency, style or project-font changes capture a new time. Capture is per control path, including component instances, and independent of Tablet's 12-hour display. Clocks are transient and are not serialized.
+
+Original white frame contours form a continuous mesh with a real opening. Transparent screens reveal content beneath them; frame hardware remains opaque. Status content is painted before the frame so compressed end sections conceal it. Canvas, thumbnails, library previews and SVG/PNG export share the same scene. Fit exposes four interior alignment guides; Stretch supplies only the generic outer guides. Both modes retain the 16-unit exterior spacing guides.
+
+`examples/render_smartphones.rs` generates a deterministic 12-frame gallery plus a colored underlay. Focused tests cover partial status visibility at different text widths, fit scaling, strict detail thresholds, editor sizing/history/storage, component overrides, alignment, mixed device clock caches and transparent/tiny rendering. Exact frame contours, glyph shapes and complex parent clipping remain visual acceptance work; the layout module deliberately keeps artwork separate from behavior.

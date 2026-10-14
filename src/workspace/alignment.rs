@@ -68,6 +68,25 @@ impl Editor {
                             targets.add(Axis::Y, GuideKind::Spacing, b.y + layout.guides[1]);
                             targets.add(Axis::Y, GuideKind::Spacing, b.y + layout.guides[3]);
                         }
+                        Kind::Smartphone => {
+                            let layout = crate::smartphone::Options::from_properties(p).layout(
+                                b.w,
+                                b.h,
+                                sketch,
+                                |_| crate::layout::TextMetrics {
+                                    width: 0.,
+                                    height: 0.,
+                                    rows: 0,
+                                },
+                            );
+                            targets.frame(b, false);
+                            if let Some(guides) = layout.guides {
+                                targets.add(Axis::X, GuideKind::Spacing, b.x + guides[0]);
+                                targets.add(Axis::X, GuideKind::Spacing, b.x + guides[2]);
+                                targets.add(Axis::Y, GuideKind::Spacing, b.y + guides[1]);
+                                targets.add(Axis::Y, GuideKind::Spacing, b.y + guides[3]);
+                            }
+                        }
                         Kind::FieldSet => {
                             let title = crate::field_set::parse(&c.text)?;
                             let metrics = fonts.measure_rich(&title, style, None, true);

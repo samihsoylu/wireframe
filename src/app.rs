@@ -915,6 +915,7 @@ impl WireframeApp {
                                             Kind::Browser
                                                 | Kind::Phone
                                                 | Kind::Tablet
+                                                | Kind::Smartphone
                                                 | Kind::Panel
                                                 | Kind::FieldSet
                                         )

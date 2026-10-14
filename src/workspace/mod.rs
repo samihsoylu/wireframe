@@ -286,6 +286,7 @@ impl Editor {
                     | Kind::Panel
                     | Kind::Phone
                     | Kind::Tablet
+                    | Kind::Smartphone
                     | Kind::FieldSet
                     | Kind::Button
                     | Kind::TextInput
@@ -321,6 +322,7 @@ impl Editor {
                     Kind::FieldSet => "field_set",
                     Kind::Phone => "phone",
                     Kind::Tablet => "tablet",
+                    Kind::Smartphone => "smartphone",
                     Kind::Button => "button",
                     Kind::TextInput => "text_input",
                     Kind::TextArea => "text_area",

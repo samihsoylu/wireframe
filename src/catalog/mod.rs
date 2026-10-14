@@ -229,7 +229,7 @@ impl ControlSpec {
             node.properties
                 .insert("device_resizing".into(), Value::Choice("stretch".into()));
         }
-        if self.id == "tablet" {
+        if matches!(self.id, "tablet" | "smartphone") {
             node.properties
                 .insert("device_resizing".into(), Value::Choice("stretch".into()));
         }

@@ -221,6 +221,8 @@ fn control(node: &LayoutNode) -> Control {
         "pointed_button" => Kind::PointedButton,
         "multiline_button" => Kind::MultilineButton,
         "button_bar" => Kind::ButtonBar,
+        "breadcrumbs" => Kind::Breadcrumbs,
+        "link_bar" => Kind::LinkBar,
         "browser" => Kind::Browser,
         "phone" => Kind::Phone,
         "panel" | "window" => Kind::Panel,

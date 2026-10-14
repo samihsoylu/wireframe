@@ -110,6 +110,8 @@ pub enum Kind {
     PointedButton,
     MultilineButton,
     ButtonBar,
+    Breadcrumbs,
+    LinkBar,
     Browser,
     Phone,
     Panel,
@@ -121,7 +123,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 30] = [
+    pub const ALL: [Kind; 32] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -143,6 +145,8 @@ impl Kind {
         Self::PointedButton,
         Self::MultilineButton,
         Self::ButtonBar,
+        Self::Breadcrumbs,
+        Self::LinkBar,
         Self::Browser,
         Self::Phone,
         Self::Panel,
@@ -176,6 +180,8 @@ impl Kind {
             Self::PointedButton => "Pointed button",
             Self::MultilineButton => "Multiline button",
             Self::ButtonBar => "Button bar",
+            Self::Breadcrumbs => "Breadcrumbs",
+            Self::LinkBar => "Link bar",
             Self::Browser => "Browser",
             Self::Phone => "Phone",
             Self::Panel => "Panel",
@@ -189,7 +195,12 @@ impl Kind {
     }
     pub fn category(self) -> &'static str {
         match self {
-            Self::Label | Self::Heading | Self::Paragraph | Self::Link => "Text",
+            Self::Label
+            | Self::Heading
+            | Self::Paragraph
+            | Self::Link
+            | Self::Breadcrumbs
+            | Self::LinkBar => "Text",
             Self::Icon | Self::IconLabel => "Icons",
             Self::Button
             | Self::CircleButton
@@ -215,6 +226,8 @@ impl Kind {
             Self::PointedButton => (69., 27.),
             Self::MultilineButton => (118., 66.),
             Self::ButtonBar => (159., 21.),
+            Self::Breadcrumbs => (210., 21.),
+            Self::LinkBar => (226., 21.),
             Self::IconLabel => (65., 63.),
             Self::Label | Self::Link => (140., 28.),
             Self::Heading => (300., 48.),
@@ -239,6 +252,8 @@ impl Kind {
             Self::IconLabel => "Icon Name",
             Self::MultilineButton => "Multiline Button\nSecond line of text",
             Self::ButtonBar => "One, Two, Three",
+            Self::Breadcrumbs => crate::navigation::BREADCRUMBS,
+            Self::LinkBar => crate::navigation::LINK_BAR,
             Self::Label => "Some text",
             Self::Heading => "Your next great idea",
             Self::Paragraph => "Describe the idea here.\nKeep it simple and make it clear.",

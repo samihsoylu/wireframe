@@ -26,7 +26,7 @@ impl Editor {
     }
     pub(super) fn structured_text_baseline(&self, id: Id) -> Option<Properties> {
         let kind = self.control_properties(id)?.0.id;
-        if !matches!(kind, "list" | "button_bar") {
+        if !matches!(kind, "list" | "button_bar" | "breadcrumbs" | "link_bar") {
             return None;
         }
         let snapshot = self.pending.as_ref().map(|(_, s)| s).filter(|s| {
@@ -54,7 +54,7 @@ impl Editor {
             .collect::<Vec<_>>();
         let nodes = children(&resolved, &self.context)?;
         let node = nodes.iter().find(|n| n.id == id)?;
-        if !matches!(&node.content,NodeContent::Control{kind,..} if matches!(kind.as_str(), "list" | "button_bar"))
+        if !matches!(&node.content,NodeContent::Control{kind,..} if matches!(kind.as_str(), "list" | "button_bar" | "breadcrumbs" | "link_bar"))
         {
             return None;
         }
@@ -80,7 +80,11 @@ impl Editor {
                 return Err("Unlock the control before editing its properties".into());
             }
             let mut edited = before.clone();
-            if matches!(&edited.content,NodeContent::Control {kind,..} if kind=="button_bar") {
+            if matches!(&edited.content,NodeContent::Control {kind,..} if matches!(kind.as_str(),"breadcrumbs"|"link_bar"))
+            {
+                crate::navigation::apply_text(&mut edited, &text, &baseline)?;
+            } else if matches!(&edited.content,NodeContent::Control {kind,..} if kind=="button_bar")
+            {
                 crate::button_bar::apply_text(&mut edited, &text, &baseline)?;
             } else {
                 crate::list::apply_text(&mut edited, &text, &baseline)?;

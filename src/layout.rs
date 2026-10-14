@@ -280,6 +280,12 @@ impl<M: TextMeasurer> Engine<'_, M> {
             bold: boolean(props, "bold"),
             italic: boolean(props, "italic"),
         };
+        if matches!(kind, "breadcrumbs" | "link_bar") {
+            let nav = crate::navigation::Navigation::parse(text, kind == "breadcrumbs")?;
+            let m = nav.measure(self.measurer, style);
+            validate_size(m.width, m.height)?;
+            return Ok((m.width, m.height));
+        }
         if kind == "button_bar" {
             let bar = crate::button_bar::ButtonBar::parse(text)?;
             let metrics = bar.measure(self.measurer, style, self.project.settings.sketch);

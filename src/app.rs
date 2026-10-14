@@ -1071,14 +1071,14 @@ if r.lost_focus(){self.editor.commit();}
                 }
                 ui.heading(if selected.len()==1{self.editor.selection_label(selected[0].id)}else{format!("{} controls",selected.len())});
                 if selected.len()==1 {let mut c=selected[0].clone();let original=c.clone();
-                    ui.add_space(10.);ui.label("Position & size");egui::Grid::new("geometry").num_columns(4).spacing([7.,8.]).show(ui,|ui|{ui.label("X");ui.add(egui::DragValue::new(&mut c.bounds.x).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.label("Y");ui.add(egui::DragValue::new(&mut c.bounds.y).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.end_row();ui.label("W");ui.add_enabled(c.kind!=Kind::Icon && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id),egui::DragValue::new(&mut c.bounds.w).update_while_editing(false).speed(1.).range(8.0..=10_000.0));ui.label("H");ui.add_enabled(!matches!(c.kind,Kind::Icon|Kind::IconLabel|Kind::PointedButton) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id),egui::DragValue::new(&mut c.bounds.h).update_while_editing(false).speed(1.).range(8.0..=10_000.0));ui.end_row();});
+                    ui.add_space(10.);ui.label("Position & size");egui::Grid::new("geometry").num_columns(4).spacing([7.,8.]).show(ui,|ui|{ui.label("X");ui.add(egui::DragValue::new(&mut c.bounds.x).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.label("Y");ui.add(egui::DragValue::new(&mut c.bounds.y).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.end_row();ui.label("W");ui.add_enabled(!matches!(c.kind,Kind::Icon|Kind::Breadcrumbs|Kind::LinkBar) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id),egui::DragValue::new(&mut c.bounds.w).update_while_editing(false).speed(1.).range((if matches!(c.kind,Kind::Breadcrumbs|Kind::LinkBar){1.0}else{8.0})..=10_000.0));ui.label("H");ui.add_enabled(!matches!(c.kind,Kind::Icon|Kind::IconLabel|Kind::PointedButton|Kind::Breadcrumbs|Kind::LinkBar) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id),egui::DragValue::new(&mut c.bounds.h).update_while_editing(false).speed(1.).range(8.0..=10_000.0));ui.end_row();});
                     if c.group.is_none() && !self.typed_properties(ui, c.id) {ui.add_space(10.);ui.label("Text");ui.add(egui::TextEdit::multiline(&mut c.text).desired_rows(4).desired_width(f32::INFINITY));if c.kind==Kind::Table {ui.small("Separate columns with commas and rows with new lines.");}
 if c.kind==Kind::Tabs {ui.small("Separate tabs with commas.");}
                     ui.horizontal(|ui|{ui.label("Size");ui.add(egui::DragValue::new(&mut c.font_size).range(6.0..=120.0));ui.checkbox(&mut c.bold,"Bold");});
                     ui.horizontal(|ui|{ui.label("Fill");ui.color_edit_button_srgb(&mut c.fill);});if matches!(c.kind,Kind::Checkbox|Kind::Radio|Kind::Toggle){ui.checkbox(&mut c.checked,"Selected state");}
                     }
                     if !self.editor.editing_instance() {ui.checkbox(&mut c.locked,"Lock position and content");}
-                    if c.group.is_none() && c.kind != Kind::ButtonBar {
+                    if c.group.is_none() && !matches!(c.kind, Kind::ButtonBar | Kind::Breadcrumbs | Kind::LinkBar) {
                     egui::ComboBox::from_id_salt("page-link").selected_text(c.link.and_then(|id|self.editor.document.pages.iter().find(|p|p.id==id).map(|p|p.name.clone())).unwrap_or("No page link".into())).show_ui(ui,|ui|{ui.selectable_value(&mut c.link,None,"No page link");for p in &self.editor.document.pages {ui.selectable_value(&mut c.link,Some(p.id),&p.name);}});
                     } else if self.editor.is_group(c.id) && ui.button("Edit group contents").clicked(){self.editor.enter(c.id);}
                     if c!=original {self.editor.begin("Edit properties");if original.locked {c.bounds=original.bounds;c.text=original.text;c.font_size=original.font_size;c.bold=original.bold;c.fill=original.fill;c.checked=original.checked;c.link=original.link;}
@@ -1303,7 +1303,12 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
     fn resize_handles(&self, bounds: Bounds) -> Vec<((i8, i8), Pos2)> {
         let selected = self.editor.selected_views();
         let single = selected.len() == 1 && selected[0].group.is_none();
-        if single && selected[0].kind == Kind::Icon {
+        if single
+            && matches!(
+                selected[0].kind,
+                Kind::Icon | Kind::Breadcrumbs | Kind::LinkBar
+            )
+        {
             return vec![];
         }
         let horizontal =

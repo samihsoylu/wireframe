@@ -279,6 +279,8 @@ impl Editor {
                     | Kind::PointedButton
                     | Kind::MultilineButton
                     | Kind::ButtonBar
+                    | Kind::Breadcrumbs
+                    | Kind::LinkBar
                     | Kind::List
             ) {
                 let kind_id = match kind {
@@ -296,6 +298,8 @@ impl Editor {
                     Kind::PointedButton => "pointed_button",
                     Kind::MultilineButton => "multiline_button",
                     Kind::ButtonBar => "button_bar",
+                    Kind::Breadcrumbs => "breadcrumbs",
+                    Kind::LinkBar => "link_bar",
                     Kind::List => "list",
                     _ => unreachable!(),
                 };
@@ -474,9 +478,14 @@ impl Editor {
                 }
                 if matches!(node.content, NodeContent::Control { .. }) {
                     if c.text != old.text {
-                        if matches!(c.kind, Kind::List | Kind::ButtonBar) {
+                        if matches!(
+                            c.kind,
+                            Kind::List | Kind::ButtonBar | Kind::Breadcrumbs | Kind::LinkBar
+                        ) {
                             let baseline = self.structured_text_baseline(c.id).unwrap_or_default();
-                            let apply = if c.kind == Kind::ButtonBar {
+                            let apply = if matches!(c.kind, Kind::Breadcrumbs | Kind::LinkBar) {
+                                crate::navigation::apply_text
+                            } else if c.kind == Kind::ButtonBar {
                                 crate::button_bar::apply_text
                             } else {
                                 crate::list::apply_text

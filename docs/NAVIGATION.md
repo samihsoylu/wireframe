@@ -1,0 +1,11 @@
+# Navigation controls
+
+Breadcrumbs and Link bar are available in the Text library. Separate items with commas; use `\,` for a comma inside a label. Newlines stay inside the same item. Rich text uses the existing text syntax. Both controls size themselves from their labels and font; width and height are read-only.
+
+Breadcrumbs preserve label spacing after removing one separator space. All items except the last appear as blue underlined links. A single label adds a visual ellipsis. Clearing the text leaves an empty first item and that fallback. Link bars trim each label, draw vertical separators and can mark one item as selected. Clearing their text restores the default labels. A whitespace-only link has a one-unit editing frame to keep the document valid.
+
+Expand **Edit item links** to assign a page, Back or web address to an item. The final breadcrumb and selected link-bar item can still have destinations. Link-bar hit areas cover the text, leaving separator gaps inactive; breadcrumb targets include the label's following padding. Inline link formatting decorates a label; navigation uses its item target. Web targets survive SVG export. Page and Back destinations operate in the app's presentation mode.
+
+Reordering labels preserves destinations by label and occurrence, including explicitly empty destinations. At unchanged item count, an unmatched renamed label retains its positional target. Link-bar selection follows its label, then falls back to its position at unchanged count. A continuous text edit uses its initial values so temporarily clearing the editor does not erase metadata. Undo/Redo and component-local editing/reset use the shared document history. Clearing a local link bar restores default labels without changing its component source.
+
+Canvas, thumbnails, PNG and SVG use the same scene. The breadcrumb arrow uses the existing licensed public icon catalog; separator lines are original geometry. Navigation honors ancestor cropping. Typography, exact visual fidelity, and native Windows/Linux acceptance remain ongoing work.

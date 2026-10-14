@@ -910,6 +910,8 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     let text = match c.id {
         "button" | "pointed_button" => "Button",
         "button_bar" => "One, Two, Three",
+        "breadcrumbs" => crate::navigation::BREADCRUMBS,
+        "link_bar" => crate::navigation::LINK_BAR,
         "icon_label" => "Icon Name",
         "multiline_button" => "Multiline Button\nSecond line of text",
         "dropdown" => "Dropdown",
@@ -931,7 +933,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         font,
         boolean("bold", "Bold", false),
         boolean("italic", "Italic", false),
-        boolean("underline", "Underline", false),
+        boolean("underline", "Underline", c.id == "link_bar"),
         fill,
         ink,
     ];
@@ -1166,13 +1168,28 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             ));
         }
     }
-    if c.id == "button_bar" {
+    if matches!(c.id, "button_bar" | "breadcrumbs" | "link_bar") {
         c.properties.push(prop(
             "row_links",
-            "Segment links",
+            if c.id == "button_bar" {
+                "Segment links"
+            } else {
+                "Item links"
+            },
             PropertyType::Links,
             Value::Links(vec![]),
         ));
+    }
+    if c.id == "link_bar" {
+        c.properties.push(prop(
+            "border_color",
+            "Separator and selected text",
+            PropertyType::Color,
+            Value::Color([0, 0, 0, 255]),
+        ));
+        if let Some(p) = c.properties.iter_mut().find(|p| p.key == "text_color") {
+            p.default = DefaultValue::Literal(Value::Color([8, 83, 148, 255]));
+        }
     }
     if c.id == "list" {
         if let Some(text) = c.properties.iter_mut().find(|p| p.key == "text_color") {

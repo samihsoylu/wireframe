@@ -10,6 +10,7 @@ mod forms;
 mod images;
 mod list;
 mod multiline_button;
+mod navigation;
 mod pointed_button;
 mod rasters;
 mod scrollbar;
@@ -292,6 +293,9 @@ impl Scene {
         }
         if c.kind == Kind::CircleButton {
             return self.circle_button(layer, sketch, fonts, rasters);
+        }
+        if matches!(c.kind, Kind::Breadcrumbs | Kind::LinkBar) {
+            return self.navigation(layer, sketch, fonts);
         }
         if c.kind == Kind::ButtonBar {
             return self.button_bar(layer, sketch, fonts);

@@ -127,6 +127,8 @@ fn migrate_control(c: legacy::Control) -> Node {
         legacy::Kind::PointedButton => "pointed_button",
         legacy::Kind::MultilineButton => "multiline_button",
         legacy::Kind::ButtonBar => "button_bar",
+        legacy::Kind::Breadcrumbs => "breadcrumbs",
+        legacy::Kind::LinkBar => "link_bar",
         legacy::Kind::Browser => "browser",
         legacy::Kind::Phone => "phone",
         legacy::Kind::Panel => "panel",

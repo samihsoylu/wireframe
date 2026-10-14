@@ -37,7 +37,14 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
         "column_chart" => &[],
         "bar_chart" => &[],
         "text_block" => &[],
-        "breadcrumbs" => &["bold", "font_size", "italic", "text", "underline"],
+        "breadcrumbs" => &[
+            "row_links",
+            "bold",
+            "font_size",
+            "italic",
+            "text",
+            "underline",
+        ],
         "browser" => &["border", "fill", "text", "value"],
         "button_bar" => &[
             "row_links",
@@ -279,6 +286,8 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "underline",
         ],
         "link_bar" => &[
+            "row_links",
+            "border_color",
             "bold",
             "font_size",
             "italic",

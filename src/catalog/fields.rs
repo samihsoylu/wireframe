@@ -316,6 +316,7 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "value",
         ],
         "menu" => &[
+            "row_links",
             "bold",
             "font_size",
             "italic",
@@ -324,11 +325,14 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "underline",
         ],
         "menu_bar" => &[
+            "row_links",
+            "icon",
+            "icon_size",
+            "icon_rotation",
             "bold",
             "border",
             "font_size",
             "italic",
-            "rotation",
             "selected_index",
             "text",
             "underline",

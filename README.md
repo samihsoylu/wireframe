@@ -4,9 +4,10 @@ A local desktop workspace for turning rough ideas into clear wireframes. Built i
 
 ## Features
 
-- 35 controls for forms, text, shapes, navigation and layout.
+- 37 controls for forms, text, shapes, navigation and layout.
 - Pages, notes, searchable library and layers.
 - Move, resize, align, nest groups, duplicate and lock controls.
+- Text-defined menus and menu bars with shortcuts, selection, row links and optional bar icons.
 - Undo/redo, local project files and recovery copies.
 - Sketch and clean styles; PNG and SVG export.
 - [Project fonts](docs/PROJECT-FONTS.md): import four font faces, save them with the project, and use them on canvas and in exports.

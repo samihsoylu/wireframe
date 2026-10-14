@@ -99,6 +99,8 @@ pub enum Kind {
     Radio,
     CheckboxGroup,
     RadioGroup,
+    Menu,
+    MenuBar,
     Dropdown,
     Search,
     Rectangle,
@@ -126,7 +128,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 35] = [
+    pub const ALL: [Kind; 37] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -137,6 +139,8 @@ impl Kind {
         Self::Radio,
         Self::CheckboxGroup,
         Self::RadioGroup,
+        Self::Menu,
+        Self::MenuBar,
         Self::Dropdown,
         Self::Search,
         Self::Rectangle,
@@ -175,6 +179,8 @@ impl Kind {
             Self::Radio => "Radio button",
             Self::CheckboxGroup => "Checkbox group",
             Self::RadioGroup => "Radio group",
+            Self::Menu => "Menu",
+            Self::MenuBar => "Menu bar",
             Self::Dropdown => "Dropdown",
             Self::Search => "Search box",
             Self::Rectangle => "Rectangle",
@@ -248,6 +254,8 @@ impl Kind {
             Self::Checkbox | Self::Radio => (180., 28.),
             Self::CheckboxGroup => (155., 149.),
             Self::RadioGroup => (165., 181.),
+            Self::Menu => (150., 167.),
+            Self::MenuBar => (192., 32.),
             Self::Line | Self::Arrow => (180., 20.),
             Self::Browser => (600., 420.),
             Self::Phone => (240., 440.),
@@ -276,6 +284,8 @@ impl Kind {
             Self::Checkbox | Self::Radio => "Option",
             Self::CheckboxGroup => crate::choice_group::CHECKBOX,
             Self::RadioGroup => crate::choice_group::RADIO,
+            Self::Menu => crate::menu::MENU,
+            Self::MenuBar => crate::menu::BAR,
             Self::Dropdown => "Choose an option",
             Self::Search => "Search…",
             Self::Browser => "https://example.com",

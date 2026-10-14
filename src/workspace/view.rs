@@ -217,6 +217,8 @@ fn control(node: &LayoutNode) -> Control {
         "radio" => Kind::Radio,
         "checkbox_group" => Kind::CheckboxGroup,
         "radio_group" => Kind::RadioGroup,
+        "menu" => Kind::Menu,
+        "menu_bar" => Kind::MenuBar,
         "dropdown" => Kind::Dropdown,
         "search" => Kind::Search,
         "ellipse" => Kind::Ellipse,

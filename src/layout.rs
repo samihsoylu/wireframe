@@ -315,6 +315,36 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(w, h)?;
             return Ok((w, h));
         }
+        if matches!(kind, "menu" | "menu_bar") {
+            let (intrinsic_w, intrinsic_h) = if kind == "menu" {
+                let menu = crate::menu::Menu::parse(text)?;
+                (
+                    150.,
+                    menu.measure(self.measurer, style, self.project.settings.sketch)
+                        .height,
+                )
+            } else {
+                let bar = crate::menu::MenuBar::parse(text)?;
+                let icon = crate::icons::setting(props);
+                let m = bar.measure(
+                    self.measurer,
+                    style,
+                    self.project.settings.sketch,
+                    icon.map(|i| i.size),
+                );
+                (m.width, m.height)
+            };
+            let w = match width {
+                Dimension::Auto => intrinsic_w,
+                Dimension::Fixed(w) => w,
+            };
+            let h = match height {
+                Dimension::Fixed(h) if kind == "menu_bar" => h,
+                _ => intrinsic_h,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         if kind == "button_bar" {
             let bar = crate::button_bar::ButtonBar::parse(text)?;
             let metrics = bar.measure(self.measurer, style, self.project.settings.sketch);

@@ -10,6 +10,7 @@ mod dropdown;
 mod forms;
 mod images;
 mod list;
+mod menu;
 mod multiline_button;
 mod navigation;
 mod pointed_button;
@@ -307,6 +308,9 @@ impl Scene {
         }
         if matches!(c.kind, Kind::Tabs | Kind::VerticalTabs) {
             return self.tabs(layer, sketch, fonts);
+        }
+        if matches!(c.kind, Kind::Menu | Kind::MenuBar) {
+            return self.menu(layer, sketch, fonts, rasters);
         }
         if c.kind == Kind::ButtonBar {
             return self.button_bar(layer, sketch, fonts);
@@ -640,6 +644,7 @@ fn paint_options(p: &Properties) -> PaintOptions {
             Color32::from_rgb(link[0], link[1], link[2])
         },
         underline: boolean(p, "underline"),
+        ..Default::default()
     }
 }
 /// Draw portable positioned ink where available. The legacy platform fallback

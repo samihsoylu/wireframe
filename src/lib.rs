@@ -11,6 +11,7 @@ pub mod icons;
 pub mod images;
 pub mod layout;
 pub mod list;
+pub mod menu;
 pub mod model;
 pub mod navigation;
 pub mod rich_text;

@@ -930,6 +930,8 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "radio" => "Radio button",
         "checkbox_group" => crate::choice_group::CHECKBOX,
         "radio_group" => crate::choice_group::RADIO,
+        "menu" => crate::menu::MENU,
+        "menu_bar" => crate::menu::BAR,
         "label" => "Some text",
         "heading" => "Title",
         "subtitle" => "Subtitle",
@@ -1121,6 +1123,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             | "circle_button"
             | "pointed_button"
             | "multiline_button"
+            | "menu_bar"
     ) {
         let mut icon = prop("icon", "Icon", PropertyType::Icon, Value::Null);
         icon.nullable = true;
@@ -1152,6 +1155,11 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             1.,
             false,
         ));
+    }
+    if c.id == "menu_bar" {
+        c.properties.retain(|p| p.key != "border");
+        c.properties
+            .push(choice("border", "Border", &["solid", "none"], "solid"));
     }
     if c.id == "pointed_button" {
         c.properties.push(choice(
@@ -1193,12 +1201,14 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             | "vertical_tabs"
             | "checkbox_group"
             | "radio_group"
+            | "menu"
+            | "menu_bar"
     ) {
         c.properties.push(prop(
             "row_links",
             if c.id == "button_bar" {
                 "Segment links"
-            } else if matches!(c.id, "checkbox_group" | "radio_group") {
+            } else if matches!(c.id, "checkbox_group" | "radio_group" | "menu") {
                 "Row links"
             } else {
                 "Item links"

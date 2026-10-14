@@ -16,6 +16,7 @@ pub struct PaintOptions {
     pub ink: Color32,
     pub link: Color32,
     pub underline: bool,
+    pub disabled_ink: Color32,
 }
 impl Default for PaintOptions {
     fn default() -> Self {
@@ -23,6 +24,7 @@ impl Default for PaintOptions {
             ink: Color32::BLACK,
             link: Color32::from_rgb(0, 102, 204),
             underline: false,
+            disabled_ink: Color32::from_gray(153),
         }
     }
 }
@@ -130,7 +132,7 @@ impl EguiMeasurer<'_> {
                 .filter(|s| (1..=512).contains(s))
                 .map_or(base.size, |s| s as f32);
             let color = if style.disabled {
-                Color32::from_gray(153)
+                options.disabled_ink
             } else if let Some(color) = style.color.as_deref().and_then(parse_color) {
                 color
             } else if style.link {

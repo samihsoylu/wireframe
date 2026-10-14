@@ -294,7 +294,7 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "transparent_background",
             "status_bar",
         ],
-        "mobile_keyboard" => &[],
+        "mobile_keyboard" => &["keyboard_device", "orientation"],
         "mobile_menu" => &["bold", "border", "font_size", "italic", "text", "underline"],
         "mobile_picker" => &["text"],
         "label" => &[

@@ -124,6 +124,7 @@ pub enum Kind {
     Phone,
     Tablet,
     Smartphone,
+    MobileKeyboard,
     Panel,
     FieldSet,
     List,
@@ -135,7 +136,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 44] = [
+    pub const ALL: [Kind; 45] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -171,6 +172,7 @@ impl Kind {
         Self::Phone,
         Self::Tablet,
         Self::Smartphone,
+        Self::MobileKeyboard,
         Self::Panel,
         Self::FieldSet,
         Self::List,
@@ -218,6 +220,7 @@ impl Kind {
             Self::Phone => "Phone",
             Self::Tablet => "Tablet",
             Self::Smartphone => "Smartphone",
+            Self::MobileKeyboard => "Mobile keyboard",
             Self::Panel => "Window",
             Self::FieldSet => "Field set",
             Self::List => "List",
@@ -286,6 +289,7 @@ impl Kind {
             Self::Phone => (240., 440.),
             Self::Tablet => (616., 916.),
             Self::Smartphone => (356., 725.),
+            Self::MobileKeyboard => (226., 160.),
             Self::Panel => (450., 400.),
             Self::FieldSet => (200., 170.),
             Self::List | Self::Table => (300., 180.),

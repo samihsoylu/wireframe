@@ -345,8 +345,10 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(w, h)?;
             return Ok((w, h));
         }
-        if matches!(kind, "phone" | "tablet" | "smartphone") {
-            let (w, h) = if kind == "smartphone" {
+        if matches!(kind, "phone" | "tablet" | "smartphone" | "mobile_keyboard") {
+            let (w, h) = if kind == "mobile_keyboard" {
+                crate::mobile_keyboard::Options::from_properties(props).native()
+            } else if kind == "smartphone" {
                 crate::smartphone::Options::from_properties(props).native()
             } else if kind == "tablet" {
                 crate::tablet::Options::from_properties(props).native()

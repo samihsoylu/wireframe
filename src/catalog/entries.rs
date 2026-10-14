@@ -1101,6 +1101,17 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             "solid",
         );
     }
+    if c.id == "mobile_keyboard" {
+        c.properties.extend([
+            choice("keyboard_device", "Device", &["phone", "tablet"], "phone"),
+            choice(
+                "orientation",
+                "Orientation",
+                &["portrait", "landscape"],
+                "portrait",
+            ),
+        ]);
+    }
     if matches!(c.id, "tablet" | "smartphone") {
         c.properties.extend([
             choice(

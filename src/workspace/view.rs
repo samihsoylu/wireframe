@@ -307,6 +307,7 @@ pub(super) fn control(node: &LayoutNode) -> Control {
         "phone" => Kind::Phone,
         "tablet" => Kind::Tablet,
         "smartphone" => Kind::Smartphone,
+        "mobile_keyboard" => Kind::MobileKeyboard,
         "panel" | "window" => Kind::Panel,
         "field_set" => Kind::FieldSet,
         "list" => Kind::List,

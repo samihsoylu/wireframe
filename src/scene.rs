@@ -367,6 +367,10 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
                 false,
             );
         }
+        // Detailed keyboard rendering uses the shared scene pipeline.
+        Kind::MobileKeyboard => {
+            rect(&mut out, b, [238; 3], 0.);
+        }
         Kind::Phone | Kind::Tablet | Kind::Smartphone => {
             rect(&mut out, b, white, 18.);
             rect(

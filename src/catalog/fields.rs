@@ -254,6 +254,7 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "underline",
         ],
         "list" => &[
+            "row_icons",
             "row_links",
             "vertical_scrollbar",
             "alternate_fill",

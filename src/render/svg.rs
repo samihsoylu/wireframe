@@ -34,6 +34,16 @@ impl Scene {
             b.x - 24.,
             b.y - 24.
         );
+        if self
+            .items
+            .iter()
+            .any(|item| matches!(item.drawing, Drawing::Icon { .. }))
+        {
+            out.push_str(&format!(
+                "<metadata>{}</metadata>",
+                escape(crate::icons::ATTRIBUTION)
+            ));
+        }
         for (i, item) in self.items.iter().enumerate() {
             if let Some(b) = item.clip {
                 out.push_str(&format!("<defs><clipPath id=\"c{i}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\"/></clipPath></defs><g clip-path=\"url(#c{i})\">",b.x,b.y,b.w,b.h));
@@ -42,6 +52,10 @@ impl Scene {
                 out.push_str(&format!("<g opacity=\"{}\">", item.opacity));
             }
             match &item.drawing {
+    Drawing::Icon { bounds, id, color } => {
+        if let Some(icon) = crate::icons::get(id) {out.push_str(&icon.svg(*bounds,*color));}
+        else {out.push_str(&format!("<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"none\" stroke=\"{}\"/>",bounds.x,bounds.y,bounds.w,bounds.h,crate::scene::color([color[0],color[1],color[2]])));}
+    },
     Drawing::Image { bounds: b, data } => out.push_str(&format!("<image x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" preserveAspectRatio=\"none\" href=\"data:image/png;base64,{}\"/>", b.x,b.y,b.w,b.h,base64(&data.png))),
     Drawing::Primitive(p)=>out.push_str(&crate::scene::primitive_svg(p.clone())),
     Drawing::Glyph(g)=>out.push_str(&format!("<text x=\"{}\" y=\"{}\" font-family=\"Comic Neue,Ubuntu,sans-serif\" font-size=\"{}\" font-weight=\"{}\" font-style=\"{}\" fill=\"{}\" fill-opacity=\"{}\" xml:space=\"preserve\">{}</text>",g.x,g.baseline,g.size,if g.bold{700}else{400},if g.italic{"italic"}else{"normal"},color([g.color[0],g.color[1],g.color[2]]),g.color[3]as f32/255.,escape(&g.text))),
@@ -63,7 +77,12 @@ impl Scene {
         out
     }
     pub fn png(&self) -> Result<Vec<u8>, String> {
-        crate::scene::png_svg(&self.svg())
+        let attribution = self
+            .items
+            .iter()
+            .any(|item| matches!(item.drawing, Drawing::Icon { .. }))
+            .then_some(crate::icons::ATTRIBUTION);
+        crate::scene::png_svg_with_attribution(&self.svg(), attribution)
     }
 }
 fn base64(bytes: &[u8]) -> String {

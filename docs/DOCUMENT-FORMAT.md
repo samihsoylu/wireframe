@@ -16,7 +16,7 @@ ProjectStore reads either format and writes version 2 using the existing atomic 
 
 ## Verification
 
-Ten document tests cover migration, recursive geometry, expansion/overrides, assets/alternates, validation and failure preservation. The complete suite now has 55 passing tests, including recursive workspace and live app workflow checks. Clippy passes with warnings denied.
+Ten document tests cover migration, recursive geometry, expansion/overrides, assets/alternates, validation and failure preservation. See SESSION-SPEC.md for the current full-suite count, including recursive workspace and live app workflow checks. Clippy passes with warnings denied.
 
 The read-only check_migration example passed against five saved native test documents, including the live editor's derived controls. It verifies order, geometry, text, round trips and unchanged source bytes. A native macOS nested-edit/save/close/reopen check also passed; see RECURSIVE-EDITOR.md. Full rendering fidelity and other-platform runtime checks remain open.
 
@@ -26,3 +26,5 @@ New ID allocation skips identities still present in component override paths acr
 
 
 List `row_links` uses the additive typed property value `{ "type": "links", "value": [null, {"type":"page","value":2}, {"type":"back"}] }`. Header is row0 when enabled. At most10,001 nullable targets are accepted; URLs must use HTTP(S), have no control characters and stay within10,000 bytes. Page references are validated against project pages. Deletion/cross-document paste remove unavailable targets throughout nodes, groups, component definitions and local override properties. Earlier v2 projects need no migration. Older readers that do not know the new value variant cannot load files containing it.
+
+List `row_icons` uses `{ "type": "icons", "value": [null, {"source":"catalog","id":"camera-solid"}] }`. Header is row0. Up to10,001 nullable entries are accepted; each nonempty ID is at most128 ASCII alphanumeric, hyphen or underscore bytes. Valid unknown IDs are retained for forward catalog compatibility and render a placeholder. This additive v2 value needs no migration for earlier files; older readers cannot load documents containing the new variant. Component override properties use the same representation. Paths, raster caches and picker state are never stored in the project.

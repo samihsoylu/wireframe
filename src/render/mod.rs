@@ -34,6 +34,11 @@ pub struct Glyph {
 pub enum Drawing {
     Primitive(Primitive),
     Glyph(Glyph),
+    Icon {
+        bounds: Bounds,
+        id: String,
+        color: [u8; 4],
+    },
     Image {
         bounds: Bounds,
         data: std::sync::Arc<crate::images::Decoded>,

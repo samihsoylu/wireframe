@@ -1088,6 +1088,15 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         ));
     }
     if c.id == "list" {
+        if let Some(text) = c.properties.iter_mut().find(|p| p.key == "text_color") {
+            text.default = DefaultValue::FormInk;
+        }
+        c.properties.push(prop(
+            "row_icons",
+            "Row icons",
+            PropertyType::Icons,
+            Value::Icons(vec![]),
+        ));
         c.properties.push(prop(
             "row_links",
             "Row links",

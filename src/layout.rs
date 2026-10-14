@@ -323,6 +323,7 @@ impl<M: TextMeasurer> Engine<'_, M> {
                 self.project.settings.sketch,
                 boolean(props, "header"),
                 number(props, "row_height", 21.),
+                crate::list::has_icons(props),
             );
             let w = match width {
                 Dimension::Auto => m.width,

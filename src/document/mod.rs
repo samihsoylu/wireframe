@@ -129,6 +129,24 @@ impl Link {
     }
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "source", content = "id", rename_all = "snake_case")]
+pub enum IconSource {
+    Catalog(String),
+}
+impl IconSource {
+    pub fn valid(&self) -> bool {
+        match self {
+            Self::Catalog(id) => {
+                !id.is_empty()
+                    && id.len() <= 128
+                    && id
+                        .bytes()
+                        .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+            }
+        }
+    }
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "value", rename_all = "snake_case")]
 pub enum Value {
     Bool(bool),
@@ -139,6 +157,7 @@ pub enum Value {
     Link(Link),
     Asset(Id),
     Links(Vec<Option<Link>>),
+    Icons(Vec<Option<IconSource>>),
     Null,
 }
 

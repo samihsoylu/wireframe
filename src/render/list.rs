@@ -19,7 +19,15 @@ impl Scene {
             bold: c.bold,
             italic: boolean(p, "italic"),
         };
-        let m = list.measure(fonts, style, sketch, header, number(p, "row_height", 21.));
+        let has_icons = crate::list::has_icons(p);
+        let m = list.measure(
+            fonts,
+            style,
+            sketch,
+            header,
+            number(p, "row_height", 21.),
+            has_icons,
+        );
         let clip = clip_with(layer.clip, b);
         let fill = rgb(p, "fill", [255; 3]);
         let alternate = rgb(p, "alternate_fill", [255; 3]);
@@ -77,6 +85,7 @@ impl Scene {
         if border {
             self.rectangle_frame(b, ink, thickness, clip);
         }
+        let mut icon_items = Vec::new();
         y = b.y + m.top;
         for (i, row) in list.rows.iter().enumerate() {
             let is_header = header && i == 0;
@@ -97,13 +106,26 @@ impl Scene {
                     options.link = Color32::WHITE;
                 }
             }
+            if let Some(Value::Icons(icons)) = p.get("row_icons")
+                && let Some(Some(crate::document::IconSource::Catalog(id))) = icons.get(i)
+            {
+                icon_items.push(Item {
+                    opacity: 1.,
+                    clip,
+                    drawing: Drawing::Icon {
+                        bounds: Bounds::new(b.x + 8., text_y, c.font_size, c.font_size),
+                        id: id.clone(),
+                        color: options.ink.to_array(),
+                    },
+                });
+            }
             let previous_links = self.links.len();
             self.text(
                 row,
                 style,
                 TextBox {
                     bounds: Bounds::new(
-                        b.x + 8.,
+                        b.x + if has_icons { c.font_size + 16. } else { 8. },
                         text_y,
                         (b.w - 8. - if sketch { 2. } else { 0. }).max(0.),
                         height,
@@ -138,6 +160,7 @@ impl Scene {
                 clip,
             );
         }
+        self.items.extend(icon_items);
         if let Some(Value::Links(links)) = p.get("row_links") {
             for (bounds, target) in link_bounds.into_iter().zip(links) {
                 if let Some(target) = target {

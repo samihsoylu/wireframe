@@ -46,6 +46,7 @@ pub enum PropertyType {
     Choice(&'static [&'static str]),
     Link,
     Links,
+    Icons,
     Asset,
 }
 #[derive(Clone, Debug)]
@@ -185,6 +186,13 @@ impl PropertySpec {
                 | (PropertyType::Color, Value::Color(_))
                 | (PropertyType::Link, Value::Link(_))
                 | (PropertyType::Asset, Value::Asset(_)) => true,
+                (PropertyType::Icons, Value::Icons(icons)) => {
+                    icons.len() <= 10_001
+                        && icons
+                            .iter()
+                            .flatten()
+                            .all(crate::document::IconSource::valid)
+                }
                 (PropertyType::Links, Value::Links(links)) => {
                     links.len() <= 10_001
                         && links.iter().flatten().all(crate::document::Link::valid)

@@ -3835,6 +3835,7 @@ dependencies = [
  "directories",
  "eframe",
  "image",
+ "png",
  "resvg",
  "rfd",
  "serde",

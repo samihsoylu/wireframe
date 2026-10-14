@@ -2,6 +2,7 @@
 // Copyright 2026 Wireframe contributors
 
 mod components;
+mod icon_picker;
 mod images;
 mod previews;
 mod properties;
@@ -1135,6 +1136,33 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                 continue;
             }
             match &item.drawing {
+                wireframe::render::Drawing::Icon {
+                    bounds: b,
+                    id,
+                    color,
+                } => {
+                    let rect = Rect::from_min_size(
+                        origin + Vec2::new(b.x, b.y) * scale,
+                        Vec2::new(b.w, b.h) * scale,
+                    );
+                    if let Some(icon) = wireframe::icons::get(id) {
+                        icon.paint(
+                            &clipped,
+                            rect,
+                            Color32::from_rgba_unmultiplied(color[0], color[1], color[2], color[3]),
+                        );
+                    } else {
+                        clipped.rect_stroke(
+                            rect,
+                            0.,
+                            egui::Stroke::new(
+                                scale,
+                                Color32::from_rgb(color[0], color[1], color[2]),
+                            ),
+                            egui::StrokeKind::Inside,
+                        );
+                    }
+                }
                 wireframe::render::Drawing::Image { bounds: b, data } => {
                     let rect = Rect::from_min_size(
                         origin + Vec2::new(b.x, b.y) * scale,

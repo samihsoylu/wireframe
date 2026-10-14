@@ -5,6 +5,7 @@ pub mod catalog;
 pub mod document;
 pub mod dropdown;
 pub mod editor;
+pub mod icons;
 pub mod images;
 pub mod layout;
 pub mod list;

@@ -309,3 +309,7 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 ## Canvas fonts
 
 Comic Neue regular, bold, italic and bold italic are redistributed unchanged under OFL-1.1. Copyright 2014 The Comic Neue Project Authors. See [font license](assets/fonts/comic-neue/OFL.txt) and [provenance](assets/fonts/comic-neue/PROVENANCE.json).
+
+## Bundled icons
+
+Font Awesome Free 6.7.2 by Fonticons, Inc. is bundled under CC BY 4.0. SVG path data and dimensions are unchanged; metadata is compacted and free styles are selected. See [license](assets/icons/font-awesome-free/LICENSE.txt), [upstream](https://fontawesome.com), and [provenance](assets/icons/font-awesome-free/PROVENANCE.json). SVG and PNG exports containing these icons include attribution metadata.

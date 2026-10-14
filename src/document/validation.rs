@@ -230,6 +230,11 @@ impl Check<'_> {
                         return Err("Unsupported link URL".into());
                     }
                 }
+                Value::Icons(icons)
+                    if icons.len() > 10_001 || !icons.iter().flatten().all(IconSource::valid) =>
+                {
+                    return Err("Invalid row icons".into());
+                }
                 Value::Links(links) => {
                     if links.len() > 10_001 {
                         return Err("Too many row links".into());

@@ -49,6 +49,12 @@ pub fn apply_text(node: &mut Node, source: &str, baseline: &Properties) -> Resul
     };
     let header = baseline.get("header") == Some(&Value::Bool(true));
     let next = selection_after_edit(old, source, selected, header);
+    if let Some(Value::Icons(icons)) = baseline.get("row_icons") {
+        node.properties.insert(
+            "row_icons".into(),
+            Value::Icons(remap_rows(old, source, icons)),
+        );
+    }
     if let Some(Value::Links(links)) = baseline.get("row_links") {
         node.properties.insert(
             "row_links".into(),
@@ -61,6 +67,9 @@ pub fn apply_text(node: &mut Node, source: &str, baseline: &Properties) -> Resul
     node.properties
         .insert("selected_index".into(), Value::Number(next as f64));
     Ok(())
+}
+pub fn has_icons(properties: &Properties) -> bool {
+    matches!(properties.get("row_icons"), Some(Value::Icons(icons)) if icons.iter().any(Option::is_some))
 }
 impl List {
     pub fn parse(source: &str) -> Result<Self, String> {
@@ -82,6 +91,7 @@ impl List {
         sketch: bool,
         header: bool,
         row_height: f32,
+        icons: bool,
     ) -> Metrics {
         let top = if sketch { 3. } else { 2. };
         let row = row_height.max(style.size + 8.);
@@ -99,7 +109,10 @@ impl List {
             top + 3. + self.rows.len() as f32 * row
         };
         Metrics {
-            width: (measured.iter().map(|m| m.width).fold(0., f32::max) + 16.).max(100.),
+            width: (measured.iter().map(|m| m.width).fold(0., f32::max)
+                + 16.
+                + if icons { style.size + 16. } else { 0. })
+            .max(100.),
             height: height.max(126.),
             row,
             top,

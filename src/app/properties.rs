@@ -10,7 +10,7 @@ use wireframe::{
 // catalog's full field inventory remains separate from completed rendering.
 fn supported(kind: &str, key: &str) -> bool {
     match key {
-        "row_links" => kind == "list",
+        "row_links" | "row_icons" => kind == "list",
         "text" | "font_size" | "bold" | "italic" | "underline" | "text_color" | "align" => true,
         "sketch_filter" | "image_border" => kind == "image",
         "state" => matches!(
@@ -108,7 +108,7 @@ impl WireframeApp {
                 if let Err(error) = self.editor.auto_size_control(id) { self.error = Some(error); }
                 self.editor.commit();
             }
-            for key in ["image_border", "sketch_filter", "text", "row_links", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+            for key in ["image_border", "sketch_filter", "text", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
                 if key == "value" && values.get("vertical_scrollbar") != Some(&Value::Bool(true)) { continue; }
                 let Some(field) = spec.property(key).filter(|f| f.visible && supported(spec.id, key)) else { continue; };
                 let Some(mut value) = values.get(key).cloned() else { continue; };
@@ -125,6 +125,25 @@ impl WireframeApp {
                         }
                     });
                     match (&field.kind, &mut value) {
+                        (PropertyType::Icons, Value::Icons(icons)) => {
+                            let source=match values.get("text") {Some(Value::Text(s))=>s.as_str(),_=>""};
+                            let labels:Vec<_>=source.split('\n').collect();
+                            icons.resize(labels.len(),None);
+                            egui::CollapsingHeader::new("Edit row icons").show(ui,|ui| {
+                                egui::ScrollArea::vertical().id_salt("row-icons").max_height(280.).show(ui,|ui| {
+                                    for (row,label) in labels.iter().enumerate() {
+                                        ui.push_id(row,|ui| {
+                                            let label=wireframe::rich_text::RichText::parse(label,false).display_text(false);
+                                            ui.label(if label.is_empty(){format!("Row {} (empty)",row+1)}else{label});
+                                            let before=icons[row].clone();
+                                            super::icon_picker::choice(ui,&mut icons[row]);
+                                            finish |= before != icons[row];
+                                        });
+                                    }
+                                });
+                            });
+                            if !finish && let Value::Icons(old)=&original {*icons=old.clone();}
+                        }
                         (PropertyType::Links, Value::Links(links)) => {
                             let source=match values.get("text") {Some(Value::Text(s))=>s.as_str(),_=>""};
                             let labels:Vec<_>=source.split('\n').collect();

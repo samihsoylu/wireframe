@@ -557,6 +557,9 @@ pub fn png(page: &Page, sketch: bool) -> Result<Vec<u8>, String> {
     png_svg(&svg(page, sketch))
 }
 pub fn png_svg(svg: &str) -> Result<Vec<u8>, String> {
+    png_svg_with_attribution(svg, None)
+}
+pub fn png_svg_with_attribution(svg: &str, attribution: Option<&str>) -> Result<Vec<u8>, String> {
     let mut options = resvg::usvg::Options::default();
     // Use the same bundled fonts as the canvas, including on minimal Linux systems.
     for font in eframe::egui::FontDefinitions::default().font_data.values() {
@@ -586,7 +589,31 @@ pub fn png_svg(svg: &str) -> Result<Vec<u8>, String> {
         resvg::tiny_skia::Transform::identity(),
         &mut pixmap.as_mut(),
     );
-    pixmap.encode_png().map_err(|e| e.to_string())
+    if let Some(attribution) = attribution {
+        let rgba: Vec<u8> = pixmap
+            .pixels()
+            .iter()
+            .flat_map(|p| {
+                let p = p.demultiply();
+                [p.red(), p.green(), p.blue(), p.alpha()]
+            })
+            .collect();
+        let mut out = Vec::new();
+        {
+            let mut encoder = png::Encoder::new(&mut out, size.width(), size.height());
+            encoder.set_color(png::ColorType::Rgba);
+            encoder.set_depth(png::BitDepth::Eight);
+            encoder
+                .add_itxt_chunk("Attribution".into(), attribution.into())
+                .map_err(|e| e.to_string())?;
+            let mut writer = encoder.write_header().map_err(|e| e.to_string())?;
+            writer.write_image_data(&rgba).map_err(|e| e.to_string())?;
+            writer.finish().map_err(|e| e.to_string())?;
+        }
+        Ok(out)
+    } else {
+        pixmap.encode_png().map_err(|e| e.to_string())
+    }
 }
 
 fn intersect(a: Bounds, b: Bounds) -> Bounds {

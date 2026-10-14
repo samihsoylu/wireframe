@@ -5,6 +5,7 @@ mod components;
 mod fonts;
 mod icon_picker;
 mod images;
+mod library_drag;
 mod previews;
 mod properties;
 mod recovery;
@@ -72,6 +73,7 @@ pub struct WireframeApp {
     zoom: f32,
     pan: Vec2,
     drag: Option<Drag>,
+    library_drag: Option<Kind>,
     grid: bool,
     snap: bool,
     status: String,
@@ -140,6 +142,7 @@ impl WireframeApp {
             zoom: 1.,
             pan: Vec2::ZERO,
             drag: None,
+            library_drag: None,
             grid: false,
             snap: false,
             status,
@@ -348,6 +351,14 @@ impl WireframeApp {
         }
     }
     fn shortcuts(&mut self, ctx: &egui::Context) {
+        // A held library control is transient. Escape must not leave a group or
+        // clear the existing selection, and shortcuts must not edit underneath it.
+        if self.library_drag.is_some() {
+            if ctx.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape)) {
+                self.library_drag = None;
+            }
+            return;
+        }
         if self.pending.is_some()
             || self.text_edit.is_some()
             || self.recovery_offer.is_some()
@@ -893,7 +904,10 @@ impl WireframeApp {
                                         Vec2::new(94., 68.),
                                         Sense::click_and_drag(),
                                     );
-                                    if response.hovered() {
+                                    if response.hovered()
+                                        || response.is_pointer_button_down_on()
+                                        || self.library_drag == Some(kind)
+                                    {
                                         ui.painter().rect_filled(r, 3, Color32::from_gray(222));
                                     }
                                     let painter = ui.painter().with_clip_rect(r);
@@ -940,16 +954,7 @@ impl WireframeApp {
                                     if response.double_clicked() {
                                         self.add(kind);
                                     }
-                                    if (response.drag_stopped()
-                                        || Self::instant_drag(ui, r).is_some())
-                                        && let Some(pos) = Self::instant_drag(ui, r)
-                                            .map(|(_, end)| end)
-                                            .or(ui.ctx().pointer_latest_pos())
-                                        && self.canvas_rect.contains(pos)
-                                    {
-                                        let point = self.world(pos);
-                                        self.editor.add(kind, point.x, point.y);
-                                    }
+                                    self.library_drag_source(ui, kind, r, &response);
                                     response.on_hover_text(format!(
                                         "{} — double-click to add, or drag onto the canvas",
                                         kind.name()
@@ -1460,6 +1465,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                         self.zoom = (self.zoom * pinch).clamp(0.2, 4.);
                     }
                 }
+                self.library_drag_update(&ctx);
                 if self.image_crop.is_some() {
                     self.crop_canvas(ui, &response, &painter);
                     return;
@@ -1973,6 +1979,7 @@ impl eframe::App for WireframeApp {
             }
         }
         self.canvas(ui);
+        self.library_drag_overlay(ui.ctx());
         if let Some(error) = self.editor.error.take() {
             self.error = Some(error);
         }

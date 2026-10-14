@@ -62,7 +62,7 @@ impl Editor {
                                     )
                                 },
                             );
-                            targets.edges(b);
+                            targets.frame(b, false);
                             targets.add(Axis::X, GuideKind::Spacing, b.x + layout.guides[0]);
                             targets.add(Axis::X, GuideKind::Spacing, b.x + layout.guides[2]);
                             targets.add(Axis::Y, GuideKind::Spacing, b.y + layout.guides[1]);

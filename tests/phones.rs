@@ -366,3 +366,48 @@ fn every_model_renders_finite_clipped_geometry_at_small_and_extreme_sizes() {
         }
     }
 }
+
+#[test]
+fn phone_retains_exterior_spacing_for_every_model_orientation_and_resize_mode() {
+    use wireframe::snapping::{Axis, Constraint, Kind as GuideKind};
+    for sketch in [false, true] {
+        for model in ["classic", "tall", "wide", "notched"] {
+            for orientation in ["portrait", "landscape"] {
+                for mode in ["fit", "stretch"] {
+                    let mut e = Editor::default();
+                    e.document.settings.sketch = sketch;
+                    e.add(Kind::Phone, 100., 200.);
+                    let id = *e.selection.iter().next().unwrap();
+                    for (key, value) in [
+                        ("device_model", model),
+                        ("orientation", orientation),
+                        ("device_resizing", mode),
+                    ] {
+                        e.set_control_property(id, key, Value::Choice(value.into()))
+                            .unwrap();
+                    }
+                    e.selected_mut(|c| {
+                        c.bounds.w = 300.;
+                        c.bounds.h = 500.;
+                    });
+                    e.selection.clear();
+                    let t = e.alignment_targets(5.).unwrap();
+                    let outside = t.matches(Bounds::new(84., 184., 332., 532.));
+                    assert_eq!(
+                        outside
+                            .iter()
+                            .filter(|g| g.kind == GuideKind::Spacing)
+                            .count(),
+                        4,
+                        "{sketch} {model} {orientation} {mode}"
+                    );
+                    let dragged = t.moved(Bounds::new(417., 300., 48., 48.), Constraint::Free);
+                    assert_eq!(dragged.bounds.x, 416.);
+                    assert!(dragged.guides.iter().any(|g| g.axis == Axis::X
+                        && g.kind == GuideKind::Spacing
+                        && g.position == 416.));
+                }
+            }
+        }
+    }
+}

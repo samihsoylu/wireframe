@@ -370,3 +370,32 @@ fn transparency_has_a_real_opening_and_tiny_frames_are_safe() {
         );
     }
 }
+
+#[test]
+fn interior_targets_stay_on_the_frame_when_a_sibling_crosses_its_origin() {
+    use wireframe::snapping::{Axis, Constraint, Kind as GuideKind};
+    let mut e = Editor::with_clock(document::Project::default(), frozen);
+    e.add(Kind::Smartphone, 100., 100.);
+    let frame = *e.selection.iter().next().unwrap();
+    e.set_control_property(frame, "device_resizing", Value::Choice("fit".into()))
+        .unwrap();
+    e.add(Kind::CircleButton, 600., 300.);
+    for x in [600., 20., 120., 0.] {
+        e.selected_mut(|c| c.bounds.x = x);
+        let t = e.alignment_targets(5.).unwrap();
+        let result = t.moved(Bounds::new(120., 300., 48., 48.), Constraint::Free);
+        assert_eq!(result.bounds.x, 119.);
+        assert!(
+            result
+                .guides
+                .iter()
+                .any(|g| g.axis == Axis::X && g.kind == GuideKind::Spacing && g.position == 119.)
+        );
+        let stray = t.matches(Bounds::new(39., 300., 48., 48.));
+        assert!(
+            !stray
+                .iter()
+                .any(|g| g.axis == Axis::X && g.kind == GuideKind::Spacing && g.position == 39.)
+        );
+    }
+}

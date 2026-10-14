@@ -20,6 +20,7 @@ pub mod model;
 pub mod navigation;
 pub mod rich_text;
 pub mod scene;
+pub mod snapping;
 pub mod storage;
 pub mod tabs;
 pub mod tree;

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 //! Recursive editing owns project data; renderer projections never become saved documents.
+mod alignment;
 mod clipboard;
 mod images;
 pub use images::{ImageTarget, ImportChoice};
@@ -433,6 +434,13 @@ impl Editor {
     pub fn bounds(&self) -> Option<Bounds> {
         self.selected_views()
             .iter()
+            .map(|c| c.bounds)
+            .reduce(Bounds::union)
+    }
+    pub fn movable_bounds(&self) -> Option<Bounds> {
+        self.selected_views()
+            .iter()
+            .filter(|c| !c.locked)
             .map(|c| c.bounds)
             .reduce(Bounds::union)
     }

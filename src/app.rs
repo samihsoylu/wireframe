@@ -22,6 +22,7 @@ use wireframe::{
     document::Project,
     model::*,
     scene::{self, Primitive},
+    snapping::{self, Constraint, Motion, Targets},
     storage::{self, ProjectRepository, ProjectStore},
     text_entry::TextInput,
     ui_text,
@@ -39,12 +40,15 @@ enum Drag {
     Move {
         start: Pos2,
         original: Vec<(Id, Bounds)>,
+        targets: Targets,
+        motion: Motion,
     },
     Resize {
         start: Pos2,
         original: Vec<(Id, Bounds)>,
         bounds: Bounds,
         handle: (i8, i8),
+        targets: Targets,
     },
     Marquee {
         start: Pos2,
@@ -74,6 +78,8 @@ pub struct WireframeApp {
     pan: Vec2,
     drag: Option<Drag>,
     library_drag: Option<Kind>,
+    alignment_guides: Vec<snapping::Guide>,
+    canvas_press: Option<Pos2>,
     grid: bool,
     snap: bool,
     status: String,
@@ -143,6 +149,8 @@ impl WireframeApp {
             pan: Vec2::ZERO,
             drag: None,
             library_drag: None,
+            alignment_guides: Vec::new(),
+            canvas_press: None,
             grid: false,
             snap: false,
             status,
@@ -458,6 +466,7 @@ impl WireframeApp {
             self.present = false;
             self.editor.cancel();
             self.drag = None;
+            self.alignment_guides.clear();
             if !self.editor.leave() {
                 self.editor.selection.clear();
             }
@@ -1466,25 +1475,56 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     }
                 }
                 self.library_drag_update(&ctx);
+                if !ui.input(|i| i.focused) {
+                    if self.drag.is_some() {
+                        self.editor.cancel();
+                    }
+                    self.drag = None;
+                    self.canvas_press = None;
+                    self.alignment_guides.clear();
+                }
                 if self.image_crop.is_some() {
                     self.crop_canvas(ui, &response, &painter);
                     return;
                 }
                 // Native automation and fast mice can deliver a complete drag between
                 // paints. Preserve the press origin even after egui releases its state.
-                let instant_drag = if self.pending.is_none()
+                let instant_drag = if ui.input(|i| i.focused && !i.key_pressed(Key::Escape))
+                    && self.pending.is_none()
                     && self.text_edit.is_none()
                     && self.error.is_none()
                     && self.recovery_offer.is_none()
                 {
-                    Self::instant_drag(ui, response.rect)
+                    let mut completed = None;
+                    for event in ui.input(|i| i.events.clone()) {
+                        if let egui::Event::PointerButton {
+                            pos,
+                            button: egui::PointerButton::Primary,
+                            pressed,
+                            ..
+                        } = event
+                        {
+                            if pressed {
+                                self.canvas_press = (response.rect.contains(pos)
+                                    && ctx.layer_id_at(pos) == Some(ui.layer_id()))
+                                .then_some(pos);
+                            } else if let Some(start) = self.canvas_press.take()
+                                && start.distance(pos) > 6.
+                            {
+                                completed = Some((start, pos));
+                            }
+                        }
+                    }
+                    completed
                 } else {
+                    self.canvas_press = None;
                     None
                 };
                 let pointer = instant_drag
                     .map(|(_, end)| end)
                     .or(response.interact_pointer_pos());
-                if (response.drag_started() || instant_drag.is_some())
+                if self.drag.is_none()
+                    && (response.drag_started() || instant_drag.is_some())
                     && let Some(pos) = instant_drag
                         .map(|(start, _)| start)
                         .or(ui.input(|i| i.pointer.press_origin()))
@@ -1496,7 +1536,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     });
                     let resize = self
                         .editor
-                        .bounds()
+                        .movable_bounds()
                         .and_then(|b| {
                             self.resize_handles(b)
                                 .into_iter()
@@ -1516,10 +1556,15 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                                 .editor
                                 .selected_views()
                                 .iter()
+                                .filter(|c| !c.locked)
                                 .map(|c| (c.id, c.bounds))
                                 .collect(),
-                            bounds: self.editor.bounds().unwrap(),
+                            bounds: self.editor.movable_bounds().unwrap(),
                             handle,
+                            targets: self
+                                .editor
+                                .alignment_targets(5.)
+                                .unwrap_or_else(|_| Targets::new(5.)),
                         });
                     } else {
                         let hit = self.editor.hit(start.x, start.y).map(|c| (c.id, c.locked));
@@ -1531,10 +1576,16 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                                 self.editor.begin("Move");
                                 self.drag = Some(Drag::Move {
                                     start,
+                                    targets: self
+                                        .editor
+                                        .alignment_targets(5.)
+                                        .unwrap_or_else(|_| Targets::new(5.)),
+                                    motion: Motion::default(),
                                     original: self
                                         .editor
                                         .selected_views()
                                         .iter()
+                                        .filter(|c| !c.locked)
                                         .map(|c| (c.id, c.bounds))
                                         .collect(),
                                 });
@@ -1563,37 +1614,124 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                             self.pan = pan + (pos - start);
                             self.drag = Some(Drag::Pan { start, pan });
                         }
-                        Drag::Move { start, original } => {
-                            let delta = now - start;
-                            let snap = self.snap;
+                        Drag::Move {
+                            start,
+                            original,
+                            targets,
+                            mut motion,
+                        } => {
+                            let mut delta = now - start;
+                            let modifiers = ui.input(|i| i.modifiers);
+                            let constraint = if modifiers.shift {
+                                if delta.x.abs() > delta.y.abs() {
+                                    delta.y = 0.;
+                                    Constraint::Horizontal
+                                } else {
+                                    delta.x = 0.;
+                                    Constraint::Vertical
+                                }
+                            } else {
+                                Constraint::Free
+                            };
+                            let mut fast = motion.too_fast();
+                            let events = ui.input(|i| i.events.clone());
+                            // A coalesced native frame may contain pointer travel before
+                            // the press. Only movement belonging to this gesture counts.
+                            let first = events
+                                .iter()
+                                .rposition(|event| {
+                                    matches!(
+                                        event,
+                                        egui::Event::PointerButton {
+                                            button: egui::PointerButton::Primary,
+                                            pressed: true,
+                                            ..
+                                        }
+                                    )
+                                })
+                                .map_or(0, |index| index + 1);
+                            for event in events.into_iter().skip(first) {
+                                if let egui::Event::PointerMoved(p) = event {
+                                    fast = motion.too_fast();
+                                    let d = self.world(p) - start;
+                                    motion.push([d.x, d.y]);
+                                }
+                            }
+                            if response.drag_stopped() || instant_drag.is_some() {
+                                fast = motion.too_fast();
+                            }
+                            self.alignment_guides.clear();
+                            let bypass = modifiers.command;
+                            if !bypass
+                                && !self.snap
+                                && !fast
+                                && let Some(bounds) =
+                                    original.iter().map(|(_, b)| *b).reduce(Bounds::union)
+                            {
+                                let wanted = Bounds::new(
+                                    bounds.x + delta.x,
+                                    bounds.y + delta.y,
+                                    bounds.w,
+                                    bounds.h,
+                                );
+                                let result = targets.moved(wanted, constraint);
+                                if result.bounds.x >= 0. && result.bounds.y >= 0. {
+                                    delta = Vec2::new(
+                                        result.bounds.x - bounds.x,
+                                        result.bounds.y - bounds.y,
+                                    );
+                                    self.alignment_guides = result.guides;
+                                }
+                            }
+                            let grid = self.snap && !bypass;
                             self.editor.selected_mut(|c| {
                                 if let Some((_, b)) = original.iter().find(|v| v.0 == c.id) {
                                     c.bounds.x = (b.x + delta.x).clamp(-50_000., 50_000.);
                                     c.bounds.y = (b.y + delta.y).clamp(-50_000., 50_000.);
-                                    if snap {
+                                    if grid {
                                         c.bounds.x = (c.bounds.x / 10.).round() * 10.;
                                         c.bounds.y = (c.bounds.y / 10.).round() * 10.;
                                     }
                                 }
                             });
-                            self.drag = Some(Drag::Move { start, original });
+                            self.drag = Some(Drag::Move {
+                                start,
+                                original,
+                                targets,
+                                motion,
+                            });
                         }
                         Drag::Resize {
                             start,
                             original,
                             bounds,
                             handle,
+                            targets,
                         } => {
                             let mut delta = now - start;
-                            if self.snap {
+                            let modifiers = ui.input(|i| i.modifiers);
+                            let bypass = modifiers.command || modifiers.alt;
+                            if self.snap && !bypass {
                                 delta.x = (delta.x / 10.).round() * 10.;
                                 delta.y = (delta.y / 10.).round() * 10.;
                             }
-                            let resized = bounds.resized(
+                            let mut resized = bounds.resized(
                                 handle,
                                 (delta.x, delta.y),
                                 ui.input(|i| i.modifiers.shift),
                             );
+                            self.alignment_guides.clear();
+                            if !self.snap && !bypass {
+                                let result = targets.resized(
+                                    resized,
+                                    handle,
+                                    modifiers.shift.then_some(bounds.w / bounds.h),
+                                );
+                                if result.bounds.w >= 1. && result.bounds.h >= 1. {
+                                    resized = result.bounds;
+                                    self.alignment_guides = result.guides;
+                                }
+                            }
                             self.editor.selected_mut(|c| {
                                 if let Some((_, b)) = original.iter().find(|v| v.0 == c.id) {
                                     c.bounds.x =
@@ -1609,6 +1747,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                                 original,
                                 bounds,
                                 handle,
+                                targets,
                             });
                         }
                         Drag::Marquee {
@@ -1632,6 +1771,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                 if response.drag_stopped() || instant_drag.is_some() {
                     self.editor.commit();
                     self.drag = None;
+                    self.alignment_guides.clear();
                 }
                 if response.clicked()
                     && instant_drag.is_none()
@@ -1724,6 +1864,27 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     }
                 }
                 if !self.present {
+                    for guide in &self.alignment_guides {
+                        let color = match guide.kind {
+                            snapping::Kind::Edge => Color32::from_rgb(204, 204, 204),
+                            snapping::Kind::Spacing => Color32::from_rgb(217, 211, 164),
+                            snapping::Kind::Center => Color32::from_rgb(137, 201, 222),
+                        };
+                        let points = if guide.axis == snapping::Axis::X {
+                            let x = self.screen([guide.position, 0.]).x;
+                            [
+                                Pos2::new(x, response.rect.top()),
+                                Pos2::new(x, response.rect.bottom()),
+                            ]
+                        } else {
+                            let y = self.screen([0., guide.position]).y;
+                            [
+                                Pos2::new(response.rect.left(), y),
+                                Pos2::new(response.rect.right(), y),
+                            ]
+                        };
+                        painter.line_segment(points, Stroke::new(1., color));
+                    }
                     for c in &self.editor.current().controls {
                         if self.editor.selection.contains(&c.id) {
                             painter.rect_stroke(
@@ -1738,7 +1899,9 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                         let r = self.screen_rect(b).expand(4.);
                         painter.rect_stroke(r, 0, Stroke::new(1., ACCENT), StrokeKind::Outside);
                         if self.editor.selected_views().iter().any(|c| !c.locked) {
-                            for (_, point) in self.resize_handles(b) {
+                            for (_, point) in
+                                self.resize_handles(self.editor.movable_bounds().unwrap_or(b))
+                            {
                                 painter.rect(
                                     Rect::from_center_size(point, Vec2::splat(6.)),
                                     0,
@@ -2355,5 +2518,241 @@ mod tests {
         assert_eq!(app.editor.document, expected);
         assert!(app.editor.dirty());
         assert_eq!(app.error.as_deref(), Some("Disk full"));
+    }
+
+    fn alignment_frame(
+        ctx: &egui::Context,
+        app: &mut WireframeApp,
+        mut events: Vec<egui::Event>,
+        modifiers: Modifiers,
+        focused: bool,
+    ) {
+        for event in &mut events {
+            if let egui::Event::PointerButton {
+                modifiers: value, ..
+            } = event
+            {
+                *value = modifiers;
+            }
+        }
+        events.insert(0, egui::Event::ModifiersChanged(modifiers));
+        let mut output = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(1000., 700.))),
+                events,
+                focused,
+                ..Default::default()
+            },
+            |ui| {
+                app.shortcuts(ui.ctx());
+                app.canvas(ui);
+            },
+        );
+        output.textures_delta.clear();
+    }
+    fn alignment_fixture(ctx: &egui::Context) -> WireframeApp {
+        let mut app = WireframeApp::workspace(ctx, None);
+        app.editor.add(Kind::CircleButton, 50., 50.);
+        app.editor.add(Kind::CircleButton, 201., 100.);
+        frame(ctx, &mut app, vec![]);
+        app
+    }
+    #[test]
+    fn canvas_alignment_drag_shows_guides_at_each_zoom_and_undo_restores_start() {
+        for zoom in [0.75, 1., 2.] {
+            let ctx = egui::Context::default();
+            let mut app = alignment_fixture(&ctx);
+            app.zoom = zoom;
+            let before = app.editor.document.clone();
+            let start = app.screen([225., 124.]);
+            let end = app.screen([75., 124.]);
+            alignment_frame(
+                &ctx,
+                &mut app,
+                vec![egui::Event::PointerMoved(start), pointer(start, true)],
+                Modifiers::NONE,
+                true,
+            );
+            alignment_frame(
+                &ctx,
+                &mut app,
+                vec![egui::Event::PointerMoved(end)],
+                Modifiers::NONE,
+                true,
+            );
+            assert_eq!(
+                app.editor.current().controls[1].bounds,
+                Bounds::new(50., 98., 48., 48.)
+            );
+            assert!(!app.alignment_guides.is_empty());
+            alignment_frame(
+                &ctx,
+                &mut app,
+                vec![pointer(end, false)],
+                Modifiers::NONE,
+                true,
+            );
+            assert!(app.alignment_guides.is_empty());
+            app.editor.undo();
+            assert_eq!(app.editor.document, before);
+        }
+    }
+    #[test]
+    fn coalesced_alignment_drag_ignores_pointer_travel_before_press() {
+        let ctx = egui::Context::default();
+        let mut app = alignment_fixture(&ctx);
+        let before = app.editor.document.clone();
+        let start = app.screen([225., 124.]);
+        let end = app.screen([75., 124.]);
+        alignment_frame(
+            &ctx,
+            &mut app,
+            vec![
+                egui::Event::PointerMoved(start),
+                pointer(start, true),
+                egui::Event::PointerMoved(end),
+                egui::Event::PointerMoved(end),
+                pointer(end, false),
+            ],
+            Modifiers::NONE,
+            true,
+        );
+        assert_eq!(
+            app.editor.current().controls[1].bounds,
+            Bounds::new(50., 98., 48., 48.)
+        );
+        assert!(app.drag.is_none());
+        app.editor.undo();
+        assert_eq!(app.editor.document, before);
+    }
+    #[test]
+    fn alignment_drag_with_press_in_previous_frame_is_not_lost() {
+        let ctx = egui::Context::default();
+        let mut app = alignment_fixture(&ctx);
+        let before = app.editor.document.clone();
+        let start = app.screen([225., 124.]);
+        let end = app.screen([75., 124.]);
+        alignment_frame(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(start), pointer(start, true)],
+            Modifiers::NONE,
+            true,
+        );
+        alignment_frame(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(end), pointer(end, false)],
+            Modifiers::NONE,
+            true,
+        );
+        assert_eq!(
+            app.editor.current().controls[1].bounds,
+            Bounds::new(50., 98., 48., 48.)
+        );
+        assert!(app.drag.is_none());
+        app.editor.undo();
+        assert_eq!(app.editor.document, before);
+    }
+    #[test]
+    fn canvas_alignment_modifier_bypass_and_axis_constraint_are_live() {
+        let ctx = egui::Context::default();
+        let mut app = alignment_fixture(&ctx);
+        let start = app.screen([225., 124.]);
+        let end = app.screen([75., 141.]);
+        alignment_frame(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(start), pointer(start, true)],
+            Modifiers::NONE,
+            true,
+        );
+        alignment_frame(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(end)],
+            Modifiers::SHIFT,
+            true,
+        );
+        assert_eq!(
+            app.editor.current().controls[1].bounds,
+            Bounds::new(50., 100., 48., 48.)
+        );
+        alignment_frame(&ctx, &mut app, vec![], Modifiers::COMMAND, true);
+        assert_eq!(
+            app.editor.current().controls[1].bounds,
+            Bounds::new(51., 117., 48., 48.)
+        );
+        assert!(app.alignment_guides.is_empty());
+        alignment_frame(&ctx, &mut app, vec![], Modifiers::NONE, true);
+        assert!(!app.alignment_guides.is_empty());
+    }
+    #[test]
+    fn canvas_resize_snaps_active_edge_and_focus_loss_cancels_preview() {
+        let ctx = egui::Context::default();
+        let mut app = alignment_fixture(&ctx);
+        let before = app.editor.document.clone();
+        let start = app.screen([201., 124.]);
+        let end = app.screen([101., 124.]);
+        alignment_frame(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(start), pointer(start, true)],
+            Modifiers::NONE,
+            true,
+        );
+        alignment_frame(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(end)],
+            Modifiers::NONE,
+            true,
+        );
+        assert_eq!(
+            app.editor.current().controls[1].bounds,
+            Bounds::new(98., 100., 151., 48.)
+        );
+        assert!(!app.alignment_guides.is_empty());
+        alignment_frame(&ctx, &mut app, vec![], Modifiers::NONE, false);
+        assert_eq!(app.editor.document, before);
+        assert!(app.alignment_guides.is_empty());
+        assert!(app.drag.is_none());
+    }
+    #[test]
+    fn multi_selection_alignment_keeps_internal_spacing_and_one_undo() {
+        let ctx = egui::Context::default();
+        let mut app = alignment_fixture(&ctx);
+        let second = app.editor.current().controls[1].id;
+        app.editor.add(Kind::CircleButton, 301., 200.);
+        app.editor.select(second, true);
+        let before = app.editor.document.clone();
+        let start = app.screen([225., 124.]);
+        let end = app.screen([75., 124.]);
+        alignment_frame(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(start), pointer(start, true)],
+            Modifiers::NONE,
+            true,
+        );
+        alignment_frame(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(end)],
+            Modifiers::NONE,
+            true,
+        );
+        alignment_frame(
+            &ctx,
+            &mut app,
+            vec![pointer(end, false)],
+            Modifiers::NONE,
+            true,
+        );
+        let c = app.editor.current().controls;
+        assert_eq!((c[1].bounds.x, c[1].bounds.y), (50., 98.));
+        assert_eq!((c[2].bounds.x, c[2].bounds.y), (150., 198.));
+        app.editor.undo();
+        assert_eq!(app.editor.document, before);
     }
 }

@@ -204,7 +204,7 @@ fn path_clip(nodes: &[LayoutNode], path: &[Id]) -> Option<layout::Rect> {
 fn bounds(b: layout::Rect) -> Bounds {
     Bounds::new(b.x, b.y, b.width, b.height)
 }
-fn control(node: &LayoutNode) -> Control {
+pub(super) fn control(node: &LayoutNode) -> Control {
     let mut supported = true;
     let kind = match node.kind.as_deref().unwrap_or("") {
         "button" => Kind::Button,

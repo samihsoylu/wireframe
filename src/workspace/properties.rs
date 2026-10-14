@@ -24,8 +24,67 @@ impl Editor {
         let effective = spec.effective(node, &self.property_context()).ok()?;
         Some((spec, effective))
     }
+    pub(super) fn list_text_baseline(&self, id: Id) -> Option<Properties> {
+        if self.control_properties(id)?.0.id != "list" {
+            return None;
+        }
+        let snapshot = self.pending.as_ref().map(|(_, s)| s).filter(|s| {
+            s.page == self.page && s.definition == self.definition && s.context == self.context
+        });
+        let project = snapshot.map_or(&self.document, |s| &s.document);
+        let surface = self.surface_id();
+        let content = project
+            .pages
+            .iter()
+            .find(|p| p.id == surface)
+            .map(|p| &p.content)
+            .or_else(|| {
+                project
+                    .definitions
+                    .iter()
+                    .find(|d| d.id == surface)
+                    .map(|d| &d.content)
+            })?;
+        let resolved = project
+            .resolve_all(&content.nodes)
+            .ok()?
+            .into_iter()
+            .map(|r| r.root)
+            .collect::<Vec<_>>();
+        let nodes = children(&resolved, &self.context)?;
+        let node = nodes.iter().find(|n| n.id == id)?;
+        if !matches!(&node.content,NodeContent::Control{kind,..} if kind=="list") {
+            return None;
+        }
+        catalog::get("list")?
+            .effective(node, &self.property_context())
+            .ok()
+    }
     /// Participates in the caller's begin/commit transaction for continuous input.
     pub fn set_control_property(&mut self, id: Id, key: &str, value: Value) -> Result<(), String> {
+        if key == "text"
+            && let Some(baseline) = self.list_text_baseline(id)
+        {
+            let Value::Text(text) = value else {
+                return Err("List text must be text".into());
+            };
+            let before = self
+                .nodes()
+                .iter()
+                .find(|n| n.id == id)
+                .cloned()
+                .ok_or("Control no longer exists")?;
+            if before.locked {
+                return Err("Unlock the control before editing its properties".into());
+            }
+            let mut edited = before.clone();
+            crate::list::apply_text(&mut edited, &text, &baseline)?;
+            if self.editing_instance() {
+                return self.write_local_node(id, &before, &edited);
+            }
+            *self.nodes_mut().iter_mut().find(|n| n.id == id).unwrap() = edited;
+            return Ok(());
+        }
         if self.editing_instance() {
             return self.set_local_property(id, key, value);
         }

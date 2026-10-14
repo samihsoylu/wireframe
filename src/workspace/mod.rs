@@ -273,6 +273,7 @@ impl Editor {
                     | Kind::Search
                     | Kind::Dropdown
                     | Kind::Image
+                    | Kind::List
             ) {
                 let kind_id = match kind {
                     Kind::Checkbox => "checkbox",
@@ -283,6 +284,7 @@ impl Editor {
                     Kind::Search => "search",
                     Kind::Dropdown => "dropdown",
                     Kind::Image => "image",
+                    Kind::List => "list",
                     _ => unreachable!(),
                 };
                 let parent = e.context_origin();
@@ -460,7 +462,15 @@ impl Editor {
                 }
                 if matches!(node.content, NodeContent::Control { .. }) {
                     if c.text != old.text {
-                        node.properties.insert("text".into(), Value::Text(c.text));
+                        if c.kind == Kind::List {
+                            let baseline = self.list_text_baseline(c.id).unwrap_or_default();
+                            if let Err(error) = crate::list::apply_text(node, &c.text, &baseline) {
+                                self.error = Some(error);
+                                return;
+                            }
+                        } else {
+                            node.properties.insert("text".into(), Value::Text(c.text));
+                        }
                     }
                     if c.font_size != old.font_size {
                         node.properties

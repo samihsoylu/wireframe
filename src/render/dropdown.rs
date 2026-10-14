@@ -4,23 +4,6 @@ use super::*;
 use crate::dropdown::{Mark, Menu};
 
 impl Scene {
-    fn dropdown_frame(&mut self, b: Bounds, color: [u8; 3], width: f32, clip: Option<Bounds>) {
-        let inset = (width / 2.).min(b.w / 2.).min(b.h / 2.);
-        self.primitive(
-            Primitive::Line {
-                points: vec![
-                    [b.x + inset, b.y + inset],
-                    [b.x + b.w - inset, b.y + inset],
-                    [b.x + b.w - inset, b.y + b.h - inset],
-                    [b.x + inset, b.y + b.h - inset],
-                    [b.x + inset, b.y + inset],
-                ],
-                color,
-                width,
-            },
-            clip,
-        );
-    }
     pub(super) fn dropdown_control(
         &mut self,
         layer: &Layer,
@@ -106,7 +89,7 @@ impl Scene {
             },
             clip,
         );
-        self.dropdown_frame(
+        self.rectangle_frame(
             header,
             if focused { accent } else { border },
             thickness,
@@ -249,7 +232,7 @@ impl Scene {
                 clip,
             );
         }
-        self.dropdown_frame(
+        self.rectangle_frame(
             Bounds::new(
                 b.x,
                 b.y + metrics.header - 1.,

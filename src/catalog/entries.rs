@@ -916,7 +916,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "search" => "search",
         "link" => "Link",
         "table" => "Name, Status\nItem one, Ready\nItem two, Draft",
-        "list" => "Item one\nItem two\nItem three",
+        "list" => "Item One\nItem Two\nItem Three",
         _ => "",
     };
     c.properties = vec![
@@ -974,7 +974,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     if let Some(first) = states.first() {
         c.properties.push(choice("state", "State", states, first));
     }
-    if matches!(c.id, "dropdown" | "text_area") {
+    if matches!(c.id, "dropdown" | "text_area" | "list") {
         c.properties.extend([
             boolean("vertical_scrollbar", "Scrollbar", false),
             number("value", "Scroll position", 0., 0., 1., false),
@@ -1086,6 +1086,19 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             359.,
             true,
         ));
+    }
+    if c.id == "list" {
+        c.properties.extend([
+            boolean("header", "Header row", false),
+            number("row_height", "Row height", 21., 1., 1000., true),
+            prop(
+                "alternate_fill",
+                "Alternate row",
+                PropertyType::Color,
+                Value::Color([255; 4]),
+            ),
+            choice("border", "Border", &["solid", "none"], "solid"),
+        ]);
     }
     if c.id == "table" {
         c.properties.extend([

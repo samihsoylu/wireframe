@@ -5,6 +5,7 @@ mod choice;
 mod dropdown;
 mod forms;
 mod images;
+mod list;
 mod scrollbar;
 mod search;
 mod svg;
@@ -186,6 +187,23 @@ impl Scene {
         }
         Ok(scene)
     }
+    fn rectangle_frame(&mut self, b: Bounds, color: [u8; 3], width: f32, clip: Option<Bounds>) {
+        let inset = (width / 2.).min(b.w / 2.).min(b.h / 2.);
+        self.primitive(
+            Primitive::Line {
+                points: vec![
+                    [b.x + inset, b.y + inset],
+                    [b.x + b.w - inset, b.y + inset],
+                    [b.x + b.w - inset, b.y + b.h - inset],
+                    [b.x + inset, b.y + b.h - inset],
+                    [b.x + inset, b.y + inset],
+                ],
+                color,
+                width,
+            },
+            clip,
+        );
+    }
     fn primitive(&mut self, p: Primitive, clip: Option<Bounds>) {
         self.items.push(Item {
             opacity: 1.,
@@ -263,6 +281,9 @@ impl Scene {
         }
         if c.kind == Kind::Search {
             return self.search_control(layer, sketch, fonts);
+        }
+        if c.kind == Kind::List {
+            return self.list_control(layer, sketch, fonts);
         }
         if c.kind == Kind::Table {
             return self.table(layer, sketch, fonts);

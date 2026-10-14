@@ -57,3 +57,6 @@ Inherited text/link ink turns white when opacity is at least0.75 and weighted RG
 Underline style removes the input label's left inset; automatic control dimensions are unchanged. The line is an original vector approximation; precise contour/font matching remains open. Input inspector state and Reset continue to use canonical recursive nodes and Undo transactions.
 
 Three regression tests cover both styles/families,0.749/0.75 opacity and152/153 brightness boundaries, explicit color/reset/Undo/Redo/storage, state border colors, stable dimensions, textarea drawing order and alpha compositing against underlying red content in raster output. The suite passes88 tests and Clippy with warnings denied. Native macOS verified opacity1→0.5/Undo, Rectangle→Underline/Undo, and clean style27→24/Undo; the saved sketch gallery is restored. Generate both styles with `cargo run --locked --example render_input_appearance -- evidence/input-appearance`. No independent review or Windows/Linux native verification is claimed.
+
+
+List measurement, typed fields, selection-preserving text edits and remaining limitations are documented in [LISTS.md](LISTS.md).

@@ -315,6 +315,26 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(w, h)?;
             return Ok((w, h));
         }
+        if kind == "list" {
+            let list = crate::list::List::parse(text)?;
+            let m = list.measure(
+                self.measurer,
+                style,
+                self.project.settings.sketch,
+                boolean(props, "header"),
+                number(props, "row_height", 21.),
+            );
+            let w = match width {
+                Dimension::Auto => m.width,
+                Dimension::Fixed(v) => v,
+            };
+            let h = match height {
+                Dimension::Auto => m.height,
+                Dimension::Fixed(v) => v,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         if kind == "table" {
             let grid = crate::rich_text::structured::Grid::parse(text);
             let available = match width {

@@ -22,19 +22,18 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "search"
                 | "dropdown"
         ),
-        "vertical_scrollbar" | "value" => matches!(kind, "dropdown" | "text_area"),
+        "vertical_scrollbar" | "value" => matches!(kind, "dropdown" | "text_area" | "list"),
         "border_color" => matches!(kind, "dropdown" | "text_input" | "text_area"),
-        "border" => kind == "text_input",
+        "border" => matches!(kind, "text_input" | "list"),
         "background_opacity" => matches!(kind, "text_input" | "text_area"),
-        "selected_index" => matches!(kind, "table" | "dropdown"),
+        "selected_index" => matches!(kind, "table" | "dropdown" | "list"),
         "shape" | "search_icon" | "microphone_icon" => kind == "search",
         "fill" => matches!(
             kind,
-            "button" | "text_input" | "text_area" | "dropdown" | "search" | "table"
+            "button" | "text_input" | "text_area" | "dropdown" | "search" | "table" | "list"
         ),
-        "alternate_fill" | "header" | "row_height" | "horizontal_lines" | "vertical_lines" => {
-            kind == "table"
-        }
+        "alternate_fill" | "header" | "row_height" => matches!(kind, "table" | "list"),
+        "horizontal_lines" | "vertical_lines" => kind == "table",
         _ => false,
     }
 }
@@ -55,6 +54,8 @@ fn choice_label(value: &str) -> &str {
         "right" => "Right",
         "rounded" => "Rounded corners",
         "rectangle" => "Rectangle",
+        "solid" => "Show border",
+        "none" => "No border",
         "line" => "Underline",
         other => other,
     }
@@ -82,6 +83,7 @@ impl WireframeApp {
                 | "checkbox"
                 | "radio"
                 | "table"
+                | "list"
         ) {
             return false;
         }
@@ -122,6 +124,18 @@ impl WireframeApp {
                         (PropertyType::Text, Value::Text(v)) => {
                             let r = ui.add(egui::TextEdit::multiline(v).desired_rows(4).desired_width(f32::INFINITY));
                             finish = r.lost_focus();
+                        }
+                        (PropertyType::Number {..}, Value::Number(v)) if key == "selected_index" && spec.id == "list" => {
+                            let source=match values.get("text") {Some(Value::Text(s))=>s.as_str(),_=>""};
+                            let labels=wireframe::list::labels(source,values.get("header")==Some(&Value::Bool(true))).iter().map(|s|wireframe::rich_text::RichText::parse(s,false).display_text(false)).collect::<Vec<_>>();
+                            let current=if *v<0. {"None"} else {labels.get(*v as usize).map_or("No matching row",String::as_str)};
+                            egui::ComboBox::from_id_salt("selection").selected_text(if current.is_empty(){"(Empty row)"}else{current}).show_ui(ui,|ui| {
+                                if ui.selectable_value(v,-1.,"None").clicked(){ui.close();}
+                                for (index,label) in labels.iter().enumerate() {
+                                    if ui.selectable_value(v,index as f64,if label.is_empty(){"(Empty row)"}else{label}).clicked(){ui.close();}
+                                }
+                            });
+                            finish=value!=original;
                         }
                         (PropertyType::Number {..}, Value::Number(v)) if key == "selected_index" && spec.id == "dropdown" => {
                             let source = match values.get("text") {Some(Value::Text(s)) => s.as_str(),_=>""};

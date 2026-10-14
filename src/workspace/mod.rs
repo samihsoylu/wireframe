@@ -275,6 +275,7 @@ impl Editor {
                     | Kind::Accordion
                     | Kind::Alert
                     | Kind::AppBar
+                    | Kind::Browser
                     | Kind::Button
                     | Kind::TextInput
                     | Kind::TextArea
@@ -304,6 +305,7 @@ impl Editor {
                     Kind::Accordion => "accordion",
                     Kind::Alert => "alert",
                     Kind::AppBar => "app_bar",
+                    Kind::Browser => "browser",
                     Kind::Button => "button",
                     Kind::TextInput => "text_input",
                     Kind::TextArea => "text_area",

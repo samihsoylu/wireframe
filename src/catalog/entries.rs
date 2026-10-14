@@ -942,6 +942,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "accordion" => crate::accordion::DEFAULT,
         "alert" => crate::alert::DEFAULT,
         "app_bar" => crate::app_bar::DEFAULT,
+        "browser" => crate::browser::DEFAULT,
         "label" => "Some text",
         "heading" => "Title",
         "subtitle" => "Subtitle",
@@ -1010,7 +1011,14 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     }
     if matches!(
         c.id,
-        "dropdown" | "text_area" | "list" | "tabs" | "vertical_tabs" | "tree" | "accordion"
+        "dropdown"
+            | "text_area"
+            | "list"
+            | "tabs"
+            | "vertical_tabs"
+            | "tree"
+            | "accordion"
+            | "browser"
     ) {
         c.properties.extend([
             boolean("vertical_scrollbar", "Scrollbar", false),
@@ -1079,6 +1087,16 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             &["none", "solid", "dashed", "dotted"],
             "solid",
         ));
+    }
+    if c.id == "browser"
+        && let Some(border) = c.properties.iter_mut().find(|p| p.key == "border")
+    {
+        *border = choice(
+            "border",
+            "Border",
+            &["solid", "torn_bottom", "none", "dashed", "dotted"],
+            "solid",
+        );
     }
     if c.id == "app_bar" {
         c.properties.extend([

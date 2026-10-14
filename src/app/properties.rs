@@ -68,12 +68,20 @@ fn supported(kind: &str, key: &str) -> bool {
         ),
         "vertical_scrollbar" | "value" => matches!(
             kind,
-            "dropdown" | "text_area" | "list" | "tabs" | "vertical_tabs" | "tree" | "accordion"
+            "dropdown"
+                | "text_area"
+                | "list"
+                | "tabs"
+                | "vertical_tabs"
+                | "tree"
+                | "accordion"
+                | "browser"
         ),
         "border_color" => matches!(kind, "dropdown" | "text_input" | "text_area" | "link_bar"),
         "border" => matches!(
             kind,
             "menu_bar"
+                | "browser"
                 | "alert"
                 | "app_bar"
                 | "tree"
@@ -108,6 +116,7 @@ fn supported(kind: &str, key: &str) -> bool {
         "fill" => matches!(
             kind,
             "app_bar"
+                | "browser"
                 | "button"
                 | "text_input"
                 | "text_area"
@@ -149,6 +158,7 @@ fn choice_label(value: &str) -> &str {
         "rounded" => "Rounded corners",
         "rectangle" => "Rectangle",
         "solid" => "Show border",
+        "torn_bottom" => "Torn bottom",
         "none" => "No border",
         "line" => "Underline",
         other => other,
@@ -189,6 +199,7 @@ impl WireframeApp {
                 | "accordion"
                 | "alert"
                 | "app_bar"
+                | "browser"
                 | "table"
                 | "list"
                 | "button_bar"
@@ -365,7 +376,14 @@ impl WireframeApp {
                         }
                         (PropertyType::Choice(options), Value::Choice(v)) => {
                             egui::ComboBox::from_id_salt("value").selected_text(choice_label(v)).show_ui(ui, |ui| {
-                                for option in *options { if ui.selectable_value(v, (*option).into(), choice_label(option)).clicked() { ui.close(); } }
+                                for option in *options {
+                                    if spec.id == "browser" && key == "border" && !matches!(*option, "solid" | "torn_bottom") {
+                                        continue;
+                                    }
+                                    if ui.selectable_value(v, (*option).into(), choice_label(option)).clicked() {
+                                        ui.close();
+                                    }
+                                }
                             });
                             finish = *v != match &original { Value::Choice(s) => s, _ => unreachable!() }.as_str();
                         }

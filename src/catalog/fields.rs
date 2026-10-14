@@ -58,7 +58,7 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "text",
             "underline",
         ],
-        "browser" => &["border", "fill", "text", "value"],
+        "browser" => &["border", "fill", "text", "vertical_scrollbar", "value"],
         "button_bar" => &[
             "row_links",
             "bold",

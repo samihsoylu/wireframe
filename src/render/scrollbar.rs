@@ -2,6 +2,12 @@
 // Copyright 2026 Wireframe contributors
 use super::*;
 
+enum ScrollbarAppearance {
+    Inline,
+    Panel,
+    Browser,
+}
+
 impl Scene {
     pub(super) fn vertical_scrollbar(
         &mut self,
@@ -11,7 +17,13 @@ impl Scene {
         sketch: bool,
         parent_clip: Option<Bounds>,
     ) {
-        self.draw_vertical_scrollbar(b, value, disabled, (sketch, false), parent_clip);
+        self.draw_vertical_scrollbar(
+            b,
+            value,
+            disabled,
+            (sketch, ScrollbarAppearance::Inline),
+            parent_clip,
+        );
     }
     pub(super) fn panel_scrollbar(
         &mut self,
@@ -21,17 +33,40 @@ impl Scene {
         sketch: bool,
         parent_clip: Option<Bounds>,
     ) {
-        self.draw_vertical_scrollbar(b, value, disabled, (sketch, true), parent_clip);
+        self.draw_vertical_scrollbar(
+            b,
+            value,
+            disabled,
+            (sketch, ScrollbarAppearance::Panel),
+            parent_clip,
+        );
+    }
+    pub(super) fn browser_scrollbar(
+        &mut self,
+        b: Bounds,
+        value: f32,
+        sketch: bool,
+        parent_clip: Option<Bounds>,
+    ) {
+        self.draw_vertical_scrollbar(
+            b,
+            value,
+            false,
+            (sketch, ScrollbarAppearance::Browser),
+            parent_clip,
+        );
     }
     fn draw_vertical_scrollbar(
         &mut self,
         b: Bounds,
         value: f32,
         disabled: bool,
-        appearance: (bool, bool),
+        appearance: (bool, ScrollbarAppearance),
         parent_clip: Option<Bounds>,
     ) {
-        let (sketch, tree) = appearance;
+        let (sketch, appearance) = appearance;
+        let panel = !matches!(appearance, ScrollbarAppearance::Inline);
+        let browser = matches!(appearance, ScrollbarAppearance::Browser);
         if b.h <= 0. || b.w <= 0. {
             return;
         }
@@ -41,7 +76,7 @@ impl Scene {
             [128, 128, 139]
         } else if sketch {
             [0; 3]
-        } else if tree {
+        } else if panel {
             [81; 3]
         } else {
             [51; 3]
@@ -58,7 +93,7 @@ impl Scene {
         );
         // Covered inline links must not remain interactive through the track.
         let cover = clip.map_or(b, |c| intersect(b, c));
-        if !tree {
+        if !panel {
             self.links = self
                 .links
                 .drain(..)
@@ -88,9 +123,11 @@ impl Scene {
             },
             clip,
         );
-        let separators = if tree && !sketch {
+        let separators = if panel && !sketch {
             vec![]
-        } else if tree {
+        } else if browser {
+            vec![b.y + 11., b.y + b.h - 11.]
+        } else if panel {
             vec![b.y + 14., b.y + b.h - 15.]
         } else {
             vec![b.y + 12., b.y + b.h - 12.]
@@ -107,7 +144,13 @@ impl Scene {
         }
         let x = b.x + b.w / 2.;
         for (y, direction) in [(b.y + 6., -1.), (b.y + b.h - 6., 1.)] {
-            let half_height = if tree && !sketch { 2. } else { 2.5 };
+            let half_height = if panel && !sketch {
+                2.
+            } else if browser {
+                3.5
+            } else {
+                2.5
+            };
             self.primitive(
                 Primitive::Polygon {
                     points: vec![
@@ -131,7 +174,7 @@ impl Scene {
                     ),
                     fill: color,
                     stroke: false,
-                    radius: if tree && !sketch {
+                    radius: if panel && !sketch {
                         4.
                     } else if sketch {
                         2.

@@ -4,6 +4,7 @@
 pub mod accordion;
 pub mod alert;
 pub mod app_bar;
+pub mod browser;
 pub mod button_bar;
 pub mod catalog;
 pub mod choice_group;

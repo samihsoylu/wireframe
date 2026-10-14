@@ -1174,7 +1174,25 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
         origin: Pos2,
         scale: f32,
     ) {
+        let mut masks = Vec::new();
         for item in &drawing.items {
+            match &item.drawing {
+                wireframe::render::Drawing::BeginMask(mask) => {
+                    let start = painter.ctx().graphics(|g| {
+                        g.get(painter.layer_id())
+                            .map_or(0, |list| list.next_idx().0)
+                    });
+                    masks.push((start, mask));
+                    continue;
+                }
+                wireframe::render::Drawing::EndMask => {
+                    if let Some((start, mask)) = masks.pop() {
+                        wireframe::render::mask::finish(painter, start, mask, origin, scale);
+                    }
+                    continue;
+                }
+                _ => {}
+            }
             let mut clipped = item.clip.map_or_else(
                 || painter.clone(),
                 |b| {
@@ -1192,6 +1210,9 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                 continue;
             }
             match &item.drawing {
+                wireframe::render::Drawing::BeginMask(_) | wireframe::render::Drawing::EndMask => {
+                    unreachable!()
+                }
                 wireframe::render::Drawing::Icon {
                     bounds: b,
                     id,

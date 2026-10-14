@@ -273,7 +273,7 @@ impl Kind {
             Self::Alert => (200., 102.),
             Self::AppBar => (320., 44.),
             Self::Line | Self::Arrow => (180., 20.),
-            Self::Browser => (600., 420.),
+            Self::Browser => (450., 400.),
             Self::Phone => (240., 440.),
             Self::Panel => (300., 220.),
             Self::List | Self::Table => (300., 180.),
@@ -308,7 +308,7 @@ impl Kind {
             Self::AppBar => crate::app_bar::DEFAULT,
             Self::Dropdown => "Choose an option",
             Self::Search => "Search…",
-            Self::Browser => "https://example.com",
+            Self::Browser => crate::browser::DEFAULT,
             Self::Panel => "Panel title",
             Self::List => "First item\nSecond item\nThird item\nFourth item",
             Self::Table => {

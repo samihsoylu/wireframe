@@ -145,6 +145,8 @@ fn migrate_control(c: legacy::Control) -> Node {
         legacy::Kind::MobileKeyboard => "mobile_keyboard",
         legacy::Kind::MobileMenu => "mobile_menu",
         legacy::Kind::MobilePicker => "mobile_picker",
+        legacy::Kind::Calendar => "calendar",
+        legacy::Kind::DateChooser => "date_chooser",
         legacy::Kind::Panel => "panel",
         legacy::Kind::FieldSet => "field_set",
         legacy::Kind::List => "list",

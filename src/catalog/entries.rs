@@ -938,6 +938,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "radio_group" => crate::choice_group::RADIO,
         "mobile_menu" => crate::mobile_menu::DEFAULT,
         "mobile_picker" => crate::mobile_picker::DEFAULT,
+        "date_chooser" => crate::date_controls::CHOOSER_DEFAULT,
         "menu" => crate::menu::MENU,
         "menu_bar" => crate::menu::BAR,
         "tree" => crate::tree::DEFAULT,
@@ -1050,6 +1051,16 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         if let Some(text) = c.properties.iter_mut().find(|p| p.key == "text_color") {
             text.default = DefaultValue::FormInk;
         }
+    }
+    if c.id == "date_chooser" {
+        let mut border = prop(
+            "border_color",
+            "Border color",
+            PropertyType::Color,
+            Value::Color([0, 0, 0, 255]),
+        );
+        border.default = DefaultValue::FormInk;
+        c.properties.push(border);
     }
     if c.id == "text_input" {
         c.properties.push(choice(

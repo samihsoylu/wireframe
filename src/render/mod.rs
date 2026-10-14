@@ -10,6 +10,7 @@ mod choice;
 mod choice_group;
 mod circle_button;
 mod control_icons;
+mod date_controls;
 mod dropdown;
 mod field_set;
 mod forms;
@@ -326,6 +327,12 @@ impl Scene {
         }
         if matches!(c.kind, Kind::Menu | Kind::MenuBar) {
             return self.menu(layer, sketch, fonts, rasters);
+        }
+        if c.kind == Kind::Calendar {
+            return self.calendar_control(layer, sketch, fonts);
+        }
+        if c.kind == Kind::DateChooser {
+            return self.date_chooser(layer, sketch, fonts);
         }
         if c.kind == Kind::MobileMenu {
             return self.mobile_menu(layer, sketch, fonts);

@@ -48,6 +48,7 @@ pub struct Editor {
     cache: RefCell<view::Cache>,
     fonts: eframe::egui::Context,
     clock: fn() -> crate::tablet::Clock,
+    date: fn() -> crate::date_controls::Date,
 }
 impl Default for Editor {
     fn default() -> Self {
@@ -76,7 +77,14 @@ impl Editor {
             cache: RefCell::new(view::Cache::default()),
             fonts,
             clock,
+            date: crate::date_controls::Date::today,
         }
+    }
+    /// Inject the local date for repeatable calendar scenes; it is never serialized.
+    pub fn with_date(document: Project, date: fn() -> crate::date_controls::Date) -> Self {
+        let mut editor = Self::new(document);
+        editor.date = date;
+        editor
     }
     fn snapshot(&self) -> Snapshot {
         Snapshot {
@@ -290,6 +298,8 @@ impl Editor {
                     | Kind::MobileKeyboard
                     | Kind::MobileMenu
                     | Kind::MobilePicker
+                    | Kind::Calendar
+                    | Kind::DateChooser
                     | Kind::FieldSet
                     | Kind::Button
                     | Kind::TextInput
@@ -329,6 +339,8 @@ impl Editor {
                     Kind::MobileKeyboard => "mobile_keyboard",
                     Kind::MobileMenu => "mobile_menu",
                     Kind::MobilePicker => "mobile_picker",
+                    Kind::Calendar => "calendar",
+                    Kind::DateChooser => "date_chooser",
                     Kind::Button => "button",
                     Kind::TextInput => "text_input",
                     Kind::TextArea => "text_area",

@@ -39,6 +39,7 @@ pub mod text_entry;
 
 pub mod ui_text;
 
+pub mod date_controls;
 pub mod mobile_keyboard;
 pub mod mobile_menu;
 pub mod mobile_picker;

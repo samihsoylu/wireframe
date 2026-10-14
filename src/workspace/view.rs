@@ -12,6 +12,7 @@ pub(super) struct Cache {
     pages: HashMap<Id, Result<Layout, String>>,
     scenes: HashMap<Id, Result<crate::render::Scene, String>>,
     clocks: HashMap<(Id, NodePath), (ClockLayout, crate::tablet::Clock)>,
+    dates: HashMap<(Id, NodePath), (ClockLayout, crate::date_controls::Date)>,
 }
 #[derive(Clone, PartialEq)]
 struct ClockLayout {
@@ -23,12 +24,14 @@ struct ClockLayout {
 }
 #[derive(Clone, PartialEq)]
 enum ClockOptions {
+    Calendar(f32),
     Tablet(crate::tablet::Options),
     Smartphone(crate::smartphone::Options),
 }
 impl ClockOptions {
     fn for_layer(layer: &Layer) -> Option<Self> {
         match layer.control.kind {
+            Kind::Calendar => Some(Self::Calendar(layer.control.font_size)),
             Kind::Tablet => Some(Self::Tablet(crate::tablet::Options::from_properties(
                 &layer.properties,
             ))),
@@ -48,6 +51,7 @@ pub struct Layer {
     pub path: NodePath,
     pub properties: Properties,
     pub clock: Option<crate::tablet::Clock>,
+    pub date: Option<crate::date_controls::Date>,
 }
 impl Editor {
     pub fn layout_page(&self, id: Id) -> Result<Layout, String> {
@@ -57,6 +61,9 @@ impl Editor {
                 crate::fonts::install_project(&self.fonts, self.document.font.as_deref());
             }
             cache.project = Some(self.document.clone());
+            cache
+                .dates
+                .retain(|(surface, _), _| self.surface(*surface).is_some());
             cache.pages.clear();
             cache.scenes.clear();
             cache
@@ -101,6 +108,9 @@ impl Editor {
             cache
                 .clocks
                 .retain(|(surface, path), _| *surface != id || paths.contains(path));
+            cache
+                .dates
+                .retain(|(surface, path), _| *surface != id || paths.contains(path));
             for layer in &mut layers {
                 let Some(options) = ClockOptions::for_layer(layer) else {
                     continue;
@@ -113,6 +123,17 @@ impl Editor {
                     font: self.document.font.clone(),
                 };
                 let key = (id, layer.path.clone());
+                if layer.control.kind == Kind::Calendar {
+                    let record = cache
+                        .dates
+                        .entry(key)
+                        .or_insert_with(|| (signature.clone(), (self.date)()));
+                    if record.0 != signature {
+                        *record = (signature, (self.date)());
+                    }
+                    layer.date = Some(record.1);
+                    continue;
+                }
                 let record = cache
                     .clocks
                     .entry(key)
@@ -186,12 +207,16 @@ impl Editor {
                 control: {
                     let mut c = control(node);
                     c.bounds = bounds(node.uncropped);
+                    if c.kind == Kind::Calendar {
+                        c.font_size = self.document.settings.font_size;
+                    }
                     c
                 },
                 clip: path_clip(&layout.nodes, &node.path).map(bounds),
                 path: node.path.clone(),
                 properties: node.properties.clone(),
                 clock: None,
+                date: None,
             })
             .collect())
     }
@@ -310,6 +335,8 @@ pub(super) fn control(node: &LayoutNode) -> Control {
         "mobile_keyboard" => Kind::MobileKeyboard,
         "mobile_menu" => Kind::MobileMenu,
         "mobile_picker" => Kind::MobilePicker,
+        "calendar" => Kind::Calendar,
+        "date_chooser" => Kind::DateChooser,
         "panel" | "window" => Kind::Panel,
         "field_set" => Kind::FieldSet,
         "list" => Kind::List,

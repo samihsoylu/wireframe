@@ -1,0 +1,13 @@
+# Calendars and date fields
+
+Calendar shows the local month, six weeks starting on Sunday, and today's highlight. It starts at 96×96 and resizes in both directions. Small frames simplify their contents; frames at least 200×200 add a day grid. Calendar text scales with available space and the project font size, up to 19 points. Its heading is recomputed consistently when the frame changes. Dates use full Gregorian years, including century leap-year rules.
+
+Each Calendar captures a local date for its content layout. Moving it or editing another control retains that date. Changing its size, style or project font, or reopening the document, refreshes the snapshot. No date is stored in the project and no midnight timer is scheduled. `Editor::with_date` supplies a deterministic date for tests and repeatable renders.
+
+Date chooser is an illustrative text field with an original calendar icon. It supports arbitrary text, normal/focused/disabled states, border color and standard text formatting. It does not validate dates or open a calendar popup. Text macros remain literal. Soft line breaks increase its computed height. Only width can be resized; Auto-size restores the width needed by the text, with a 90-pixel minimum. A manually set width stays fixed when the text or font changes.
+
+The icon remains 24×24. Very narrow fields hide the border but retain the icon, which can extend left of the control. Parent crops still clip it. The icon's openings are transparent, so they preserve underlying content. Canvas, thumbnails, library previews and PNG/SVG exports use the same geometry and renderer.
+
+`examples/render_dates.rs` produces a neutral ten-control gallery in both styles. Focused tests cover Gregorian arithmetic, layout thresholds, date snapshot lifetime, width/state/history/storage and icon overflow/transparency. Exact glyph weights and contour refinement, native Windows/Linux verification and further nested clipping acceptance remain open.
+
+Acceptance on macOS covers insertion, text/state/font editing, width retention, automatic sizing with Undo/Redo, both drawing styles and byte-identical save/reopen after a full process restart. Four native PNG/SVG exports match generated gallery renders byte for byte. The full suite passes 353 tests. The current font-backed comparison matches 38 of 48 outer sizes; ten automatic date-field widths differ by 2–6 pixels. These remain typography work, not accepted exact visual parity. Generic page-link and layer controls remain available in the inspector. Native border-picker editing, component overrides for these families and midnight refresh cadence were not separately verified.

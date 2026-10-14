@@ -80,6 +80,7 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "text_input"
                 | "text_area"
                 | "search"
+                | "date_chooser"
                 | "dropdown"
                 | "icon_label"
                 | "circle_button"
@@ -98,7 +99,10 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "browser"
                 | "window"
         ),
-        "border_color" => matches!(kind, "dropdown" | "text_input" | "text_area" | "link_bar"),
+        "border_color" => matches!(
+            kind,
+            "dropdown" | "text_input" | "text_area" | "link_bar" | "date_chooser"
+        ),
         "border" => matches!(
             kind,
             "menu_bar"
@@ -233,6 +237,7 @@ impl WireframeApp {
                 | "pointed_button"
                 | "multiline_button"
                 | "search"
+                | "date_chooser"
                 | "checkbox"
                 | "radio"
                 | "checkbox_group"
@@ -250,6 +255,7 @@ impl WireframeApp {
                 | "smartphone"
                 | "mobile_keyboard"
                 | "mobile_picker"
+                | "calendar"
                 | "browser"
                 | "window"
                 | "table"

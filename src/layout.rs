@@ -315,6 +315,33 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(w, h)?;
             return Ok((w, h));
         }
+        if kind == "calendar" {
+            let w = match width {
+                Dimension::Auto => 96.,
+                Dimension::Fixed(w) => w,
+            };
+            let h = match height {
+                Dimension::Auto => 96.,
+                Dimension::Fixed(h) => h,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
+        if kind == "date_chooser" {
+            let fixed = match width {
+                Dimension::Auto => None,
+                Dimension::Fixed(w) => Some(w),
+            };
+            let m = crate::date_controls::chooser(
+                &RichText::parse(text, false),
+                style,
+                fixed,
+                self.project.settings.sketch,
+                self.measurer,
+            );
+            validate_size(m.width, m.height)?;
+            return Ok((m.width, m.height));
+        }
         if kind == "mobile_picker" {
             return Ok(crate::mobile_picker::SIZE);
         }

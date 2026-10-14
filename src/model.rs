@@ -127,6 +127,8 @@ pub enum Kind {
     MobileKeyboard,
     MobileMenu,
     MobilePicker,
+    Calendar,
+    DateChooser,
     Panel,
     FieldSet,
     List,
@@ -138,7 +140,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 47] = [
+    pub const ALL: [Kind; 49] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -177,6 +179,8 @@ impl Kind {
         Self::MobileKeyboard,
         Self::MobileMenu,
         Self::MobilePicker,
+        Self::Calendar,
+        Self::DateChooser,
         Self::Panel,
         Self::FieldSet,
         Self::List,
@@ -227,6 +231,8 @@ impl Kind {
             Self::MobileKeyboard => "Mobile keyboard",
             Self::MobileMenu => "Mobile menu",
             Self::MobilePicker => "Mobile picker",
+            Self::Calendar => "Calendar",
+            Self::DateChooser => "Date chooser",
             Self::Panel => "Window",
             Self::FieldSet => "Field set",
             Self::List => "List",
@@ -260,6 +266,8 @@ impl Kind {
             | Self::RadioGroup
             | Self::Dropdown
             | Self::Search
+            | Self::Calendar
+            | Self::DateChooser
             | Self::Toggle => "Forms",
             Self::Rectangle | Self::Ellipse | Self::Line | Self::Arrow => "Shapes",
             _ => "Layout",
@@ -298,6 +306,8 @@ impl Kind {
             Self::MobileKeyboard => (226., 160.),
             Self::MobileMenu => (215., 381.),
             Self::MobilePicker => crate::mobile_picker::SIZE,
+            Self::Calendar => (96., 96.),
+            Self::DateChooser => (90., 25.),
             Self::Panel => (450., 400.),
             Self::FieldSet => (200., 170.),
             Self::List | Self::Table => (300., 180.),
@@ -326,6 +336,8 @@ impl Kind {
             Self::RadioGroup => crate::choice_group::RADIO,
             Self::MobileMenu => crate::mobile_menu::DEFAULT,
             Self::MobilePicker => crate::mobile_picker::DEFAULT,
+            Self::Calendar => "",
+            Self::DateChooser => crate::date_controls::CHOOSER_DEFAULT,
             Self::Menu => crate::menu::MENU,
             Self::MenuBar => crate::menu::BAR,
             Self::Tree => crate::tree::DEFAULT,

@@ -368,7 +368,7 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
             );
         }
         // Detailed keyboard rendering uses the shared scene pipeline.
-        Kind::MobileMenu | Kind::MobilePicker => {
+        Kind::MobileMenu | Kind::MobilePicker | Kind::Calendar | Kind::DateChooser => {
             rect(&mut out, b, white, 0.);
         }
         Kind::MobileKeyboard => {

@@ -8,7 +8,7 @@ Work directly as Engineer. Preserve user files and explicit deferrals. Use synth
 
 ## Current checkpoint — 2026-10-14
 
-Latest completed slice: intrinsic breadcrumbs and link bars. The live library has32 controls and158 tests pass. Native macOS insertion, metadata edits/history, empty text, page/Back navigation, clean/sketch exports and full process restart are verified. The development app runs the saved Navigation gallery with case10 selected. Typography and native Windows/Linux acceptance remain open; see the final checkpoint below.
+Latest completed slice: editable Alert dialogs. The library has 40 control families and 253 tests pass. Native macOS insertion, source/link remapping, button style, sizing/history, both-style navigation and clipping, exports and full process persistence are verified. The running development app shows the saved Project decisions example in clean style at 92% fit. Exact visual fidelity, remaining families and native Windows/Linux acceptance remain open; see the final checkpoint below.
 
 The live desktop app now owns a version-2 recursive Project through the workspace editor. It opens version-1 files by read-only migration, saves version 2, and uses the same project storage for recovery. Nested groups have real parent-local children, editable contexts, movement, resizing, grouping/ungrouping, duplication and undo/redo. Enter/double-click/Edit group contents enters a group; Escape/Exit group returns to its parent. Full-enclosure marquee and visible leaf ordering drive selection.
 
@@ -361,3 +361,14 @@ Native macOS verified Quick Add, text editing, child selection, scrollbar enable
 Controlled external comparisons match 30 parser cases, 153 selection cases and 32 measured layouts. Those measurements do not establish exact pixels: typography, contours and rasterization remain different. The tested, signature-verified development bundle has UUID 8E58762A-F831-35C2-BD8A-1918908B10D3. The app is running the saved neutral Workspace panels example in clean style at 98% fit, six controls and no selection. No build/test process remains.
 
 Other 47 control families, advanced editing, whole-control Back targets, platform backends, recovery and release work remain open. Native component editing, independent review and native Windows/Linux execution were not performed. Next investigate the remaining structured controls before implementation. The overall goal remains active; GPL-3.0-only and external evidence separation remain unchanged.
+
+
+## Alert dialogs accepted — 2026-10-14
+
+Added original Alert parsing, intrinsic layout, shared rendering, inspector controls and per-button destinations. Raw text distinguishes missing and blank fields, uses the first three lines and up to two comma-separated labels, and preserves unused source. The title is enlarged, the message wraps, and fixed height can hide later fields. Divided and inline styles have distinct button placement and color defaults. Explicit colors persist across style changes; global underline affects title/message while inline buttons always underline. Hidden button links retain source identity. See docs/ALERTS.md and examples/render_alerts.rs.
+
+All 253 tests pass, including eight focused tests for grammar, strict visibility thresholds, source-index destinations, color/reset/underline behavior, remapping/component overrides, atomic invalid edits, history and serialization. Formatting, all-target Clippy with warnings denied and diff checks pass. The unsupported automatic-layout rollback fixture now uses the still-unsupported app_bar control and retains its assertions.
+
+Native macOS verified Quick Add, multiline source editing, reordered destinations, divided-to-inline style editing, 90×60 sizing, automatic 200×102 sizing, Undo/Redo, both-style button navigation and message/hidden-button exclusion. The narrow inline right button retains its own destination. Four native PNG/SVG exports equal generated exports byte-for-byte. Full Quit/relaunch/reopen/resave preserved both edited and gallery projects byte-for-byte. Bundle UUID 2838361F-F2DC-3E26-B8FC-9A4C59126A12, ad-hoc signature verified. The running app shows the saved Project decisions gallery, clean style, no selection.
+
+The style selector was initially absent from the inspector's display order despite working storage/rendering; native acceptance found this and it was corrected and rechecked. Exact font rasterization, sketch contours, broader edge cases, native component editing, platform backends, Windows/Linux acceptance, recovery and release work remain open. No independent review was performed. Overall goal remains active, with 40 accepted control families; the existing import deferral and GPL-3.0-only licensing remain unchanged.

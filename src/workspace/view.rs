@@ -221,6 +221,7 @@ fn control(node: &LayoutNode) -> Control {
         "menu_bar" => Kind::MenuBar,
         "tree" => Kind::Tree,
         "accordion" => Kind::Accordion,
+        "alert" => Kind::Alert,
         "dropdown" => Kind::Dropdown,
         "search" => Kind::Search,
         "ellipse" => Kind::Ellipse,

@@ -2,6 +2,7 @@
 // Copyright 2026 Wireframe contributors
 
 pub mod accordion;
+pub mod alert;
 pub mod button_bar;
 pub mod catalog;
 pub mod choice_group;

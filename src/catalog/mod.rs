@@ -253,6 +253,12 @@ impl ControlSpec {
             }
             values.insert(key.clone(), value.clone());
         }
+        if self.id == "alert"
+            && !node.properties.contains_key("text_color")
+            && values.get("button_style") == Some(&Value::Choice("inline".into()))
+        {
+            values.insert("text_color".into(), Value::Color([8, 83, 148, 255]));
+        }
         if matches!(self.id, "text_input" | "text_area") {
             if !node.properties.contains_key("link_color") {
                 values.insert("link_color".into(), Value::Color([8, 83, 148, 255]));
@@ -308,10 +314,10 @@ impl ControlSpec {
         value: Value,
         context: &Context,
     ) -> Result<(), PropertyError> {
-        // An explicit input text color must retain its intent across fill changes.
-        if key == "text_color" && matches!(self.id, "text_input" | "text_area") {
+        // Preserve explicit colors across dependent fill or button-style changes.
+        if key == "text_color" && matches!(self.id, "text_input" | "text_area" | "alert") {
             self.property(key)
-                .expect("Input text color")
+                .expect("Control text color")
                 .validate(&value)?;
             node.properties.insert(key.into(), value);
             return Ok(());

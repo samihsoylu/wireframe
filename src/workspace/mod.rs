@@ -273,6 +273,7 @@ impl Editor {
                     | Kind::MenuBar
                     | Kind::Tree
                     | Kind::Accordion
+                    | Kind::Alert
                     | Kind::Button
                     | Kind::TextInput
                     | Kind::TextArea
@@ -300,6 +301,7 @@ impl Editor {
                     Kind::MenuBar => "menu_bar",
                     Kind::Tree => "tree",
                     Kind::Accordion => "accordion",
+                    Kind::Alert => "alert",
                     Kind::Button => "button",
                     Kind::TextInput => "text_input",
                     Kind::TextArea => "text_area",
@@ -503,6 +505,7 @@ impl Editor {
                                 | Kind::MenuBar
                                 | Kind::Tree
                                 | Kind::Accordion
+                                | Kind::Alert
                                 | Kind::ButtonBar
                                 | Kind::Breadcrumbs
                                 | Kind::LinkBar
@@ -518,6 +521,8 @@ impl Editor {
                                 crate::choice_group::apply_text
                             } else if matches!(c.kind, Kind::Menu | Kind::MenuBar) {
                                 crate::menu::apply_text
+                            } else if c.kind == Kind::Alert {
+                                crate::alert::apply_text
                             } else if c.kind == Kind::Accordion {
                                 crate::accordion::apply_text
                             } else if c.kind == Kind::Tree {

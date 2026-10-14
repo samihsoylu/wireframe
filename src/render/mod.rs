@@ -2,6 +2,7 @@
 // Copyright 2026 Wireframe contributors
 //! Shared positioned drawing data for the canvas and vector/raster exports.
 mod accordion;
+mod alert;
 mod button_bar;
 mod choice;
 mod choice_group;
@@ -313,6 +314,9 @@ impl Scene {
         }
         if matches!(c.kind, Kind::Menu | Kind::MenuBar) {
             return self.menu(layer, sketch, fonts, rasters);
+        }
+        if c.kind == Kind::Alert {
+            return self.alert(layer, sketch, fonts);
         }
         if c.kind == Kind::Accordion {
             return self.accordion(layer, sketch, fonts);

@@ -17,6 +17,8 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "value",
         ],
         "alert" => &[
+            "button_style",
+            "row_links",
             "align",
             "bold",
             "border",

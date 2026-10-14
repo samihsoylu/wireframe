@@ -24,6 +24,7 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "menu_bar"
                 | "tree"
                 | "accordion"
+                | "alert"
         ),
         "row_icons" => kind == "list",
         "icon" | "icon_size" | "icon_rotation" => {
@@ -40,6 +41,7 @@ fn supported(kind: &str, key: &str) -> bool {
             )
         }
         "menu_icon" => matches!(kind, "button" | "pointed_button"),
+        "button_style" => kind == "alert",
         "tab_position" => matches!(kind, "tabs" | "vertical_tabs"),
         "direction" => kind == "pointed_button",
         "label_position" => matches!(kind, "icon_label" | "circle_button"),
@@ -70,6 +72,7 @@ fn supported(kind: &str, key: &str) -> bool {
         "border" => matches!(
             kind,
             "menu_bar"
+                | "alert"
                 | "tree"
                 | "text_input"
                 | "list"
@@ -123,6 +126,8 @@ fn supported(kind: &str, key: &str) -> bool {
 fn choice_label(value: &str) -> &str {
     match value {
         "normal" => "Normal",
+        "divided" => "Divided",
+        "inline" => "Inline",
         "selected" => "Selected",
         "focused" => "Focused",
         "closed" => "Closed",
@@ -178,6 +183,7 @@ impl WireframeApp {
                 | "menu_bar"
                 | "tree"
                 | "accordion"
+                | "alert"
                 | "table"
                 | "list"
                 | "button_bar"
@@ -207,7 +213,7 @@ impl WireframeApp {
                 if let Err(error) = self.editor.auto_size_control(id) { self.error = Some(error); }
                 self.editor.commit();
             }
-            for key in ["image_border", "sketch_filter", "text", "tab_position", "direction", "label_position", "icon", "icon_size", "icon_rotation", "menu_icon", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+            for key in ["image_border", "sketch_filter", "text", "button_style", "tab_position", "direction", "label_position", "icon", "icon_size", "icon_rotation", "menu_icon", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
                 if matches!(key, "icon_size" | "icon_rotation") && !matches!(values.get("icon"),Some(Value::Icon(_))) {continue;}
                 if key == "value" && values.get("vertical_scrollbar") != Some(&Value::Bool(true)) { continue; }
                 let Some(field) = spec.property(key).filter(|f| f.visible && supported(spec.id, key)) else { continue; };
@@ -252,10 +258,10 @@ impl WireframeApp {
                         }
                         (PropertyType::Links, Value::Links(links)) => {
                             let source=match values.get("text") {Some(Value::Text(s))=>s.as_str(),_=>""};
-                            let labels:Vec<String>=if spec.id=="accordion" {wireframe::accordion::labels(source)} else if spec.id=="tree" {wireframe::tree::labels(source)} else if matches!(spec.id,"menu"|"menu_bar") {wireframe::menu::labels(source,spec.id=="menu_bar")} else if matches!(spec.id,"tabs"|"vertical_tabs") {wireframe::tabs::labels(source,spec.id=="vertical_tabs")} else if matches!(spec.id,"breadcrumbs"|"link_bar") {wireframe::navigation::labels(source,spec.id=="breadcrumbs")} else if spec.id=="button_bar" {wireframe::button_bar::labels(source).into_iter().map(str::to_owned).collect()} else {source.split('\n').map(str::to_owned).collect()};
+                            let labels:Vec<String>=if spec.id=="alert" {wireframe::alert::labels(source)} else if spec.id=="accordion" {wireframe::accordion::labels(source)} else if spec.id=="tree" {wireframe::tree::labels(source)} else if matches!(spec.id,"menu"|"menu_bar") {wireframe::menu::labels(source,spec.id=="menu_bar")} else if matches!(spec.id,"tabs"|"vertical_tabs") {wireframe::tabs::labels(source,spec.id=="vertical_tabs")} else if matches!(spec.id,"breadcrumbs"|"link_bar") {wireframe::navigation::labels(source,spec.id=="breadcrumbs")} else if spec.id=="button_bar" {wireframe::button_bar::labels(source).into_iter().map(str::to_owned).collect()} else {source.split('\n').map(str::to_owned).collect()};
                             links.resize(labels.len(),None);
                             // Keep partial URL input outside document history until Apply.
-                            egui::CollapsingHeader::new(if matches!(spec.id,"tabs"|"vertical_tabs") {"Edit tab links"} else if spec.id=="button_bar" {"Edit segment links"} else if matches!(spec.id,"breadcrumbs"|"link_bar"|"menu_bar") {"Edit item links"} else {"Edit row links"}).show(ui,|ui| {
+                            egui::CollapsingHeader::new(if spec.id=="alert" {"Edit button links"} else if matches!(spec.id,"tabs"|"vertical_tabs") {"Edit tab links"} else if spec.id=="button_bar" {"Edit segment links"} else if matches!(spec.id,"breadcrumbs"|"link_bar"|"menu_bar") {"Edit item links"} else {"Edit row links"}).show(ui,|ui| {
                                 egui::ScrollArea::vertical().max_height(280.).show(ui,|ui| {
                                     for (row,label) in labels.iter().enumerate() {
                                         ui.push_id(row,|ui| {

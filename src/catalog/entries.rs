@@ -34,7 +34,7 @@ pub(super) fn build() -> Vec<ControlSpec> {
     );
     add!(
         "alert",
-        "Alert box",
+        "Alert dialog",
         "Containers",
         Container,
         Both,
@@ -934,6 +934,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "menu_bar" => crate::menu::BAR,
         "tree" => crate::tree::DEFAULT,
         "accordion" => crate::accordion::DEFAULT,
+        "alert" => crate::alert::DEFAULT,
         "label" => "Some text",
         "heading" => "Title",
         "subtitle" => "Subtitle",
@@ -965,7 +966,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "align",
         "Alignment",
         &["left", "center", "right"],
-        if matches!(c.family, Family::Button) {
+        if matches!(c.family, Family::Button) || c.id == "alert" {
             "center"
         } else {
             "left"
@@ -1071,6 +1072,21 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             &["none", "solid", "dashed", "dotted"],
             "solid",
         ));
+    }
+    if c.id == "alert" {
+        c.properties.push(choice(
+            "button_style",
+            "Button style",
+            &["divided", "inline"],
+            "divided",
+        ));
+        if let Some(border) = c.properties.iter_mut().find(|p| p.key == "border") {
+            border.kind = PropertyType::Choice(&["none", "solid"]);
+        }
+        if let Some(ink) = c.properties.iter_mut().find(|p| p.key == "text_color") {
+            ink.default = DefaultValue::FormInk;
+            ink.label = "Button color";
+        }
     }
     if matches!(c.id, "image" | "icon") {
         let mut asset = prop("image", "Image", PropertyType::Asset, Value::Null);
@@ -1211,10 +1227,13 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             | "menu_bar"
             | "tree"
             | "accordion"
+            | "alert"
     ) {
         c.properties.push(prop(
             "row_links",
-            if c.id == "button_bar" {
+            if c.id == "alert" {
+                "Button links"
+            } else if c.id == "button_bar" {
                 "Segment links"
             } else if matches!(
                 c.id,

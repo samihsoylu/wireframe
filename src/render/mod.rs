@@ -19,6 +19,7 @@ pub mod mask;
 mod menu;
 mod multiline_button;
 mod navigation;
+mod phone;
 mod pointed_button;
 mod rasters;
 mod scrollbar;
@@ -321,6 +322,9 @@ impl Scene {
         }
         if matches!(c.kind, Kind::Menu | Kind::MenuBar) {
             return self.menu(layer, sketch, fonts, rasters);
+        }
+        if c.kind == Kind::Phone {
+            return self.phone(layer, sketch, fonts);
         }
         if c.kind == Kind::FieldSet {
             return self.field_set(layer, sketch, fonts);

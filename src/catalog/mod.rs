@@ -223,6 +223,12 @@ impl ControlSpec {
     }
     pub fn create(&self, id: u64, origin: Point) -> Node {
         let mut node = Node::control(id, self.id, origin, self.default_size);
+        if self.id == "phone" {
+            node.properties
+                .insert("device_model".into(), Value::Choice("notched".into()));
+            node.properties
+                .insert("device_resizing".into(), Value::Choice("stretch".into()));
+        }
         if self.id == "circle_button" {
             node.properties.insert(
                 "icon".into(),

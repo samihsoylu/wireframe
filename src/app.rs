@@ -1357,6 +1357,19 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     Stroke::new(1.5 * scale, Color32::from_rgb(44, 48, 55)),
                 ));
             }
+            Primitive::Mesh {
+                points,
+                indices,
+                fill,
+            } => {
+                let mut mesh = egui::Mesh::default();
+                let color = Color32::from_rgb(fill[0], fill[1], fill[2]);
+                for point in points {
+                    mesh.colored_vertex(screen(point), color);
+                }
+                mesh.indices = indices;
+                painter.add(egui::Shape::mesh(mesh));
+            }
             Primitive::Polygon { points, fill } => {
                 painter.add(egui::Shape::convex_polygon(
                     points.into_iter().map(screen).collect(),

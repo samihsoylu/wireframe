@@ -20,6 +20,12 @@ fn fraction_slider(ui: &mut egui::Ui, value: &mut f64) -> (egui::Response, bool)
 // catalog's full field inventory remains separate from completed rendering.
 fn supported(kind: &str, key: &str) -> bool {
     match key {
+        "device_model"
+        | "orientation"
+        | "device_resizing"
+        | "background_pattern"
+        | "transparent_background"
+        | "status_bar" => kind == "phone",
         "row_links" => matches!(
             kind,
             "list"
@@ -159,6 +165,19 @@ fn supported(kind: &str, key: &str) -> bool {
 }
 fn choice_label(value: &str) -> &str {
     match value {
+        "classic" => "Classic",
+        "tall" => "Tall",
+        "wide" => "Wide",
+        "notched" => "Notched",
+        "portrait" => "Portrait",
+        "landscape" => "Landscape",
+        "stretch" => "Stretch",
+        "fit" => "Maintain proportions",
+        "white" => "White",
+        "header" => "White with header",
+        "header_footer" => "White with header and footer",
+        "header_dark_footer" => "White with header and dark footer",
+        "dark" => "Dark",
         "normal" => "Normal",
         "divided" => "Divided",
         "inline" => "Inline",
@@ -221,6 +240,7 @@ impl WireframeApp {
                 | "alert"
                 | "app_bar"
                 | "field_set"
+                | "phone"
                 | "browser"
                 | "window"
                 | "table"
@@ -252,7 +272,7 @@ impl WireframeApp {
                 if let Err(error) = self.editor.auto_size_control(id) { self.error = Some(error); }
                 self.editor.commit();
             }
-            for key in ["image_border", "sketch_filter", "text", "header_height", "footer_height", "minimize", "maximize", "close", "resize_handle", "button_style", "tab_position", "direction", "label_position", "icon", "icon_size", "icon_rotation", "nav_icon", "filter_icon", "menu_icon", "icons", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+            for key in ["device_model", "orientation", "device_resizing", "background_pattern", "transparent_background", "status_bar", "image_border", "sketch_filter", "text", "header_height", "footer_height", "minimize", "maximize", "close", "resize_handle", "button_style", "tab_position", "direction", "label_position", "icon", "icon_size", "icon_rotation", "nav_icon", "filter_icon", "menu_icon", "icons", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
                 if matches!(key, "icon_size" | "icon_rotation") && !matches!(values.get("icon"),Some(Value::Icon(_))) {continue;}
                 if key == "value" && values.get("vertical_scrollbar") != Some(&Value::Bool(true)) { continue; }
                 let Some(field) = spec.property(key).filter(|f| f.visible && supported(spec.id, key)) else { continue; };

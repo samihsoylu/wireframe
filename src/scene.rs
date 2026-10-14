@@ -6,6 +6,12 @@ use crate::model::{Bounds, Control, Kind, Page};
 pub const INK: [u8; 3] = [44, 48, 55];
 #[derive(Clone, Debug)]
 pub enum Primitive {
+    /// One filled surface. Shared triangle edges must not be antialiased separately.
+    Mesh {
+        points: Vec<[f32; 2]>,
+        indices: Vec<u32>,
+        fill: [u8; 3],
+    },
     Polygon {
         points: Vec<[f32; 2]>,
         fill: [u8; 3],
@@ -698,6 +704,25 @@ pub fn primitive_svg(p: Primitive) -> String {
             color(fill),
             color(INK)
         ),
+        Primitive::Mesh {
+            points,
+            indices,
+            fill,
+        } => {
+            let mut path = String::new();
+            for t in indices.as_chunks::<3>().0 {
+                let [a, b, c] = [
+                    points[t[0] as usize],
+                    points[t[1] as usize],
+                    points[t[2] as usize],
+                ];
+                path.push_str(&format!(
+                    "M{},{}L{},{}L{},{}Z",
+                    a[0], a[1], b[0], b[1], c[0], c[1]
+                ));
+            }
+            format!("<path d=\"{path}\" fill=\"{}\"/>", color(fill))
+        }
         Primitive::Polygon { points, fill } => format!(
             "<polygon points=\"{}\" fill=\"{}\"/>",
             points

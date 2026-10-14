@@ -49,6 +49,25 @@ impl Editor {
                         continue;
                     }
                     match c.kind {
+                        Kind::Phone => {
+                            let layout = crate::phone::Options::from_properties(p).layout(
+                                b.w,
+                                b.h,
+                                sketch,
+                                |size| {
+                                    let style = crate::app_bar::text_style(size);
+                                    (
+                                        fonts.measure("ABC", style, None),
+                                        fonts.measure("09:52 AM", style, None),
+                                    )
+                                },
+                            );
+                            targets.edges(b);
+                            targets.add(Axis::X, GuideKind::Spacing, b.x + layout.guides[0]);
+                            targets.add(Axis::X, GuideKind::Spacing, b.x + layout.guides[2]);
+                            targets.add(Axis::Y, GuideKind::Spacing, b.y + layout.guides[1]);
+                            targets.add(Axis::Y, GuideKind::Spacing, b.y + layout.guides[3]);
+                        }
                         Kind::FieldSet => {
                             let title = crate::field_set::parse(&c.text)?;
                             let metrics = fonts.measure_rich(&title, style, None, true);

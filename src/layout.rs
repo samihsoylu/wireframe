@@ -345,6 +345,19 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(w, h)?;
             return Ok((w, h));
         }
+        if kind == "phone" {
+            let (w, h) = crate::phone::Options::from_properties(props).native();
+            let w = match width {
+                Dimension::Auto => w,
+                Dimension::Fixed(v) => v,
+            };
+            let h = match height {
+                Dimension::Auto => h,
+                Dimension::Fixed(v) => v,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         if kind == "field_set" {
             let label = crate::field_set::parse(text)?;
             let (w, h) =

@@ -1101,6 +1101,37 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             "solid",
         );
     }
+    if c.id == "phone" {
+        c.properties.extend([
+            choice(
+                "device_model",
+                "Model",
+                &["classic", "tall", "wide", "notched"],
+                "classic",
+            ),
+            choice(
+                "orientation",
+                "Orientation",
+                &["portrait", "landscape"],
+                "portrait",
+            ),
+            choice("device_resizing", "Resizing", &["stretch", "fit"], "fit"),
+            choice(
+                "background_pattern",
+                "Background",
+                &[
+                    "white",
+                    "header",
+                    "header_footer",
+                    "header_dark_footer",
+                    "dark",
+                ],
+                "white",
+            ),
+            boolean("transparent_background", "Transparent screen", false),
+            boolean("status_bar", "Show status bar", true),
+        ]);
+    }
     if c.id == "field_set" {
         c.properties.push(number(
             "background_opacity",

@@ -24,3 +24,4 @@ pub mod fonts;
 pub mod render;
 
 pub mod text_engine;
+pub mod text_entry;

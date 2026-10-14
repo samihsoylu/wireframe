@@ -437,8 +437,19 @@ impl Editor {
         {
             let node = &mut edited;
             if !node.locked {
-                if old.bounds != c.bounds {
-                    transform(node, geometry, parent, parent, old.bounds, requested);
+                if old.bounds != c.bounds
+                    && let Err(error) = transform(
+                        &self.document,
+                        node,
+                        geometry,
+                        parent,
+                        parent,
+                        old.bounds,
+                        requested,
+                    )
+                {
+                    self.error = Some(error);
+                    return;
                 }
                 if matches!(node.content, NodeContent::Control { .. }) {
                     if c.text != old.text {
@@ -803,20 +814,50 @@ fn clear_links(nodes: &mut [Node], page: Id) {
     }
 }
 fn transform(
+    project: &Project,
     node: &mut Node,
     layout: &crate::layout::LayoutNode,
     parent: Point,
     new_parent: Point,
     from: Bounds,
     to: Bounds,
-) {
+) -> Result<(), String> {
+    if matches!(node.content, NodeContent::Instance { .. }) {
+        return overrides::transform_instance(project, node, layout, parent, new_parent, from, to);
+    }
     let sx = if from.w > 0. { to.w / from.w } else { 1. };
     let sy = if from.h > 0. { to.h / from.h } else { 1. };
     let world = node.origin.translated(parent);
-    let next = Point::new(
+    let mut next = Point::new(
         to.x + (world.x - from.x) * sx,
         to.y + (world.y - from.y) * sy,
     );
+    if let NodeContent::Control { kind, .. } = &node.content
+        && let Some(spec) = catalog::get(kind)
+    {
+        let same = |a: f32, b: f32| (a - b).abs() < 0.001;
+        match spec.resize {
+            catalog::ResizeAxes::Horizontal => {
+                let height = layout.uncropped.height;
+                if same(world.y, from.y) {
+                    next.y = to.y;
+                } else if same(world.y + height, from.y + from.h)
+                    || (same(from.y + from.h, to.y + to.h) && next.y + height > to.y + to.h)
+                {
+                    next.y = to.y + to.h - height;
+                }
+            }
+            catalog::ResizeAxes::Vertical => {
+                let width = layout.uncropped.width;
+                if same(world.x, from.x) {
+                    next.x = to.x;
+                } else if same(world.x + width, from.x + from.w) {
+                    next.x = to.x + to.w - width;
+                }
+            }
+            _ => {}
+        }
+    }
     node.origin = Point::new(next.x - new_parent.x, next.y - new_parent.y);
     match &mut node.content {
         NodeContent::Control { kind, size } => {
@@ -825,10 +866,19 @@ fn transform(
                 let h = layout.uncropped.height;
                 let (nw, nh) = catalog::get(kind)
                     .map_or((w * sx, h * sy), |s| s.resized((w, h), (w * sx, h * sy)));
-                if nw != w {
+                let axes = catalog::get(kind)
+                    .map(|s| s.resize)
+                    .unwrap_or(catalog::ResizeAxes::Both);
+                if matches!(
+                    axes,
+                    catalog::ResizeAxes::Both | catalog::ResizeAxes::Horizontal
+                ) {
                     size.width = Dimension::Fixed(nw);
                 }
-                if nh != h {
+                if matches!(
+                    axes,
+                    catalog::ResizeAxes::Both | catalog::ResizeAxes::Vertical
+                ) {
                     size.height = Dimension::Fixed(nh);
                 }
             }
@@ -840,10 +890,23 @@ fn transform(
                     .iter()
                     .find(|l| l.path.last() == Some(&child.id))
                 {
-                    transform(child, l, world, next, from, to);
+                    let group_from = Bounds::new(
+                        layout.uncropped.x,
+                        layout.uncropped.y,
+                        layout.uncropped.width,
+                        layout.uncropped.height,
+                    );
+                    let group_to = Bounds::new(
+                        to.x + (group_from.x - from.x) * sx,
+                        to.y + (group_from.y - from.y) * sy,
+                        group_from.w * sx,
+                        group_from.h * sy,
+                    );
+                    transform(project, child, l, world, next, group_from, group_to)?;
                 }
             }
         }
-        NodeContent::Instance { .. } => {}
+        NodeContent::Instance { .. } => unreachable!(),
     }
+    Ok(())
 }

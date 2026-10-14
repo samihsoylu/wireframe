@@ -303,3 +303,87 @@ fn collect_changes(
         }
     }
 }
+
+/// Materialization is temporary: only relative descendant deltas are stored back.
+pub(super) fn transform_instance(
+    project: &Project,
+    node: &mut Node,
+    layout: &crate::layout::LayoutNode,
+    parent: Point,
+    new_parent: Point,
+    from: Bounds,
+    to: Bounds,
+) -> Result<(), String> {
+    let before = project.resolve(node)?.root;
+    let mut after = before.clone();
+    super::transform(project, &mut after, layout, parent, new_parent, from, to)?;
+    let mut source = node.clone();
+    if let NodeContent::Instance { overrides, .. } = &mut source.content {
+        overrides.clear();
+    }
+    let inherited = project.resolve(&source)?.root;
+    let mut changes = vec![];
+    collect_changes(&before, &after, &inherited, vec![], &mut changes);
+    if from.w != to.w || from.h != to.h {
+        freeze_resized_geometry(&after, &mut vec![], &mut changes);
+    }
+    let NodeContent::Instance { overrides, .. } = &mut node.content else {
+        unreachable!()
+    };
+    for (path, delta) in changes.into_iter().filter(|(p, _)| !p.is_empty()) {
+        if delta.origin.is_none() && delta.size.is_none() && delta.properties.is_empty() {
+            continue;
+        }
+        let index = overrides
+            .iter()
+            .position(|o| o.path == path)
+            .unwrap_or_else(|| {
+                overrides.push(Override {
+                    path,
+                    patch: Patch::default(),
+                });
+                overrides.len() - 1
+            });
+        let patch = &mut overrides[index].patch;
+        if let Some(origin) = delta.origin {
+            patch.origin = origin;
+        }
+        if let Some(size) = delta.size {
+            patch.size = size;
+        }
+        for (key, value) in delta.properties {
+            if let Some(value) = value {
+                patch.properties.insert(key, value);
+            } else {
+                patch.properties.remove(&key);
+            }
+        }
+    }
+    overrides.retain(|o| o.patch != Patch::default());
+    node.origin = after.origin;
+    Ok(())
+}
+
+fn freeze_resized_geometry(node: &Node, path: &mut NodePath, changes: &mut Vec<(NodePath, Delta)>) {
+    if !path.is_empty() {
+        let index = changes
+            .iter()
+            .position(|(p, _)| p == path)
+            .unwrap_or_else(|| {
+                changes.push((path.clone(), Delta::default()));
+                changes.len() - 1
+            });
+        let delta = &mut changes[index].1;
+        delta.origin = Some(Some(node.origin));
+        if let NodeContent::Control { size, .. } = &node.content {
+            delta.size = Some(Some(*size));
+        }
+    }
+    if let NodeContent::Group { children } = &node.content {
+        for child in children {
+            path.push(child.id);
+            freeze_resized_geometry(child, path, changes);
+            path.pop();
+        }
+    }
+}

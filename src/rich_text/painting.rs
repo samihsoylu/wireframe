@@ -279,7 +279,7 @@ impl EguiMeasurer<'_> {
         }
     }
 }
-fn parse_color(value: &str) -> Option<Color32> {
+pub(crate) fn parse_color(value: &str) -> Option<Color32> {
     let value = value.trim().to_ascii_lowercase();
     let hex = value.trim_start_matches('#');
     if hex.len() == 6 && hex.bytes().all(|c| c.is_ascii_hexdigit()) {

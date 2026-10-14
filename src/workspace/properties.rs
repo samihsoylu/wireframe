@@ -28,7 +28,14 @@ impl Editor {
         let kind = self.control_properties(id)?.0.id;
         if !matches!(
             kind,
-            "list" | "button_bar" | "breadcrumbs" | "link_bar" | "tabs" | "vertical_tabs"
+            "list"
+                | "button_bar"
+                | "breadcrumbs"
+                | "link_bar"
+                | "tabs"
+                | "vertical_tabs"
+                | "checkbox_group"
+                | "radio_group"
         ) {
             return None;
         }
@@ -57,7 +64,7 @@ impl Editor {
             .collect::<Vec<_>>();
         let nodes = children(&resolved, &self.context)?;
         let node = nodes.iter().find(|n| n.id == id)?;
-        if !matches!(&node.content,NodeContent::Control{kind,..} if matches!(kind.as_str(), "list" | "button_bar" | "breadcrumbs" | "link_bar" | "tabs" | "vertical_tabs"))
+        if !matches!(&node.content,NodeContent::Control{kind,..} if matches!(kind.as_str(), "list" | "button_bar" | "breadcrumbs" | "link_bar" | "tabs" | "vertical_tabs" | "checkbox_group" | "radio_group"))
         {
             return None;
         }
@@ -92,6 +99,9 @@ impl Editor {
             } else if matches!(&edited.content,NodeContent::Control {kind,..} if kind=="button_bar")
             {
                 crate::button_bar::apply_text(&mut edited, &text, &baseline)?;
+            } else if matches!(&edited.content,NodeContent::Control {kind,..} if matches!(kind.as_str(),"checkbox_group"|"radio_group"))
+            {
+                crate::choice_group::apply_text(&mut edited, &text, &baseline)?;
             } else {
                 crate::list::apply_text(&mut edited, &text, &baseline)?;
             }

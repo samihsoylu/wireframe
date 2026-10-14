@@ -97,6 +97,8 @@ pub enum Kind {
     TextArea,
     Checkbox,
     Radio,
+    CheckboxGroup,
+    RadioGroup,
     Dropdown,
     Search,
     Rectangle,
@@ -124,7 +126,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 33] = [
+    pub const ALL: [Kind; 35] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -133,6 +135,8 @@ impl Kind {
         Self::TextArea,
         Self::Checkbox,
         Self::Radio,
+        Self::CheckboxGroup,
+        Self::RadioGroup,
         Self::Dropdown,
         Self::Search,
         Self::Rectangle,
@@ -169,6 +173,8 @@ impl Kind {
             Self::TextArea => "Text area",
             Self::Checkbox => "Checkbox",
             Self::Radio => "Radio button",
+            Self::CheckboxGroup => "Checkbox group",
+            Self::RadioGroup => "Radio group",
             Self::Dropdown => "Dropdown",
             Self::Search => "Search box",
             Self::Rectangle => "Rectangle",
@@ -214,6 +220,8 @@ impl Kind {
             | Self::TextArea
             | Self::Checkbox
             | Self::Radio
+            | Self::CheckboxGroup
+            | Self::RadioGroup
             | Self::Dropdown
             | Self::Search
             | Self::Toggle => "Forms",
@@ -238,6 +246,8 @@ impl Kind {
             Self::TextInput | Self::Dropdown | Self::Search => (220., 38.),
             Self::TextArea => (260., 120.),
             Self::Checkbox | Self::Radio => (180., 28.),
+            Self::CheckboxGroup => (155., 149.),
+            Self::RadioGroup => (165., 181.),
             Self::Line | Self::Arrow => (180., 20.),
             Self::Browser => (600., 420.),
             Self::Phone => (240., 440.),
@@ -264,6 +274,8 @@ impl Kind {
             Self::TextInput => "Enter text…",
             Self::TextArea => "Write something…",
             Self::Checkbox | Self::Radio => "Option",
+            Self::CheckboxGroup => crate::choice_group::CHECKBOX,
+            Self::RadioGroup => crate::choice_group::RADIO,
             Self::Dropdown => "Choose an option",
             Self::Search => "Search…",
             Self::Browser => "https://example.com",

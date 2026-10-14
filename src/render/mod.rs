@@ -3,6 +3,7 @@
 //! Shared positioned drawing data for the canvas and vector/raster exports.
 mod button_bar;
 mod choice;
+mod choice_group;
 mod circle_button;
 mod control_icons;
 mod dropdown;
@@ -318,6 +319,9 @@ impl Scene {
         }
         if c.kind == Kind::Button {
             return self.button_control(layer, sketch, fonts, rasters);
+        }
+        if matches!(c.kind, Kind::CheckboxGroup | Kind::RadioGroup) {
+            return self.choice_group(layer, fonts);
         }
         if c.kind == Kind::List {
             return self.list_control(layer, sketch, fonts, rasters);

@@ -865,6 +865,8 @@ impl WireframeApp {
                                             | Kind::ButtonBar
                                             | Kind::Checkbox
                                             | Kind::Radio
+                                            | Kind::CheckboxGroup
+                                            | Kind::RadioGroup
                                             | Kind::Toggle
                                     ),
                                     "Common" => matches!(
@@ -1120,7 +1122,7 @@ if c.kind==Kind::Tabs {ui.small("Separate tabs with commas.");}
                     ui.horizontal(|ui|{ui.label("Fill");ui.color_edit_button_srgb(&mut c.fill);});if matches!(c.kind,Kind::Checkbox|Kind::Radio|Kind::Toggle){ui.checkbox(&mut c.checked,"Selected state");}
                     }
                     if !self.editor.editing_instance() {ui.checkbox(&mut c.locked,"Lock position and content");}
-                    if c.group.is_none() && !matches!(c.kind, Kind::ButtonBar | Kind::Breadcrumbs | Kind::LinkBar | Kind::Tabs | Kind::VerticalTabs) {
+                    if c.group.is_none() && !matches!(c.kind, Kind::ButtonBar | Kind::Breadcrumbs | Kind::LinkBar | Kind::Tabs | Kind::VerticalTabs | Kind::CheckboxGroup | Kind::RadioGroup) {
                     let link_caption=c.link.and_then(|id|self.editor.document.pages.iter().find(|p|p.id==id).map(|p|p.name.clone())).unwrap_or("No page link".into());
                     ui_text::combo_box(ui,"page-link",&link_caption,|ui|{if ui_text::selectable_value(ui,&mut c.link,None,"No page link").clicked(){ui.close();}for p in &self.editor.document.pages {if ui_text::selectable_value(ui,&mut c.link,Some(p.id),&p.name).clicked(){ui.close();}}});
                     } else if self.editor.is_group(c.id) && ui.button("Edit group contents").clicked(){self.editor.enter(c.id);}

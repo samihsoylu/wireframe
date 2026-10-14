@@ -919,6 +919,8 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "dropdown" => "Dropdown",
         "checkbox" => "Checkbox",
         "radio" => "Radio button",
+        "checkbox_group" => crate::choice_group::CHECKBOX,
+        "radio_group" => crate::choice_group::RADIO,
         "label" => "Some text",
         "heading" => "Title",
         "subtitle" => "Subtitle",
@@ -1175,12 +1177,20 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     }
     if matches!(
         c.id,
-        "button_bar" | "breadcrumbs" | "link_bar" | "tabs" | "vertical_tabs"
+        "button_bar"
+            | "breadcrumbs"
+            | "link_bar"
+            | "tabs"
+            | "vertical_tabs"
+            | "checkbox_group"
+            | "radio_group"
     ) {
         c.properties.push(prop(
             "row_links",
             if c.id == "button_bar" {
                 "Segment links"
+            } else if matches!(c.id, "checkbox_group" | "radio_group") {
+                "Row links"
             } else {
                 "Item links"
             },

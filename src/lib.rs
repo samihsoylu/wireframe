@@ -3,6 +3,7 @@
 
 pub mod button_bar;
 pub mod catalog;
+pub mod choice_group;
 pub mod document;
 pub mod dropdown;
 pub mod editor;

@@ -301,6 +301,20 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(w, h)?;
             return Ok((w, h));
         }
+        if matches!(kind, "checkbox_group" | "radio_group") {
+            let group = crate::choice_group::ChoiceGroup::parse(text, kind == "radio_group")?;
+            let m = group.measure(self.measurer, style);
+            let w = match width {
+                Dimension::Auto => m.width.max(1.),
+                Dimension::Fixed(w) => w,
+            };
+            let h = match height {
+                Dimension::Auto => m.height.max(1.),
+                Dimension::Fixed(h) => h,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         if kind == "button_bar" {
             let bar = crate::button_bar::ButtonBar::parse(text)?;
             let metrics = bar.measure(self.measurer, style, self.project.settings.sketch);

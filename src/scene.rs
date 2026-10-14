@@ -116,6 +116,8 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
         | Kind::PointedButton
         | Kind::MultilineButton
         | Kind::ButtonBar
+        | Kind::CheckboxGroup
+        | Kind::RadioGroup
         | Kind::Breadcrumbs
         | Kind::LinkBar => {
             // Legacy scene fallback; the live editor uses the shared icon renderer.

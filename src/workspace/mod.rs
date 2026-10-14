@@ -267,6 +267,8 @@ impl Editor {
                 kind,
                 Kind::Checkbox
                     | Kind::Radio
+                    | Kind::CheckboxGroup
+                    | Kind::RadioGroup
                     | Kind::Button
                     | Kind::TextInput
                     | Kind::TextArea
@@ -288,6 +290,8 @@ impl Editor {
                 let kind_id = match kind {
                     Kind::Checkbox => "checkbox",
                     Kind::Radio => "radio",
+                    Kind::CheckboxGroup => "checkbox_group",
+                    Kind::RadioGroup => "radio_group",
                     Kind::Button => "button",
                     Kind::TextInput => "text_input",
                     Kind::TextArea => "text_area",
@@ -485,6 +489,8 @@ impl Editor {
                         if matches!(
                             c.kind,
                             Kind::List
+                                | Kind::CheckboxGroup
+                                | Kind::RadioGroup
                                 | Kind::ButtonBar
                                 | Kind::Breadcrumbs
                                 | Kind::LinkBar
@@ -496,6 +502,8 @@ impl Editor {
                                 crate::tabs::apply_text
                             } else if matches!(c.kind, Kind::Breadcrumbs | Kind::LinkBar) {
                                 crate::navigation::apply_text
+                            } else if matches!(c.kind, Kind::CheckboxGroup | Kind::RadioGroup) {
+                                crate::choice_group::apply_text
                             } else if c.kind == Kind::ButtonBar {
                                 crate::button_bar::apply_text
                             } else {

@@ -128,6 +128,7 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "underline",
         ],
         "radio_group" => &[
+            "row_links",
             "bold",
             "font_size",
             "italic",
@@ -136,6 +137,7 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "underline",
         ],
         "checkbox_group" => &[
+            "row_links",
             "bold",
             "font_size",
             "italic",

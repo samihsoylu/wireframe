@@ -12,7 +12,14 @@ fn supported(kind: &str, key: &str) -> bool {
     match key {
         "row_links" => matches!(
             kind,
-            "list" | "button_bar" | "breadcrumbs" | "link_bar" | "tabs" | "vertical_tabs"
+            "list"
+                | "button_bar"
+                | "breadcrumbs"
+                | "link_bar"
+                | "tabs"
+                | "vertical_tabs"
+                | "checkbox_group"
+                | "radio_group"
         ),
         "row_icons" => kind == "list",
         "icon" | "icon_size" | "icon_rotation" => {
@@ -146,6 +153,8 @@ impl WireframeApp {
                 | "search"
                 | "checkbox"
                 | "radio"
+                | "checkbox_group"
+                | "radio_group"
                 | "table"
                 | "list"
                 | "button_bar"

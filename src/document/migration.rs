@@ -115,6 +115,8 @@ fn migrate_control(c: legacy::Control) -> Node {
         legacy::Kind::TextArea => "text_area",
         legacy::Kind::Checkbox => "checkbox",
         legacy::Kind::Radio => "radio",
+        legacy::Kind::CheckboxGroup => "checkbox_group",
+        legacy::Kind::RadioGroup => "radio_group",
         legacy::Kind::Dropdown => "dropdown",
         legacy::Kind::Search => "search",
         legacy::Kind::Rectangle => "rectangle",

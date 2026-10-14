@@ -912,6 +912,8 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "button_bar" => "One, Two, Three",
         "breadcrumbs" => crate::navigation::BREADCRUMBS,
         "link_bar" => crate::navigation::LINK_BAR,
+        "tabs" => crate::tabs::HORIZONTAL,
+        "vertical_tabs" => crate::tabs::VERTICAL,
         "icon_label" => "Icon Name",
         "multiline_button" => "Multiline Button\nSecond line of text",
         "dropdown" => "Dropdown",
@@ -983,7 +985,10 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     if let Some(first) = states.first() {
         c.properties.push(choice("state", "State", states, first));
     }
-    if matches!(c.id, "dropdown" | "text_area" | "list") {
+    if matches!(
+        c.id,
+        "dropdown" | "text_area" | "list" | "tabs" | "vertical_tabs"
+    ) {
         c.properties.extend([
             boolean("vertical_scrollbar", "Scrollbar", false),
             number("value", "Scroll position", 0., 0., 1., false),
@@ -1168,7 +1173,10 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             ));
         }
     }
-    if matches!(c.id, "button_bar" | "breadcrumbs" | "link_bar") {
+    if matches!(
+        c.id,
+        "button_bar" | "breadcrumbs" | "link_bar" | "tabs" | "vertical_tabs"
+    ) {
         c.properties.push(prop(
             "row_links",
             if c.id == "button_bar" {
@@ -1179,6 +1187,31 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             PropertyType::Links,
             Value::Links(vec![]),
         ));
+    }
+    if matches!(c.id, "tabs" | "vertical_tabs") {
+        c.properties.push(choice(
+            "tab_position",
+            "Tabs position",
+            if c.id == "tabs" {
+                &["top", "bottom"]
+            } else {
+                &["left", "right"]
+            },
+            if c.id == "tabs" { "top" } else { "left" },
+        ));
+        c.properties
+            .push(choice("border", "Border", &["solid", "none"], "solid"));
+        c.properties.push(number(
+            "background_opacity",
+            "Fill opacity",
+            1.,
+            0.,
+            1.,
+            false,
+        ));
+        if let Some(p) = c.properties.iter_mut().find(|p| p.key == "text_color") {
+            p.default = DefaultValue::FormInk;
+        }
     }
     if c.id == "link_bar" {
         c.properties.push(prop(

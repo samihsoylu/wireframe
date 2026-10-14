@@ -118,12 +118,13 @@ pub enum Kind {
     List,
     Table,
     Tabs,
+    VerticalTabs,
     Progress,
     Toggle,
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 32] = [
+    pub const ALL: [Kind; 33] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -153,6 +154,7 @@ impl Kind {
         Self::List,
         Self::Table,
         Self::Tabs,
+        Self::VerticalTabs,
         Self::Progress,
         Self::Toggle,
         Self::Link,
@@ -188,6 +190,7 @@ impl Kind {
             Self::List => "List",
             Self::Table => "Table",
             Self::Tabs => "Tabs",
+            Self::VerticalTabs => "Vertical tabs",
             Self::Progress => "Progress bar",
             Self::Toggle => "Toggle",
             Self::Link => "Link",
@@ -240,7 +243,8 @@ impl Kind {
             Self::Phone => (240., 440.),
             Self::Panel => (300., 220.),
             Self::List | Self::Table => (300., 180.),
-            Self::Tabs => (300., 40.),
+            Self::Tabs => (199., 100.),
+            Self::VerticalTabs => (200., 178.),
             Self::Progress => (240., 24.),
             Self::Toggle => (54., 28.),
             _ => (180., 120.),
@@ -268,7 +272,8 @@ impl Kind {
             Self::Table => {
                 "Name,Status,Owner\nHomepage,Draft,Alex\nSettings,Ready,Sam\nProfile,Draft,Jo"
             }
-            Self::Tabs => "Overview,Details,Activity",
+            Self::Tabs => crate::tabs::HORIZONTAL,
+            Self::VerticalTabs => crate::tabs::VERTICAL,
             Self::Link => "Learn more",
             _ => "",
         }

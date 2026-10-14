@@ -397,6 +397,11 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
         "map" => &[],
         "toggle" => &["fill", "link", "state"],
         "tabs" => &[
+            "background_opacity",
+            "tab_position",
+            "row_links",
+            "vertical_scrollbar",
+            "align",
             "bold",
             "border",
             "fill",
@@ -408,6 +413,10 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "value",
         ],
         "vertical_tabs" => &[
+            "background_opacity",
+            "tab_position",
+            "row_links",
+            "vertical_scrollbar",
             "bold",
             "border",
             "fill",

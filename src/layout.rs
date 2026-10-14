@@ -286,6 +286,20 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(m.width, m.height)?;
             return Ok((m.width, m.height));
         }
+        if matches!(kind, "tabs" | "vertical_tabs") {
+            let tabs = crate::tabs::Tabs::parse(text, kind == "vertical_tabs")?;
+            let m = tabs.measure(self.measurer, style, self.project.settings.sketch);
+            let w = match width {
+                Dimension::Auto => m.width,
+                Dimension::Fixed(w) => w,
+            };
+            let h = match height {
+                Dimension::Auto => m.height,
+                Dimension::Fixed(h) => h,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         if kind == "button_bar" {
             let bar = crate::button_bar::ButtonBar::parse(text)?;
             let metrics = bar.measure(self.measurer, style, self.project.settings.sketch);

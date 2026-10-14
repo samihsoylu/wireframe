@@ -442,7 +442,7 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
                 );
             }
         }
-        Kind::Tabs => {
+        Kind::Tabs | Kind::VerticalTabs => {
             let values: Vec<_> = c.text.split(',').collect();
             let n = values.len().max(1);
             for (i, t) in values.iter().enumerate() {

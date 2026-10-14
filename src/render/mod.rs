@@ -18,6 +18,7 @@ mod search;
 mod standalone_icons;
 mod svg;
 mod table;
+mod tabs;
 use crate::{
     document::{Properties, Value},
     layout::{EguiMeasurer, TextStyle},
@@ -296,6 +297,9 @@ impl Scene {
         }
         if matches!(c.kind, Kind::Breadcrumbs | Kind::LinkBar) {
             return self.navigation(layer, sketch, fonts);
+        }
+        if matches!(c.kind, Kind::Tabs | Kind::VerticalTabs) {
+            return self.tabs(layer, sketch, fonts);
         }
         if c.kind == Kind::ButtonBar {
             return self.button_bar(layer, sketch, fonts);

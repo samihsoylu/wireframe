@@ -229,6 +229,7 @@ fn control(node: &LayoutNode) -> Control {
         "list" => Kind::List,
         "table" => Kind::Table,
         "tabs" => Kind::Tabs,
+        "vertical_tabs" => Kind::VerticalTabs,
         "progress" => Kind::Progress,
         "toggle" => Kind::Toggle,
         "link" => Kind::Link,

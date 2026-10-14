@@ -10,7 +10,10 @@ use wireframe::{
 // catalog's full field inventory remains separate from completed rendering.
 fn supported(kind: &str, key: &str) -> bool {
     match key {
-        "row_links" => matches!(kind, "list" | "button_bar" | "breadcrumbs" | "link_bar"),
+        "row_links" => matches!(
+            kind,
+            "list" | "button_bar" | "breadcrumbs" | "link_bar" | "tabs" | "vertical_tabs"
+        ),
         "row_icons" => kind == "list",
         "icon" | "icon_size" | "icon_rotation" => {
             matches!(
@@ -25,6 +28,7 @@ fn supported(kind: &str, key: &str) -> bool {
             )
         }
         "menu_icon" => matches!(kind, "button" | "pointed_button"),
+        "tab_position" => matches!(kind, "tabs" | "vertical_tabs"),
         "direction" => kind == "pointed_button",
         "label_position" => matches!(kind, "icon_label" | "circle_button"),
         "text" | "font_size" | "bold" | "italic" | "underline" | "text_color" | "align" => true,
@@ -45,16 +49,29 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "circle_button"
                 | "pointed_button"
         ),
-        "vertical_scrollbar" | "value" => matches!(kind, "dropdown" | "text_area" | "list"),
+        "vertical_scrollbar" | "value" => matches!(
+            kind,
+            "dropdown" | "text_area" | "list" | "tabs" | "vertical_tabs"
+        ),
         "border_color" => matches!(kind, "dropdown" | "text_input" | "text_area" | "link_bar"),
         "border" => matches!(
             kind,
-            "text_input" | "list" | "icon" | "icon_label" | "circle_button" | "pointed_button"
+            "text_input"
+                | "list"
+                | "icon"
+                | "icon_label"
+                | "circle_button"
+                | "pointed_button"
+                | "tabs"
+                | "vertical_tabs"
         ),
-        "background_opacity" => matches!(kind, "text_input" | "text_area" | "multiline_button"),
+        "background_opacity" => matches!(
+            kind,
+            "text_input" | "text_area" | "multiline_button" | "tabs" | "vertical_tabs"
+        ),
         "selected_index" => matches!(
             kind,
-            "table" | "dropdown" | "list" | "button_bar" | "link_bar"
+            "table" | "dropdown" | "list" | "button_bar" | "link_bar" | "tabs" | "vertical_tabs"
         ),
         "shape" | "search_icon" | "microphone_icon" => kind == "search",
         "fill" => matches!(
@@ -69,6 +86,8 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "circle_button"
                 | "pointed_button"
                 | "multiline_button"
+                | "tabs"
+                | "vertical_tabs"
         ),
         "alternate_fill" | "header" | "row_height" => matches!(kind, "table" | "list"),
         "horizontal_lines" | "vertical_lines" => kind == "table",
@@ -87,6 +106,7 @@ fn choice_label(value: &str) -> &str {
         "disabled_selected" => "Selected and disabled",
         "indeterminate" => "Indeterminate",
         "disabled_indeterminate" => "Indeterminate and disabled",
+        "top" => "Top",
         "bottom" => "Bottom",
         "left" => "Left",
         "center" => "Center",
@@ -131,6 +151,8 @@ impl WireframeApp {
                 | "button_bar"
                 | "breadcrumbs"
                 | "link_bar"
+                | "tabs"
+                | "vertical_tabs"
         ) {
             return false;
         }
@@ -153,7 +175,7 @@ impl WireframeApp {
                 if let Err(error) = self.editor.auto_size_control(id) { self.error = Some(error); }
                 self.editor.commit();
             }
-            for key in ["image_border", "sketch_filter", "text", "direction", "label_position", "icon", "icon_size", "icon_rotation", "menu_icon", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+            for key in ["image_border", "sketch_filter", "text", "tab_position", "direction", "label_position", "icon", "icon_size", "icon_rotation", "menu_icon", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
                 if matches!(key, "icon_size" | "icon_rotation") && !matches!(values.get("icon"),Some(Value::Icon(_))) {continue;}
                 if key == "value" && values.get("vertical_scrollbar") != Some(&Value::Bool(true)) { continue; }
                 let Some(field) = spec.property(key).filter(|f| f.visible && supported(spec.id, key)) else { continue; };
@@ -198,15 +220,15 @@ impl WireframeApp {
                         }
                         (PropertyType::Links, Value::Links(links)) => {
                             let source=match values.get("text") {Some(Value::Text(s))=>s.as_str(),_=>""};
-                            let labels:Vec<String>=if matches!(spec.id,"breadcrumbs"|"link_bar") {wireframe::navigation::labels(source,spec.id=="breadcrumbs")} else if spec.id=="button_bar" {wireframe::button_bar::labels(source).into_iter().map(str::to_owned).collect()} else {source.split('\n').map(str::to_owned).collect()};
+                            let labels:Vec<String>=if matches!(spec.id,"tabs"|"vertical_tabs") {wireframe::tabs::labels(source,spec.id=="vertical_tabs")} else if matches!(spec.id,"breadcrumbs"|"link_bar") {wireframe::navigation::labels(source,spec.id=="breadcrumbs")} else if spec.id=="button_bar" {wireframe::button_bar::labels(source).into_iter().map(str::to_owned).collect()} else {source.split('\n').map(str::to_owned).collect()};
                             links.resize(labels.len(),None);
                             // Keep partial URL input outside document history until Apply.
-                            egui::CollapsingHeader::new(if spec.id=="button_bar" {"Edit segment links"} else if matches!(spec.id,"breadcrumbs"|"link_bar") {"Edit item links"} else {"Edit row links"}).show(ui,|ui| {
+                            egui::CollapsingHeader::new(if matches!(spec.id,"tabs"|"vertical_tabs") {"Edit tab links"} else if spec.id=="button_bar" {"Edit segment links"} else if matches!(spec.id,"breadcrumbs"|"link_bar") {"Edit item links"} else {"Edit row links"}).show(ui,|ui| {
                                 egui::ScrollArea::vertical().max_height(280.).show(ui,|ui| {
                                     for (row,label) in labels.iter().enumerate() {
                                         ui.push_id(row,|ui| {
                                             let label=wireframe::rich_text::RichText::parse(label,false).display_text(false);
-                                            ui.label(if label.is_empty(){format!("{} {} (empty)",if spec.id=="button_bar" {"Segment"} else if matches!(spec.id,"breadcrumbs"|"link_bar") {"Item"} else {"Row"},row+1)}else{label});
+                                            ui.label(if label.is_empty(){format!("{} {} (empty)",if matches!(spec.id,"tabs"|"vertical_tabs") {"Tab"} else if spec.id=="button_bar" {"Segment"} else if matches!(spec.id,"breadcrumbs"|"link_bar") {"Item"} else {"Row"},row+1)}else{label});
                                             let key=ui.make_persistent_id(("link-draft",id,self.editor.surface_id(),&self.editor.context));
                                             let saved=links[row].clone();
                                             let cached=ui.ctx().data_mut(|d|d.get_temp::<(Option<Link>,Option<Link>)>(key));
@@ -237,9 +259,9 @@ impl WireframeApp {
                             let r = ui.add(egui::TextEdit::multiline(v).desired_rows(4).desired_width(f32::INFINITY));
                             finish = r.lost_focus();
                         }
-                        (PropertyType::Number {..}, Value::Number(v)) if key == "selected_index" && matches!(spec.id, "list" | "button_bar" | "link_bar") => {
+                        (PropertyType::Number {..}, Value::Number(v)) if key == "selected_index" && matches!(spec.id, "list" | "button_bar" | "link_bar" | "tabs" | "vertical_tabs") => {
                             let source=match values.get("text") {Some(Value::Text(s))=>s.as_str(),_=>""};
-                            let raw:Vec<String>=if spec.id=="link_bar" {wireframe::navigation::labels(source,false)} else if spec.id=="button_bar" {wireframe::button_bar::labels(source).into_iter().map(str::to_owned).collect()} else {wireframe::list::labels(source,values.get("header")==Some(&Value::Bool(true))).into_iter().map(str::to_owned).collect()};
+                            let raw:Vec<String>=if matches!(spec.id,"tabs"|"vertical_tabs") {wireframe::tabs::labels(source,spec.id=="vertical_tabs")} else if spec.id=="link_bar" {wireframe::navigation::labels(source,false)} else if spec.id=="button_bar" {wireframe::button_bar::labels(source).into_iter().map(str::to_owned).collect()} else {wireframe::list::labels(source,values.get("header")==Some(&Value::Bool(true))).into_iter().map(str::to_owned).collect()};
                             let labels=raw.iter().map(|s|wireframe::rich_text::RichText::parse(s,false).display_text(false)).collect::<Vec<_>>();
                             let current=if *v<0. {"None"} else {labels.get(*v as usize).map_or("No matching item",String::as_str)};
                             egui::ComboBox::from_id_salt("selection").selected_text(if current.is_empty(){"(Empty item)"}else{current}).show_ui(ui,|ui| {

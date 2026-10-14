@@ -135,6 +135,7 @@ fn migrate_control(c: legacy::Control) -> Node {
         legacy::Kind::List => "list",
         legacy::Kind::Table => "table",
         legacy::Kind::Tabs => "tabs",
+        legacy::Kind::VerticalTabs => "vertical_tabs",
         legacy::Kind::Progress => "progress",
         legacy::Kind::Toggle => "toggle",
         legacy::Kind::Link => "link",

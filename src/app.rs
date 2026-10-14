@@ -23,6 +23,7 @@ use wireframe::{
     scene::{self, Primitive},
     storage::{self, ProjectRepository, ProjectStore},
     text_entry::TextInput,
+    ui_text,
     workspace::{Clipboard, Editor},
 };
 
@@ -499,7 +500,10 @@ impl WireframeApp {
                         self.present = false;
                     }
                     ui.separator();
-                    ui.strong(&self.editor.document.title);
+                    ui_text::label(ui, &self.editor.document.title, 180.);
+                    if ui.button("Fit").clicked() {
+                        self.fit();
+                    }
                     let pages: Vec<_> = self
                         .editor
                         .document
@@ -507,14 +511,19 @@ impl WireframeApp {
                         .iter()
                         .map(|p| (p.id, p.name.clone()))
                         .collect();
-                    for (id, name) in pages {
-                        if ui.selectable_label(self.editor.page == id, name).clicked() {
-                            self.navigate_page(id);
-                        }
-                    }
-                    if ui.button("Fit").clicked() {
-                        self.fit();
-                    }
+                    egui::ScrollArea::horizontal()
+                        .id_salt("presentation-pages")
+                        .show(ui, |ui| {
+                            ui.horizontal(|ui| {
+                                for (id, name) in pages {
+                                    if ui_text::selectable(ui, self.editor.page == id, &name, 160.)
+                                        .clicked()
+                                    {
+                                        self.navigate_page(id);
+                                    }
+                                }
+                            });
+                        });
                 });
             });
             return;
@@ -632,11 +641,11 @@ impl WireframeApp {
                         self.editor.redo();
                     }
                     ui.separator();
-                    ui.label(format!(
-                        "{}{}",
-                        self.editor.document.title,
-                        if self.editor.dirty() { " •" } else { "" }
-                    ));
+                    let title_width = (ui.available_width() - 230.).max(0.);
+                    ui_text::label(ui, &self.editor.document.title, title_width);
+                    if self.editor.dirty() {
+                        ui.label("•");
+                    }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.button("Help").clicked() {
                             self.help = true;
@@ -660,7 +669,11 @@ impl WireframeApp {
                     }
                     ui.label(format!("{:.0}%", self.zoom * 100.));
                     if self.editor.definition.is_some() {
-                        ui.strong(format!("Editing component: {}", self.editor.current().name));
+                        ui_text::label(
+                            ui,
+                            &format!("Editing component: {}", self.editor.current().name),
+                            180.,
+                        );
                         if ui.button("Back to wireframe").clicked() {
                             self.editor.switch_page(self.editor.page);
                         }
@@ -1017,16 +1030,21 @@ impl WireframeApp {
                                 if let Ok(drawing) = self.editor.rendered_scene(page.id) {
                                     Self::paint_scene(&painter, &drawing, origin, scale);
                                 }
-                                ui.painter().text(
-                                    r.center_bottom() - Vec2::new(0., 9.),
-                                    Align2::CENTER_BOTTOM,
+                                let caption = Rect::from_min_max(
+                                    Pos2::new(r.left() + 8., r.bottom() - 28.),
+                                    Pos2::new(r.right() - 8., r.bottom() - 5.),
+                                );
+                                ui_text::paint(
+                                    ui,
+                                    caption,
                                     &page.name,
-                                    FontId::proportional(12.),
+                                    12.,
                                     if selected {
                                         Color32::WHITE
                                     } else {
                                         Color32::from_gray(40)
                                     },
+                                    true,
                                 );
                                 response.widget_info(|| {
                                     egui::WidgetInfo::labeled(
@@ -1038,7 +1056,14 @@ impl WireframeApp {
                                 if response.clicked() {
                                     self.editor.switch_page(page.id);
                                 }
-                            } else if ui.selectable_label(selected, &page.name).clicked() {
+                            } else if ui_text::selectable(
+                                ui,
+                                selected,
+                                &page.name,
+                                ui.available_width(),
+                            )
+                            .clicked()
+                            {
                                 self.editor.switch_page(page.id);
                             }
                         }
@@ -1058,9 +1083,13 @@ impl WireframeApp {
                                 if c.locked { "[locked] " } else { "" },
                                 self.editor.selection_label(c.id)
                             );
-                            if ui
-                                .selectable_label(self.editor.selection.contains(&c.id), label)
-                                .clicked()
+                            if ui_text::selectable(
+                                ui,
+                                self.editor.selection.contains(&c.id),
+                                &label,
+                                ui.available_width(),
+                            )
+                            .clicked()
                             {
                                 self.editor.select(c.id, ui.input(|i| i.modifiers.shift));
                             }
@@ -2062,6 +2091,42 @@ mod tests {
             .collect();
         matches.sort_by_key(|k| (k.name().to_lowercase() != "button", k.name()));
         assert_eq!(app.editor.current().controls[0].kind, matches[1]);
+    }
+
+    #[test]
+    fn long_project_titles_leave_toolbar_actions_inside_the_window() {
+        let ctx = egui::Context::default();
+        ctx.enable_accesskit();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        app.editor.document.title = "ABC שלום 👩‍💻 ".repeat(100);
+        for width in [860., 1000., 1600.] {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(width, 700.))),
+                    ..Default::default()
+                },
+                |ui| app.toolbar(ui),
+            );
+            let nodes = &output
+                .platform_output
+                .accesskit_update
+                .as_ref()
+                .unwrap()
+                .nodes;
+            for label in ["Help", "Save", "Present"] {
+                let node = &nodes
+                    .iter()
+                    .find(|(_, n)| n.label() == Some(label))
+                    .unwrap()
+                    .1;
+                let b = node.bounds().unwrap();
+                assert!(
+                    b.x0 >= 0. && b.x1 <= width as f64,
+                    "{label} {b:?} width{width}"
+                );
+            }
+            output.textures_delta.clear();
+        }
     }
 
     fn pointer(pos: Pos2, pressed: bool) -> egui::Event {

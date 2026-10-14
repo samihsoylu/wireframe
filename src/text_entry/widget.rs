@@ -8,10 +8,7 @@ use super::{
 use eframe::egui::{
     self, Color32, Event, Id, ImeEvent, Key, Pos2, Rect, Response, Sense, TextureHandle, Ui, Vec2,
 };
-use std::{
-    ops::Range,
-    sync::{Arc, Mutex},
-};
+use std::ops::Range;
 use unicode_segmentation::UnicodeSegmentation;
 mod accessibility;
 
@@ -217,16 +214,7 @@ fn input(ui: &mut Ui, options: TextInput<'_>) -> Response {
     if fresh && autofocus && ui.is_enabled() {
         response.request_focus();
     }
-    let engine_id = Id::new("unicode-input-engine");
-    let engine = ui
-        .ctx()
-        .data_mut(|d| d.get_temp::<Arc<Mutex<Engine>>>(engine_id))
-        .unwrap_or_else(|| {
-            let engine = Arc::new(Mutex::new(Engine::default()));
-            ui.ctx()
-                .data_mut(|d| d.insert_temp(engine_id, engine.clone()));
-            engine
-        });
+    let engine = super::layout::shared_engine(ui.ctx());
     let mut engine = engine.lock().unwrap_or_else(|e| e.into_inner());
     let inner = rect.shrink2(padding);
     let scale = ui.ctx().pixels_per_point();

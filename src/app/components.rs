@@ -24,10 +24,14 @@ impl WireframeApp {
                     .show(ui, |ui| {
                         for (id, name) in definitions {
                             ui.horizontal(|ui| {
-                                if ui
-                                    .selectable_label(self.editor.definition == Some(id), &name)
-                                    .on_hover_text("Edit this component's source")
-                                    .clicked()
+                                if ui_text::selectable(
+                                    ui,
+                                    self.editor.definition == Some(id),
+                                    &name,
+                                    (ui.available_width() - 30.).max(0.),
+                                )
+                                .on_hover_text("Edit this component's source")
+                                .clicked()
                                     && let Err(error) = self.editor.edit_definition(id)
                                 {
                                     self.error = Some(error);

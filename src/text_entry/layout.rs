@@ -4,8 +4,22 @@
 use super::{Affinity, Caret, Selection};
 use cosmic_text::{Attrs, Buffer, Family, FontSystem, Metrics, Shaping, SwashCache, Weight, Wrap};
 use eframe::egui::{self, Color32, ColorImage, Pos2, Rect, Vec2};
-use std::{collections::BTreeMap, ops::Range};
+use std::{
+    collections::BTreeMap,
+    ops::Range,
+    sync::{Arc, Mutex},
+};
 use unicode_segmentation::UnicodeSegmentation;
+
+pub(crate) fn shared_engine(ctx: &egui::Context) -> Arc<Mutex<Engine>> {
+    let id = egui::Id::new("unicode-input-engine");
+    ctx.data_mut(|d| d.get_temp::<Arc<Mutex<Engine>>>(id))
+        .unwrap_or_else(|| {
+            let engine = Arc::new(Mutex::new(Engine::default()));
+            ctx.data_mut(|d| d.insert_temp(id, engine.clone()));
+            engine
+        })
+}
 
 pub struct Engine {
     fonts: FontSystem,

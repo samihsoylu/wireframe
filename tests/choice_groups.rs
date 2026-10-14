@@ -300,3 +300,57 @@ fn choice_artwork_keeps_optical_bounds_and_negative_half_alignment() {
         );
     }
 }
+
+#[test]
+fn choice_ink_tracks_style_without_replacing_explicit_colors() {
+    use wireframe::render::Drawing;
+    fn assert_ink(e: &Editor, expected: [u8; 4]) {
+        let scene = e.rendered_scene(e.page).unwrap();
+        let mut symbols = 0;
+        let mut labels = 0;
+        for item in scene.items {
+            match item.drawing {
+                Drawing::Icon { color, .. } => {
+                    symbols += 1;
+                    assert_eq!(color, expected);
+                }
+                Drawing::Glyph(g) => {
+                    labels += 1;
+                    assert_eq!(g.color, expected);
+                }
+                _ => {}
+            }
+        }
+        assert_eq!(symbols, 1);
+        assert!(labels > 0);
+    }
+    for (kind, text) in [
+        (Kind::Checkbox, "Choice"),
+        (Kind::Radio, "Choice"),
+        (Kind::CheckboxGroup, "[x] Choice"),
+        (Kind::RadioGroup, "(o) Choice"),
+    ] {
+        let mut e = Editor::default();
+        e.add(kind, 50., 50.);
+        let id = *e.selection.iter().next().unwrap();
+        edit(&mut e, id, "text", Value::Text(text.into()));
+        assert_ink(&e, [0, 0, 0, 255]);
+        e.edit("Clean style", |e| e.document.settings.sketch = false);
+        assert_ink(&e, [51, 51, 51, 255]);
+        e.undo();
+        assert_ink(&e, [0, 0, 0, 255]);
+        e.redo();
+        assert_ink(&e, [51, 51, 51, 255]);
+        for color in [[0, 0, 0, 255], [30, 70, 110, 255]] {
+            edit(&mut e, id, "text_color", Value::Color(color));
+            for sketch in [true, false] {
+                e.document.settings.sketch = sketch;
+                assert_ink(&e, color);
+                let restored = Editor::new(decode(&e.document.encode().unwrap()).unwrap());
+                assert_ink(&restored, color);
+            }
+        }
+        e.reset_control_property(id, "text_color").unwrap();
+        assert_ink(&e, [51, 51, 51, 255]);
+    }
+}

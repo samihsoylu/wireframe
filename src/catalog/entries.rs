@@ -900,7 +900,16 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     );
     ink.default = if c.id == "link" {
         DefaultValue::LinkColor
-    } else if matches!(c.id, "dropdown" | "icon" | "icon_label") {
+    } else if matches!(
+        c.id,
+        "dropdown"
+            | "icon"
+            | "icon_label"
+            | "checkbox"
+            | "radio"
+            | "checkbox_group"
+            | "radio_group"
+    ) {
         DefaultValue::FormInk
     } else if c.id == "search" {
         DefaultValue::SearchInk

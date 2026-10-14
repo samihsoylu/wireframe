@@ -13,7 +13,7 @@ Selected markers also accept `o O v V x X *`; mixed markers accept `- =`. Empty 
 
 The inspector's Row links section assigns a destination to each row. Disabled appearance does not disable an explicit destination. Only complete visible rows render and receive link hit regions. Auto-size restores the full measured width and height; fixed sizes preserve deliberate clipping. Row edits remap links by existing source-row identity, with positional fallback for equal row counts.
 
-A color wrapper around a marker changes its symbol; a wrapper around marker and label also formats the label. Disabled rows use gray for ordinary ink and symbols, while explicit inline label colors remain intact. Original source stays editable and is stored without rewriting its markers.
+Default symbol and label ink is black in sketch style and dark gray in clean style. Explicit control colors remain unchanged when switching styles. A color wrapper around a marker changes its symbol; a wrapper around marker and label also formats the label. Disabled rows use gray for ordinary ink and symbols, while explicit inline label colors remain intact. Original source stays editable and is stored without rewriting its markers.
 
 Parsing, measurement and painting are shared across canvas, thumbnails, presentation, PNG and SVG. Local component overrides, reset and Undo/Redo use the ordinary document operations. `cargo run --example render_choice_groups -- /path/to/fresh-directory` creates an editable twelve-case gallery and both style exports.
 

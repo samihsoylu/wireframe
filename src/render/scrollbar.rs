@@ -13,7 +13,7 @@ impl Scene {
     ) {
         self.draw_vertical_scrollbar(b, value, disabled, (sketch, false), parent_clip);
     }
-    pub(super) fn tree_scrollbar(
+    pub(super) fn panel_scrollbar(
         &mut self,
         b: Bounds,
         value: f32,

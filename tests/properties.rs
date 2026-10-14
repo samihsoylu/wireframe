@@ -271,11 +271,9 @@ fn unsupported_auto_layout_rolls_back_requested_dimensions() {
         next_id: 3,
         ..Project::default()
     };
-    let mut node = catalog::get("accordion")
-        .unwrap()
-        .create(2, Point::default());
+    let mut node = catalog::get("alert").unwrap().create(2, Point::default());
     node.content = NodeContent::Control {
-        kind: "accordion".into(),
+        kind: "alert".into(),
         size: Size::fixed(200., 100.),
     };
     p.pages[0].content.nodes.push(node);

@@ -6,6 +6,8 @@
 pub(super) fn visible(id: &str, key: &str) -> bool {
     let fields: &[&str] = match id {
         "accordion" => &[
+            "row_links",
+            "vertical_scrollbar",
             "bold",
             "font_size",
             "italic",

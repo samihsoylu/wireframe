@@ -102,6 +102,7 @@ pub enum Kind {
     Menu,
     MenuBar,
     Tree,
+    Accordion,
     Dropdown,
     Search,
     Rectangle,
@@ -129,7 +130,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 38] = [
+    pub const ALL: [Kind; 39] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -143,6 +144,7 @@ impl Kind {
         Self::Menu,
         Self::MenuBar,
         Self::Tree,
+        Self::Accordion,
         Self::Dropdown,
         Self::Search,
         Self::Rectangle,
@@ -184,6 +186,7 @@ impl Kind {
             Self::Menu => "Menu",
             Self::MenuBar => "Menu bar",
             Self::Tree => "Tree pane",
+            Self::Accordion => "Accordion",
             Self::Dropdown => "Dropdown",
             Self::Search => "Search box",
             Self::Rectangle => "Rectangle",
@@ -260,6 +263,7 @@ impl Kind {
             Self::Menu => (150., 167.),
             Self::MenuBar => (192., 32.),
             Self::Tree => (300., 285.),
+            Self::Accordion => (150., 186.),
             Self::Line | Self::Arrow => (180., 20.),
             Self::Browser => (600., 420.),
             Self::Phone => (240., 440.),
@@ -291,6 +295,7 @@ impl Kind {
             Self::Menu => crate::menu::MENU,
             Self::MenuBar => crate::menu::BAR,
             Self::Tree => crate::tree::DEFAULT,
+            Self::Accordion => crate::accordion::DEFAULT,
             Self::Dropdown => "Choose an option",
             Self::Search => "Search…",
             Self::Browser => "https://example.com",

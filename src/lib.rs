@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 
+pub mod accordion;
 pub mod button_bar;
 pub mod catalog;
 pub mod choice_group;

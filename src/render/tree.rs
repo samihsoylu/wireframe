@@ -125,7 +125,7 @@ impl Scene {
         }
         if scrollbar {
             let (top, bottom, right) = if sketch { (4., 2., 2.) } else { (0., 0., 0.) };
-            self.tree_scrollbar(
+            self.panel_scrollbar(
                 Bounds::new(b.x + b.w - right - 16., b.y + top, 16., b.h - top - bottom),
                 number(p, "value", 0.),
                 disabled,

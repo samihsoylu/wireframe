@@ -933,6 +933,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "menu" => crate::menu::MENU,
         "menu_bar" => crate::menu::BAR,
         "tree" => crate::tree::DEFAULT,
+        "accordion" => crate::accordion::DEFAULT,
         "label" => "Some text",
         "heading" => "Title",
         "subtitle" => "Subtitle",
@@ -1001,7 +1002,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     }
     if matches!(
         c.id,
-        "dropdown" | "text_area" | "list" | "tabs" | "vertical_tabs" | "tree"
+        "dropdown" | "text_area" | "list" | "tabs" | "vertical_tabs" | "tree" | "accordion"
     ) {
         c.properties.extend([
             boolean("vertical_scrollbar", "Scrollbar", false),
@@ -1053,7 +1054,11 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         c.properties.push(number(
             "selected_index",
             "Selection",
-            if c.id == "button_bar" { 0. } else { -1. },
+            if matches!(c.id, "button_bar" | "accordion") {
+                0.
+            } else {
+                -1.
+            },
             -1.,
             10000.,
             true,
@@ -1205,12 +1210,16 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             | "menu"
             | "menu_bar"
             | "tree"
+            | "accordion"
     ) {
         c.properties.push(prop(
             "row_links",
             if c.id == "button_bar" {
                 "Segment links"
-            } else if matches!(c.id, "checkbox_group" | "radio_group" | "menu" | "tree") {
+            } else if matches!(
+                c.id,
+                "checkbox_group" | "radio_group" | "menu" | "tree" | "accordion"
+            ) {
                 "Row links"
             } else {
                 "Item links"

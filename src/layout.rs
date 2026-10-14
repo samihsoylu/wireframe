@@ -345,6 +345,23 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(w, h)?;
             return Ok((w, h));
         }
+        if kind == "accordion" {
+            let accordion = crate::accordion::Accordion::parse(
+                text,
+                number(props, "selected_index", 0.) as i32,
+            )?;
+            let m = accordion.measure(self.measurer, style, self.project.settings.sketch);
+            let w = match width {
+                Dimension::Auto => m.width,
+                Dimension::Fixed(w) => w,
+            };
+            let h = match height {
+                Dimension::Auto => m.height,
+                Dimension::Fixed(h) => h,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         if kind == "tree" {
             let tree = crate::tree::Tree::parse(text)?;
             let m = tree.measure(self.measurer, style);

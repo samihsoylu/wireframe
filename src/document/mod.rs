@@ -128,7 +128,7 @@ impl Link {
         }
     }
 }
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(tag = "source", content = "id", rename_all = "snake_case")]
 pub enum IconSource {
     Catalog(String),

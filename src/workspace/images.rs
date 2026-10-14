@@ -8,6 +8,7 @@ pub enum ImageTarget {
     Control(Id),
     Icon(Id),
     ListRow { control: Id, row: usize },
+    AppBarIcon { control: Id, index: usize },
 }
 #[derive(Clone, Copy)]
 pub enum ImportChoice {
@@ -243,6 +244,25 @@ impl Editor {
                     return Err("Select an unlocked control with an icon".into());
                 }
             }
+            ImageTarget::AppBarIcon { control, index } => {
+                let (spec, props) = self
+                    .control_properties(control)
+                    .ok_or("App bar no longer exists")?;
+                let count = match props.get("icons") {
+                    Some(Value::Icons(v)) => v.len(),
+                    _ => 0,
+                };
+                if spec.id != "app_bar"
+                    || index > count
+                    || self
+                        .nodes()
+                        .iter()
+                        .find(|n| n.id == control)
+                        .is_none_or(|n| n.locked)
+                {
+                    return Err("Select an unlocked app bar and an existing icon position".into());
+                }
+            }
             ImageTarget::ListRow { control, row } => {
                 let (spec, props) = self
                     .control_properties(control)
@@ -313,6 +333,21 @@ impl Editor {
                 }
                 ImageTarget::Control(id) => {
                     e.set_control_property(id, "image", Value::Asset(asset))?
+                }
+                ImageTarget::AppBarIcon { control, index } => {
+                    let (_, props) = e
+                        .control_properties(control)
+                        .ok_or("App bar no longer exists")?;
+                    let mut icons = match props.get("icons") {
+                        Some(Value::Icons(v)) => v.clone(),
+                        _ => vec![],
+                    };
+                    if index == icons.len() {
+                        icons.push(Some(IconSource::Asset(asset)));
+                    } else {
+                        icons[index] = Some(IconSource::Asset(asset));
+                    }
+                    e.set_control_property(control, "icons", Value::Icons(icons))?;
                 }
                 ImageTarget::ListRow { control, row } => {
                     let (_, props) = e

@@ -274,6 +274,7 @@ impl Editor {
                     | Kind::Tree
                     | Kind::Accordion
                     | Kind::Alert
+                    | Kind::AppBar
                     | Kind::Button
                     | Kind::TextInput
                     | Kind::TextArea
@@ -302,6 +303,7 @@ impl Editor {
                     Kind::Tree => "tree",
                     Kind::Accordion => "accordion",
                     Kind::Alert => "alert",
+                    Kind::AppBar => "app_bar",
                     Kind::Button => "button",
                     Kind::TextInput => "text_input",
                     Kind::TextArea => "text_area",
@@ -512,7 +514,8 @@ impl Editor {
                                 | Kind::Tabs
                                 | Kind::VerticalTabs
                         ) {
-                            let baseline = self.structured_text_baseline(c.id).unwrap_or_default();
+                            let baseline =
+                                self.structured_property_baseline(c.id).unwrap_or_default();
                             let apply = if matches!(c.kind, Kind::Tabs | Kind::VerticalTabs) {
                                 crate::tabs::apply_text
                             } else if matches!(c.kind, Kind::Breadcrumbs | Kind::LinkBar) {

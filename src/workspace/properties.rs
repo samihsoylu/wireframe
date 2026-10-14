@@ -24,7 +24,7 @@ impl Editor {
         let effective = spec.effective(node, &self.property_context()).ok()?;
         Some((spec, effective))
     }
-    pub(super) fn structured_text_baseline(&self, id: Id) -> Option<Properties> {
+    pub(super) fn structured_property_baseline(&self, id: Id) -> Option<Properties> {
         let kind = self.control_properties(id)?.0.id;
         if !matches!(
             kind,
@@ -41,6 +41,7 @@ impl Editor {
                 | "tree"
                 | "accordion"
                 | "alert"
+                | "app_bar"
         ) {
             return None;
         }
@@ -69,7 +70,7 @@ impl Editor {
             .collect::<Vec<_>>();
         let nodes = children(&resolved, &self.context)?;
         let node = nodes.iter().find(|n| n.id == id)?;
-        if !matches!(&node.content,NodeContent::Control{kind,..} if matches!(kind.as_str(), "list" | "button_bar" | "breadcrumbs" | "link_bar" | "tabs" | "vertical_tabs" | "checkbox_group" | "radio_group" | "menu" | "menu_bar" | "tree" | "accordion" | "alert"))
+        if !matches!(&node.content,NodeContent::Control{kind,..} if matches!(kind.as_str(), "list" | "button_bar" | "breadcrumbs" | "link_bar" | "tabs" | "vertical_tabs" | "checkbox_group" | "radio_group" | "menu" | "menu_bar" | "tree" | "accordion" | "alert" | "app_bar"))
         {
             return None;
         }
@@ -79,8 +80,56 @@ impl Editor {
     }
     /// Participates in the caller's begin/commit transaction for continuous input.
     pub fn set_control_property(&mut self, id: Id, key: &str, value: Value) -> Result<(), String> {
+        if key == "icons"
+            && self
+                .control_properties(id)
+                .is_some_and(|(spec, _)| spec.id == "app_bar")
+        {
+            let baseline = self
+                .structured_property_baseline(id)
+                .ok_or("Control no longer exists")?;
+            let Value::Icons(icons) = &value else {
+                return Err("Custom icons must be an icon collection".into());
+            };
+            if icons.len() > 9_998 {
+                return Err("Too many app-bar icons".into());
+            }
+            let before = self
+                .nodes()
+                .iter()
+                .find(|n| n.id == id)
+                .cloned()
+                .ok_or("Control no longer exists")?;
+            if before.locked {
+                return Err("Unlock the control before editing its properties".into());
+            }
+            let mut edited = before.clone();
+            let spec = catalog::get("app_bar").unwrap();
+            spec.set_property(&mut edited, key, value.clone(), &self.property_context())
+                .map_err(|e| e.to_string())?;
+            if let Some(Value::Links(links)) = baseline.get("row_links")
+                && !links.is_empty()
+            {
+                let old = match baseline.get("icons") {
+                    Some(Value::Icons(v)) => v.as_slice(),
+                    _ => &[],
+                };
+                edited.properties.insert(
+                    "row_links".into(),
+                    Value::Links(crate::app_bar::remap_links(old, icons, links)),
+                );
+            }
+            if self.editing_instance() {
+                return self.write_local_node(id, &before, &edited);
+            }
+            *self.nodes_mut().iter_mut().find(|n| n.id == id).unwrap() = edited;
+            return Ok(());
+        }
         if key == "text"
-            && let Some(baseline) = self.structured_text_baseline(id)
+            && self
+                .control_properties(id)
+                .is_some_and(|(spec, _)| spec.id != "app_bar")
+            && let Some(baseline) = self.structured_property_baseline(id)
         {
             let Value::Text(text) = value else {
                 return Err("Control text must be text".into());
@@ -146,6 +195,43 @@ impl Editor {
             .map_err(|e| e.to_string())
     }
     pub fn reset_control_property(&mut self, id: Id, key: &str) -> Result<(), String> {
+        if key == "icons"
+            && let Some((spec, before)) = self.control_properties(id)
+            && spec.id == "app_bar"
+        {
+            let snapshot = self.snapshot();
+            let result = (|| {
+                self.reset_property_value(id, key)?;
+                let (_, after) = self
+                    .control_properties(id)
+                    .ok_or("Control no longer exists")?;
+                if let Some(Value::Links(links)) = before.get("row_links")
+                    && !links.is_empty()
+                {
+                    let old = match before.get("icons") {
+                        Some(Value::Icons(v)) => v.as_slice(),
+                        _ => &[],
+                    };
+                    let new = match after.get("icons") {
+                        Some(Value::Icons(v)) => v.as_slice(),
+                        _ => &[],
+                    };
+                    self.set_control_property(
+                        id,
+                        "row_links",
+                        Value::Links(crate::app_bar::remap_links(old, new, links)),
+                    )?;
+                }
+                Ok(())
+            })();
+            if result.is_err() {
+                self.restore(snapshot);
+            }
+            return result;
+        }
+        self.reset_property_value(id, key)
+    }
+    fn reset_property_value(&mut self, id: Id, key: &str) -> Result<(), String> {
         if self.editing_instance() {
             return self.reset_local_property(id, key);
         }

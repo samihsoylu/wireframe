@@ -122,6 +122,7 @@ fn migrate_control(c: legacy::Control) -> Node {
         legacy::Kind::Tree => "tree",
         legacy::Kind::Accordion => "accordion",
         legacy::Kind::Alert => "alert",
+        legacy::Kind::AppBar => "app_bar",
         legacy::Kind::Dropdown => "dropdown",
         legacy::Kind::Search => "search",
         legacy::Kind::Rectangle => "rectangle",

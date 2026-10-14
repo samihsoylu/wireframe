@@ -3,6 +3,7 @@
 //! Shared positioned drawing data for the canvas and vector/raster exports.
 mod accordion;
 mod alert;
+mod app_bar;
 mod button_bar;
 mod choice;
 mod choice_group;
@@ -314,6 +315,9 @@ impl Scene {
         }
         if matches!(c.kind, Kind::Menu | Kind::MenuBar) {
             return self.menu(layer, sketch, fonts, rasters);
+        }
+        if c.kind == Kind::AppBar {
+            return self.app_bar(layer, fonts, rasters);
         }
         if c.kind == Kind::Alert {
             return self.alert(layer, sketch, fonts);

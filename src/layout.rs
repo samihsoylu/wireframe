@@ -345,6 +345,20 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(w, h)?;
             return Ok((w, h));
         }
+        if kind == "app_bar" {
+            let bar = crate::app_bar::AppBar::parse(text, props)?;
+            let metrics = bar.measure(self.measurer, style.size);
+            let w = match width {
+                Dimension::Auto => metrics.width,
+                Dimension::Fixed(w) => w,
+            };
+            let h = match height {
+                Dimension::Auto => metrics.height,
+                Dimension::Fixed(h) => h,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         if kind == "alert" {
             let alert = crate::alert::Alert::parse(text)?;
             let metrics = alert.measure(self.measurer, style);

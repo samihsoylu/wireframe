@@ -123,6 +123,7 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
         | Kind::Tree
         | Kind::Accordion
         | Kind::Alert
+        | Kind::AppBar
         | Kind::Breadcrumbs
         | Kind::LinkBar => {
             // Legacy scene fallback; the live editor uses the shared icon renderer.

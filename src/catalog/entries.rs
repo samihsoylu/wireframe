@@ -883,9 +883,15 @@ pub(super) fn build() -> Vec<ControlSpec> {
 }
 fn configure(mut c: ControlSpec) -> ControlSpec {
     let mut font = number("font_size", "Font size", 13., 6., 120., false);
-    font.default = DefaultValue::FontSize;
+    font.default = if c.id == "app_bar" {
+        DefaultValue::Literal(Value::Number(16.))
+    } else {
+        DefaultValue::FontSize
+    };
     let mut fill = prop("fill", "Fill", PropertyType::Color, Value::Color([255; 4]));
-    fill.default = if c.id == "button" {
+    fill.default = if c.id == "app_bar" {
+        DefaultValue::Literal(Value::Color([221, 221, 221, 255]))
+    } else if c.id == "button" {
         DefaultValue::ButtonFill
     } else if c.id == "circle_button" {
         DefaultValue::Literal(Value::Color([204, 204, 204, 255]))
@@ -935,6 +941,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "tree" => crate::tree::DEFAULT,
         "accordion" => crate::accordion::DEFAULT,
         "alert" => crate::alert::DEFAULT,
+        "app_bar" => crate::app_bar::DEFAULT,
         "label" => "Some text",
         "heading" => "Title",
         "subtitle" => "Subtitle",
@@ -1051,7 +1058,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         border.default = DefaultValue::FormInk;
         c.properties.push(border);
     }
-    if matches!(c.family, Family::Rows) {
+    if matches!(c.family, Family::Rows) && c.id != "app_bar" {
         c.properties.push(number(
             "selected_index",
             "Selection",
@@ -1072,6 +1079,19 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             &["none", "solid", "dashed", "dotted"],
             "solid",
         ));
+    }
+    if c.id == "app_bar" {
+        c.properties.extend([
+            boolean("nav_icon", "Navigation icon", true),
+            boolean("filter_icon", "Filter icon", true),
+            boolean("menu_icon", "Menu icon", true),
+            prop(
+                "icons",
+                "Custom icons",
+                PropertyType::Icons,
+                Value::Icons(vec![]),
+            ),
+        ]);
     }
     if c.id == "alert" {
         c.properties.push(choice(
@@ -1228,10 +1248,13 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             | "tree"
             | "accordion"
             | "alert"
+            | "app_bar"
     ) {
         c.properties.push(prop(
             "row_links",
-            if c.id == "alert" {
+            if c.id == "app_bar" {
+                "Icon links"
+            } else if c.id == "alert" {
                 "Button links"
             } else if c.id == "button_bar" {
                 "Segment links"

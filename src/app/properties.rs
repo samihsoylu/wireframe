@@ -6,6 +6,16 @@ use wireframe::{
     document::{Link, Value},
 };
 
+// Slider preserves its numeric editor's focus in its combined response.
+// Intermediate digits preview live but belong to one undoable edit.
+fn fraction_slider(ui: &mut egui::Ui, value: &mut f64) -> (egui::Response, bool) {
+    let response = ui.add(egui::Slider::new(value, 0.0..=1.0).fixed_decimals(2));
+    let finish = response.lost_focus()
+        || response.drag_stopped()
+        || (response.changed() && !response.dragged() && !response.has_focus());
+    (response, finish)
+}
+
 // Expose fields whose behavior the shared renderer currently implements. The
 // catalog's full field inventory remains separate from completed rendering.
 fn supported(kind: &str, key: &str) -> bool {
@@ -100,7 +110,13 @@ fn supported(kind: &str, key: &str) -> bool {
         ),
         "background_opacity" => matches!(
             kind,
-            "text_input" | "text_area" | "multiline_button" | "tabs" | "vertical_tabs" | "tree"
+            "text_input"
+                | "text_area"
+                | "multiline_button"
+                | "tabs"
+                | "vertical_tabs"
+                | "tree"
+                | "field_set"
         ),
         "selected_index" => matches!(
             kind,
@@ -120,6 +136,7 @@ fn supported(kind: &str, key: &str) -> bool {
         "fill" => matches!(
             kind,
             "app_bar"
+                | "field_set"
                 | "browser"
                 | "button"
                 | "text_input"
@@ -203,6 +220,7 @@ impl WireframeApp {
                 | "accordion"
                 | "alert"
                 | "app_bar"
+                | "field_set"
                 | "browser"
                 | "window"
                 | "table"
@@ -370,8 +388,7 @@ impl WireframeApp {
                             finish = value != original;
                         }
                         (PropertyType::Number {..}, Value::Number(v)) if matches!(key, "value" | "background_opacity") => {
-                            let r = ui.add(egui::Slider::new(v, 0.0..=1.0).fixed_decimals(2));
-                            finish = r.lost_focus() || r.drag_stopped() || (r.changed() && !r.dragged());
+                            finish = fraction_slider(ui, v).1;
                         }
                         (PropertyType::Number {min,max,integer}, Value::Number(v)) => {
                             let mut edit = egui::DragValue::new(v).range(*min..=*max).speed(1.);
@@ -432,5 +449,153 @@ impl WireframeApp {
             });
         }
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct SliderFixture {
+        ctx: egui::Context,
+        editor: Editor,
+        id: Id,
+        time: f64,
+    }
+    impl SliderFixture {
+        fn new(kind: Kind) -> Self {
+            let mut editor = Editor::default();
+            editor.add(kind, 0., 0.);
+            let id = *editor.selection.iter().next().unwrap();
+            Self {
+                ctx: egui::Context::default(),
+                editor,
+                id,
+                time: 0.,
+            }
+        }
+        fn value(&self, key: &str) -> f64 {
+            match self.editor.control_properties(self.id).unwrap().1[key] {
+                Value::Number(v) => v,
+                _ => unreachable!(),
+            }
+        }
+        fn frame(
+            &mut self,
+            key: &str,
+            events: Vec<egui::Event>,
+            blur: bool,
+        ) -> (egui::Response, bool) {
+            self.time += 0.1;
+            let mut result = None;
+            let ctx = self.ctx.clone();
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    time: Some(self.time),
+                    screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(400., 200.))),
+                    events,
+                    ..Default::default()
+                },
+                |ui| {
+                    if blur && let Some(id) = ui.memory(|m| m.focused()) {
+                        ui.memory_mut(|m| m.surrender_focus(id));
+                    }
+                    let original = self.value(key);
+                    let mut value = original;
+                    let (response, finish) = fraction_slider(ui, &mut value);
+                    if value != original {
+                        self.editor.begin("Edit fraction");
+                        self.editor
+                            .set_control_property(self.id, key, Value::Number(value))
+                            .unwrap();
+                    }
+                    if finish {
+                        self.editor.commit();
+                    }
+                    result = Some((response, finish));
+                },
+            );
+            output.textures_delta.clear();
+            result.unwrap()
+        }
+    }
+    fn pointer(pos: Pos2, pressed: bool) -> egui::Event {
+        egui::Event::PointerButton {
+            pos,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: Modifiers::NONE,
+        }
+    }
+    #[test]
+    fn fractional_typing_is_one_undo_step_on_enter_or_blur() {
+        for (kind, key) in [
+            (Kind::FieldSet, "background_opacity"),
+            (Kind::Browser, "value"),
+        ] {
+            for blur in [false, true] {
+                let mut f = SliderFixture::new(kind);
+                let baseline = f.value(key);
+                let (response, _) = f.frame(key, vec![], false);
+                let pos = Pos2::new(response.rect.right() - 10., response.rect.center().y);
+                f.frame(
+                    key,
+                    vec![egui::Event::PointerMoved(pos), pointer(pos, true)],
+                    false,
+                );
+                f.frame(key, vec![pointer(pos, false)], false);
+                f.frame(key, vec![], false);
+                // Numeric editor auto-selects its contents on focus.
+                let (r, finish) = f.frame(key, vec![egui::Event::Text("0".into())], false);
+                assert!(r.has_focus());
+                assert!(!finish);
+                assert_eq!(f.value(key), 0.);
+                f.frame(key, vec![egui::Event::Text(".".into())], false);
+                let (_, finish) = f.frame(key, vec![egui::Event::Text("5".into())], false);
+                assert!(!finish);
+                assert_eq!(f.value(key), 0.5);
+                let events = if blur {
+                    vec![]
+                } else {
+                    vec![egui::Event::Key {
+                        key: Key::Enter,
+                        physical_key: None,
+                        pressed: true,
+                        repeat: false,
+                        modifiers: Modifiers::NONE,
+                    }]
+                };
+                let (_, finish) = f.frame(key, events, blur);
+                assert!(finish);
+                f.editor.undo();
+                assert_eq!(f.value(key), baseline);
+                f.editor.redo();
+                assert_eq!(f.value(key), 0.5);
+            }
+        }
+    }
+    #[test]
+    fn fractional_drag_previews_live_and_commits_once_on_release() {
+        let mut f = SliderFixture::new(Kind::FieldSet);
+        let key = "background_opacity";
+        let (response, _) = f.frame(key, vec![], false);
+        let start = Pos2::new(response.rect.left() + 20., response.rect.center().y);
+        let end = start + Vec2::new(40., 0.);
+        let (_, finish) = f.frame(
+            key,
+            vec![egui::Event::PointerMoved(start), pointer(start, true)],
+            false,
+        );
+        assert!(!finish);
+        let (_, finish) = f.frame(key, vec![egui::Event::PointerMoved(end)], false);
+        assert!(!finish);
+        let value = f.value(key);
+        assert!(value > 0. && value < 1.);
+        let (_, finish) = f.frame(key, vec![pointer(end, false)], false);
+        assert!(finish);
+        f.editor.undo();
+        assert_eq!(f.value(key), 1.);
+        f.editor.redo();
+        assert_eq!(f.value(key), value);
     }
 }

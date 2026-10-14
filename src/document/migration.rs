@@ -141,6 +141,7 @@ fn migrate_control(c: legacy::Control) -> Node {
         legacy::Kind::Browser => "browser",
         legacy::Kind::Phone => "phone",
         legacy::Kind::Panel => "panel",
+        legacy::Kind::FieldSet => "field_set",
         legacy::Kind::List => "list",
         legacy::Kind::Table => "table",
         legacy::Kind::Tabs => "tabs",

@@ -240,6 +240,7 @@ pub(super) fn control(node: &LayoutNode) -> Control {
         "browser" => Kind::Browser,
         "phone" => Kind::Phone,
         "panel" | "window" => Kind::Panel,
+        "field_set" => Kind::FieldSet,
         "list" => Kind::List,
         "table" => Kind::Table,
         "tabs" => Kind::Tabs,

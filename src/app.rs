@@ -910,7 +910,13 @@ impl WireframeApp {
                                             | Kind::Browser
                                     ),
                                     "Containers" => {
-                                        matches!(kind, Kind::Browser | Kind::Phone | Kind::Panel)
+                                        matches!(
+                                            kind,
+                                            Kind::Browser
+                                                | Kind::Phone
+                                                | Kind::Panel
+                                                | Kind::FieldSet
+                                        )
                                     }
                                     "Media" => matches!(kind, Kind::Image),
                                     cat => kind.category() == cat,

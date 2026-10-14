@@ -278,6 +278,7 @@ impl Editor {
                     | Kind::AppBar
                     | Kind::Browser
                     | Kind::Panel
+                    | Kind::FieldSet
                     | Kind::Button
                     | Kind::TextInput
                     | Kind::TextArea
@@ -309,6 +310,7 @@ impl Editor {
                     Kind::AppBar => "app_bar",
                     Kind::Browser => "browser",
                     Kind::Panel => "window",
+                    Kind::FieldSet => "field_set",
                     Kind::Button => "button",
                     Kind::TextInput => "text_input",
                     Kind::TextArea => "text_area",

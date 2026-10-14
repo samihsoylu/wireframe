@@ -49,6 +49,19 @@ impl Editor {
                         continue;
                     }
                     match c.kind {
+                        Kind::FieldSet => {
+                            let title = crate::field_set::parse(&c.text)?;
+                            let metrics = fonts.measure_rich(&title, style, None, true);
+                            targets.edges(b);
+                            targets.add(Axis::X, GuideKind::Spacing, b.x + 16.);
+                            targets.add(Axis::X, GuideKind::Spacing, b.x + b.w - 16.);
+                            targets.add(
+                                Axis::Y,
+                                GuideKind::Spacing,
+                                b.y + 16. + metrics.height / 2.,
+                            );
+                            targets.add(Axis::Y, GuideKind::Spacing, b.y + b.h - 16.);
+                        }
                         Kind::Panel => {
                             let title = crate::window::parse(&c.text)?;
                             let layout = crate::window::Options {

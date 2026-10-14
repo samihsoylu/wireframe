@@ -123,6 +123,7 @@ pub enum Kind {
     Browser,
     Phone,
     Panel,
+    FieldSet,
     List,
     Table,
     Tabs,
@@ -132,7 +133,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 41] = [
+    pub const ALL: [Kind; 42] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -167,6 +168,7 @@ impl Kind {
         Self::Browser,
         Self::Phone,
         Self::Panel,
+        Self::FieldSet,
         Self::List,
         Self::Table,
         Self::Tabs,
@@ -211,6 +213,7 @@ impl Kind {
             Self::Browser => "Browser",
             Self::Phone => "Phone",
             Self::Panel => "Window",
+            Self::FieldSet => "Field set",
             Self::List => "List",
             Self::Table => "Table",
             Self::Tabs => "Tabs",
@@ -276,6 +279,7 @@ impl Kind {
             Self::Browser => (450., 400.),
             Self::Phone => (240., 440.),
             Self::Panel => (450., 400.),
+            Self::FieldSet => (200., 170.),
             Self::List | Self::Table => (300., 180.),
             Self::Tabs => (199., 100.),
             Self::VerticalTabs => (200., 178.),
@@ -310,6 +314,7 @@ impl Kind {
             Self::Search => "Search…",
             Self::Browser => crate::browser::DEFAULT,
             Self::Panel => crate::window::DEFAULT,
+            Self::FieldSet => crate::field_set::DEFAULT,
             Self::List => "First item\nSecond item\nThird item\nFourth item",
             Self::Table => {
                 "Name,Status,Owner\nHomepage,Draft,Alex\nSettings,Ready,Sam\nProfile,Draft,Jo"

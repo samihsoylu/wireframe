@@ -345,6 +345,21 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(w, h)?;
             return Ok((w, h));
         }
+        if kind == "field_set" {
+            let label = crate::field_set::parse(text)?;
+            let (w, h) =
+                crate::field_set::intrinsic(self.measurer.measure_rich(&label, style, None, true));
+            let w = match width {
+                Dimension::Auto => w,
+                Dimension::Fixed(w) => w,
+            };
+            let h = match height {
+                Dimension::Auto => h,
+                Dimension::Fixed(h) => h,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         if kind == "app_bar" {
             let bar = crate::app_bar::AppBar::parse(text, props)?;
             let metrics = bar.measure(self.measurer, style.size);

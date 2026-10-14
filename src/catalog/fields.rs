@@ -230,7 +230,15 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
         ],
         "date_chooser" => &["bold", "font_size", "italic", "state", "text", "underline"],
         "date_picker" => &[],
-        "field_set" => &["bold", "fill", "font_size", "italic", "text", "underline"],
+        "field_set" => &[
+            "background_opacity",
+            "bold",
+            "fill",
+            "font_size",
+            "italic",
+            "text",
+            "underline",
+        ],
         "formatting_toolbar" => &[],
         "help_button" => &["link"],
         "icon" => &[

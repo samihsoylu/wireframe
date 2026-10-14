@@ -11,6 +11,7 @@ mod choice_group;
 mod circle_button;
 mod control_icons;
 mod dropdown;
+mod field_set;
 mod forms;
 mod images;
 mod list;
@@ -320,6 +321,9 @@ impl Scene {
         }
         if matches!(c.kind, Kind::Menu | Kind::MenuBar) {
             return self.menu(layer, sketch, fonts, rasters);
+        }
+        if c.kind == Kind::FieldSet {
+            return self.field_set(layer, sketch, fonts);
         }
         if c.kind == Kind::Panel {
             return self.window(layer, sketch, fonts);

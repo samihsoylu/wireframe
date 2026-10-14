@@ -944,6 +944,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "app_bar" => crate::app_bar::DEFAULT,
         "browser" => crate::browser::DEFAULT,
         "window" => crate::window::DEFAULT,
+        "field_set" => crate::field_set::DEFAULT,
         "label" => "Some text",
         "heading" => "Title",
         "subtitle" => "Subtitle",
@@ -1099,6 +1100,16 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             &["solid", "torn_bottom", "none", "dashed", "dotted"],
             "solid",
         );
+    }
+    if c.id == "field_set" {
+        c.properties.push(number(
+            "background_opacity",
+            "Fill opacity",
+            1.,
+            0.,
+            1.,
+            false,
+        ));
     }
     if c.id == "window" {
         c.properties.extend([

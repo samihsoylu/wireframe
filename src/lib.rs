@@ -29,6 +29,7 @@ pub mod window;
 
 pub mod workspace;
 
+pub mod field_set;
 pub mod fonts;
 
 pub mod render;

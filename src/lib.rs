@@ -22,3 +22,5 @@ pub mod workspace;
 pub mod fonts;
 
 pub mod render;
+
+pub mod text_engine;

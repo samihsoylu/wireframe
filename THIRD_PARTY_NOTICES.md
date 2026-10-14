@@ -58,9 +58,13 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | color_quant-1.1.0 | MIT | [files](licenses/color_quant-1.1.0/) |
 | concurrent-queue-2.5.0 | Apache-2.0 OR MIT | [files](licenses/concurrent-queue-2.5.0/) |
 | core-foundation-0.9.4 | MIT OR Apache-2.0 | [files](licenses/core-foundation-0.9.4/) |
+| core-foundation-0.10.1 | MIT OR Apache-2.0 | [files](licenses/core-foundation-0.10.1/) |
 | core-foundation-sys-0.8.7 | MIT OR Apache-2.0 | [files](licenses/core-foundation-sys-0.8.7/) |
 | core-graphics-0.23.2 | MIT OR Apache-2.0 | [files](licenses/core-graphics-0.23.2/) |
+| core-graphics-0.25.0 | MIT OR Apache-2.0 | [files](licenses/core-graphics-0.25.0/) |
 | core-graphics-types-0.1.3 | MIT OR Apache-2.0 | [files](licenses/core-graphics-types-0.1.3/) |
+| core-graphics-types-0.2.0 | MIT OR Apache-2.0 | [files](licenses/core-graphics-types-0.2.0/) |
+| core-text-22.0.0 | MIT OR Apache-2.0 | [files](licenses/core-text-22.0.0/) |
 | crc32fast-1.5.2 | MIT OR Apache-2.0 | [files](licenses/crc32fast-1.5.2/) |
 | crossbeam-utils-0.8.23 | MIT OR Apache-2.0 | [files](licenses/crossbeam-utils-0.8.23/) |
 | cursor-icon-1.2.0 | MIT OR Apache-2.0 OR Zlib | [files](licenses/cursor-icon-1.2.0/) |

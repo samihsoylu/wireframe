@@ -2,6 +2,30 @@
 // Copyright 2026 Wireframe contributors
 use super::*;
 
+pub(super) struct TileImage {
+    pub origin: Pos2,
+    pub scale: f32,
+}
+impl TileImage {
+    pub fn new(tile: Rect, bounds: Bounds) -> Self {
+        let size = Vec2::new(bounds.w.ceil().max(1.), bounds.h.ceil().max(1.));
+        let scale = (68. / size.x).min(46. / size.y).min(1.);
+        let fitted = size * scale;
+        let left = ((68. - fitted.x) / 2.).round();
+        // The source image region has an upward Y axis. Preserve its rounded
+        // bottom inset when mapping to the canvas's downward Y axis.
+        let top = 46. - ((46. - fitted.y) / 2.).round() - fitted.y;
+        Self {
+            origin: tile.min + Vec2::new(left, top) - Vec2::new(bounds.x, bounds.y) * scale,
+            scale,
+        }
+    }
+    pub fn anchor(&self, point: Pos2) -> Vec2 {
+        // Padding is a valid grab point; do not clamp it to the image.
+        (point - self.origin) / self.scale
+    }
+}
+
 impl WireframeApp {
     pub(super) fn library_drag_source(
         &mut self,
@@ -25,9 +49,20 @@ impl WireframeApp {
                 && ui.ctx().layer_id_at(pos) == Some(ui.layer_id())
             {
                 self.library_press = Some((kind, pos));
+                self.library_anchor = self
+                    .previews
+                    .scene(
+                        kind,
+                        &self.editor.document.settings,
+                        &self.editor.document.font,
+                    )
+                    .map(|scene| TileImage::new(rect, scene.bounds).anchor(pos))
+                    .unwrap_or(Vec2::ZERO);
             }
         }
-        if response.drag_started_by(egui::PointerButton::Primary) {
+        if response.drag_started_by(egui::PointerButton::Primary)
+            && self.library_press.is_some_and(|(source, _)| source == kind)
+        {
             self.library_drag = Some(kind);
         }
     }
@@ -71,7 +106,7 @@ impl WireframeApp {
                 return;
             };
             if released && let Some(pos) = pointer.filter(|p| self.canvas_rect.contains(*p)) {
-                let point = self.world(pos);
+                let point = self.world((pos - self.library_anchor).max(self.canvas_rect.min));
                 self.editor.add(kind, point.x, point.y);
                 ctx.request_repaint();
             }
@@ -98,7 +133,7 @@ impl WireframeApp {
                 &self.editor.document.settings,
                 &self.editor.document.font,
             ) {
-                Self::paint_scene(&painter, scene, pos, self.zoom);
+                Self::paint_scene(&painter, scene, pos - self.library_anchor, 1.);
             }
         }
         ctx.request_repaint();
@@ -136,7 +171,7 @@ mod tests {
                 app.shortcuts(ui.ctx());
                 egui::Panel::top("test-library").show(ui, |ui| {
                     let (r, response) =
-                        ui.allocate_exact_size(Vec2::new(94., 68.), Sense::click_and_drag());
+                        ui.allocate_exact_size(Vec2::splat(68.), Sense::click_and_drag());
                     source = r;
                     app.library_drag_source(ui, Kind::CircleButton, r, &response);
                 });
@@ -162,7 +197,7 @@ mod tests {
     fn begin(ctx: &egui::Context, app: &mut WireframeApp) -> Pos2 {
         frame(ctx, app, vec![], true);
         let (source, _) = frame(ctx, app, vec![], true);
-        let start = source.center();
+        let start = source.min + Vec2::new(34., 23.);
         frame(
             ctx,
             app,
@@ -173,6 +208,7 @@ mod tests {
     }
     #[test]
     fn held_preview_follows_pointer_without_editing_then_drops_once_at_zoomed_position() {
+        let mut preview_size: Option<Vec2> = None;
         for zoom in [0.5, 1., 2.] {
             let ctx = egui::Context::default();
             let mut app = WireframeApp::workspace(&ctx, None);
@@ -201,6 +237,10 @@ mod tests {
             assert_eq!(app.editor.document, before);
             assert_eq!(app.editor.selection, selection);
             assert!(preview_bounds.is_positive());
+            if let Some(size) = preview_size {
+                assert!((preview_bounds.size() - size).length() < 0.01);
+            }
+            preview_size = Some(preview_bounds.size());
             let target = target + Vec2::new(30., 15.);
             let (_, moved_bounds) = frame(
                 &ctx,
@@ -215,13 +255,73 @@ mod tests {
             assert!(app.library_drag.is_none());
             assert_eq!(app.editor.current().controls.len(), 2);
             let b = app.editor.current().controls[1].bounds;
-            assert_eq!((b.x, b.y), (160. + 30. / zoom, 200. + 15. / zoom));
+            assert_eq!((b.x, b.y), (160. + 6. / zoom, 200. - 9. / zoom));
             frame(&ctx, &mut app, vec![], true);
             assert_eq!(app.editor.current().controls.len(), 2);
             app.editor.undo();
             assert_eq!(app.editor.document, before);
             app.editor.redo();
             assert_eq!(app.editor.current().controls.len(), 2);
+        }
+    }
+    #[test]
+    fn fitted_thumbnails_center_without_upscaling_and_allow_padding_grabs() {
+        let tile = Rect::from_min_size(Pos2::new(10., 20.), Vec2::splat(68.));
+        for (size, expected, scale) in [
+            ([48., 48.], [11., 0.], 46. / 48.),
+            ([60., 27.], [4., 9.], 1.),
+            ([300., 200.], [0., 2. / 3.], 68. / 300.),
+            ([20., 20.], [24., 13.], 1.),
+        ] {
+            let image = TileImage::new(tile, Bounds::new(0., 0., size[0], size[1]));
+            assert!((image.origin - tile.min - Vec2::from(expected)).length() < 0.0001);
+            assert!((image.scale - scale).abs() < 0.0001);
+        }
+        let circle = TileImage::new(tile, Bounds::new(0., 0., 48., 48.));
+        assert!(
+            (circle.anchor(tile.min + Vec2::new(34., 23.)) - Vec2::splat(24.)).length() < 0.0001
+        );
+        let left = circle.anchor(tile.min + Vec2::new(0., 23.));
+        assert!((left.x + 11.478261).abs() < 0.0001);
+        assert_eq!(left.y, 24.);
+    }
+
+    #[test]
+    fn padding_grab_survives_drop_and_near_edge_origin_is_clamped() {
+        for padding in [false, true] {
+            let ctx = egui::Context::default();
+            let mut app = WireframeApp::workspace(&ctx, None);
+            frame(&ctx, &mut app, vec![], true);
+            let (source, _) = frame(&ctx, &mut app, vec![], true);
+            let start = source.min + Vec2::new(if padding { 0. } else { 34. }, 23.);
+            frame(
+                &ctx,
+                &mut app,
+                vec![egui::Event::PointerMoved(start), pointer(start, true)],
+                true,
+            );
+            let target = if padding {
+                app.screen([160., 200.])
+            } else {
+                app.canvas_rect.min + Vec2::splat(2.)
+            };
+            frame(
+                &ctx,
+                &mut app,
+                vec![egui::Event::PointerMoved(target)],
+                true,
+            );
+            frame(&ctx, &mut app, vec![pointer(target, false)], true);
+            assert_eq!(app.editor.current().controls.len(), 1);
+            let b = app.editor.current().controls[0].bounds;
+            if padding {
+                assert!((b.x - 171.47826).abs() < 0.001);
+                assert!((b.y - 176.).abs() < 0.001);
+            } else {
+                assert_eq!((b.x, b.y), (0., 0.));
+            }
+            app.editor.undo();
+            assert!(app.editor.current().controls.is_empty());
         }
     }
     #[test]
@@ -286,9 +386,9 @@ mod tests {
         let mut app = WireframeApp::workspace(&ctx, None);
         frame(&ctx, &mut app, vec![], true);
         let (source, _) = frame(&ctx, &mut app, vec![], true);
-        let start = source.center();
+        let start = source.min + Vec2::new(34., 23.);
         let target = app.canvas_rect.center();
-        let expected = app.world(target);
+        let expected = app.world(target - Vec2::splat(24.));
         frame(
             &ctx,
             &mut app,
@@ -323,7 +423,7 @@ mod tests {
             );
             assert_eq!(app.editor.current().controls.len(), 1);
             let b = app.editor.current().controls[0].bounds;
-            assert_eq!((b.x, b.y), (160., 200.));
+            assert_eq!((b.x, b.y), (160. - 24. / zoom, 200. - 24. / zoom));
             frame(&ctx, &mut app, vec![], true);
             assert_eq!(app.editor.current().controls.len(), 1);
             app.editor.undo();

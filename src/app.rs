@@ -81,6 +81,7 @@ pub struct WireframeApp {
     drag_scroll: Option<wireframe::viewport::DragScroll>,
     library_drag: Option<Kind>,
     library_press: Option<(Kind, Pos2)>,
+    library_anchor: Vec2,
     alignment_guides: Vec<snapping::Guide>,
     canvas_press: Option<Pos2>,
     grid: bool,
@@ -154,6 +155,7 @@ impl WireframeApp {
             drag_scroll: None,
             library_drag: None,
             library_press: None,
+            library_anchor: Vec2::ZERO,
             alignment_guides: Vec::new(),
             canvas_press: None,
             grid: false,
@@ -878,6 +880,8 @@ impl WireframeApp {
                             ui.disable();
                         }
                         ui.horizontal(|ui| {
+                            ui.spacing_mut().item_spacing.x = 16.;
+                            ui.add_space(10.);
                             let mut kinds: Vec<_> = Kind::ALL
                                 .into_iter()
                                 .filter(|kind| match self.category.as_str() {
@@ -916,7 +920,7 @@ impl WireframeApp {
                             for kind in kinds {
                                 ui.vertical(|ui| {
                                     let (r, response) = ui.allocate_exact_size(
-                                        Vec2::new(94., 68.),
+                                        Vec2::splat(68.),
                                         Sense::click_and_drag(),
                                     );
                                     if response.hovered()
@@ -932,15 +936,14 @@ impl WireframeApp {
                                         &self.editor.document.font,
                                     ) {
                                         Ok(drawing) => {
-                                            let b = drawing.bounds;
-                                            let scale =
-                                                (82. / b.w.max(1.)).min(43. / b.h.max(1.)).min(1.);
-                                            let origin = r.min
-                                                + Vec2::new(
-                                                    (94. - b.w * scale) / 2. - b.x * scale,
-                                                    4. - b.y * scale,
-                                                );
-                                            Self::paint_scene(&painter, drawing, origin, scale);
+                                            let image =
+                                                library_drag::TileImage::new(r, drawing.bounds);
+                                            Self::paint_scene(
+                                                &painter,
+                                                drawing,
+                                                image.origin,
+                                                image.scale,
+                                            );
                                         }
                                         Err(_) => {
                                             painter.text(
@@ -952,11 +955,17 @@ impl WireframeApp {
                                             );
                                         }
                                     }
-                                    painter.text(
-                                        r.center_bottom() - Vec2::new(0., 4.),
-                                        Align2::CENTER_BOTTOM,
-                                        kind.name(),
+                                    let mut label = egui::text::LayoutJob::simple_singleline(
+                                        kind.name().to_owned(),
                                         FontId::proportional(11.),
+                                        Color32::from_gray(35),
+                                    );
+                                    label.wrap.max_width = r.width();
+                                    label.wrap.max_rows = 1;
+                                    let label = painter.layout_job(label);
+                                    painter.galley(
+                                        r.center_top() + Vec2::new(-label.size().x / 2., 51.),
+                                        label,
                                         Color32::from_gray(35),
                                     );
                                     response.widget_info(|| {

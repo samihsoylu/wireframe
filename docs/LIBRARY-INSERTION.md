@@ -1,11 +1,11 @@
 # Adding controls from the library
 
-Drag a control onto the canvas to preview its placement before releasing. The preview uses the project drawing style, font and current zoom. The pointer marks the control origin, preserving the existing placement convention. The library tile stays highlighted while held.
+Drag a control onto the canvas to see it before releasing. The library uses compact 68×68 tiles, centered thumbnails in a 68×46 image area, and one-line labels with ellipses where needed. Hovering shows the full name.
 
-Release over the canvas to insert and select it. Undo removes that insertion in one step. Escape, a loss of app focus, or releasing outside the canvas cancels without editing the project. Double-click still inserts a control at the default position.
+The point you grab stays attached to the floating control. Grab offsets include the padding around a fitted thumbnail. The floating preview uses full-size project artwork and retains its screen size across canvas zoom levels; placement converts its origin through the current zoom and pan. At the top or left canvas edge, the insertion origin is kept inside the viewport. The tile stays highlighted while held.
 
-The preview is transient: it never enters the document, undo history, recovery file or export. Release commits before canvas painting to avoid an empty frame between preview and placed control.
+Release over the canvas to insert and select the control. Undo removes that insertion in one step. Escape, loss of app focus, or release outside the canvas cancels without editing the project. Double-click still inserts at the default position. The existing ability to begin a drag anywhere on a tile is retained.
 
-Validation covers actual egui pointer events across frames, preview paint bounds following the pointer, placement at 50/100/200% zoom with panning, small pre-drag movement, Escape/focus/outside cancellation, one-frame coalesced drags, press/move/release split across render frames, cancellation before the drag threshold, and one-step history. Native macOS validates drop, Undo/Redo, outside rejection and double-click. A held native preview capture and native Windows/Linux testing remain outstanding.
+The preview is transient: it never enters the document, undo history, recovery file or export. Release commits before canvas painting to avoid an empty frame between preview and placed control. The source press and grab offset are retained until release/cancellation, so a fast gesture still works when movement and release arrive together in the following frame.
 
-The source press is retained until release or cancellation. This keeps fast drops reliable when the press arrives in one render frame and movement plus release arrive together in the next.
+Validation covers fitted-image geometry, padding grabs, clamped edge drops, real egui events across frames, preview paint bounds following the pointer at 50/100/200% zoom, panning, cancellation, coalesced/split-frame drags and one-step history. Native macOS checks cover final placement and Undo/Redo. A held native preview recording, exact onset timing, display-pixel alignment, library autoscroll and native Windows/Linux testing remain outstanding.

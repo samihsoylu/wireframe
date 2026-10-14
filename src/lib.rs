@@ -23,6 +23,7 @@ pub mod scene;
 pub mod storage;
 pub mod tabs;
 pub mod tree;
+pub mod window;
 
 pub mod workspace;
 

@@ -27,6 +27,7 @@ mod svg;
 mod table;
 mod tabs;
 mod tree;
+mod window;
 use crate::{
     document::{Properties, Value},
     layout::{EguiMeasurer, TextStyle},
@@ -319,6 +320,9 @@ impl Scene {
         }
         if matches!(c.kind, Kind::Menu | Kind::MenuBar) {
             return self.menu(layer, sketch, fonts, rasters);
+        }
+        if c.kind == Kind::Panel {
+            return self.window(layer, sketch, fonts);
         }
         if c.kind == Kind::Browser {
             return self.browser(layer, sketch, fonts);

@@ -44,6 +44,9 @@ fn supported(kind: &str, key: &str) -> bool {
         "menu_icon" => matches!(kind, "button" | "pointed_button" | "app_bar"),
         "nav_icon" | "filter_icon" | "icons" => kind == "app_bar",
         "button_style" => kind == "alert",
+        "header_height" | "footer_height" | "minimize" | "maximize" | "close" | "resize_handle" => {
+            kind == "window"
+        }
         "tab_position" => matches!(kind, "tabs" | "vertical_tabs"),
         "direction" => kind == "pointed_button",
         "label_position" => matches!(kind, "icon_label" | "circle_button"),
@@ -76,6 +79,7 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "tree"
                 | "accordion"
                 | "browser"
+                | "window"
         ),
         "border_color" => matches!(kind, "dropdown" | "text_input" | "text_area" | "link_bar"),
         "border" => matches!(
@@ -200,6 +204,7 @@ impl WireframeApp {
                 | "alert"
                 | "app_bar"
                 | "browser"
+                | "window"
                 | "table"
                 | "list"
                 | "button_bar"
@@ -229,7 +234,7 @@ impl WireframeApp {
                 if let Err(error) = self.editor.auto_size_control(id) { self.error = Some(error); }
                 self.editor.commit();
             }
-            for key in ["image_border", "sketch_filter", "text", "button_style", "tab_position", "direction", "label_position", "icon", "icon_size", "icon_rotation", "nav_icon", "filter_icon", "menu_icon", "icons", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+            for key in ["image_border", "sketch_filter", "text", "header_height", "footer_height", "minimize", "maximize", "close", "resize_handle", "button_style", "tab_position", "direction", "label_position", "icon", "icon_size", "icon_rotation", "nav_icon", "filter_icon", "menu_icon", "icons", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
                 if matches!(key, "icon_size" | "icon_rotation") && !matches!(values.get("icon"),Some(Value::Icon(_))) {continue;}
                 if key == "value" && values.get("vertical_scrollbar") != Some(&Value::Bool(true)) { continue; }
                 let Some(field) = spec.property(key).filter(|f| f.visible && supported(spec.id, key)) else { continue; };

@@ -943,6 +943,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "alert" => crate::alert::DEFAULT,
         "app_bar" => crate::app_bar::DEFAULT,
         "browser" => crate::browser::DEFAULT,
+        "window" => crate::window::DEFAULT,
         "label" => "Some text",
         "heading" => "Title",
         "subtitle" => "Subtitle",
@@ -1019,6 +1020,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             | "tree"
             | "accordion"
             | "browser"
+            | "window"
     ) {
         c.properties.extend([
             boolean("vertical_scrollbar", "Scrollbar", false),
@@ -1097,6 +1099,16 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             &["solid", "torn_bottom", "none", "dashed", "dotted"],
             "solid",
         );
+    }
+    if c.id == "window" {
+        c.properties.extend([
+            number("header_height", "Header height", 26., 0., 10000., true),
+            number("footer_height", "Footer height", 25., 0., 10000., true),
+            boolean("minimize", "Minimize button", false),
+            boolean("maximize", "Maximize button", false),
+            boolean("close", "Close button", false),
+            boolean("resize_handle", "Resize handle", false),
+        ]);
     }
     if c.id == "app_bar" {
         c.properties.extend([

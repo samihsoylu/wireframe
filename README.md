@@ -13,6 +13,7 @@ A local desktop workspace for turning rough ideas into clear wireframes. Built i
 - Alert dialogs with divided or inline buttons, individual destinations and automatic sizing.
 - App bars with custom icons, project images, automatic contrast and per-icon destinations.
 - Browser frames with title/address text, content colors, scrollbars and transparent torn edges.
+- Window frames with rich titles, adjustable headers/footers, chrome buttons and resize handles.
 - Undo/redo, local project files and recovery copies.
 - Sketch and clean styles; PNG and SVG export.
 - [Project fonts](docs/PROJECT-FONTS.md): import four font faces, save them with the project, and use them on canvas and in exports.

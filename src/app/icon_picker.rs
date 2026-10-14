@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 use eframe::egui::{self, Color32};
+use wireframe::text_entry::TextInput;
 use wireframe::{
     document::{Asset, IconSource},
     icons,
@@ -51,7 +52,7 @@ pub(super) fn choice(ui: &mut egui::Ui, value: &mut Option<IconSource>, assets: 
                     .data_mut(|d| d.get_temp::<String>(style_key))
                     .unwrap_or_default();
                 ui.add(
-                    egui::TextEdit::singleline(&mut query)
+                    TextInput::singleline(&mut query)
                         .hint_text("Search icons…")
                         .desired_width(330.),
                 );

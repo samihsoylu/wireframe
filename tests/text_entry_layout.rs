@@ -216,3 +216,29 @@ fn invalid_layout_or_raster_dimensions_fail_explicitly() {
             .is_err()
     );
 }
+
+#[test]
+fn unwrapped_lines_keep_full_width_and_visible_rtl_coordinates() {
+    let mut engine = ENGINE.lock().unwrap_or_else(|e| e.into_inner());
+    for source in ["ABC שלום 123 ".repeat(80), "שלום مرحبا ".repeat(80)] {
+        let mut layout = Layout::with_wrap(&mut engine, &source, 13., 100., 2., false).unwrap();
+        assert_eq!(layout.rows.len(), 1);
+        assert!(layout.size.x > 100.);
+        assert!(
+            layout.rows[0]
+                .cells
+                .iter()
+                .all(|c| c.rect.left() >= 0. && c.rect.right() <= layout.size.x + 0.01)
+        );
+        assert_eq!(layout.rows[0].cells.len(), source.graphemes(true).count());
+        let right = layout.size.x - 100.;
+        let image = layout
+            .raster(
+                &mut engine,
+                Rect::from_min_size(Pos2::new(right, 0.), Vec2::new(100., 25.)),
+                Color32::BLACK,
+            )
+            .unwrap();
+        assert!(image.pixels.iter().any(|p| p.a() > 0));
+    }
+}

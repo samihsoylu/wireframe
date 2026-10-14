@@ -305,3 +305,112 @@ fn whole_field_accessibility_replacement_and_clipboard_keep_unicode() {
     frame(&ctx, &mut value, vec![key(Key::Z, Modifiers::COMMAND)]);
     assert_eq!(value, "مرحبا\n👩‍💻");
 }
+
+#[test]
+fn singleline_retains_source_scrolls_and_leaves_form_keys_available() {
+    let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+    let ctx = egui::Context::default();
+    ctx.enable_accesskit();
+    let mut value = "ABC שלום 123 👩‍💻 ".repeat(15);
+    let original = value.clone();
+    let mut run = |events| {
+        let mut id = egui::Id::NULL;
+        let mut rect = Rect::NOTHING;
+        let mut keys = (false, false);
+        let mut output = ctx.run_ui(
+            egui::RawInput {
+                events,
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(500., 300.))),
+                ..Default::default()
+            },
+            |ui| {
+                let response = ui.add(
+                    wireframe::text_entry::TextInput::singleline(&mut value)
+                        .desired_width(140.)
+                        .autofocus(true)
+                        .hint_text("Search"),
+                );
+                id = response.id;
+                rect = response.rect;
+                keys = ui.input(|i| (i.key_pressed(Key::Enter), i.key_pressed(Key::ArrowDown)));
+            },
+        );
+        output.textures_delta.clear();
+        (id, rect, keys, output)
+    };
+    let (id, rect, _, output) = run(vec![]);
+    assert!(wireframe::text_entry::is_focused(&ctx));
+    let caret = output.platform_output.ime.unwrap().cursor_rect;
+    assert!(caret.left() >= rect.left() && caret.right() <= rect.right());
+    let nodes = &output.platform_output.accesskit_update.unwrap().nodes;
+    let parent = &nodes
+        .iter()
+        .find(|(n, _)| *n == id.accesskit_id())
+        .unwrap()
+        .1;
+    assert_eq!(parent.role(), Role::TextInput);
+    assert_eq!(parent.value(), Some(original.as_str()));
+    assert_eq!(parent.placeholder(), Some("Search"));
+    let (_, _, keys, _) = run(vec![key(Key::ArrowDown, Modifiers::NONE)]);
+    assert!(keys.1);
+    assert!(wireframe::text_entry::is_focused(&ctx));
+    let (_, _, keys, _) = run(vec![key(Key::Enter, Modifiers::NONE)]);
+    assert!(keys.0);
+    assert!(!wireframe::text_entry::is_focused(&ctx));
+    assert_eq!(value, original);
+}
+
+#[test]
+fn singleline_paste_keeps_line_endings_and_delete_keeps_graphemes() {
+    let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+    let ctx = egui::Context::default();
+    let mut value = String::new();
+    let mut run = |events| {
+        let mut out = ctx.run_ui(
+            egui::RawInput {
+                events,
+                ..Default::default()
+            },
+            |ui| {
+                ui.add(wireframe::text_entry::TextInput::singleline(&mut value).autofocus(true));
+            },
+        );
+        out.textures_delta.clear();
+    };
+    run(vec![]);
+    run(vec![Event::Paste("שלום\r\n👩‍💻".into())]);
+    run(vec![key(Key::Backspace, Modifiers::NONE)]);
+    assert_eq!(value, "שלום\r\n");
+}
+
+#[test]
+fn composition_keys_do_not_submit_a_singleline_form() {
+    let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+    let ctx = egui::Context::default();
+    let mut value = String::new();
+    for events in [
+        vec![],
+        vec![
+            Event::Ime(ImeEvent::Preedit {
+                text: "に".into(),
+                active_range_chars: None,
+            }),
+            key(Key::Enter, Modifiers::NONE),
+            key(Key::ArrowDown, Modifiers::NONE),
+        ],
+    ] {
+        let mut output = ctx.run_ui(
+            egui::RawInput {
+                events,
+                ..Default::default()
+            },
+            |ui| {
+                ui.add(wireframe::text_entry::TextInput::singleline(&mut value).autofocus(true));
+                assert!(!ui.input(|i| i.key_pressed(Key::Enter) || i.key_pressed(Key::ArrowDown)));
+            },
+        );
+        output.textures_delta.clear();
+    }
+    assert!(value.is_empty());
+    assert!(wireframe::text_entry::is_focused(&ctx));
+}

@@ -9,7 +9,7 @@ use unicode_segmentation::UnicodeSegmentation;
 
 pub mod layout;
 mod widget;
-pub use widget::{forget, multiline};
+pub use widget::{TextInput, forget, is_focused, multiline};
 
 /// The side of a source boundary to which a visual caret belongs. Both sides
 /// may have different screen positions at a bidirectional or wrapped boundary.

@@ -60,7 +60,7 @@ impl WireframeApp {
         ui.label("Changes here update every instance. Local overrides keep their values.");
         let mut name = self.editor.current().name;
         ui.label("Name");
-        let edit = ui.text_edit_singleline(&mut name);
+        let edit = ui.add(TextInput::singleline(&mut name));
         if edit.changed() {
             self.editor.begin("Rename component");
             if let Some(d) = self

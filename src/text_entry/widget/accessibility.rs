@@ -2,7 +2,7 @@
 // Copyright 2026 Wireframe contributors
 use super::{Caret, State};
 use eframe::egui::{
-    self, Id, Rect, Response, Ui, Vec2,
+    self, Id, Rect, Response, Ui,
     accesskit::{self, Action, ActionData, NodeId, Role, TextPosition, TextSelection},
 };
 use std::ops::Range;
@@ -58,7 +58,14 @@ struct Unit {
     rtl: bool,
 }
 
-pub(super) fn update(ui: &mut Ui, response: &Response, state: &mut State, inner: Rect) {
+pub(super) fn update(
+    ui: &mut Ui,
+    response: &Response,
+    state: &mut State,
+    inner: Rect,
+    multiline: bool,
+    hint: &str,
+) {
     if ui
         .ctx()
         .accesskit_node_builder(response.id, |_| ())
@@ -141,7 +148,7 @@ pub(super) fn update(ui: &mut Ui, response: &Response, state: &mut State, inner:
     }
     let word_starts: Vec<_> = source.unicode_word_indices().map(|(i, _)| i).collect();
     state.ax_runs.clear();
-    let offset = inner.min.to_vec2() - Vec2::new(0., state.scroll);
+    let offset = inner.min.to_vec2() - state.scroll;
     for units in groups {
         let range = units[0].source.start..units.last().unwrap().source.end;
         let rtl = units[0].rtl;
@@ -259,7 +266,14 @@ pub(super) fn update(ui: &mut Ui, response: &Response, state: &mut State, inner:
     };
     let positions = position(selection.anchor).zip(position(selection.focus));
     ui.ctx().accesskit_node_builder(response.id, |node| {
-        node.set_role(Role::MultilineTextInput);
+        node.set_role(if multiline {
+            Role::MultilineTextInput
+        } else {
+            Role::TextInput
+        });
+        if !hint.is_empty() {
+            node.set_placeholder(hint);
+        }
         node.set_value(source.as_str());
         node.add_action(Action::SetTextSelection);
         node.add_action(Action::SetValue);

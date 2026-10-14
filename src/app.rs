@@ -22,6 +22,7 @@ use wireframe::{
     model::*,
     scene::{self, Primitive},
     storage::{self, ProjectRepository, ProjectStore},
+    text_entry::TextInput,
     workspace::{Clipboard, Editor},
 };
 
@@ -392,7 +393,8 @@ impl WireframeApp {
             self.presentation_history.clear();
             self.present = true;
         }
-        if ctx.egui_wants_keyboard_input() {
+        if wireframe::text_entry::is_focused(ctx) || ctx.text_edit_focused() || ctx.any_popup_open()
+        {
             return;
         }
         if take(Modifiers::NONE, Key::Slash) || take(Modifiers::NONE, Key::Plus) {
@@ -733,7 +735,7 @@ impl WireframeApp {
     }
     fn quick_add_ui(&mut self, ui: &mut egui::Ui) {
         let response = ui.add(
-            egui::TextEdit::singleline(&mut self.quick)
+            TextInput::singleline(&mut self.quick)
                 .id_salt("quick-add")
                 .hint_text("Quick Add  /")
                 .desired_width(180.),
@@ -1072,11 +1074,11 @@ impl WireframeApp {
                 let selected=self.editor.selected_views();
                 if selected.is_empty() && self.editor.editing_instance() {ui.heading("Component instance");ui.label("Select a child to change this instance. Reset returns a property to its source value.");return;}
                 if selected.is_empty() && self.editor.definition.is_some() { self.component_source_inspector(ui); return; }
-                if selected.is_empty(){ui.heading("Page");ui.label("Project title");let mut title=self.editor.document.title.clone();let r=ui.text_edit_singleline(&mut title);if r.changed(){self.editor.begin("Rename project");self.editor.document.title=title;}
+                if selected.is_empty(){ui.heading("Page");ui.label("Project title");let mut title=self.editor.document.title.clone();let r=ui.add(TextInput::singleline(&mut title));if r.changed(){self.editor.begin("Rename project");self.editor.document.title=title;}
 if r.lost_focus(){self.editor.commit();}
-                    ui.label("Page name");let mut name=self.editor.current().name.clone();let r=ui.text_edit_singleline(&mut name);if r.changed(){self.editor.begin("Rename page");self.editor.current_mut().name=name;}
+                    ui.label("Page name");let mut name=self.editor.current().name.clone();let r=ui.add(TextInput::singleline(&mut name));if r.changed(){self.editor.begin("Rename page");self.editor.current_mut().name=name;}
 if r.lost_focus(){self.editor.commit();}
-                    ui.label("Notes");let mut notes=self.editor.current().notes.clone();let r=ui.add(egui::TextEdit::multiline(&mut notes).desired_rows(8).desired_width(f32::INFINITY).hint_text("Explain what this wireframe is for…"));if r.changed(){self.editor.begin("Edit notes");self.editor.current_mut().notes=notes;}
+                    ui.label("Notes");let mut notes=self.editor.current().notes.clone();let r=ui.add(TextInput::multiline(&mut notes).desired_rows(8).desired_width(f32::INFINITY).hint_text("Explain what this wireframe is for…"));if r.changed(){self.editor.begin("Edit notes");self.editor.current_mut().notes=notes;}
 if r.lost_focus(){self.editor.commit();}
                     ui.add_space(14.);if ui.add_enabled(self.editor.document.pages.len()>1,egui::Button::new("Delete this page")).clicked(){self.editor.delete_page();}ui.separator();ui.small("Select a control on the canvas to change its content and appearance. Double-click it to edit text.");return;
                 }
@@ -1094,7 +1096,7 @@ if c.kind==Kind::Tabs {ui.small("Separate tabs with commas.");}
                     } else if self.editor.is_group(c.id) && ui.button("Edit group contents").clicked(){self.editor.enter(c.id);}
                     if c!=original {self.editor.begin("Edit properties");if original.locked {c.bounds=original.bounds;c.text=original.text;c.font_size=original.font_size;c.bold=original.bold;c.fill=original.fill;c.checked=original.checked;c.link=original.link;}
                         self.editor.update_control(c);}
-                    if !ui.ctx().egui_wants_keyboard_input()&&!ui.input(|i|i.pointer.any_down()){self.editor.commit();}
+                    if !wireframe::text_entry::is_focused(ui.ctx()) && !ui.ctx().text_edit_focused()&&!ui.input(|i|i.pointer.any_down()){self.editor.commit();}
                 }else {ui.label("Align");ui.horizontal(|ui|{for(i,name)in ["Left","Center","Right"].iter().enumerate(){if ui.button(*name).clicked(){self.editor.align(0,i);}}});ui.horizontal(|ui|{for(i,name)in ["Top","Middle","Bottom"].iter().enumerate(){if ui.button(*name).clicked(){self.editor.align(1,i);}}});ui.horizontal(|ui|{if ui.button("Spread X").clicked(){self.editor.distribute(0);}
 if ui.button("Spread Y").clicked(){self.editor.distribute(1);}});}
                 self.component_actions(ui);
@@ -1986,6 +1988,82 @@ mod tests {
         );
         output.textures_delta.clear();
     }
+    #[test]
+    fn text_undo_stays_local_but_button_focus_allows_document_undo() {
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        app.editor.add(Kind::Rectangle, 50., 50.);
+        let mut value = "hello".to_owned();
+        let key = |key| egui::Event::Key {
+            key,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: Modifiers::COMMAND,
+        };
+        for (events, button) in [
+            (vec![], false),
+            (vec![egui::Event::Text("X".into())], false),
+            (vec![key(Key::Z)], false),
+            (vec![], true),
+            (vec![key(Key::Z)], true),
+        ] {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    events,
+                    ..Default::default()
+                },
+                |ui| {
+                    app.shortcuts(ui.ctx());
+                    if button {
+                        ui.button("Action").request_focus();
+                    } else {
+                        ui.add(TextInput::singleline(&mut value).autofocus(true));
+                    }
+                },
+            );
+            output.textures_delta.clear();
+            if !button {
+                assert_eq!(app.editor.current().controls.len(), 1);
+            }
+        }
+        assert_eq!(value, "hello");
+        assert_eq!(app.editor.current().controls.len(), 0);
+    }
+
+    #[test]
+    fn quick_add_keeps_arrow_selection_and_enter_submission() {
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        app.quick_focus = true;
+        app.quick = "button".into();
+        let event = |key| egui::Event::Key {
+            key,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: Modifiers::NONE,
+        };
+        for events in [vec![], vec![event(Key::ArrowDown)], vec![event(Key::Enter)]] {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    events,
+                    ..Default::default()
+                },
+                |ui| app.quick_add_ui(ui),
+            );
+            output.textures_delta.clear();
+        }
+        assert_eq!(app.editor.current().controls.len(), 1);
+        assert!(app.quick.is_empty());
+        let mut matches: Vec<_> = Kind::ALL
+            .into_iter()
+            .filter(|k| k.name().to_lowercase().contains("button"))
+            .collect();
+        matches.sort_by_key(|k| (k.name().to_lowercase() != "button", k.name()));
+        assert_eq!(app.editor.current().controls[0].kind, matches[1]);
+    }
+
     fn pointer(pos: Pos2, pressed: bool) -> egui::Event {
         egui::Event::PointerButton {
             pos,

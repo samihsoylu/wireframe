@@ -243,7 +243,7 @@ impl WireframeApp {
                                                 if ui.selectable_label(matches!(draft,Some(Link::Url(_))),"Web address…").clicked(){if !matches!(draft,Some(Link::Url(_))){draft=Some(Link::Url(String::new()));}ui.close();}
                                             });
                                             let apply=if let Some(Link::Url(url))=&mut draft {
-                                                ui.add(egui::TextEdit::singleline(url).hint_text("https://…"));
+                                                ui.add(TextInput::singleline(url).hint_text("https://…"));
                                                 ui.add_enabled(Link::Url(url.clone()).valid(),egui::Button::new("Apply link")).clicked()
                                             }else{draft!=saved};
                                             if apply {links[row]=draft.clone();finish=true;}

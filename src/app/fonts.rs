@@ -80,11 +80,11 @@ impl WireframeApp {
                 }
                 ui.horizontal(|ui| {
                     ui.label("Name");
-                    ui.text_edit_singleline(&mut draft.name);
+                    ui.add(TextInput::singleline(&mut draft.name));
                 });
                 ui.collapsing("Font notices", |ui| {
                     ui.label("Optional notices to retain with the project and SVG exports.");
-                    ui.add(egui::TextEdit::multiline(&mut draft.notices).desired_rows(4));
+                    ui.add(TextInput::multiline(&mut draft.notices).desired_rows(4));
                 });
                 if let Some(error) = &draft.error {
                     ui.colored_label(Color32::DARK_RED, error);

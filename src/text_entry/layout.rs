@@ -2,7 +2,7 @@
 // Copyright 2026 Wireframe contributors
 
 use super::{Affinity, Caret, Selection};
-use cosmic_text::{Attrs, Buffer, Family, FontSystem, Metrics, Shaping, SwashCache, Weight};
+use cosmic_text::{Attrs, Buffer, Family, FontSystem, Metrics, Shaping, SwashCache, Weight, Wrap};
 use eframe::egui::{self, Color32, ColorImage, Pos2, Rect, Vec2};
 use std::{collections::BTreeMap, ops::Range};
 use unicode_segmentation::UnicodeSegmentation;
@@ -90,6 +90,17 @@ impl Layout {
         width: f32,
         scale: f32,
     ) -> Result<Self, String> {
+        Self::with_wrap(engine, source, font_size, width, scale, true)
+    }
+
+    pub fn with_wrap(
+        engine: &mut Engine,
+        source: &str,
+        font_size: f32,
+        width: f32,
+        scale: f32,
+        wrap: bool,
+    ) -> Result<Self, String> {
         if source.len() > 1024 * 1024 {
             return Err("Text exceeds the editor's 1 MiB layout limit".into());
         }
@@ -107,7 +118,8 @@ impl Layout {
             &mut engine.fonts,
             Metrics::new(font_size * scale, font_size * 1.4 * scale),
         );
-        buffer.set_size(Some(width * scale), None);
+        buffer.set_wrap(if wrap { Wrap::WordOrGlyph } else { Wrap::None });
+        buffer.set_size(wrap.then_some(width * scale), None);
         buffer.set_text(
             source,
             &Attrs::new()
@@ -214,21 +226,21 @@ impl Layout {
             let row = &mut rows[i];
             let first = boundaries.partition_point(|r| r.end <= lo);
             let last = boundaries.partition_point(|r| r.start < hi);
+            let mut source_positions: BTreeMap<_, _> = row
+                .cells
+                .iter()
+                .map(|c| (c.source.start, c.trailing()))
+                .collect();
             for range in &boundaries[first..last] {
-                if !row.cells.iter().any(|c| c.source == *range) {
-                    let x = row
-                        .cells
-                        .iter()
-                        .filter(|c| c.source.end <= range.start)
-                        .max_by_key(|c| c.source.end)
-                        .map_or(
-                            if rtl {
-                                row.rect.left()
-                            } else {
-                                row.rect.right()
-                            },
-                            Cell::trailing,
-                        );
+                if !source_positions.contains_key(&range.start) {
+                    let x = source_positions.range(..range.start).next_back().map_or(
+                        if rtl {
+                            row.rect.left()
+                        } else {
+                            row.rect.right()
+                        },
+                        |(_, x)| *x,
+                    );
                     row.cells.push(Cell {
                         source: range.clone(),
                         rect: Rect::from_min_max(
@@ -237,6 +249,7 @@ impl Layout {
                         ),
                         rtl,
                     });
+                    source_positions.insert(range.start, x);
                 }
             }
             row.cells.sort_by(|a, b| {
@@ -249,11 +262,12 @@ impl Layout {
             row.ending = if hi == end { end..after } else { hi..hi };
         }
         let height = rows.last().map_or(font_size * 1.4, |r| r.rect.bottom());
+        let content_width = rows.iter().map(|r| r.rect.right()).fold(width, f32::max);
         Ok(Self {
             source: source.into(),
             buffer,
             rows,
-            size: Vec2::new(width, height),
+            size: Vec2::new(content_width, height),
             scale,
         })
     }

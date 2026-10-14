@@ -229,6 +229,10 @@ impl ControlSpec {
             node.properties
                 .insert("device_resizing".into(), Value::Choice("stretch".into()));
         }
+        if self.id == "tablet" {
+            node.properties
+                .insert("device_resizing".into(), Value::Choice("stretch".into()));
+        }
         if self.id == "circle_button" {
             node.properties.insert(
                 "icon".into(),

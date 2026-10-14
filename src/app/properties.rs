@@ -20,12 +20,10 @@ fn fraction_slider(ui: &mut egui::Ui, value: &mut f64) -> (egui::Response, bool)
 // catalog's full field inventory remains separate from completed rendering.
 fn supported(kind: &str, key: &str) -> bool {
     match key {
-        "device_model"
-        | "orientation"
-        | "device_resizing"
-        | "background_pattern"
-        | "transparent_background"
-        | "status_bar" => kind == "phone",
+        "device_model" | "background_pattern" => kind == "phone",
+        "orientation" | "device_resizing" | "transparent_background" | "status_bar" => {
+            matches!(kind, "phone" | "tablet")
+        }
         "row_links" => matches!(
             kind,
             "list"
@@ -241,6 +239,7 @@ impl WireframeApp {
                 | "app_bar"
                 | "field_set"
                 | "phone"
+                | "tablet"
                 | "browser"
                 | "window"
                 | "table"

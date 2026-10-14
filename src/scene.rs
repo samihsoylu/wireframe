@@ -367,7 +367,7 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
                 false,
             );
         }
-        Kind::Phone => {
+        Kind::Phone | Kind::Tablet => {
             rect(&mut out, b, white, 18.);
             rect(
                 &mut out,

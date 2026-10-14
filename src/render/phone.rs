@@ -9,7 +9,7 @@ use std::f32::consts::{FRAC_PI_2, PI};
 
 // Original continuous contours. Corresponding samples form a transparent ring;
 // no screen-colored patch is painted over content beneath the device.
-fn contour(b: Bounds, top: f32, bottom: f32, notch: bool) -> Vec<[f32; 2]> {
+pub(super) fn contour(b: Bounds, top: f32, bottom: f32, notch: bool) -> Vec<[f32; 2]> {
     let rt = top.min(b.w / 2.).min(b.h / 2.).max(0.);
     let rb = bottom.min(b.w / 2.).min(b.h / 2.).max(0.);
     let mut p = Vec::new();
@@ -50,7 +50,7 @@ fn contour(b: Bounds, top: f32, bottom: f32, notch: bool) -> Vec<[f32; 2]> {
     }
     p
 }
-fn section_axis(p: f32, source: f32, target: f32, start: f32, end: f32) -> f32 {
+pub(super) fn section_axis(p: f32, source: f32, target: f32, start: f32, end: f32) -> f32 {
     let compression = (target / (start + end)).min(1.);
     let a = start * compression;
     let z = end * compression;
@@ -62,7 +62,7 @@ fn section_axis(p: f32, source: f32, target: f32, start: f32, end: f32) -> f32 {
         a + (p - start) / (source - start - end) * (target - a - z).max(0.)
     }
 }
-fn circle(b: Bounds) -> Vec<[f32; 2]> {
+pub(super) fn circle(b: Bounds) -> Vec<[f32; 2]> {
     (0..=40)
         .map(|i| {
             let a = i as f32 / 40. * 2. * PI;
@@ -315,7 +315,7 @@ impl Scene {
         }
         Ok(())
     }
-    fn phone_line(
+    pub(super) fn phone_line(
         &mut self,
         points: Vec<[f32; 2]>,
         color: [u8; 3],
@@ -394,7 +394,7 @@ impl Scene {
             self.phone_line(local(camera, true), ink, width * 0.75, clip);
         }
     }
-    fn phone_status_icon(
+    pub(super) fn phone_status_icon(
         &mut self,
         kind: StatusKind,
         b: Bounds,

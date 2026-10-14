@@ -345,8 +345,12 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(w, h)?;
             return Ok((w, h));
         }
-        if kind == "phone" {
-            let (w, h) = crate::phone::Options::from_properties(props).native();
+        if matches!(kind, "phone" | "tablet") {
+            let (w, h) = if kind == "tablet" {
+                crate::tablet::Options::from_properties(props).native()
+            } else {
+                crate::phone::Options::from_properties(props).native()
+            };
             let w = match width {
                 Dimension::Auto => w,
                 Dimension::Fixed(v) => v,

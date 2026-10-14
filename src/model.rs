@@ -122,6 +122,7 @@ pub enum Kind {
     LinkBar,
     Browser,
     Phone,
+    Tablet,
     Panel,
     FieldSet,
     List,
@@ -133,7 +134,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 42] = [
+    pub const ALL: [Kind; 43] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -167,6 +168,7 @@ impl Kind {
         Self::LinkBar,
         Self::Browser,
         Self::Phone,
+        Self::Tablet,
         Self::Panel,
         Self::FieldSet,
         Self::List,
@@ -212,6 +214,7 @@ impl Kind {
             Self::LinkBar => "Link bar",
             Self::Browser => "Browser",
             Self::Phone => "Phone",
+            Self::Tablet => "Tablet",
             Self::Panel => "Window",
             Self::FieldSet => "Field set",
             Self::List => "List",
@@ -278,6 +281,7 @@ impl Kind {
             Self::Line | Self::Arrow => (180., 20.),
             Self::Browser => (450., 400.),
             Self::Phone => (240., 440.),
+            Self::Tablet => (616., 916.),
             Self::Panel => (450., 400.),
             Self::FieldSet => (200., 170.),
             Self::List | Self::Table => (300., 180.),

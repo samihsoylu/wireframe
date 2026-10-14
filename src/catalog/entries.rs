@@ -1101,6 +1101,19 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             "solid",
         );
     }
+    if c.id == "tablet" {
+        c.properties.extend([
+            choice(
+                "orientation",
+                "Orientation",
+                &["portrait", "landscape"],
+                "portrait",
+            ),
+            choice("device_resizing", "Resizing", &["stretch", "fit"], "fit"),
+            boolean("transparent_background", "Transparent screen", false),
+            boolean("status_bar", "Show status bar", true),
+        ]);
+    }
     if c.id == "phone" {
         c.properties.extend([
             choice(

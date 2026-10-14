@@ -7,11 +7,21 @@ use wireframe::{
     workspace::Editor,
 };
 
-#[derive(Default)]
 pub(super) struct LibraryPreviews {
     settings: Option<Settings>,
     font: Option<std::sync::Arc<wireframe::fonts::ProjectFont>>,
     scenes: Vec<(Kind, Result<Scene, String>)>,
+    clock: fn() -> wireframe::tablet::Clock,
+}
+impl Default for LibraryPreviews {
+    fn default() -> Self {
+        Self {
+            settings: None,
+            font: None,
+            scenes: vec![],
+            clock: wireframe::tablet::Clock::now,
+        }
+    }
 }
 impl LibraryPreviews {
     pub(super) fn scene(
@@ -30,11 +40,14 @@ impl LibraryPreviews {
         } else {
             // Use the insertion path in an isolated document so catalog defaults,
             // automatic sizing and migrated families agree with actual insertion.
-            let mut editor = Editor::new(Project {
-                settings: settings.clone(),
-                font: font.clone(),
-                ..Project::default()
-            });
+            let mut editor = Editor::with_clock(
+                Project {
+                    settings: settings.clone(),
+                    font: font.clone(),
+                    ..Project::default()
+                },
+                self.clock,
+            );
             editor.add(kind, 0., 0.);
             let drawing = if let Some(error) = editor.error.take() {
                 Err(error)
@@ -54,17 +67,26 @@ mod tests {
 
     #[test]
     fn every_library_preview_matches_actual_insertion_in_each_style() {
-        let mut previews = LibraryPreviews::default();
+        fn frozen() -> wireframe::tablet::Clock {
+            wireframe::tablet::Clock::new(9, 52).unwrap()
+        }
+        let mut previews = LibraryPreviews {
+            clock: frozen,
+            ..Default::default()
+        };
         for sketch in [true, false] {
             let settings = Settings {
                 sketch,
                 font_size: 13.,
             };
             for kind in Kind::ALL {
-                let mut editor = Editor::new(Project {
-                    settings: settings.clone(),
-                    ..Project::default()
-                });
+                let mut editor = Editor::with_clock(
+                    Project {
+                        settings: settings.clone(),
+                        ..Project::default()
+                    },
+                    frozen,
+                );
                 editor.add(kind, 0., 0.);
                 let expected = editor.rendered_scene(editor.page).unwrap();
                 let actual = previews.scene(kind, &settings, &None).unwrap();

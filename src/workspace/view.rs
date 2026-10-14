@@ -11,6 +11,15 @@ pub(super) struct Cache {
     project: Option<Project>,
     pages: HashMap<Id, Result<Layout, String>>,
     scenes: HashMap<Id, Result<crate::render::Scene, String>>,
+    clocks: HashMap<(Id, NodePath), (ClockLayout, crate::tablet::Clock)>,
+}
+#[derive(Clone, PartialEq)]
+struct ClockLayout {
+    options: crate::tablet::Options,
+    width: f32,
+    height: f32,
+    sketch: bool,
+    font: Option<std::sync::Arc<crate::fonts::ProjectFont>>,
 }
 #[derive(Clone)]
 pub struct Layer {
@@ -20,6 +29,7 @@ pub struct Layer {
     pub clip: Option<Bounds>,
     pub path: NodePath,
     pub properties: Properties,
+    pub clock: Option<crate::tablet::Clock>,
 }
 impl Editor {
     pub fn layout_page(&self, id: Id) -> Result<Layout, String> {
@@ -31,6 +41,9 @@ impl Editor {
             cache.project = Some(self.document.clone());
             cache.pages.clear();
             cache.scenes.clear();
+            cache
+                .clocks
+                .retain(|(surface, _), _| self.surface(*surface).is_some());
         }
         if let Some(layout) = cache.pages.get(&id) {
             return layout.clone();
@@ -59,7 +72,41 @@ impl Editor {
         if let Some(scene) = self.cache.borrow().scenes.get(&id) {
             return scene.clone();
         }
-        let layers = self.layers(id)?;
+        let mut layers = self.layers(id)?;
+        {
+            let mut cache = self.cache.borrow_mut();
+            let paths = layers
+                .iter()
+                .filter(|l| l.control.kind == Kind::Tablet)
+                .map(|l| l.path.clone())
+                .collect::<HashSet<_>>();
+            cache
+                .clocks
+                .retain(|(surface, path), _| *surface != id || paths.contains(path));
+            for layer in &mut layers {
+                if layer.control.kind != Kind::Tablet {
+                    continue;
+                }
+                let signature = ClockLayout {
+                    options: crate::tablet::Options::from_properties(&layer.properties),
+                    width: layer.control.bounds.w,
+                    height: layer.control.bounds.h,
+                    sketch: self.document.settings.sketch,
+                    font: self.document.font.clone(),
+                };
+                let key = (id, layer.path.clone());
+                let record = cache
+                    .clocks
+                    .entry(key)
+                    .or_insert_with(|| (signature.clone(), (self.clock)()));
+                // Location is deliberately absent: moving a control does not
+                // relayout its contents or change its displayed clock.
+                if record.0 != signature {
+                    *record = (signature, (self.clock)());
+                }
+                layer.clock = Some(record.1);
+            }
+        }
         let (title, _) = self.surface(id).ok_or("Workspace no longer exists")?;
         let mut result = Err("Drawing did not run".into());
         let output = self.fonts.run_ui(egui::RawInput::default(), |ui| {
@@ -126,6 +173,7 @@ impl Editor {
                 clip: path_clip(&layout.nodes, &node.path).map(bounds),
                 path: node.path.clone(),
                 properties: node.properties.clone(),
+                clock: None,
             })
             .collect())
     }
@@ -239,6 +287,7 @@ pub(super) fn control(node: &LayoutNode) -> Control {
         "link_bar" => Kind::LinkBar,
         "browser" => Kind::Browser,
         "phone" => Kind::Phone,
+        "tablet" => Kind::Tablet,
         "panel" | "window" => Kind::Panel,
         "field_set" => Kind::FieldSet,
         "list" => Kind::List,

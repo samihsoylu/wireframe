@@ -47,6 +47,7 @@ pub struct Editor {
     pub error: Option<String>,
     cache: RefCell<view::Cache>,
     fonts: eframe::egui::Context,
+    clock: fn() -> crate::tablet::Clock,
 }
 impl Default for Editor {
     fn default() -> Self {
@@ -55,6 +56,10 @@ impl Default for Editor {
 }
 impl Editor {
     pub fn new(document: Project) -> Self {
+        Self::with_clock(document, crate::tablet::Clock::now)
+    }
+    /// Supply a clock for reproducible rendering without storing time in projects.
+    pub fn with_clock(document: Project, clock: fn() -> crate::tablet::Clock) -> Self {
         let fonts = eframe::egui::Context::default();
         crate::fonts::install_project(&fonts, document.font.as_deref());
         Self {
@@ -70,6 +75,7 @@ impl Editor {
             error: None,
             cache: RefCell::new(view::Cache::default()),
             fonts,
+            clock,
         }
     }
     fn snapshot(&self) -> Snapshot {
@@ -279,6 +285,7 @@ impl Editor {
                     | Kind::Browser
                     | Kind::Panel
                     | Kind::Phone
+                    | Kind::Tablet
                     | Kind::FieldSet
                     | Kind::Button
                     | Kind::TextInput
@@ -313,6 +320,7 @@ impl Editor {
                     Kind::Panel => "window",
                     Kind::FieldSet => "field_set",
                     Kind::Phone => "phone",
+                    Kind::Tablet => "tablet",
                     Kind::Button => "button",
                     Kind::TextInput => "text_input",
                     Kind::TextArea => "text_area",

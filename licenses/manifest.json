@@ -468,6 +468,15 @@
     ]
   },
   {
+    "name": "chrono",
+    "version": "0.4.45",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/chronotope/chrono",
+    "files": [
+      "chrono-0.4.45/LICENSE.txt"
+    ]
+  },
+  {
     "name": "clipboard-win",
     "version": "5.4.1",
     "license": "BSL-1.0",
@@ -1295,6 +1304,16 @@
     "files": [
       "hex-0.4.3/LICENSE-APACHE",
       "hex-0.4.3/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "iana-time-zone",
+    "version": "0.1.65",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/strawlab/iana-time-zone",
+    "files": [
+      "iana-time-zone-0.1.65/LICENSE-APACHE",
+      "iana-time-zone-0.1.65/LICENSE-MIT"
     ]
   },
   {

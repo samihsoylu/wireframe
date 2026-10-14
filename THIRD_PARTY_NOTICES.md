@@ -53,6 +53,7 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | cfg-if-1.0.5 | MIT OR Apache-2.0 | [files](licenses/cfg-if-1.0.5/) |
 | cfg_aliases-0.2.2 | MIT | [files](licenses/cfg_aliases-0.2.2/) |
 | cgl-0.3.2 | MIT / Apache-2.0 | [files](licenses/cgl-0.3.2/) |
+| chrono-0.4.45 | MIT OR Apache-2.0 | [files](licenses/chrono-0.4.45/) |
 | clipboard-win-5.4.1 | BSL-1.0 | [files](licenses/clipboard-win-5.4.1/) |
 | color-0.3.3 | Apache-2.0 OR MIT | [files](licenses/color-0.3.3/) |
 | color_quant-1.1.0 | MIT | [files](licenses/color_quant-1.1.0/) |
@@ -137,6 +138,7 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | hashbrown-0.16.1 | MIT OR Apache-2.0 | [files](licenses/hashbrown-0.16.1/) |
 | hashbrown-0.17.1 | MIT OR Apache-2.0 | [files](licenses/hashbrown-0.17.1/) |
 | hex-0.4.3 | MIT OR Apache-2.0 | [files](licenses/hex-0.4.3/) |
+| iana-time-zone-0.1.65 | MIT OR Apache-2.0 | [files](licenses/iana-time-zone-0.1.65/) |
 | image-0.25.10 | MIT OR Apache-2.0 | [files](licenses/image-0.25.10/) |
 | image-webp-0.2.4 | MIT OR Apache-2.0 | [files](licenses/image-webp-0.2.4/) |
 | imagesize-0.15.0 | MIT | [files](licenses/imagesize-0.15.0/) |

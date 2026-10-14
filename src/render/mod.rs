@@ -27,6 +27,7 @@ mod search;
 mod standalone_icons;
 mod svg;
 mod table;
+mod tablet;
 mod tabs;
 mod tree;
 mod window;
@@ -322,6 +323,9 @@ impl Scene {
         }
         if matches!(c.kind, Kind::Menu | Kind::MenuBar) {
             return self.menu(layer, sketch, fonts, rasters);
+        }
+        if c.kind == Kind::Tablet {
+            return self.tablet(layer, sketch, fonts);
         }
         if c.kind == Kind::Phone {
             return self.phone(layer, sketch, fonts);

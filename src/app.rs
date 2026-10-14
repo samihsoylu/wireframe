@@ -838,6 +838,7 @@ impl WireframeApp {
                                         Kind::Button
                                             | Kind::CircleButton
                                             | Kind::PointedButton
+                                            | Kind::MultilineButton
                                             | Kind::Checkbox
                                             | Kind::Radio
                                             | Kind::Toggle

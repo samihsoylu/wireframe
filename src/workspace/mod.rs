@@ -277,6 +277,7 @@ impl Editor {
                     | Kind::IconLabel
                     | Kind::CircleButton
                     | Kind::PointedButton
+                    | Kind::MultilineButton
                     | Kind::List
             ) {
                 let kind_id = match kind {
@@ -292,6 +293,7 @@ impl Editor {
                     Kind::IconLabel => "icon_label",
                     Kind::CircleButton => "circle_button",
                     Kind::PointedButton => "pointed_button",
+                    Kind::MultilineButton => "multiline_button",
                     Kind::List => "list",
                     _ => unreachable!(),
                 };

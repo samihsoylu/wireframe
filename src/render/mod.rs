@@ -8,6 +8,7 @@ mod dropdown;
 mod forms;
 mod images;
 mod list;
+mod multiline_button;
 mod pointed_button;
 mod rasters;
 mod scrollbar;
@@ -290,6 +291,9 @@ impl Scene {
         }
         if c.kind == Kind::CircleButton {
             return self.circle_button(layer, sketch, fonts, rasters);
+        }
+        if c.kind == Kind::MultilineButton {
+            return self.multiline_button(layer, sketch, fonts, rasters);
         }
         if c.kind == Kind::PointedButton {
             return self.pointed_button(layer, sketch, fonts, rasters);

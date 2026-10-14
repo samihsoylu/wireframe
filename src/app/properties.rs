@@ -14,7 +14,13 @@ fn supported(kind: &str, key: &str) -> bool {
         "icon" | "icon_size" | "icon_rotation" => {
             matches!(
                 kind,
-                "button" | "dropdown" | "icon" | "icon_label" | "circle_button" | "pointed_button"
+                "button"
+                    | "dropdown"
+                    | "icon"
+                    | "icon_label"
+                    | "circle_button"
+                    | "pointed_button"
+                    | "multiline_button"
             )
         }
         "menu_icon" => matches!(kind, "button" | "pointed_button"),
@@ -44,7 +50,7 @@ fn supported(kind: &str, key: &str) -> bool {
             kind,
             "text_input" | "list" | "icon" | "icon_label" | "circle_button" | "pointed_button"
         ),
-        "background_opacity" => matches!(kind, "text_input" | "text_area"),
+        "background_opacity" => matches!(kind, "text_input" | "text_area" | "multiline_button"),
         "selected_index" => matches!(kind, "table" | "dropdown" | "list"),
         "shape" | "search_icon" | "microphone_icon" => kind == "search",
         "fill" => matches!(
@@ -58,6 +64,7 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "list"
                 | "circle_button"
                 | "pointed_button"
+                | "multiline_button"
         ),
         "alternate_fill" | "header" | "row_height" => matches!(kind, "table" | "list"),
         "horizontal_lines" | "vertical_lines" => kind == "table",
@@ -111,6 +118,7 @@ impl WireframeApp {
                 | "icon_label"
                 | "circle_button"
                 | "pointed_button"
+                | "multiline_button"
                 | "search"
                 | "checkbox"
                 | "radio"

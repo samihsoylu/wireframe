@@ -910,6 +910,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     let text = match c.id {
         "button" | "pointed_button" => "Button",
         "icon_label" => "Icon Name",
+        "multiline_button" => "Multiline Button\nSecond line of text",
         "dropdown" => "Dropdown",
         "checkbox" => "Checkbox",
         "radio" => "Radio button",
@@ -1094,7 +1095,13 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     }
     if matches!(
         c.id,
-        "button" | "dropdown" | "icon" | "icon_label" | "circle_button" | "pointed_button"
+        "button"
+            | "dropdown"
+            | "icon"
+            | "icon_label"
+            | "circle_button"
+            | "pointed_button"
+            | "multiline_button"
     ) {
         let mut icon = prop("icon", "Icon", PropertyType::Icon, Value::Null);
         icon.nullable = true;
@@ -1116,6 +1123,16 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         if matches!(c.id, "button" | "pointed_button") {
             c.properties.push(boolean("menu_icon", "Menu arrow", false));
         }
+    }
+    if c.id == "multiline_button" {
+        c.properties.push(number(
+            "background_opacity",
+            "Fill opacity",
+            1.,
+            0.,
+            1.,
+            false,
+        ));
     }
     if c.id == "pointed_button" {
         c.properties.push(choice(

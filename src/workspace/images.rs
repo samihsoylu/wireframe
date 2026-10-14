@@ -232,6 +232,7 @@ impl Editor {
                         | "icon_label"
                         | "circle_button"
                         | "pointed_button"
+                        | "multiline_button"
                 ) || self
                     .current()
                     .controls

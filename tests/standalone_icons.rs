@@ -163,6 +163,7 @@ fn standalone_import_is_atomic_and_survives_components_copy_and_reset() {
         Kind::IconLabel,
         Kind::CircleButton,
         Kind::PointedButton,
+        Kind::MultilineButton,
     ] {
         let (mut e, id) = add(kind);
         let baseline = e.document.clone();
@@ -188,7 +189,9 @@ fn standalone_import_is_atomic_and_survives_components_copy_and_reset() {
         let child = e.nodes()[0].id;
         choice(&mut e, child, "icon_size", "64");
         choice(&mut e, child, "icon_rotation", "270");
-        choice(&mut e, child, "border", "solid");
+        if kind != Kind::MultilineButton {
+            choice(&mut e, child, "border", "solid");
+        }
         assert_eq!(e.document.definitions, source);
         let scene = e.rendered_scene(e.page).unwrap();
         assert!(scene.svg().contains("data:image/png;base64,"));

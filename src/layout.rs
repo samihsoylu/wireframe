@@ -45,6 +45,19 @@ pub struct TextStyle {
     pub bold: bool,
     pub italic: bool,
 }
+pub fn multiline_text(text: &str, style: TextStyle) -> (RichText, Option<RichText>, TextStyle) {
+    let (title, secondary) = text
+        .split_once('\n')
+        .map_or((text, None), |(a, b)| (a, Some(b)));
+    (
+        RichText::parse(title, false),
+        secondary.map(|s| RichText::parse(s, false)),
+        TextStyle {
+            size: (style.size * 0.7).ceil().max(8.),
+            ..style
+        },
+    )
+}
 #[derive(Clone, Copy)]
 pub struct TextPlacement {
     pub left: f32,
@@ -267,6 +280,51 @@ impl<M: TextMeasurer> Engine<'_, M> {
             bold: boolean(props, "bold"),
             italic: boolean(props, "italic"),
         };
+        if kind == "multiline_button" {
+            let (title, secondary, second_style) = multiline_text(text, style);
+            let measured = self.measurer.measure_rich(&title, style, None, false);
+            let padding = if self.project.settings.sketch {
+                28.
+            } else {
+                10.
+            };
+            let secondary_height = secondary.as_ref().map_or(0., |t| {
+                8. + self
+                    .measurer
+                    .measure_rich(
+                        t,
+                        second_style,
+                        Some((measured.width + padding).max(1.)),
+                        true,
+                    )
+                    .height
+            });
+            let icon = crate::icons::setting(props);
+            let icon_size = icon.as_ref().map_or(0., |i| i.size);
+            let w = match width {
+                Dimension::Auto => {
+                    (measured.width
+                        + padding
+                        + icon_size
+                        + if icon.is_some() && !text.is_empty() {
+                            3.
+                        } else {
+                            0.
+                        })
+                    .max(28.)
+                        + 16.
+                }
+                Dimension::Fixed(w) => w,
+            };
+            let h = match height {
+                Dimension::Auto => (measured.height + secondary_height + 30.)
+                    .max(icon_size)
+                    .max(66.),
+                Dimension::Fixed(h) => h,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         if kind == "pointed_button" {
             let measured =
                 self.measurer

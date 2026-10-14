@@ -2,6 +2,7 @@
 // Copyright 2026 Wireframe contributors
 
 mod components;
+mod images;
 mod previews;
 mod properties;
 mod recovery;
@@ -70,6 +71,7 @@ pub struct WireframeApp {
     status: String,
     error: Option<String>,
     pending: Option<Pending>,
+    image_import: Option<(Id, wireframe::images::Prepared)>,
     quit_allowed: bool,
     text_edit: Option<(Id, String)>,
     clipboard: Clipboard,
@@ -130,6 +132,7 @@ impl WireframeApp {
             status,
             error: None,
             pending: None,
+            image_import: None,
             quit_allowed: false,
             text_edit: None,
             clipboard: Clipboard::default(),
@@ -1065,6 +1068,18 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                 continue;
             }
             match &item.drawing {
+                wireframe::render::Drawing::Image { bounds: b, data } => {
+                    let rect = Rect::from_min_size(
+                        origin + Vec2::new(b.x, b.y) * scale,
+                        Vec2::new(b.w, b.h) * scale,
+                    );
+                    clipped.image(
+                        data.texture(clipped.ctx()),
+                        rect,
+                        Rect::from_min_max(Pos2::ZERO, Pos2::new(1., 1.)),
+                        Color32::WHITE,
+                    );
+                }
                 wireframe::render::Drawing::Primitive(p) => {
                     Self::paint_at(&clipped, p.clone(), origin, scale)
                 }
@@ -1688,6 +1703,7 @@ impl eframe::App for WireframeApp {
         self.sync_recovery(true);
     }
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.image_import_dialog(ui.ctx());
         let ctx = ui.ctx().clone();
         if ctx.input(|i| i.viewport().close_requested()) && !self.quit_allowed {
             self.editor.commit();

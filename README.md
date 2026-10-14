@@ -10,6 +10,7 @@ A local desktop workspace for turning rough ideas into clear wireframes. Built i
 - Undo/redo, local project files and recovery copies.
 - Sketch and clean styles; PNG and SVG export.
 - Page links and presentation mode.
+- Embedded PNG/JPEG/GIF images, shared sources and replacement with Undo.
 
 ## Run from source
 
@@ -23,7 +24,7 @@ Editable documents use the versioned `.wireframe` JSON format. Files are validat
 
 ## Development status
 
-The first native build runs on macOS. Windows/Linux verification and packaging are in progress. See [current state](SESSION-SPEC.md) for actual checks and remaining work. The desktop editor supports nested groups and version-2 project saving. Double-click a group to edit its children; use Escape or Exit group to return. Basic rich text and table formatting appear on canvas, thumbnails and PNG/SVG exports. The text/table inspector includes styles, Reset, Auto-size and six checkbox/radio states. Create a reusable component from a selected control or group in the inspector. The Components sidebar inserts instances and opens the shared source; Detach component makes an independent group. Double-click an instance to edit its children locally; Reset resumes the source value. Deleting a component source retains missing-instance placeholders and can be undone in the current session. Empty sources and groups remain visible and editable; adding children populates them again. Image controls remain placeholders; instances can resize without changing their source. Final typography, full control coverage and asset editing remain under development.
+The first native build runs on macOS. Windows/Linux verification and packaging are in progress. See [current state](SESSION-SPEC.md) for actual checks and remaining work. The desktop editor supports nested groups and version-2 project saving. Double-click a group to edit its children; use Escape or Exit group to return. Basic rich text and table formatting appear on canvas, thumbnails and PNG/SVG exports. The text/table inspector includes styles, Reset, Auto-size and six checkbox/radio states. Create a reusable component from a selected control or group in the inspector. The Components sidebar inserts instances and opens the shared source; Detach component makes an independent group. Double-click an instance to edit its children locally; Reset resumes the source value. Deleting a component source retains missing-instance placeholders and can be undone in the current session. Empty sources and groups remain visible and editable; adding children populates them again. Image controls import embedded PNG/JPEG/GIF files and share their sources; instances can resize without changing their source. Final typography, full control coverage and asset editing remain under development.
 
 ## License
 

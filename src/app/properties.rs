@@ -63,6 +63,10 @@ impl WireframeApp {
         let Some((spec, values)) = self.editor.control_properties(id) else {
             return false;
         };
+        if spec.id == "image" {
+            self.image_properties(ui, id, &values);
+            return true;
+        }
         if !matches!(
             spec.id,
             "label"

@@ -267,6 +267,32 @@ impl<M: TextMeasurer> Engine<'_, M> {
             bold: boolean(props, "bold"),
             italic: boolean(props, "italic"),
         };
+        if kind == "image" {
+            let natural = match props.get("image") {
+                Some(Value::Asset(id)) => self
+                    .project
+                    .assets
+                    .iter()
+                    .find(|a| a.id == *id)
+                    .ok_or_else(|| "Image resource is unavailable".to_owned())
+                    .and_then(|a| crate::images::dimensions(&a.bytes)),
+                _ => Ok((77, 79)),
+            };
+            let (w, h) = natural.unwrap_or_else(|error| {
+                warnings.push(error);
+                (77, 79)
+            });
+            let w = match width {
+                Dimension::Auto => w as f32,
+                Dimension::Fixed(v) => v,
+            };
+            let h = match height {
+                Dimension::Auto => h as f32,
+                Dimension::Fixed(v) => v,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         if kind == "dropdown" {
             let selected = number(props, "selected_index", 0.).max(0.) as usize;
             let menu = crate::dropdown::Menu::parse(text, selected)?;

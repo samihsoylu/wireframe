@@ -20,7 +20,7 @@ The text/table inspector now reads effective typed properties from the recursive
 
 Native property evidence: inserted a checkbox; selected Indeterminate and disabled; undid/redid; reset and undid reset; saved, closed and reopened. Confirmed the same state (historical measurement before the line-metric correction: 73.69×25). Selected and disabled also worked, and its menu closed after selection. Restored the saved state with Undo. Local evidence: evidence/property-inspector/; saved input: evidence/text-scene/Native-choice-properties.wireframe. The default checkbox's typography/measurement remains an open fidelity item.
 
-Verification: 107 tests pass (eleven app, eleven legacy workflows, ten document, eleven catalog/layout, nine text, eleven recursive workspace, eight scene, eight property/state, two search-control, two dropdown-menu, two embedded-scrollbar, three input-appearance, three component-workflow, four component-override, three component-resize, four component-deletion, five empty-container). Clippy passes with warnings denied. Prior five-fixture read-only migration checks retain source bytes. The macOS development bundle is refreshed. Windows/Linux runtime checks remain unperformed.
+Verification: 112 tests pass (eleven app, eleven legacy workflows, ten document, eleven catalog/layout, nine text, eleven recursive workspace, eight scene, eight property/state, two search-control, two dropdown-menu, two embedded-scrollbar, three input-appearance, three component-workflow, four component-override, three component-resize, four component-deletion, five empty-container, five image-asset). Clippy passes with warnings denied. Prior five-fixture read-only migration checks retain source bytes. The macOS development bundle is refreshed. Windows/Linux runtime checks remain unperformed.
 
 Text metrics now separate font shaping from canvas line boxes: maximum font size per row, 20% interline spacing, common baseline, integer measured width and rounded total height. Measurement, shared drawing and link regions consume the same metrics. Native inspector verified 74×23 at 13 points and 120×34 at 24 points. Multiline canvas/thumbnail inspection and presentation inline navigation passed. Evidence: evidence/text-metrics/. Exact glyph widths, fallback and clean-style fonts remain open.
 
@@ -60,12 +60,18 @@ Explicit paint order retains a group's position when deleting its last child or 
 
 Native macOS verified two empty instances, Undo restoring530×226 content, Redo, detachment, source repopulation affecting only the linked instance, save/quit/reopen, then first-child insertion into a reopened empty group and Undo to the saved state. Saved linked-instance page data/overrides exactly match the original fixture. Five tests cover history/storage/export, orphan identity, nested groups/components, copy/detach, clipping/locks/movement, layer transitions and legacy-file compatibility. Evidence: evidence/empty-components/. The refreshed bundle runs the saved mixed empty-group/instance fixture; no Windows/Linux native or independent review claim is made.
 
+## Embedded image checkpoint — 2026-10-14
+
+Image controls now import actual embedded PNG/JPEG/GIF data, expose source selection/removal and Auto-size, and render on canvas, thumbnails and SVG/PNG exports. Same-name import distinguishes shared replacement, existing reuse and independent copies; replacements retain identity and update automatic dimensions. Fixed dimensions remain fixed. Local component source overrides preserve shared source ownership. Import errors roll back asset/allocator/control state, with raw and serialized file limits checked. Decode and per-scene budgets bound raster memory.
+
+Native macOS imported160×100 transparent PNG, duplicated/moved it, removed one source/Undo, replaced the shared image with100×160 opaque content, Undo/Redo, save/quit/restart/reopen while original paths were temporarily unavailable, then exported PNG/SVG. Sources were restored unchanged. The running app has the saved Embedded-images fixture with two shared100×160 images; second selected at320,70. Five image tests and the full112-test suite pass, with Clippy warnings denied. Dependency notice collection still covers299 packages. Evidence: evidence/images/. No independent review or native Windows/Linux acceptance is claimed. Image crop/rotation, DPI/EXIF handling, filter/borders, broader format/runtime/performance acceptance remain open; see docs/IMAGES.md.
+
 ## Next work and unresolved acceptance
 
 1. Expand representative text/table visual comparisons and refine typography, states, padding, clean/sketch styles and source-specific formatting. Current shared rendering covers eleven basic text controls plus tables; other control families still need it. Maintain source text and shared canvas/export geometry.
 2. Extend typed inspector and rendering beyond the initial text/table subset, including remaining form options, automatic size/anchor rules, text/macros/icons and licensed fonts. The catalog inventories 86 families; this is not 86 completed renderers.
 3. Complete remaining component geometry edge cases. Creation, insertion, shared source editing, local override/reset and detach are available; more complex crop/lock/resize combinations still need acceptance. Groups now resize nested instances; crop and locked-descendant combinations still need focused acceptance. Cropped-group ungrouping requires layout-aware handling; it currently reports the limitation.
-4. Add asset import/crop/rotation UI, alternate versions, page hierarchy, richer snapping/alignment/distribution and presentation history/target behavior. Verify shutdown/recovery and debounced saves through real failures.
+4. Complete image crop/rotation/DPI/filter behavior, alternate versions, page hierarchy, richer snapping/alignment/distribution and presentation history/target behavior. Verify shutdown/recovery and debounced saves through real failures.
 5. Finish exports including PDF/links/fonts and 1x/2x behavior, then package and run native macOS/Windows/Linux acceptance. No cross-platform runtime or full visual fidelity claim is established.
 
 Large-document profiling and revision-based cache invalidation remain open. Current history is bounded by snapshot count/estimated serialized bytes; current layout caching compares project snapshots. Native checks use synthetic documents and are scoped evidence, not independent review.
@@ -77,6 +83,7 @@ Large-document profiling and revision-based cache invalidation remain open. Curr
 - docs/CATALOG-AND-LAYOUT.md: property defaults, schemas, search, sizing and remaining gaps.
 - docs/RICH-TEXT.md: source-preserving text/structured parsing and font geometry.
 - docs/INSPECTOR-AND-STATES.md: typed property edits, choice rendering and native checks.
+- docs/IMAGES.md: embedded resource lifecycle, shared rendering, import bounds and remaining image gaps.
 - docs/COMPONENTS.md: shared/local editing, inheritance/reset and remaining component gaps.
 - docs/RECURSIVE-EDITOR.md: current live editing/storage boundary and verification.
 

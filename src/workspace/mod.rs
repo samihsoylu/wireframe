@@ -2,6 +2,8 @@
 // Copyright 2026 Wireframe contributors
 //! Recursive editing owns project data; renderer projections never become saved documents.
 mod clipboard;
+mod images;
+pub use images::ImportChoice;
 mod components;
 mod overrides;
 mod properties;
@@ -270,6 +272,7 @@ impl Editor {
                     | Kind::TextArea
                     | Kind::Search
                     | Kind::Dropdown
+                    | Kind::Image
             ) {
                 let kind_id = match kind {
                     Kind::Checkbox => "checkbox",
@@ -279,6 +282,7 @@ impl Editor {
                     Kind::TextArea => "text_area",
                     Kind::Search => "search",
                     Kind::Dropdown => "dropdown",
+                    Kind::Image => "image",
                     _ => unreachable!(),
                 };
                 let parent = e.context_origin();

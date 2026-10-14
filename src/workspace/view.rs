@@ -63,8 +63,13 @@ impl Editor {
                 regular: crate::fonts::family(false, false),
                 bold: crate::fonts::family(true, false),
             };
-            result =
-                crate::render::Scene::build(title, &layers, self.document.settings.sketch, &fonts);
+            result = crate::render::Scene::build(
+                title,
+                &layers,
+                self.document.settings.sketch,
+                &fonts,
+                &self.document.assets,
+            );
         });
         output.drop_without_applying_deltas();
         self.cache.borrow_mut().scenes.insert(id, result.clone());

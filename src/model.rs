@@ -157,7 +157,7 @@ impl Kind {
             Self::Ellipse => "Ellipse",
             Self::Line => "Line",
             Self::Arrow => "Arrow",
-            Self::Image => "Image placeholder",
+            Self::Image => "Image",
             Self::Browser => "Browser",
             Self::Phone => "Phone",
             Self::Panel => "Panel",

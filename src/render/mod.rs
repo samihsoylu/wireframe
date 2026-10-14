@@ -32,6 +32,10 @@ pub struct Glyph {
 pub enum Drawing {
     Primitive(Primitive),
     Glyph(Glyph),
+    Image {
+        bounds: Bounds,
+        data: std::sync::Arc<crate::images::Decoded>,
+    },
 }
 #[derive(Clone, Debug)]
 pub struct Item {
@@ -83,6 +87,7 @@ impl Scene {
         layers: &[Layer],
         sketch: bool,
         fonts: &EguiMeasurer<'_>,
+        assets: &[crate::document::Asset],
     ) -> Result<Self, String> {
         let bounds = layers
             .iter()
@@ -98,6 +103,8 @@ impl Scene {
             items: vec![],
             links: vec![],
         };
+        let mut decoded = std::collections::HashMap::new();
+        let mut decoded_bytes = 0usize;
         for layer in layers {
             let visible = layer.clip.map_or(layer.control.bounds, |clip| {
                 intersect(layer.control.bounds, clip)
@@ -118,7 +125,55 @@ impl Scene {
                     })
                     .collect();
             }
-            scene.control(layer, sketch, fonts)?;
+            let image = if layer.control.kind == Kind::Image && layer.control.group.is_none() {
+                if let Some(Value::Asset(id)) = layer.properties.get("image") {
+                    let data = decoded.entry(*id).or_insert_with(|| {
+                        assets.iter().find(|a| a.id == *id).and_then(|a| {
+                            let (w, h) = crate::images::dimensions(&a.bytes).ok()?;
+                            let bytes = w as usize * h as usize * 4;
+                            if bytes + decoded_bytes > 128 * 1024 * 1024 {
+                                return None;
+                            }
+                            let image = crate::images::decoded(&a.bytes).ok()?;
+                            decoded_bytes += bytes;
+                            Some(std::sync::Arc::new(image))
+                        })
+                    });
+                    data.clone()
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+            if let Some(data) = image {
+                scene.items.push(Item {
+                    opacity: 1.,
+                    drawing: Drawing::Image {
+                        bounds: layer.control.bounds,
+                        data,
+                    },
+                    clip: layer.clip,
+                });
+            } else {
+                scene.control(layer, sketch, fonts)?;
+                if layer.control.kind == Kind::Image
+                    && matches!(layer.properties.get("image"), Some(Value::Asset(_)))
+                {
+                    scene.primitive(
+                        Primitive::Text {
+                            x: layer.control.bounds.x + layer.control.bounds.w / 2.,
+                            y: layer.control.bounds.y + layer.control.bounds.h / 2.,
+                            text: "Image unavailable".into(),
+                            size: 13.,
+                            bold: false,
+                            color: [130, 35, 35],
+                            center: true,
+                        },
+                        layer.clip,
+                    );
+                }
+            }
             if scene.items.len() + scene.links.len() > 1_000_000 {
                 return Err("This page exceeds the drawing complexity limit".into());
             }

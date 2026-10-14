@@ -1387,10 +1387,14 @@ checksum = "85ab80394333c02fe689eaf900ab500fbd0c2213da414687ebf995a65d5a6104"
 dependencies = [
  "bytemuck",
  "byteorder-lite",
+ "color_quant",
+ "gif",
  "moxcms",
  "num-traits",
  "png",
  "tiff",
+ "zune-core",
+ "zune-jpeg",
 ]
 
 [[package]]
@@ -3830,6 +3834,7 @@ version = "0.1.0"
 dependencies = [
  "directories",
  "eframe",
+ "image",
  "resvg",
  "rfd",
  "serde",

@@ -24,6 +24,7 @@ pub mod snapping;
 pub mod storage;
 pub mod tabs;
 pub mod tree;
+pub mod viewport;
 pub mod window;
 
 pub mod workspace;

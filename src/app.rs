@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 
+mod canvas_scroll;
 mod components;
 mod fonts;
 mod icon_picker;
@@ -77,6 +78,7 @@ pub struct WireframeApp {
     zoom: f32,
     pan: Vec2,
     drag: Option<Drag>,
+    drag_scroll: Option<wireframe::viewport::DragScroll>,
     library_drag: Option<Kind>,
     library_press: Option<(Kind, Pos2)>,
     alignment_guides: Vec<snapping::Guide>,
@@ -149,6 +151,7 @@ impl WireframeApp {
             zoom: 1.,
             pan: Vec2::ZERO,
             drag: None,
+            drag_scroll: None,
             library_drag: None,
             library_press: None,
             alignment_guides: Vec::new(),
@@ -1487,6 +1490,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     self.alignment_guides.clear();
                 }
                 if self.image_crop.is_some() {
+                    self.drag_scroll = None;
                     self.crop_canvas(ui, &response, &painter);
                     return;
                 }
@@ -1608,7 +1612,11 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                         }
                     }
                 }
-                if (response.dragged() || response.drag_stopped() || instant_drag.is_some())
+                let scrolled = self.scroll_during_drag(&ctx);
+                if (scrolled
+                    || response.dragged()
+                    || response.drag_stopped()
+                    || instant_drag.is_some())
                     && let (Some(pos), Some(drag)) = (pointer, self.drag.take())
                 {
                     let now = self.world(pos);
@@ -1774,6 +1782,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                 if response.drag_stopped() || instant_drag.is_some() {
                     self.editor.commit();
                     self.drag = None;
+                    self.drag_scroll = None;
                     self.alignment_guides.clear();
                 }
                 if response.clicked()

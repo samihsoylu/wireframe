@@ -16,6 +16,8 @@ pub type Id = u64;
 pub type NodePath = Vec<Id>;
 pub type Properties = BTreeMap<String, Value>;
 pub const FORMAT_VERSION: u32 = 2;
+/// Internal marker on disposable resolved placeholders; canonical instances retain their data.
+pub const MISSING_COMPONENT: &str = "_missing_component";
 pub const MAX_FILE_BYTES: usize = 64 * 1024 * 1024;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]

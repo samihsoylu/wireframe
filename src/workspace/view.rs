@@ -158,7 +158,7 @@ impl Editor {
                 .iter()
                 .find(|d| d.id == *definition)
                 .map(|d| format!("Component: {}", d.name))
-                .unwrap_or("Component".into()),
+                .unwrap_or("Missing component".into()),
             Some(NodeContent::Control { kind, .. }) => {
                 catalog::get(kind).map_or_else(|| kind.clone(), |s| s.name.into())
             }
@@ -230,7 +230,9 @@ fn control(node: &LayoutNode) -> Control {
     );
     c.bounds = bounds(node.bounds);
     c.locked = node.locked;
-    c.group = node.kind.is_none().then_some(c.id);
+    c.group = (node.kind.is_none()
+        || node.properties.get(MISSING_COMPONENT) == Some(&Value::Bool(true)))
+    .then_some(c.id);
     let p = &node.properties;
     c.text = match p.get("text") {
         Some(Value::Text(t)) => t.clone(),

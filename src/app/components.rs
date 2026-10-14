@@ -81,6 +81,15 @@ impl WireframeApp {
                 self.editor.commit();
             }
         }
+        ui.separator();
+        ui.small(
+            "Deleting this source leaves missing component placeholders. Undo restores the source.",
+        );
+        if ui.button("Delete component source").clicked()
+            && let Err(error) = self.editor.delete_definition(id)
+        {
+            self.error = Some(error);
+        }
         if ui.button("Back to wireframe").clicked() {
             self.editor.switch_page(self.editor.page);
         }
@@ -91,6 +100,11 @@ impl WireframeApp {
         }
         let id = *self.editor.selection.iter().next().unwrap();
         ui.separator();
+        if self.editor.missing_component(id) {
+            ui.label("Component source is missing. Its reference and local changes are preserved.");
+            ui.small("Source editing and detaching are unavailable while the source is missing.");
+            return;
+        }
         if self.editor.editing_instance() {
             ui.small("Local changes affect only this instance.");
             if ui.button("Reset local changes").clicked()

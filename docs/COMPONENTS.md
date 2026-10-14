@@ -14,10 +14,16 @@ The editor locates the first canonical instance crossed by the canvas context. E
 
 Canvas, thumbnails and exports use the same resolved layout. History captures context and selection as well as the document. Tests cover deep paths, two levels of competing inheritance, explicit defaults over nondefault inherited values, per-property/subtree/whole-instance reset, geometry, copy, locked edits, structural guards and storage. Native macOS checks cover local text, shared propagation, reset/history and reopening. See SESSION-SPEC.md for current totals and evidence scope.
 
-Definition deletion, some crop/lock/resize combinations, large-project performance and Windows/Linux native acceptance remain open. Existing-format import is deferred.
+Empty-source behavior, some crop/lock/resize combinations, large-project performance and Windows/Linux native acceptance remain open. Existing-format import is deferred.
 
 ## Resizing
 
 Whole instances now resize through recursive geometry overrides without altering definitions. Nested instances inside ordinary groups follow the same transformation. Per-control resize axes preserve fixed dimensions and edge anchoring, including a horizontal-only label at the bottom. Fonts and existing local text/property overrides remain unchanged. Resizing records descendant positions and resizable dimensions explicitly; computed dimensions retain their sizing rules. Simple movement does not create geometry overrides. Reset instance overrides restores inherited geometry and content.
 
 Native macOS resized one of two synthetic instances265×113→530×226, verified its bottom label and unchanged local text/other instance, exercised resize Undo/Redo and whole-instance reset/Undo, then saved/quit/reopened with X50,Y50,W530,H226 intact. Saved definitions match the original fixture. Numeric position/size entry now applies completed text on focus loss/Enter, avoiding destructive intermediate resizing while typing; pointer dragging remains live. Three regression tests cover nested instances/groups, fixed-height anchoring, frozen geometry/source changes, source preservation, reset/history/storage and locked/move behavior. Evidence: evidence/component-resize/. Typography, minimum-size, crop and locked-descendant edge cases remain open; no Windows/Linux native or independent review claim is made.
+
+## Deleting a source
+
+Open a component source, clear the selection, and choose **Delete component source** in its inspector. Existing instances remain as150×150 missing-component placeholders. Their references and local changes are preserved in the saved file. Undo restores the source during the current session; reopening does not retain Undo history. Missing instances can move, copy or be deleted, but their size is fixed and source editing/reset/detach is unavailable. A parent with missing descendants cannot be detached. Copying missing references assigns fresh missing IDs to prevent unrelated destination components from being substituted.
+
+Native macOS checks cover deletion, Undo restoring resized/local content, Redo, saving and reopening. Four regression tests additionally cover nested references, alternates, crop preservation, context recovery, shared SVG/PNG rendering, allocator/clipboard collisions and no-op Ungroup. See SESSION-SPEC.md for scoped evidence and remaining acceptance.

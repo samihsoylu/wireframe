@@ -140,6 +140,52 @@ impl Scene {
     ) -> Result<(), String> {
         let c = &layer.control;
         let b = c.bounds;
+        if layer.properties.get(crate::document::MISSING_COMPONENT) == Some(&Value::Bool(true)) {
+            self.primitive(
+                Primitive::Rect {
+                    b,
+                    fill: [255; 3],
+                    stroke: true,
+                    radius: 0.,
+                },
+                layer.clip,
+            );
+            for points in [
+                vec![[b.x, b.y], [b.x + b.w, b.y + b.h]],
+                vec![[b.x + b.w, b.y], [b.x, b.y + b.h]],
+            ] {
+                self.primitive(
+                    Primitive::Line {
+                        points,
+                        color: [90; 3],
+                        width: 2.,
+                    },
+                    layer.clip,
+                );
+            }
+            self.primitive(
+                Primitive::Rect {
+                    b: Bounds::new(b.x + 4., b.y + b.h / 2. - 12., b.w - 8., 24.),
+                    fill: [255; 3],
+                    stroke: false,
+                    radius: 3.,
+                },
+                layer.clip,
+            );
+            self.primitive(
+                Primitive::Text {
+                    x: b.x + b.w / 2.,
+                    y: b.y + b.h / 2. + 5.,
+                    text: "Component not found".into(),
+                    size: 13.,
+                    bold: false,
+                    color: [44, 48, 55],
+                    center: true,
+                },
+                layer.clip,
+            );
+            return Ok(());
+        }
         if c.kind == Kind::Dropdown {
             return self.dropdown_control(layer, sketch, fonts);
         }

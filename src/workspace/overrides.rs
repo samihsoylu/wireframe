@@ -213,6 +213,9 @@ impl Editor {
     }
     pub fn reset_instance(&mut self, id: Id) -> Result<(), String> {
         self.require_structure_edit()?;
+        if self.missing_component(id) {
+            return Err("Restore the component source before resetting its local changes".into());
+        }
         self.component_change("Reset component instance", |e| {
             let node = e
                 .nodes_mut()

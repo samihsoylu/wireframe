@@ -9,7 +9,7 @@ struct Check<'a> {
     project: &'a Project,
     pages: HashSet<Id>,
     assets: HashSet<Id>,
-    definitions: HashSet<Id>,
+    resources: HashSet<Id>,
     count: usize,
     maximum_id: Id,
 }
@@ -34,7 +34,7 @@ impl Project {
             project: self,
             pages: self.pages.iter().map(|p| p.id).collect(),
             assets: self.assets.iter().map(|a| a.id).collect(),
-            definitions: self.definitions.iter().map(|d| d.id).collect(),
+            resources: HashSet::new(),
             count: 0,
             maximum_id: 0,
         };
@@ -55,6 +55,7 @@ impl Project {
             }
             check.maximum_id = check.maximum_id.max(id);
         }
+        check.resources = resources;
         let mut asset_bytes = 0usize;
         for a in &self.assets {
             text(&a.name, 10000)?;
@@ -166,9 +167,14 @@ impl Check<'_> {
                     definition,
                     overrides,
                 } => {
-                    if !self.definitions.contains(definition) {
-                        return Err("Missing component definition".into());
+                    if *definition == 0
+                        || (self.resources.contains(definition)
+                            && !self.project.definitions.iter().any(|d| d.id == *definition))
+                    {
+                        return Err("Invalid component reference ID".into());
                     }
+                    // Dangling references must never be reused by subsequent allocations.
+                    self.maximum_id = self.maximum_id.max(*definition);
                     let mut paths = HashSet::new();
                     for o in overrides {
                         if o.path.is_empty()
@@ -242,13 +248,12 @@ impl Check<'_> {
         let height = if let Some(height) = heights.get(&id) {
             *height
         } else {
-            let definition = self
-                .project
-                .definitions
-                .iter()
-                .find(|d| d.id == id)
-                .ok_or("Missing component definition")?;
-            let height = self.nodes_height(&definition.content.nodes, active, heights)?;
+            let height =
+                if let Some(definition) = self.project.definitions.iter().find(|d| d.id == id) {
+                    self.nodes_height(&definition.content.nodes, active, heights)?
+                } else {
+                    0
+                };
             heights.insert(id, height);
             height
         };

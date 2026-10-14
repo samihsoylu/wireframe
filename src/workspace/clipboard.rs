@@ -70,10 +70,22 @@ impl Editor {
         }
         self.edit("Paste controls", |e| {
             let mut copy = copy.clone();
-            let reuse = copy
-                .definitions
-                .iter()
-                .all(|d| e.document.definitions.contains(d))
+            let mut refs = HashSet::new();
+            let mut assets = HashSet::new();
+            references(&copy.nodes, &mut refs, &mut assets);
+            for d in &copy.definitions {
+                references(&d.content.nodes, &mut refs, &mut assets);
+            }
+            let mut missing: Vec<_> = refs
+                .into_iter()
+                .filter(|id| !copy.definitions.iter().any(|d| d.id == *id))
+                .collect();
+            missing.sort_unstable();
+            let reuse = missing.is_empty()
+                && copy
+                    .definitions
+                    .iter()
+                    .all(|d| e.document.definitions.contains(d))
                 && copy.assets.iter().all(|a| e.document.assets.contains(a));
             if reuse {
                 copy.definitions.clear();
@@ -85,6 +97,7 @@ impl Editor {
                 .iter()
                 .map(|d| d.id)
                 .chain(copy.assets.iter().map(|a| a.id))
+                .chain(missing)
             {
                 let Ok(next) = e.document.allocate_id() else {
                     return;

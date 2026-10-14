@@ -77,11 +77,21 @@ impl Project {
                 if definitions.contains(definition) {
                     return Err("Cyclic component definition".into());
                 }
-                let source = self
-                    .definitions
-                    .iter()
-                    .find(|d| d.id == *definition)
-                    .ok_or("Missing component definition")?;
+                let Some(source) = self.definitions.iter().find(|d| d.id == *definition) else {
+                    misses.extend(overrides.iter().map(|o| (path.clone(), o.path.clone())));
+                    result.crop = None;
+                    result.properties =
+                        Properties::from([(MISSING_COMPONENT.into(), Value::Bool(true))]);
+                    result.content = NodeContent::Control {
+                        kind: "image".into(),
+                        size: Size {
+                            width: Dimension::Fixed(150.),
+                            height: Dimension::Fixed(150.),
+                        },
+                    };
+                    path.pop();
+                    return Ok(result);
+                };
                 if !source.content.paint_order.is_empty() {
                     return Err("Component definitions cannot use legacy paint order".into());
                 }

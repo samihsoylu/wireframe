@@ -86,6 +86,26 @@ impl Editor {
             }
         })
     }
+    pub fn missing_component(&self, id: Id) -> bool {
+        self.instance_definition(id)
+            .is_some_and(|definition| !self.document.definitions.iter().any(|d| d.id == definition))
+            || self.nodes().iter().any(|n| {
+                n.id == id && n.properties.get(MISSING_COMPONENT) == Some(&Value::Bool(true))
+            })
+    }
+    pub fn delete_definition(&mut self, id: Id) -> Result<(), String> {
+        self.component_change("Delete component", |e| {
+            let index = e
+                .document
+                .definitions
+                .iter()
+                .position(|d| d.id == id)
+                .ok_or("Component no longer exists")?;
+            e.document.definitions.remove(index);
+            e.reconcile();
+            Ok(())
+        })
+    }
     pub fn edit_definition(&mut self, id: Id) -> Result<(), String> {
         self.commit();
         if !self.document.definitions.iter().any(|d| d.id == id) {
@@ -247,6 +267,11 @@ impl Editor {
                 return Err("Select a component instance".into());
             }
             let resolved = e.document.resolve(node)?.root;
+            fn missing(n: &Node) -> bool {
+                n.properties.get(MISSING_COMPONENT) == Some(&Value::Bool(true))
+                    || matches!(&n.content, NodeContent::Group { children } if children.iter().any(missing))
+            }
+            if missing(&resolved) { return Err("Restore the missing component source before detaching".into()); }
             let mut path = e.context.clone();
             path.push(id);
             let replacements = Content {

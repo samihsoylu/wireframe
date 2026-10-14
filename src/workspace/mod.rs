@@ -117,6 +117,7 @@ impl Editor {
         {
             self.definition = None;
             self.context.clear();
+            self.selection.clear();
         }
         if !self.document.pages.iter().any(|p| p.id == self.page) {
             self.page = self.document.pages[0].id;
@@ -220,6 +221,7 @@ impl Editor {
         if self.nodes().iter().any(|n| {
             n.id == id
                 && !n.locked
+                && !self.missing_component(id)
                 && matches!(
                     n.content,
                     NodeContent::Group { .. } | NodeContent::Instance { .. }
@@ -590,6 +592,13 @@ impl Editor {
         if !self.structure_edit_allowed() {
             return;
         }
+        if !self.nodes().iter().any(|n| {
+            self.selection.contains(&n.id)
+                && !n.locked
+                && matches!(n.content, NodeContent::Group { .. })
+        }) {
+            return;
+        }
         self.edit("Ungroup", |e| {
             let order = e.leaf_order();
             let selected = e.selection.clone();
@@ -832,6 +841,10 @@ fn transform(
         to.x + (world.x - from.x) * sx,
         to.y + (world.y - from.y) * sy,
     );
+    if node.properties.get(MISSING_COMPONENT) == Some(&Value::Bool(true)) {
+        node.origin = Point::new(next.x - new_parent.x, next.y - new_parent.y);
+        return Ok(());
+    }
     if let NodeContent::Control { kind, .. } = &node.content
         && let Some(spec) = catalog::get(kind)
     {

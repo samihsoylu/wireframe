@@ -176,7 +176,7 @@ fn orphan_overrides_are_reported_and_do_not_overwrite_a_different_path() {
     assert_eq!(decode(&p.encode().unwrap()).unwrap(), p);
 }
 #[test]
-fn cycles_missing_references_and_expansion_growth_fail_without_mutation() {
+fn cycles_and_expansion_growth_fail_but_missing_references_remain_loadable() {
     let mut p = component_project();
     p.definitions[0].content.nodes.push(instance(5, 11, vec![]));
     let before = p.clone();
@@ -185,7 +185,8 @@ fn cycles_missing_references_and_expansion_growth_fail_without_mutation() {
     assert_eq!(p, before);
     p.definitions[0].content.nodes.pop();
     p.definitions.remove(0);
-    assert!(p.validate().unwrap_err().contains("Missing component"));
+    p.validate().unwrap();
+    assert!(p.resolve(&p.pages[0].content.nodes[0]).is_ok());
     let mut p = Project::default();
     p.definitions.push(Definition {
         id: 10,

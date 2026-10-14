@@ -137,7 +137,7 @@ impl Editor {
             for d in &mut copy.definitions {
                 strip_missing_links(&mut d.content.nodes, &pages);
             }
-            let had_order = !e.page_data().content.paint_order.is_empty();
+            let had_order = !e.active_content().paint_order.is_empty();
             e.nodes_mut().extend(copy.nodes);
             e.document.definitions.extend(copy.definitions);
             e.document.assets.extend(copy.assets);
@@ -162,7 +162,7 @@ impl Editor {
                         .collect::<Vec<_>>()
                 });
                 match order {
-                    Ok(paths) => e.current_mut().content.paint_order.extend(paths),
+                    Ok(paths) => e.active_content_mut().paint_order.extend(paths),
                     Err(err) => e.error = Some(err),
                 }
             }

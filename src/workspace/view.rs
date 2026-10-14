@@ -30,12 +30,7 @@ impl Editor {
         if let Some(layout) = cache.pages.get(&id) {
             return layout.clone();
         }
-        let page = self
-            .document
-            .pages
-            .iter()
-            .find(|p| p.id == id)
-            .ok_or("Page no longer exists")?;
+        let (_, content) = self.surface(id).ok_or("Workspace no longer exists")?;
         let mut result = Err("Font layout did not run".into());
         let output = self.fonts.run_ui(egui::RawInput::default(), |ui| {
             let measurer = layout::EguiMeasurer {
@@ -48,7 +43,7 @@ impl Editor {
                 measurer: &measurer,
                 context: Context::default(),
             }
-            .layout(&page.content);
+            .layout(content);
         });
         output.drop_without_applying_deltas();
         cache.pages.insert(id, result.clone());
@@ -60,13 +55,7 @@ impl Editor {
             return scene.clone();
         }
         let layers = self.layers(id)?;
-        let title = &self
-            .document
-            .pages
-            .iter()
-            .find(|p| p.id == id)
-            .ok_or("Page no longer exists")?
-            .name;
+        let (title, _) = self.surface(id).ok_or("Workspace no longer exists")?;
         let mut result = Err("Drawing did not run".into());
         let output = self.fonts.run_ui(egui::RawInput::default(), |ui| {
             let fonts = layout::EguiMeasurer {
@@ -84,7 +73,7 @@ impl Editor {
     pub fn current(&self) -> model::Page {
         let page = self.page_data();
         let controls = self
-            .layout_page(self.page)
+            .layout_page(self.surface_id())
             .map(|layout| {
                 let nodes = if self.context.is_empty() {
                     &layout.nodes
@@ -97,9 +86,15 @@ impl Editor {
             })
             .unwrap_or_default();
         model::Page {
-            id: page.id,
-            name: page.name.clone(),
-            notes: page.notes.clone(),
+            id: self.surface_id(),
+            name: self
+                .surface(self.surface_id())
+                .map_or_else(|| page.name.clone(), |(name, _)| name.to_owned()),
+            notes: if self.definition.is_some() {
+                String::new()
+            } else {
+                page.notes.clone()
+            },
             controls,
         }
     }
@@ -121,22 +116,23 @@ impl Editor {
             .collect())
     }
     pub fn rendered_page(&self, id: Id) -> Result<model::Page, String> {
-        let page = self
-            .document
-            .pages
-            .iter()
-            .find(|p| p.id == id)
-            .ok_or("Page no longer exists")?;
+        let (name, _) = self.surface(id).ok_or("Workspace no longer exists")?;
         Ok(model::Page {
             id,
-            name: page.name.clone(),
-            notes: page.notes.clone(),
+            name: name.into(),
+            notes: self
+                .document
+                .pages
+                .iter()
+                .find(|p| p.id == id)
+                .map(|p| p.notes.clone())
+                .unwrap_or_default(),
             controls: self.layers(id)?.into_iter().map(|l| l.control).collect(),
         })
     }
     pub fn hit(&self, x: f32, y: f32) -> Option<Control> {
         let controls = self.current().controls;
-        if let Ok(layers) = self.layers(self.page) {
+        if let Ok(layers) = self.layers(self.surface_id()) {
             for layer in layers.into_iter().rev() {
                 if layer.path.starts_with(&self.context)
                     && layer.control.bounds.contains(x, y)
@@ -156,7 +152,13 @@ impl Editor {
     pub fn selection_label(&self, id: Id) -> String {
         match self.nodes().iter().find(|n| n.id == id).map(|n| &n.content) {
             Some(NodeContent::Group { .. }) => "Group".into(),
-            Some(NodeContent::Instance { .. }) => "Component".into(),
+            Some(NodeContent::Instance { definition, .. }) => self
+                .document
+                .definitions
+                .iter()
+                .find(|d| d.id == *definition)
+                .map(|d| format!("Component: {}", d.name))
+                .unwrap_or("Component".into()),
             Some(NodeContent::Control { kind, .. }) => {
                 catalog::get(kind).map_or_else(|| kind.clone(), |s| s.name.into())
             }

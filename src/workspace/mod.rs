@@ -2,6 +2,7 @@
 // Copyright 2026 Wireframe contributors
 //! Recursive editing owns project data; renderer projections never become saved documents.
 mod clipboard;
+mod components;
 mod properties;
 mod view;
 use crate::{
@@ -19,6 +20,7 @@ pub use view::Layer;
 struct Snapshot {
     document: Project,
     page: Id,
+    definition: Option<Id>,
     context: NodePath,
     selection: HashSet<Id>,
 }
@@ -31,6 +33,7 @@ struct Change {
 pub struct Editor {
     pub document: Project,
     pub page: Id,
+    pub definition: Option<Id>,
     pub context: NodePath,
     pub selection: HashSet<Id>,
     saved: Project,
@@ -52,6 +55,7 @@ impl Editor {
         crate::fonts::install(&fonts);
         Self {
             page: document.pages[0].id,
+            definition: None,
             saved: document.clone(),
             document,
             context: vec![],
@@ -68,6 +72,7 @@ impl Editor {
         Snapshot {
             document: self.document.clone(),
             page: self.page,
+            definition: self.definition,
             context: self.context.clone(),
             selection: self.selection.clone(),
         }
@@ -75,6 +80,7 @@ impl Editor {
     fn restore(&mut self, s: Snapshot) {
         self.document = s.document;
         self.page = s.page;
+        self.definition = s.definition;
         self.context = s.context;
         self.selection = s.selection;
         self.reconcile();
@@ -96,19 +102,26 @@ impl Editor {
         &mut self.document.pages[i]
     }
     pub fn nodes(&self) -> &[Node] {
-        children(&self.page_data().content.nodes, &self.context).unwrap_or(&[])
+        children(&self.active_content().nodes, &self.context).unwrap_or(&[])
     }
     fn nodes_mut(&mut self) -> &mut Vec<Node> {
         let context = self.context.clone();
-        children_mut(&mut self.current_mut().content.nodes, &context)
+        children_mut(&mut self.active_content_mut().nodes, &context)
             .expect("reconciled edit context")
     }
     fn reconcile(&mut self) {
+        if self
+            .definition
+            .is_some_and(|id| !self.document.definitions.iter().any(|d| d.id == id))
+        {
+            self.definition = None;
+            self.context.clear();
+        }
         if !self.document.pages.iter().any(|p| p.id == self.page) {
             self.page = self.document.pages[0].id;
             self.context.clear();
         }
-        while children(&self.page_data().content.nodes, &self.context).is_none() {
+        while children(&self.active_content().nodes, &self.context).is_none() {
             self.context.pop();
         }
         let ids: HashSet<_> = self.nodes().iter().map(|n| n.id).collect();
@@ -147,7 +160,10 @@ impl Editor {
         if before.document == self.document {
             return;
         }
-        if let Err(error) = self.document.validate() {
+        if let Err(error) = self
+            .normalize_source_order()
+            .and_then(|()| self.document.validate())
+        {
             self.restore(before);
             self.error = Some(error);
             return;
@@ -193,6 +209,7 @@ impl Editor {
         self.commit();
         if self.document.pages.iter().any(|p| p.id == id) {
             self.page = id;
+            self.definition = None;
             self.context.clear();
             self.selection.clear();
         }
@@ -215,6 +232,9 @@ impl Editor {
         self.commit();
         if let Some(id) = self.context.pop() {
             self.selection = HashSet::from([id]);
+            true
+        } else if self.definition.take().is_some() {
+            self.selection.clear();
             true
         } else {
             false
@@ -291,12 +311,16 @@ impl Editor {
                     alternates: vec![],
                 });
                 e.page = id;
+                e.definition = None;
                 e.context.clear();
                 e.selection.clear();
             }
         });
     }
     pub fn delete_page(&mut self) {
+        if self.definition.is_some() {
+            return;
+        }
         if self.document.pages.len() < 2 {
             return;
         }
@@ -377,7 +401,7 @@ impl Editor {
         };
         let mut path = self.context.clone();
         path.push(c.id);
-        let Ok(layout) = self.layout_page(self.page) else {
+        let Ok(layout) = self.layout_page(self.surface_id()) else {
             return;
         };
         let Some(geometry) = view::find_layout(&layout.nodes, &path) else {
@@ -455,7 +479,7 @@ impl Editor {
                 .collect();
             e.nodes_mut().retain(|n| !ids.contains(&n.id));
             let context = e.context.clone();
-            e.current_mut().content.paint_order.retain(|p| {
+            e.active_content_mut().paint_order.retain(|p| {
                 !(p.starts_with(&context)
                     && p.get(context.len()).is_some_and(|id| ids.contains(id)))
             });
@@ -503,7 +527,7 @@ impl Editor {
             });
             nodes.insert(index, Node::group(id, origin, grouped));
             let context = e.context.clone();
-            e.current_mut().content.paint_order = order
+            e.active_content_mut().paint_order = order
                 .into_iter()
                 .map(|mut p| {
                     if p.starts_with(&context)
@@ -555,7 +579,7 @@ impl Editor {
                 }
             }
             *e.nodes_mut() = result;
-            e.current_mut().content.paint_order = order
+            e.active_content_mut().paint_order = order
                 .into_iter()
                 .map(|mut p| {
                     if p.starts_with(&context)
@@ -586,7 +610,7 @@ impl Editor {
             let ids = e.selection.clone();
             e.nodes_mut().sort_by_key(|n| ids.contains(&n.id) == front);
             let context = e.context.clone();
-            let order = &mut e.current_mut().content.paint_order;
+            let order = &mut e.active_content_mut().paint_order;
             let mut scoped: Vec<_> = order
                 .iter()
                 .filter(|p| p.starts_with(&context))
@@ -659,7 +683,7 @@ impl Editor {
         });
     }
     fn context_origin(&self) -> Point {
-        let mut nodes = &self.page_data().content.nodes;
+        let mut nodes = &self.active_content().nodes;
         let mut point = Point::default();
         for id in &self.context {
             if let Some(n) = nodes.iter().find(|n| n.id == *id) {
@@ -672,13 +696,13 @@ impl Editor {
         point
     }
     fn leaf_order(&self) -> Vec<NodePath> {
-        self.page_data().content.paint_paths().unwrap_or_default()
+        self.active_content().paint_paths().unwrap_or_default()
     }
     fn append_order(&mut self, id: Id) {
-        if !self.page_data().content.paint_order.is_empty() {
+        if !self.active_content().paint_order.is_empty() {
             let mut p = self.context.clone();
             p.push(id);
-            self.current_mut().content.paint_order.push(p);
+            self.active_content_mut().paint_order.push(p);
         }
     }
 }

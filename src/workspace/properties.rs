@@ -79,7 +79,7 @@ impl Editor {
             AutoSize::Height => size.height = Dimension::Auto,
             _ => *size = Size::default(),
         }
-        if let Err(error) = self.layout_page(self.page) {
+        if let Err(error) = self.layout_page(self.surface_id()) {
             if let Some(Node {
                 content: NodeContent::Control { size, .. },
                 ..

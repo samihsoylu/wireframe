@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 
+mod components;
 mod previews;
 mod properties;
 mod recovery;
@@ -267,7 +268,7 @@ impl WireframeApp {
         {
             let bytes = self
                 .editor
-                .rendered_scene(self.editor.page)
+                .rendered_scene(self.editor.surface_id())
                 .and_then(|drawing| {
                     if png {
                         drawing.png()
@@ -598,6 +599,12 @@ impl WireframeApp {
                         self.zoom = (self.zoom / 1.2).max(0.2);
                     }
                     ui.label(format!("{:.0}%", self.zoom * 100.));
+                    if self.editor.definition.is_some() {
+                        ui.strong(format!("Editing component: {}", self.editor.current().name));
+                        if ui.button("Back to wireframe").clicked() {
+                            self.editor.switch_page(self.editor.page);
+                        }
+                    }
                     if !self.editor.context.is_empty() && ui.button("Exit group").clicked() {
                         self.editor.leave();
                     }
@@ -876,7 +883,8 @@ impl WireframeApp {
                                 notes: page.notes,
                                 controls: vec![],
                             });
-                            let selected = self.editor.page == page.id;
+                            let selected =
+                                self.editor.definition.is_none() && self.editor.page == page.id;
                             if self.thumbnails {
                                 let width = ui.available_width();
                                 let (r, response) =
@@ -933,6 +941,7 @@ impl WireframeApp {
                         }
                     });
                 ui.separator();
+                self.components_sidebar(ui);
                 egui::CollapsingHeader::new("Layers")
                     .default_open(false)
                     .show(ui, |ui| {
@@ -957,6 +966,7 @@ impl WireframeApp {
         egui::Panel::right("inspector").resizable(true).default_size(250.).size_range(220.0..=340.0).show(ui,|ui|{
             ui.add_space(10.);egui::ScrollArea::vertical().show(ui,|ui|{
                 let selected=self.editor.selected_views();
+                if selected.is_empty() && self.editor.definition.is_some() { self.component_source_inspector(ui); return; }
                 if selected.is_empty(){ui.heading("Page");ui.label("Project title");let mut title=self.editor.document.title.clone();let r=ui.text_edit_singleline(&mut title);if r.changed(){self.editor.begin("Rename project");self.editor.document.title=title;}
 if r.lost_focus(){self.editor.commit();}
                     ui.label("Page name");let mut name=self.editor.current().name.clone();let r=ui.text_edit_singleline(&mut name);if r.changed(){self.editor.begin("Rename page");self.editor.current_mut().name=name;}
@@ -982,6 +992,7 @@ if c.kind==Kind::Tabs {ui.small("Separate tabs with commas.");}
                     if !ui.ctx().egui_wants_keyboard_input()&&!ui.input(|i|i.pointer.any_down()){self.editor.commit();}
                 }else {ui.label("Align");ui.horizontal(|ui|{for(i,name)in ["Left","Center","Right"].iter().enumerate(){if ui.button(*name).clicked(){self.editor.align(0,i);}}});ui.horizontal(|ui|{for(i,name)in ["Top","Middle","Bottom"].iter().enumerate(){if ui.button(*name).clicked(){self.editor.align(1,i);}}});ui.horizontal(|ui|{if ui.button("Spread X").clicked(){self.editor.distribute(0);}
 if ui.button("Spread Y").clicked(){self.editor.distribute(1);}});}
+                self.component_actions(ui);
                 ui.add_space(14.);ui.separator();ui.horizontal(|ui|{if ui.button("Group").clicked(){self.editor.group();}
 if ui.button("Ungroup").clicked(){self.editor.ungroup();}});ui.horizontal(|ui|{if ui.button("To front").clicked(){self.editor.reorder(true);}
 if ui.button("To back").clicked(){self.editor.reorder(false);}});ui.horizontal(|ui|{if ui.button("Duplicate").clicked(){self.editor.duplicate();}
@@ -995,7 +1006,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
         let b = scene::page_bounds(
             &self
                 .editor
-                .rendered_page(self.editor.page)
+                .rendered_page(self.editor.surface_id())
                 .unwrap_or_else(|_| self.editor.current()),
         );
         let size = self.canvas_rect.size();
@@ -1384,7 +1395,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     let p = self.world(pos);
                     let hit = if self.present {
                         self.editor
-                            .layers(self.editor.page)
+                            .layers(self.editor.surface_id())
                             .ok()
                             .and_then(|layers| {
                                 layers
@@ -1403,7 +1414,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                         .present
                         .then(|| {
                             self.editor
-                                .rendered_scene(self.editor.page)
+                                .rendered_scene(self.editor.surface_id())
                                 .ok()
                                 .and_then(|s| s.hit_link(p.x, p.y).map(str::to_owned))
                         })
@@ -1456,7 +1467,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                         }
                     }
                 }
-                match self.editor.rendered_scene(self.editor.page) {
+                match self.editor.rendered_scene(self.editor.surface_id()) {
                     Ok(drawing) => Self::paint_scene(
                         &painter,
                         &drawing,

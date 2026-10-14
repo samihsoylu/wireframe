@@ -7,6 +7,10 @@
 use std::{collections::VecDeque, ops::Range};
 use unicode_segmentation::UnicodeSegmentation;
 
+pub mod layout;
+mod widget;
+pub use widget::{forget, multiline};
+
 /// The side of a source boundary to which a visual caret belongs. Both sides
 /// may have different screen positions at a bidirectional or wrapped boundary.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -152,6 +156,15 @@ impl Draft {
             range.end = next_boundary(&self.text, range.end);
         }
         self.replace(range, "")
+    }
+
+    pub fn delete_to(&mut self, caret: Caret) -> bool {
+        if !self.selection.range().is_empty() {
+            return self.insert("");
+        }
+        let byte = floor_boundary(&self.text, caret.byte);
+        let focus = self.selection.focus.byte;
+        self.replace(byte.min(focus)..byte.max(focus), "")
     }
 
     fn replace(&mut self, range: Range<usize>, replacement: &str) -> bool {

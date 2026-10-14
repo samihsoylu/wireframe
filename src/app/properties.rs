@@ -256,7 +256,7 @@ impl WireframeApp {
                             if !finish && let Value::Links(old)=&original {*links=old.clone();}
                         }
                         (PropertyType::Text, Value::Text(v)) => {
-                            let r = ui.add(egui::TextEdit::multiline(v).desired_rows(4).desired_width(f32::INFINITY));
+                            let r = wireframe::text_entry::multiline(ui, v, 4, false);
                             finish = r.lost_focus();
                         }
                         (PropertyType::Number {..}, Value::Number(v)) if key == "selected_index" && matches!(spec.id, "list" | "button_bar" | "link_bar" | "tabs" | "vertical_tabs") => {

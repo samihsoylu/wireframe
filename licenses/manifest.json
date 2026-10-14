@@ -586,6 +586,28 @@
     ]
   },
   {
+    "name": "core_maths",
+    "version": "0.1.1",
+    "license": "MIT",
+    "repository": "https://github.com/robertbastian/core_maths",
+    "files": [
+      "core_maths-0.1.1/LICENSE"
+    ]
+  },
+  {
+    "name": "cosmic-text",
+    "version": "0.19.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/pop-os/cosmic-text",
+    "files": [
+      "cosmic-text-0.19.0/LICENSE-APACHE",
+      "cosmic-text-0.19.0/LICENSE-MIT",
+      "cosmic-text-0.19.0/fonts/FiraMono-LICENSE",
+      "cosmic-text-0.19.0/fonts/Inter-LICENSE",
+      "cosmic-text-0.19.0/fonts/NotoSans-LICENSE"
+    ]
+  },
+  {
     "name": "crc32fast",
     "version": "1.5.2",
     "license": "MIT OR Apache-2.0",
@@ -965,6 +987,16 @@
   },
   {
     "name": "font-types",
+    "version": "0.11.3",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/googlefonts/fontations",
+    "files": [
+      "font-types-0.11.3/LICENSE-APACHE",
+      "font-types-0.11.3/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "font-types",
     "version": "0.12.6",
     "license": "MIT OR Apache-2.0",
     "repository": "https://github.com/googlefonts/fontations",
@@ -980,6 +1012,16 @@
     "repository": "https://github.com/Riey/fontconfig-parser",
     "files": [
       "fontconfig-parser-0.5.8/LICENSE"
+    ]
+  },
+  {
+    "name": "fontdb",
+    "version": "0.23.0",
+    "license": "MIT",
+    "repository": "https://github.com/RazrFalcon/fontdb",
+    "files": [
+      "fontdb-0.23.0/LICENSE",
+      "fontdb-0.23.0/tests/fonts/LICENSE.txt"
     ]
   },
   {
@@ -1209,6 +1251,15 @@
   },
   {
     "name": "harfrust",
+    "version": "0.5.2",
+    "license": "MIT",
+    "repository": "https://github.com/harfbuzz/harfrust",
+    "files": [
+      "harfrust-0.5.2/upstream-LICENSE"
+    ]
+  },
+  {
+    "name": "harfrust",
     "version": "0.12.0",
     "license": "MIT",
     "repository": "https://github.com/harfbuzz/harfrust",
@@ -1341,6 +1392,15 @@
     "repository": "https://github.com/nagisa/rust_libloading/",
     "files": [
       "libloading-0.8.9/LICENSE"
+    ]
+  },
+  {
+    "name": "libm",
+    "version": "0.2.16",
+    "license": "MIT",
+    "repository": "https://github.com/rust-lang/compiler-builtins",
+    "files": [
+      "libm-0.2.16/LICENSE.txt"
     ]
   },
   {
@@ -1835,6 +1895,16 @@
     ]
   },
   {
+    "name": "rangemap",
+    "version": "1.8.0",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/jeffparsons/rangemap",
+    "files": [
+      "rangemap-1.8.0/LICENSE-APACHE",
+      "rangemap-1.8.0/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "raw-window-handle",
     "version": "0.6.2",
     "license": "MIT OR Apache-2.0 OR Zlib",
@@ -1843,6 +1913,16 @@
       "raw-window-handle-0.6.2/LICENSE-APACHE.md",
       "raw-window-handle-0.6.2/LICENSE-MIT.md",
       "raw-window-handle-0.6.2/LICENSE-ZLIB.md"
+    ]
+  },
+  {
+    "name": "read-fonts",
+    "version": "0.37.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/googlefonts/fontations",
+    "files": [
+      "read-fonts-0.37.0/LICENSE-APACHE",
+      "read-fonts-0.37.0/LICENSE-MIT"
     ]
   },
   {
@@ -1902,6 +1982,16 @@
     "files": [
       "roxmltree-0.21.1/LICENSE-APACHE",
       "roxmltree-0.21.1/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "rustc-hash",
+    "version": "2.1.3",
+    "license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/rust-lang/rustc-hash",
+    "files": [
+      "rustc-hash-2.1.3/LICENSE-APACHE",
+      "rustc-hash-2.1.3/LICENSE-MIT"
     ]
   },
   {
@@ -2058,6 +2148,16 @@
   },
   {
     "name": "skrifa",
+    "version": "0.40.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/googlefonts/fontations",
+    "files": [
+      "skrifa-0.40.0/LICENSE-APACHE",
+      "skrifa-0.40.0/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "skrifa",
     "version": "0.44.0",
     "license": "MIT OR Apache-2.0",
     "repository": "https://github.com/googlefonts/fontations",
@@ -2132,6 +2232,16 @@
     ]
   },
   {
+    "name": "smol_str",
+    "version": "0.3.6",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-lang/rust-analyzer/tree/master/lib/smol_str",
+    "files": [
+      "smol_str-0.3.6/LICENSE-APACHE",
+      "smol_str-0.3.6/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "static_assertions",
     "version": "1.1.0",
     "license": "MIT OR Apache-2.0",
@@ -2161,6 +2271,16 @@
     ]
   },
   {
+    "name": "swash",
+    "version": "0.2.10",
+    "license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/dfrg/swash",
+    "files": [
+      "swash-0.2.10/LICENSE-APACHE",
+      "swash-0.2.10/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "syn",
     "version": "2.0.119",
     "license": "MIT OR Apache-2.0",
@@ -2178,6 +2298,16 @@
     "files": [
       "syn-3.0.9/LICENSE-APACHE",
       "syn-3.0.9/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "sys-locale",
+    "version": "0.3.2",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/1Password/sys-locale",
+    "files": [
+      "sys-locale-0.3.2/LICENSE-APACHE",
+      "sys-locale-0.3.2/LICENSE-MIT"
     ]
   },
   {
@@ -2327,6 +2457,17 @@
     ]
   },
   {
+    "name": "ttf-parser",
+    "version": "0.25.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/harfbuzz/ttf-parser",
+    "files": [
+      "ttf-parser-0.25.1/LICENSE-APACHE",
+      "ttf-parser-0.25.1/LICENSE-MIT",
+      "ttf-parser-0.25.1/tests/fonts/colr_1_LICENSE"
+    ]
+  },
+  {
     "name": "unicode-bidi",
     "version": "0.3.18",
     "license": "MIT OR Apache-2.0",
@@ -2354,6 +2495,15 @@
       "unicode-ident-1.0.27/LICENSE-APACHE",
       "unicode-ident-1.0.27/LICENSE-MIT",
       "unicode-ident-1.0.27/LICENSE-UNICODE"
+    ]
+  },
+  {
+    "name": "unicode-linebreak",
+    "version": "0.1.5",
+    "license": "Apache-2.0",
+    "repository": "https://github.com/axelf4/unicode-linebreak",
+    "files": [
+      "unicode-linebreak-0.1.5/LICENSE"
     ]
   },
   {
@@ -2832,6 +2982,16 @@
     ]
   },
   {
+    "name": "yazi",
+    "version": "0.2.1",
+    "license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/dfrg/yazi",
+    "files": [
+      "yazi-0.2.1/LICENSE-APACHE",
+      "yazi-0.2.1/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "zbus",
     "version": "5.19.0",
     "license": "MIT",
@@ -2892,6 +3052,16 @@
     "repository": "https://github.com/z-galaxy/zcheapstr/",
     "files": [
       "zcheapstr-1.1.0/LICENSE"
+    ]
+  },
+  {
+    "name": "zeno",
+    "version": "0.3.3",
+    "license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/dfrg/zeno",
+    "files": [
+      "zeno-0.3.3/LICENSE-APACHE",
+      "zeno-0.3.3/LICENSE-MIT"
     ]
   },
   {

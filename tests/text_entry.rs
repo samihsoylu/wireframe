@@ -3,6 +3,25 @@
 use wireframe::text_entry::{Affinity, Caret, Draft};
 
 #[test]
+fn range_deletion_preserves_selection_and_grapheme_boundaries() {
+    let mut d = Draft::new("one 👩‍💻 two".into());
+    let before = d.selection();
+    assert!(d.delete_to(Caret::new("one 👩‍💻 ".len())));
+    assert_eq!(d.text(), "one 👩‍💻 ");
+    assert!(d.undo());
+    assert_eq!(d.selection(), before);
+    d.select(Caret::new("one 👩‍💻".len()), Caret::new(4));
+    let selected = d.selection();
+    assert!(d.delete_to(Caret::new(0)));
+    assert_eq!(d.text(), "one  two");
+    assert!(d.undo());
+    assert_eq!(d.selection(), selected);
+    d.move_to(Caret::new("one 👩‍💻".len()), false);
+    assert!(d.delete_to(Caret::new(6)));
+    assert_eq!(d.text(), "one  two");
+}
+
+#[test]
 fn edits_use_source_bytes_in_mixed_direction_text() {
     let mut d = Draft::new("ABC שלום 123".into());
     let at = d.text().find("123").unwrap();

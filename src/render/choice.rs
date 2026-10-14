@@ -26,7 +26,7 @@ impl Scene {
         };
         let b = Bounds::new(
             c.bounds.x,
-            c.bounds.y + ((c.bounds.h - size) / 2.).round(),
+            c.bounds.y + center_offset(c.bounds.h, size),
             size,
             size,
         );
@@ -46,78 +46,43 @@ impl Scene {
         clip: Option<Bounds>,
         color: Color32,
     ) {
-        let color = [color.r(), color.g(), color.b()];
-        let outline = if radio {
-            (0..=32)
-                .map(|i| {
-                    let a = i as f32 * std::f32::consts::TAU / 32.;
-                    [
-                        b.x + b.w / 2. + a.cos() * b.w / 2.,
-                        b.y + b.h / 2. + a.sin() * b.h / 2.,
-                    ]
-                })
-                .collect()
-        } else {
-            vec![
-                [b.x, b.y],
-                [b.x + b.w, b.y],
-                [b.x + b.w, b.y + b.h],
-                [b.x, b.y + b.h],
-                [b.x, b.y],
-            ]
+        let id = match (radio, mark) {
+            (false, Mark::Empty) => "square-regular",
+            (false, Mark::Selected) => "square-check-regular",
+            (false, Mark::Mixed) => "square-minus-regular",
+            (true, Mark::Selected) => "circle-dot-regular",
+            (true, _) => "circle-regular",
         };
-        self.primitive(
-            Primitive::Line {
-                points: outline,
-                color,
-                width: 1.5,
+        self.items.push(Item {
+            drawing: Drawing::Icon {
+                bounds: b,
+                id: id.into(),
+                color: color.to_array(),
+                turns: 0,
             },
             clip,
-        );
-        match mark {
-            Mark::Empty => {}
-            Mark::Mixed => self.primitive(
+            opacity: 1.,
+        });
+        if radio && matches!(mark, Mark::Mixed) {
+            // Original rounded minus, aligned with the licensed circle's stroke weight.
+            let half_segment = b.w * 9. / 64.;
+            self.primitive(
                 Primitive::Line {
                     points: vec![
-                        [b.x + b.w * 0.25, b.y + b.h / 2.],
-                        [b.x + b.w * 0.75, b.y + b.h / 2.],
+                        [b.x + b.w / 2. - half_segment, b.y + b.h / 2.],
+                        [b.x + b.w / 2. + half_segment, b.y + b.h / 2.],
                     ],
-                    color,
-                    width: 2.,
+                    color: [color.r(), color.g(), color.b()],
+                    width: b.w * 3. / 32.,
                 },
                 clip,
-            ),
-            Mark::Selected if radio => {
-                // Filled center built from close horizontal strokes; no fixed-color legacy outline.
-                let radius = b.w * 0.22;
-                for i in -3..=3 {
-                    let y = radius * i as f32 / 3.5;
-                    let x = (radius * radius - y * y).sqrt();
-                    self.primitive(
-                        Primitive::Line {
-                            points: vec![
-                                [b.x + b.w / 2. - x, b.y + b.h / 2. + y],
-                                [b.x + b.w / 2. + x, b.y + b.h / 2. + y],
-                            ],
-                            color,
-                            width: 1.,
-                        },
-                        clip,
-                    );
-                }
-            }
-            Mark::Selected => self.primitive(
-                Primitive::Line {
-                    points: vec![
-                        [b.x + b.w * 0.18, b.y + b.h * 0.5],
-                        [b.x + b.w * 0.43, b.y + b.h * 0.75],
-                        [b.x + b.w * 0.86, b.y + b.h * 0.2],
-                    ],
-                    color,
-                    width: 2.,
-                },
-                clip,
-            ),
+            );
         }
     }
+}
+
+/// Center on the pixel grid; half-unit ties move toward the positive axis.
+/// A symbol can be taller than its row, so negative offsets matter too.
+pub(super) fn center_offset(row: f32, symbol: f32) -> f32 {
+    ((row - symbol) / 2. + 0.5).floor()
 }

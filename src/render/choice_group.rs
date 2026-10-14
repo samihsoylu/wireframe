@@ -38,7 +38,12 @@ impl Scene {
                 };
                 let size = if radio { 13. } else { 16. };
                 self.choice_symbol(
-                    Bounds::new(area.x, area.y + ((area.h - size) / 2.).round(), size, size),
+                    Bounds::new(
+                        area.x,
+                        area.y + choice::center_offset(area.h, size),
+                        size,
+                        size,
+                    ),
                     radio,
                     match mark {
                         crate::choice_group::Mark::Empty => choice::Mark::Empty,

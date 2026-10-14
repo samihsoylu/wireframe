@@ -292,7 +292,7 @@ fn unsupported_auto_layout_rolls_back_requested_dimensions() {
 fn all_choice_states_draw_their_mark_and_disabled_ink_without_changing_geometry() {
     for kind in ["checkbox", "radio"] {
         let mut normal_bounds = None;
-        let mut normal_count = 0;
+
         for state in [
             "normal",
             "selected",
@@ -320,41 +320,66 @@ fn all_choice_states_draw_their_mark_and_disabled_ink_without_changing_geometry(
             } else {
                 [0, 0, 0]
             };
-            let outlines = scene
+            let symbols = scene
                 .items
                 .iter()
                 .filter_map(|i| match &i.drawing {
-                    Drawing::Primitive(Primitive::Line { points, color, .. })
-                        if points.len() > 4 =>
+                    Drawing::Icon {
+                        bounds, id, color, ..
+                    } => Some((bounds, id.as_str(), color)),
+                    _ => None,
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(symbols.len(), 1);
+            let (symbol, id, color) = symbols[0];
+            assert_eq!(*color, [ink[0], ink[1], ink[2], 255]);
+            assert_eq!(
+                (symbol.w, symbol.h),
+                if kind == "checkbox" {
+                    (16., 16.)
+                } else {
+                    (13., 13.)
+                }
+            );
+            let mixed = state.contains("indeterminate");
+            let selected = state.contains("selected");
+            let expected = if kind == "checkbox" {
+                if mixed {
+                    "square-minus-regular"
+                } else if selected {
+                    "square-check-regular"
+                } else {
+                    "square-regular"
+                }
+            } else if selected {
+                "circle-dot-regular"
+            } else {
+                "circle-regular"
+            };
+            assert_eq!(id, expected);
+            let bars = scene
+                .items
+                .iter()
+                .filter_map(|i| match &i.drawing {
+                    Drawing::Primitive(Primitive::Line {
+                        points,
+                        color,
+                        width,
+                    }) if points
+                        .iter()
+                        .all(|p| p[0] >= symbol.x && p[0] <= symbol.x + symbol.w) =>
                     {
-                        Some((points, color))
+                        Some((points, color, width))
                     }
                     _ => None,
                 })
                 .collect::<Vec<_>>();
-            assert_eq!(outlines.len(), 1);
-            assert_eq!(*outlines[0].1, ink);
-            let width = outlines[0]
-                .0
-                .iter()
-                .map(|p| p[0])
-                .fold(f32::NEG_INFINITY, f32::max)
-                - outlines[0]
-                    .0
-                    .iter()
-                    .map(|p| p[0])
-                    .fold(f32::INFINITY, f32::min);
-            assert_eq!(width, if kind == "checkbox" { 16. } else { 13. });
-            let marks = scene
-                .items
-                .iter()
-                .filter(|i| matches!(i.drawing, Drawing::Primitive(_)))
-                .count();
-            if state == "normal" {
-                normal_count = marks;
-            }
-            if state.contains("selected") || state.contains("indeterminate") {
-                assert!(marks > normal_count);
+            if kind == "radio" && mixed {
+                assert_eq!(bars.len(), 1);
+                assert_eq!(*bars[0].1, ink);
+                assert_eq!(*bars[0].2, 13. * 3. / 32.);
+            } else {
+                assert!(bars.is_empty());
             }
             let glyphs = scene
                 .items

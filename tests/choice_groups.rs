@@ -239,13 +239,64 @@ fn disabled_rows_keep_explicit_inline_colors_without_recoloring_the_symbol() {
             assert!(colors.contains(&[255, 0, 0, 255]));
             assert!(colors.contains(&[128, 128, 139, 255]));
             for item in &scene.items {
-                if let Drawing::Primitive(Primitive::Line { color, .. }) = &item.drawing {
-                    assert_eq!(*color, [128, 128, 139]);
+                match &item.drawing {
+                    Drawing::Primitive(Primitive::Line { color, .. }) => {
+                        assert_eq!(*color, [128, 128, 139])
+                    }
+                    Drawing::Icon { color, .. } => assert_eq!(*color, [128, 128, 139, 255]),
+                    _ => {}
                 }
             }
             assert_eq!(scene.links.len(), 2);
             let svg = scene.svg();
             assert!(svg.contains("fill=\"rgb(255,0,0)\"") || svg.contains("fill=\"#ff0000\""));
         }
+    }
+}
+
+#[test]
+fn choice_artwork_keeps_optical_bounds_and_negative_half_alignment() {
+    use wireframe::render::Drawing;
+    for (kind, marker, pixels) in [
+        (Kind::CheckboxGroup, "[ ]", (14, 14)),
+        (Kind::RadioGroup, "( )", (13, 13)),
+    ] {
+        let (mut e, id, _) = fixture(kind);
+        edit(&mut e, id, "text", Value::Text(marker.into()));
+        let scene = e.rendered_scene(e.page).unwrap();
+        let data = scene.png().unwrap();
+        let raster = image::load_from_memory(&data).unwrap().to_rgba8();
+        let mut bounds = (u32::MAX, u32::MAX, 0, 0);
+        for (x, y, p) in raster.enumerate_pixels() {
+            if p[3] > 24 && p[0] < 230 && p[1] < 230 && p[2] < 230 {
+                bounds = (
+                    bounds.0.min(x),
+                    bounds.1.min(y),
+                    bounds.2.max(x + 1),
+                    bounds.3.max(y + 1),
+                );
+            }
+        }
+        assert_eq!((bounds.2 - bounds.0, bounds.3 - bounds.1), pixels);
+        assert!(scene.svg().contains("Font Awesome Free"));
+        // Thirteen-point checkbox labels make the 16-unit icon taller than its row.
+        edit(&mut e, id, "text", Value::Text(format!("{marker} First")));
+        let scene = e.rendered_scene(e.page).unwrap();
+        let symbol = scene
+            .items
+            .iter()
+            .find_map(|i| match i.drawing {
+                Drawing::Icon { bounds, .. } => Some(bounds),
+                _ => None,
+            })
+            .unwrap();
+        assert_eq!(
+            symbol.y,
+            if kind == Kind::CheckboxGroup {
+                51.
+            } else {
+                52.
+            }
+        );
     }
 }

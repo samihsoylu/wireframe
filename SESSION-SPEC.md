@@ -6,7 +6,7 @@ Build a complete, usable offline Rust wireframing product for macOS, Windows and
 
 Work directly as Engineer. Preserve user files and explicit deferrals. Use synthetic fixtures for native experiments. Keep reference-specific names, extracted implementation/assets and investigation narratives outside this repository and its Git history. Original code is GPL-3.0-only from first commit 87f11c1; preserve dependency notices. Existing-format import remains deferred.
 
-## Current checkpoint — 2026-10-15
+## Current checkpoint — 2026-10-16
 
 Stable vector outlines now serve Sketch Button, Text Input and Text Area. Rectangle has Square, Rounded, Dashed and No border choices, custom border color and independent fill opacity in its typed inspector. Corner regions retain their size on ordinary resize and compress for tiny frames. Stored rectangle captions remain editable. See docs/OUTLINES.md.
 
@@ -16,7 +16,7 @@ Native macOS acceptance covers border choices, opacity, RGB editing, width edit/
 
 All 599 tests across 133 unique targets pass. The all-target run was resumed after correcting one antialiasing-sensitive test assertion; earlier passing targets were retained and every remaining target completed. Clippy, formatting, signed-bundle verification, unchanged dependencies/fonts, first-commit GPL and repository-boundary checks pass. This accepts the functional checkpoint, with the visual discrepancies below still open.
 
-Exact outline fidelity remains open. The Sketch Button pixel comparison is worse than the former straight outline at all five measured sizes, despite stable corners; its ink distribution is the next targeted investigation. Rounded Sketch Rectangle curvature also remains approximate. Functional coverage does not close these visual discrepancies. The accepted palette, table geometry/options, shared scrollbar and physical-pixel text alignment remain intact.
+Exact outline fidelity remains open. The Sketch Button pixel comparison is worse than the former straight outline at the four ordinary measured sizes, despite stable corners. The original 8×8 comparison used a resize helper that clamped the product fixture to10×10, so that comparison was invalid. Exact stored-size fixtures now replace that helper in further investigation. Rounded Sketch Rectangle curvature also remains approximate. Original geometry prototypes improve all ten corrected development cases and eight independently exported new-size cases; integration and full acceptance are next. Functional coverage does not close these visual discrepancies. The accepted palette, table geometry/options, shared scrollbar and physical-pixel text alignment remain intact.
 
 ## Existing capabilities and limits
 
@@ -30,7 +30,7 @@ Keep the four integrated scenarios as repeatable acceptance fixtures. Keep the f
 
 1. Broaden display-hardware acceptance for canvas pixel alignment; retain the demonstrated extra-filtering correction and distinguish remaining font/capture differences. Continue targeted shared-interaction investigation: native held library-drag cadence, display-pixel alignment and library autoscroll. Six screen points is the current onset threshold, not an exact timing acceptance result. Do not repeat completed preview foundations or claim native held verification from post-release captures.
 2. Complete remaining group/component crop, lock and resize combinations, clipping, snapping and alignment behavior. Cropped-group ungrouping and group crop creation/adjustment/removal UI have scoped native acceptance; broader nested component combinations remain. Alternate versions, page hierarchy and presentation target/history behavior need broader acceptance.
-3. Refine typography, state styling and geometric/visual edge cases against the established specification. Keep original artwork and fonts properly licensed. Legacy shape/rule coverage, image metadata and placeholder/filter behavior remain open where identified in family documents.
+3. Refine typography, state styling and geometric/visual edge cases against the established specification. Keep original artwork and fonts properly licensed. Legacy shape/rule coverage, image metadata and placeholder/filter behavior remain open where identified in family documents. Explicit stored Text Input heights remain fixed, while interactive insertion/resizing uses intrinsic auto height; reconcile that loading contract separately before any compatibility claim.
 4. Complete PDF typography and remaining native failure/performance acceptance, image scale/options and broader font handling. Preserve shared canvas/export geometry.
 5. Package and run native macOS, Windows and Linux acceptance and release checks. Large-document profiling, revision-based cache invalidation, forced failures and recovery remain outstanding. No full cross-platform or complete-fidelity claim.
 

@@ -8,6 +8,14 @@ Work directly as Engineer. Preserve user files and explicit deferrals. Use synth
 
 ## Current checkpoint — 2026-10-15
 
+Unreadable recovery preservation is accepted. Startup now discloses a failed load and preserves the unreadable original under a unique sibling name before new checkpoints use the normal path. If preservation fails, the original remains unchanged and automatic recovery is disabled for that session with a manual-save notice. Missing snapshots are normal; the exclusive lock remains in force. See docs/RECOVERY.md.
+
+All 458 tests pass, including 53 app tests and seven recovery tests. The new regression initially failed on silent startup handling, then passed after the correction. Final all-target Clippy, formatting, diff, signature and canonical executable checks pass. Native macOS confirms original-byte preservation, a separate new checkpoint, quit/restart/Restore and byte-identical manual save. The active checkpoint clears after Save; the generated unreadable test file was retained outside application support after verification. Failed preservation and repeated archives have automated coverage. No file repair, power-loss or native Windows/Linux claim; self-review only.
+
+Signed development bundle UUID 6855AA2A-31F4-30C9-9D1B-461EB55154A8. The app runs the saved one-control recovery fixture, Sketch style at 100%, no selection, Library hidden. No build/test sessions remain. The full goal remains active. Next prioritize per-project working copies, automatic named-file synchronization and fallback/conflict handling. Exact held native library-drag timing/autoscroll remain unproven. Shared editing fidelity, PDF/export options, native Windows/Linux and release acceptance remain open; 86-entry availability does not establish full completion.
+
+Previous accepted catalog checkpoint:
+
 Popover and Site map now use the library, Quick Add, typed inspector and shared canvas/PNG/SVG renderer. The available catalog has 86 entries. Popover supports four pointer sides, five positions, rich text, fill and linked Auto-size. Site map computes its layout from hierarchy text, supports two orientations and per-node destinations, and populates labels plus page links atomically. Malformed text keeps destinations available during repair. See docs/DIAGRAMS.md.
 
 The full regression run passed 455 tests. After final inspector changes, 50 app tests passed; after a final thin-panel winding correction, six diagram tests passed. Final all-target Clippy, formatting and diff checks pass. Geometry checks match 1,672 cases through 22,980 assertions, with 48 deliberately different readable error-card cases. Sixty scoped image checks pass. Self-review found and fixed overlapping fill triangles and reversed winding for extremely thin saved panels. Exact contours, typography and rasterization remain different.

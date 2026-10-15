@@ -57,6 +57,99 @@ mod tests {
     };
 
     #[test]
+    fn unreadable_recovery_is_preserved_before_new_work_can_checkpoint() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("recovery.wireframe");
+        let broken = b"{unfinished project bytes";
+        std::fs::write(&path, broken).unwrap();
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, Some(path.clone()));
+        assert!(
+            app.error.is_some(),
+            "startup must disclose unreadable recovery"
+        );
+        let archived: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .map(|v| v.unwrap().path())
+            .filter(|p| {
+                p.file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .starts_with("unreadable-recovery-")
+            })
+            .collect();
+        assert_eq!(archived.len(), 1);
+        assert_eq!(std::fs::read(&archived[0]).unwrap(), broken);
+        app.editor.add(Kind::Label, 30., 40.);
+        let edited = app.editor.document.clone();
+        app.on_exit(None);
+        assert_eq!(ProjectStore.load(&path).unwrap(), edited);
+        assert_eq!(std::fs::read(&archived[0]).unwrap(), broken);
+        drop(app);
+        let reopened = WireframeApp::workspace(&ctx, Some(path));
+        assert_eq!(reopened.recovery_offer, Some(edited));
+        assert!(reopened.error.is_none());
+    }
+
+    #[test]
+    fn failed_preservation_disables_recovery_without_blocking_manual_save() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("recovery.wireframe");
+        std::fs::create_dir(&path).unwrap();
+        let original = path.join("do-not-replace");
+        std::fs::write(&original, b"kept").unwrap();
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, Some(path.clone()));
+        assert!(app.recovery.is_none());
+        assert!(
+            app.error
+                .as_ref()
+                .unwrap()
+                .contains("Save your work manually")
+        );
+        app.editor.add(Kind::Label, 30., 40.);
+        let manual = dir.path().join("manual.wireframe");
+        app.file = Some(manual.clone());
+        assert!(app.save(false));
+        app.editor.add(Kind::Button, 50., 60.);
+        app.sync_recovery(true);
+        app.perform(Pending::New, &ctx);
+        app.on_exit(None);
+        assert_eq!(std::fs::read(&original).unwrap(), b"kept");
+        assert_eq!(
+            ProjectStore.load(&manual).unwrap().pages[0]
+                .content
+                .nodes
+                .len(),
+            1
+        );
+    }
+
+    #[test]
+    fn repeated_unreadable_checkpoints_keep_distinct_originals() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("recovery.wireframe");
+        let ctx = egui::Context::default();
+        for bytes in [b"invalid one".as_slice(), b"invalid two".as_slice()] {
+            std::fs::write(&path, bytes).unwrap();
+            let app = WireframeApp::workspace(&ctx, Some(path.clone()));
+            assert!(app.error.is_some());
+            drop(app);
+        }
+        let mut contents: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .map(|v| v.unwrap().path())
+            .filter(|p| p.extension().is_some_and(|e| e == "wireframe"))
+            .map(|p| std::fs::read(p).unwrap())
+            .collect();
+        contents.sort();
+        assert_eq!(
+            contents,
+            vec![b"invalid one".to_vec(), b"invalid two".to_vec()]
+        );
+    }
+
+    #[test]
     fn undo_to_saved_clears_recovery_and_redo_is_recoverable_on_exit() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("recovery.wireframe");

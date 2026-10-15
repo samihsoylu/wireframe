@@ -143,7 +143,34 @@ impl WireframeApp {
         if recovery_lock.is_none() {
             recovery = None;
         }
-        let recovery_offer = recovery.as_ref().and_then(|p| ProjectStore.load(p).ok());
+        let mut recovery_error = None;
+        let mut recovery_offer = None;
+        if let Some(path) = recovery.clone() {
+            match ProjectStore.load(&path) {
+                Ok(project) => recovery_offer = Some(project),
+                Err(error) if !matches!(std::fs::symlink_metadata(&path), Err(e) if e.kind() == std::io::ErrorKind::NotFound) => {
+                    match storage::preserve_unreadable_recovery(&path) {
+                        Ok(preserved) => {
+                            status = "An unreadable recovery copy was preserved".into();
+                            recovery_error = Some(format!(
+                                "The previous recovery copy couldn't be opened. Its original bytes are preserved at:\n{}\n\nNew work will have its own recovery copy.\n\nDetails: {error}",
+                                preserved.display()
+                            ));
+                        }
+                        Err(preserve_error) => {
+                            recovery = None;
+                            status = "Automatic recovery is unavailable. Save your work manually."
+                                .into();
+                            recovery_error = Some(format!(
+                                "The previous recovery copy couldn't be opened or moved aside. It remains unchanged at:\n{}\n\nAutomatic recovery is unavailable for this session. Save your work manually.\n\nDetails: {error}\n{preserve_error}",
+                                path.display()
+                            ));
+                        }
+                    }
+                }
+                Err(_) => {}
+            }
+        }
         Self {
             editor: Editor::default(),
             installed_font: None,
@@ -170,7 +197,7 @@ impl WireframeApp {
             grid: false,
             snap: false,
             status,
-            error: None,
+            error: recovery_error,
             pending: None,
             image_import: None,
             image_crop: None,

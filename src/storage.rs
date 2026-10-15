@@ -57,6 +57,29 @@ pub fn recovery_path() -> Option<PathBuf> {
     Some(dirs.data_local_dir().join("recovery.wireframe"))
 }
 
+/// Preserve an unreadable checkpoint under a unique name before reusing its slot.
+/// The caller must hold the recovery lock. Rename stays on the same filesystem;
+/// the reserved destination cannot replace an existing user file.
+pub fn preserve_unreadable_recovery(path: &Path) -> Result<PathBuf, String> {
+    if !fs::symlink_metadata(path)
+        .map_err(|e| e.to_string())?
+        .is_file()
+    {
+        return Err("The recovery path is not a regular file".into());
+    }
+    let parent = path.parent().unwrap_or(Path::new("."));
+    let mut reserved = tempfile::Builder::new()
+        .prefix("unreadable-recovery-")
+        .suffix(".wireframe")
+        .tempfile_in(parent)
+        .map_err(|e| e.to_string())?
+        .into_temp_path();
+    fs::rename(path, &reserved).map_err(|e| e.to_string())?;
+    // After the rename this is the user's original data, never temporary data.
+    reserved.disable_cleanup(true);
+    Ok(reserved.to_path_buf())
+}
+
 /// One process owns recovery at a time. The OS releases the lock on exit/crash.
 pub fn acquire_recovery(path: &Path) -> Result<fs::File, String> {
     let lock = fs::OpenOptions::new()

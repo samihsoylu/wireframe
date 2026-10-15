@@ -35,6 +35,7 @@ mod rasters;
 mod scrollbar;
 mod search;
 mod sliders;
+mod small_forms;
 mod smartphone;
 mod standalone_icons;
 mod svg;
@@ -340,6 +341,12 @@ impl Scene {
         }
         if c.kind == Kind::Calendar {
             return self.calendar_control(layer, sketch, fonts);
+        }
+        if matches!(
+            c.kind,
+            Kind::NumericStepper | Kind::ColorPicker | Kind::HelpButton
+        ) {
+            return self.small_form(layer, sketch, fonts);
         }
         if c.kind == Kind::DateChooser {
             return self.date_chooser(layer, sketch, fonts);

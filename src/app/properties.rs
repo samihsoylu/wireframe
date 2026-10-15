@@ -20,6 +20,7 @@ fn fraction_slider(ui: &mut egui::Ui, value: &mut f64) -> (egui::Response, bool)
 // catalog's full field inventory remains separate from completed rendering.
 fn supported(kind: &str, key: &str) -> bool {
     match key {
+        "link" => kind == "help_button",
         "slider_thumb" => matches!(kind, "horizontal_slider" | "vertical_slider"),
         "date_mode" => kind == "date_picker",
         "device_model" | "background_pattern" => kind == "phone",
@@ -90,6 +91,7 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "search"
                 | "horizontal_slider"
                 | "vertical_slider"
+                | "numeric_stepper"
                 | "date_chooser"
                 | "dropdown"
                 | "icon_label"
@@ -123,7 +125,12 @@ fn supported(kind: &str, key: &str) -> bool {
         ),
         "border_color" => matches!(
             kind,
-            "dropdown" | "text_input" | "text_area" | "link_bar" | "date_chooser"
+            "dropdown"
+                | "text_input"
+                | "text_area"
+                | "link_bar"
+                | "numeric_stepper"
+                | "date_chooser"
         ),
         "border" => matches!(
             kind,
@@ -171,7 +178,8 @@ fn supported(kind: &str, key: &str) -> bool {
         "shape" | "search_icon" | "microphone_icon" => kind == "search",
         "fill" => matches!(
             kind,
-            "callout"
+            "color_picker"
+                | "callout"
                 | "scratch_out"
                 | "sticky_note"
                 | "app_bar"
@@ -256,6 +264,8 @@ impl WireframeApp {
         if !matches!(
             spec.id,
             "image"
+                | "color_picker"
+                | "help_button"
                 | "icon"
                 | "label"
                 | "heading"
@@ -296,6 +306,7 @@ impl WireframeApp {
                 | "callout"
                 | "sticky_note"
                 | "tooltip"
+                | "numeric_stepper"
                 | "date_chooser"
                 | "checkbox"
                 | "radio"
@@ -348,7 +359,7 @@ impl WireframeApp {
                 if let Err(error) = self.editor.auto_size_control(id) { self.error = Some(error); }
                 self.editor.commit();
             }
-            for key in ["slider_thumb", "date_mode", "keyboard_device", "device_model", "orientation", "device_resizing", "background_pattern", "transparent_background", "status_bar", "image_border", "sketch_filter", "text", "header_height", "footer_height", "minimize", "maximize", "close", "resize_handle", "button_style", "tab_position", "direction", "label_position", "icon", "icon_size", "icon_rotation", "nav_icon", "filter_icon", "menu_icon", "icons", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+            for key in ["link", "slider_thumb", "date_mode", "keyboard_device", "device_model", "orientation", "device_resizing", "background_pattern", "transparent_background", "status_bar", "image_border", "sketch_filter", "text", "header_height", "footer_height", "minimize", "maximize", "close", "resize_handle", "button_style", "tab_position", "direction", "label_position", "icon", "icon_size", "icon_rotation", "nav_icon", "filter_icon", "menu_icon", "icons", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
                 if key == "sketch_filter" && spec.id == "cover_flow" && !matches!(values.get("image"), Some(Value::Asset(_))) { continue; }
                 if matches!(key, "icon_size" | "icon_rotation") && !matches!(values.get("icon"),Some(Value::Icon(_))) {continue;}
                 if key == "value" && !matches!(spec.id,"horizontal_slider"|"vertical_slider"|"horizontal_scrollbar"|"vertical_scrollbar") && values.get("vertical_scrollbar") != Some(&Value::Bool(true)) { continue; }
@@ -506,6 +517,27 @@ impl WireframeApp {
                             });
                             finish = *v != match &original { Value::Choice(s) => s, _ => unreachable!() }.as_str();
                         }
+                        (PropertyType::Link, v) => {
+                                            let key=ui.make_persistent_id(("link-draft",id,self.editor.surface_id(),&self.editor.context));
+                                            let saved=match v { Value::Link(link) => Some(link.clone()), _ => None };
+                                            let cached=ui.ctx().data_mut(|d|d.get_temp::<(Option<Link>,Option<Link>)>(key));
+                                            let mut draft=cached.filter(|(baseline,_)|baseline==&saved).map_or(saved.clone(),|(_,draft)|draft);
+                                            let title=match &draft {None=>"No link".into(),Some(Link::Back)=>"Go back".into(),Some(Link::Url(_))=>"Web address".into(),Some(Link::Page(id))=>self.editor.document.pages.iter().find(|p|p.id==*id).map_or("Missing page".into(),|p|p.name.clone())};
+                                            ui_text::combo_box(ui,"target",&title,|ui| {
+                                                if ui_text::selectable_value(ui,&mut draft,None,"No link").clicked(){ui.close();}
+                                                for page in &self.editor.document.pages {
+                                                    if ui_text::selectable_value(ui,&mut draft,Some(Link::Page(page.id)),&page.name).clicked(){ui.close();}
+                                                }
+                                                if ui_text::selectable_value(ui,&mut draft,Some(Link::Back),"Go back").clicked(){ui.close();}
+                                                if ui.selectable_label(matches!(draft,Some(Link::Url(_))),"Web address…").clicked(){if !matches!(draft,Some(Link::Url(_))){draft=Some(Link::Url(String::new()));}ui.close();}
+                                            });
+                                            let apply=if let Some(Link::Url(url))=&mut draft {
+                                                ui.add(TextInput::singleline(url).hint_text("https://…"));
+                                                ui.add_enabled(Link::Url(url.clone()).valid(),egui::Button::new("Apply link")).clicked()
+                                            }else{draft!=saved};
+                                            if apply {*v=draft.clone().map(Value::Link).unwrap_or(Value::Null);finish=true;}
+                                            ui.ctx().data_mut(|d|d.insert_temp(key,(match v { Value::Link(link) => Some(link.clone()), _ => None },draft)));
+                        },
                         (PropertyType::Color, Value::Color(v)) => {
                             let mut rgb = [v[0],v[1],v[2]];
                             ui.color_edit_button_srgb(&mut rgb);
@@ -627,6 +659,9 @@ mod tests {
     #[test]
     fn annotation_inspector_fields_have_renderer_support() {
         for (kind, fields) in [
+            ("help_button", vec!["link"]),
+            ("color_picker", vec!["fill"]),
+            ("numeric_stepper", vec!["text", "state", "border_color"]),
             ("callout", vec!["fill", "background_opacity", "text"]),
             ("sticky_note", vec!["fill", "align", "text"]),
             ("tooltip", vec!["direction", "align", "text"]),

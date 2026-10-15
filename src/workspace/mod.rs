@@ -282,6 +282,9 @@ impl Editor {
             if matches!(
                 kind,
                 Kind::Heading
+                    | Kind::NumericStepper
+                    | Kind::ColorPicker
+                    | Kind::HelpButton
                     | Kind::Subtitle
                     | Kind::TextBlock
                     | Kind::TextLine
@@ -390,6 +393,10 @@ impl Editor {
                     Kind::PieChart => "pie_chart",
                     Kind::Heading => "heading",
                     Kind::Subtitle => "subtitle",
+                    Kind::NumericStepper => "numeric_stepper",
+                    Kind::ColorPicker => "color_picker",
+                    Kind::HelpButton => "help_button",
+
                     Kind::TextBlock => "text_block",
                     Kind::TextLine => "text_line",
                     Kind::TagCloud => "tag_cloud",

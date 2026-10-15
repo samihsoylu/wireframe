@@ -304,6 +304,23 @@ impl<M: TextMeasurer> Engine<'_, M> {
             bold: boolean(props, "bold"),
             italic: boolean(props, "italic"),
         };
+        if let Some(size) = crate::small_forms::fixed_size(kind) {
+            return Ok(size);
+        }
+        if kind == "numeric_stepper" {
+            let measured =
+                self.measurer
+                    .measure_rich(&RichText::parse(text, false), style, None, true);
+            let size = crate::small_forms::stepper_size(
+                measured,
+                match width {
+                    Dimension::Auto => None,
+                    Dimension::Fixed(w) => Some(w),
+                },
+            );
+            validate_size(size.0, size.1)?;
+            return Ok(size);
+        }
         if matches!(kind, "heading" | "subtitle") {
             let title = match props.get("_page_title") {
                 Some(Value::Text(t)) => t.as_str(),

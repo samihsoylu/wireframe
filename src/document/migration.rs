@@ -111,6 +111,10 @@ fn migrate_control(c: legacy::Control) -> Node {
         legacy::Kind::Label => "label",
         legacy::Kind::Heading => "heading",
         legacy::Kind::Subtitle => "subtitle",
+        legacy::Kind::NumericStepper => "numeric_stepper",
+        legacy::Kind::ColorPicker => "color_picker",
+        legacy::Kind::HelpButton => "help_button",
+
         legacy::Kind::TextBlock => "text_block",
         legacy::Kind::TextLine => "text_line",
         legacy::Kind::TagCloud => "tag_cloud",

@@ -402,7 +402,15 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "underline",
         ],
         "modal_overlay" => &["link"],
-        "numeric_stepper" => &["bold", "font_size", "italic", "state", "text", "underline"],
+        "numeric_stepper" => &[
+            "bold",
+            "border_color",
+            "font_size",
+            "italic",
+            "state",
+            "text",
+            "underline",
+        ],
         "paragraph" => &[
             "align",
             "bold",

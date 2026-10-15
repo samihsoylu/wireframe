@@ -116,7 +116,10 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
         .cloned()
         .unwrap_or_default();
     match c.kind {
-        Kind::Subtitle
+        Kind::NumericStepper
+        | Kind::ColorPicker
+        | Kind::HelpButton
+        | Kind::Subtitle
         | Kind::TextBlock
         | Kind::TextLine
         | Kind::TagCloud

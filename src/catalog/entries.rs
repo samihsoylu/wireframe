@@ -238,7 +238,7 @@ pub(super) fn build() -> Vec<ControlSpec> {
         "Forms",
         Input,
         Computed,
-        Intrinsic,
+        None,
         auto(),
         &["colour picker"]
     );
@@ -338,7 +338,7 @@ pub(super) fn build() -> Vec<ControlSpec> {
         "Buttons",
         Button,
         Computed,
-        Intrinsic,
+        None,
         auto(),
         &[]
     );
@@ -889,7 +889,10 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         DefaultValue::FontSize
     };
     let mut fill = prop("fill", "Fill", PropertyType::Color, Value::Color([255; 4]));
-    fill.default = if c.id == "scratch_out" {
+    fill.default = if c.id == "color_picker" {
+        fill.label = "Color";
+        DefaultValue::Literal(Value::Color([43, 120, 228, 255]))
+    } else if c.id == "scratch_out" {
         DefaultValue::FormInk
     } else if c.id == "app_bar" {
         DefaultValue::Literal(Value::Color([221, 221, 221, 255]))
@@ -966,6 +969,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "label" => "Some text",
         "heading" => "Title",
         "subtitle" => "Subtitle",
+        "numeric_stepper" => "3",
         "tag_cloud" => crate::text_controls::CLOUD_DEFAULT,
         "paragraph" => "Write your ideas here.",
         "text_input" => "",
@@ -1085,7 +1089,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         c.properties
             .push(choice("date_mode", "Kind", &["month", "year"], "month"));
     }
-    if c.id == "date_chooser" {
+    if matches!(c.id, "date_chooser" | "numeric_stepper") {
         let mut border = prop(
             "border_color",
             "Border color",

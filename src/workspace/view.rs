@@ -309,6 +309,10 @@ pub(super) fn control(node: &LayoutNode) -> Control {
         "label" => Kind::Label,
         "heading" => Kind::Heading,
         "subtitle" => Kind::Subtitle,
+        "numeric_stepper" => Kind::NumericStepper,
+        "color_picker" => Kind::ColorPicker,
+        "help_button" => Kind::HelpButton,
+
         "text_block" => Kind::TextBlock,
         "text_line" => Kind::TextLine,
         "tag_cloud" => Kind::TagCloud,

@@ -93,6 +93,10 @@ pub enum Kind {
     Label,
     Heading,
     Subtitle,
+    NumericStepper,
+    ColorPicker,
+    HelpButton,
+
     TextBlock,
     TextLine,
     TagCloud,
@@ -169,11 +173,14 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 77] = [
+    pub const ALL: [Kind; 80] = [
         Self::Button,
         Self::Label,
         Self::Heading,
         Self::Subtitle,
+        Self::NumericStepper,
+        Self::ColorPicker,
+        Self::HelpButton,
         Self::TextBlock,
         Self::TextLine,
         Self::TagCloud,
@@ -254,6 +261,10 @@ impl Kind {
             Self::Label => "Text label",
             Self::Heading => "Heading",
             Self::Subtitle => "Subtitle",
+            Self::NumericStepper => "Numeric stepper",
+            Self::ColorPicker => "Color picker",
+            Self::HelpButton => "Help button",
+
             Self::TextBlock => "Text block",
             Self::TextLine => "Text line",
             Self::TagCloud => "Tag cloud",
@@ -368,6 +379,9 @@ impl Kind {
             | Self::Dropdown
             | Self::Search
             | Self::Calendar
+            | Self::NumericStepper
+            | Self::ColorPicker
+            | Self::HelpButton
             | Self::DateChooser
             | Self::HorizontalSlider
             | Self::VerticalSlider
@@ -390,6 +404,10 @@ impl Kind {
             Self::Label | Self::Link => (140., 28.),
             Self::Heading => (300., 44.),
             Self::Subtitle => (140., 28.),
+            Self::NumericStepper => (41., 24.),
+            Self::ColorPicker => (26., 28.),
+            Self::HelpButton => (18., 18.),
+
             Self::TextBlock => (275., 80.),
             Self::TextLine => (200., 27.),
             Self::TagCloud => (350., 110.),
@@ -449,7 +467,9 @@ impl Kind {
     pub fn text_editable(self) -> bool {
         !matches!(
             self,
-            Self::VolumeSlider
+            Self::ColorPicker
+                | Self::HelpButton
+                | Self::VolumeSlider
                 | Self::Playback
                 | Self::Webcam
                 | Self::Video
@@ -477,6 +497,10 @@ impl Kind {
             Self::Label => "Some text",
             Self::Heading => "Title",
             Self::Subtitle => "Subtitle",
+            Self::NumericStepper => "3",
+            Self::ColorPicker => "",
+            Self::HelpButton => "",
+
             Self::TextBlock | Self::TextLine => "",
             Self::TagCloud => crate::text_controls::CLOUD_DEFAULT,
             Self::Paragraph => "Describe the idea here.\nKeep it simple and make it clear.",

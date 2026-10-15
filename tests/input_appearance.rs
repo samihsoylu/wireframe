@@ -180,7 +180,7 @@ fn input_borders_preserve_geometry_and_textarea_border_draws_after_text() {
         let s = area.rendered_scene(1).unwrap();
         assert!(matches!(
             s.items.last().unwrap().drawing,
-            Drawing::Primitive(Primitive::Line { .. })
+            Drawing::Primitive(Primitive::Line { .. } | Primitive::Mesh { .. })
         ));
     }
 }

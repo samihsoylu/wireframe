@@ -134,7 +134,8 @@ fn supported(kind: &str, key: &str) -> bool {
         ),
         "border_color" => matches!(
             kind,
-            "vertical_rule"
+            "rectangle"
+                | "vertical_rule"
                 | "dropdown"
                 | "text_input"
                 | "text_area"
@@ -144,7 +145,8 @@ fn supported(kind: &str, key: &str) -> bool {
         ),
         "border" => matches!(
             kind,
-            "menu_bar"
+            "rectangle"
+                | "menu_bar"
                 | "mobile_menu"
                 | "browser"
                 | "alert"
@@ -163,7 +165,8 @@ fn supported(kind: &str, key: &str) -> bool {
         ),
         "background_opacity" => matches!(
             kind,
-            "vertical_rule"
+            "rectangle"
+                | "vertical_rule"
                 | "text_input"
                 | "text_area"
                 | "multiline_button"
@@ -191,7 +194,8 @@ fn supported(kind: &str, key: &str) -> bool {
         "shape" | "search_icon" | "microphone_icon" => kind == "search",
         "fill" => matches!(
             kind,
-            "color_picker"
+            "rectangle"
+                | "color_picker"
                 | "popover"
                 | "callout"
                 | "scratch_out"
@@ -270,6 +274,19 @@ fn choice_label(value: &str) -> &str {
         other => other,
     }
 }
+fn field_choice_label<'a>(kind: &str, key: &str, value: &'a str) -> &'a str {
+    if kind == "rectangle" && key == "border" {
+        match value {
+            "solid" => "Square",
+            "rounded" => "Rounded",
+            "dashed" | "dotted" => "Dashed",
+            "none" => "No border",
+            other => other,
+        }
+    } else {
+        choice_label(value)
+    }
+}
 impl WireframeApp {
     pub(super) fn typed_properties(&mut self, ui: &mut egui::Ui, id: Id) -> bool {
         let Some((spec, values)) = self.editor.control_properties(id) else {
@@ -281,6 +298,7 @@ impl WireframeApp {
         if !matches!(
             spec.id,
             "image"
+                | "rectangle"
                 | "popover"
                 | "site_map"
                 | "formatting_toolbar"
@@ -537,12 +555,13 @@ impl WireframeApp {
                             finish = r.lost_focus() || r.drag_stopped();
                         }
                         (PropertyType::Choice(options), Value::Choice(v)) => {
-                            egui::ComboBox::from_id_salt("value").selected_text(if key == "stroke" { match v.as_str() { "solid" => "Solid", "dashed" => "Dashed", "dotted" => "Dotted", other => other } } else {choice_label(v)}).show_ui(ui, |ui| {
+                            egui::ComboBox::from_id_salt("value").selected_text(if key == "stroke" { match v.as_str() { "solid" => "Solid", "dashed" => "Dashed", "dotted" => "Dotted", other => other } } else {field_choice_label(spec.id,key,v)}).show_ui(ui, |ui| {
                                 for option in *options {
+                                    if spec.id == "rectangle" && key == "border" && *option == "dotted" { continue; }
                                     if spec.id == "browser" && key == "border" && !matches!(*option, "solid" | "torn_bottom") {
                                         continue;
                                     }
-                                    if ui.selectable_value(v, (*option).into(), if key == "stroke" { match *option { "solid" => "Solid", "dashed" => "Dashed", "dotted" => "Dotted", other => other } } else {choice_label(option)}).clicked() {
+                                    if ui.selectable_value(v, (*option).into(), if key == "stroke" { match *option { "solid" => "Solid", "dashed" => "Dashed", "dotted" => "Dotted", other => other } } else {field_choice_label(spec.id,key,option)}).clicked() {
                                         ui.close();
                                     }
                                 }
@@ -689,6 +708,45 @@ mod tests {
         }
     }
     #[test]
+    fn rectangle_uses_typed_inspector_and_keeps_legacy_caption_fields() {
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        app.editor.add(Kind::Rectangle, 20., 20.);
+        let id = *app.editor.selection.iter().next().unwrap();
+        let mut output = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(400., 900.),
+                )),
+                ..Default::default()
+            },
+            |ui| {
+                ui.set_width(260.);
+                assert!(app.typed_properties(ui, id))
+            },
+        );
+        output.textures_delta.clear();
+        for key in [
+            "text",
+            "font_size",
+            "bold",
+            "fill",
+            "border",
+            "border_color",
+            "background_opacity",
+        ] {
+            assert!(
+                wireframe::catalog::get("rectangle")
+                    .unwrap()
+                    .property(key)
+                    .unwrap()
+                    .visible
+            );
+            assert!(supported("rectangle", key));
+        }
+    }
+    #[test]
     fn specialized_inspector_fields_have_renderer_support() {
         for (kind, fields) in [
             (
@@ -706,6 +764,18 @@ mod tests {
             ("vertical_brace", vec!["direction", "text", "text_color"]),
             ("scratch_out", vec!["fill", "background_opacity"]),
             ("table", vec!["border", "vertical_scrollbar", "value"]),
+            (
+                "rectangle",
+                vec![
+                    "border",
+                    "border_color",
+                    "fill",
+                    "background_opacity",
+                    "text",
+                    "font_size",
+                    "bold",
+                ],
+            ),
         ] {
             for key in fields {
                 assert!(supported(kind, key));

@@ -1159,6 +1159,32 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             "solid",
         ));
     }
+    if c.id == "rectangle" {
+        if let Some(border) = c.properties.iter_mut().find(|p| p.key == "border") {
+            *border = choice(
+                "border",
+                "Border",
+                &["solid", "rounded", "dashed", "dotted", "none"],
+                "solid",
+            );
+        }
+        let mut border = prop(
+            "border_color",
+            "Border color",
+            PropertyType::Color,
+            Value::Color([0, 0, 0, 255]),
+        );
+        border.default = DefaultValue::FormInk;
+        c.properties.push(border);
+        c.properties.push(number(
+            "background_opacity",
+            "Fill opacity",
+            1.,
+            0.,
+            1.,
+            false,
+        ));
+    }
     if c.id == "browser"
         && let Some(border) = c.properties.iter_mut().find(|p| p.key == "border")
     {

@@ -125,7 +125,17 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "text",
             "underline",
         ],
-        "rectangle" => &["border", "fill", "link", "value"],
+        "rectangle" => &[
+            "text",
+            "font_size",
+            "bold",
+            "border",
+            "border_color",
+            "background_opacity",
+            "fill",
+            "link",
+            "value",
+        ],
         "radio" => &[
             "bold",
             "font_size",

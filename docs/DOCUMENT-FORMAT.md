@@ -46,6 +46,10 @@ The `multiline_button` kind splits the first literal newline into title and seco
 
 The `button_bar` kind uses literal commas to separate segments; embedded newlines stay within a segment. Both dimensions accept fixed or automatic sizing. `selected_index` defaults to0, with−1 for no selection, and `row_links` stores per-segment page, Back or URL targets. Narrow bars omit whole segments without discarding stored selection or targets. Single-item text adds a visual ellipsis segment without adding a link-editor entry. Text edits match trimmed labels in occurrence order for links; renamed labels retain their position when the count stays unchanged. This reuses existing typed values and does not change the format version.
 
+## Rectangle appearance
+
+Rectangle reuses typed choice `border` values `solid`, `rounded`, `dashed`, `dotted` and `none`, color `border_color`, and numeric `background_opacity` in the range 0–1. Missing values mean a square outline, style-dependent ink and opaque fill. `dotted` is a legacy alias for dashed rendering. Existing rectangle text and shape properties are retained. These additive properties require no format migration; component overrides use the same representation. See OUTLINES.md.
+
 ## Project palette
 
 `settings.palette` optionally holds opaque RGB byte arrays named `selection` and `link`. Missing values retain the built-in defaults: `[149,188,242]` and `[8,83,148]`. The entire field is omitted when both colors are default, keeping legacy project serialization stable. Invalid array lengths and values outside 0–255 are rejected during decoding. Per-control colors remain node properties; derived render hints are never saved.

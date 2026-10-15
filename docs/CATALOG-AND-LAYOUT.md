@@ -25,3 +25,5 @@ Unsupported automatic layout returns an explicit error. For unsupported controls
 The shared text/table scene is integrated; continue control-specific measurement/rendering and visual comparisons. Representative native version-2 editing and save/reopen are verified; full visual fidelity, control coverage and Windows/Linux runtime acceptance remain outstanding.
 
 Typed text/table properties and six-state choice rendering are integrated; see INSPECTOR-AND-STATES.md for the current field boundary and native evidence.
+
+Rectangle outline variants, fill opacity and border color use the typed inspector. Stable Sketch form contours and their scoped acceptance are documented in OUTLINES.md.

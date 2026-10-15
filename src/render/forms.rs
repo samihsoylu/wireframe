@@ -46,10 +46,10 @@ impl Scene {
         let clip = clip_with(layer.clip, bounds);
         let frame = if button && sketch {
             Bounds::new(
-                bounds.x,
-                bounds.y,
-                (bounds.w - 3.).max(0.),
-                (bounds.h - 3.).max(0.),
+                bounds.x + 2.,
+                bounds.y + 2.,
+                (bounds.w - 6.).max(0.),
+                (bounds.h - 5.).max(0.),
             )
         } else {
             bounds
@@ -145,37 +145,21 @@ impl Scene {
             );
             return;
         }
-        let (x, y, w, h) = (frame.x, frame.y, frame.w, frame.h);
-        let inset = (if sketch { 1.0_f32 } else { 0.5_f32 })
-            .min(w / 2.)
-            .min(h / 2.);
-        self.primitive(
-            Primitive::Line {
-                points: vec![
-                    [x + inset, y + inset],
-                    [x + w - inset, y + inset],
-                    [x + w - inset, y + h - inset],
-                    [x + inset, y + h - inset],
-                    [x + inset, y + inset],
-                ],
-                color: border,
-                width: if sketch { 2. } else { 1. },
-            },
-            clip,
-        );
-        if button && sketch {
+        if sketch {
             self.primitive(
-                Primitive::Line {
-                    points: vec![
-                        [x + w + 1.5, y + 2.],
-                        [x + w + 1.5, y + h + 1.5],
-                        [x + 2., y + h + 1.5],
-                    ],
-                    color: border,
-                    width: 3.,
-                },
+                outlines::sketch(
+                    bounds,
+                    if button {
+                        outlines::Profile::Button
+                    } else {
+                        outlines::Profile::Square
+                    },
+                    border,
+                ),
                 clip,
             );
+        } else {
+            self.rectangle_frame(frame, border, 1., clip);
         }
     }
 }

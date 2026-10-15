@@ -88,8 +88,12 @@ fn form_states_change_border_and_fill_without_moving_the_text() {
                     .unwrap()
                     .to_rgba8();
                 let middle = 24 + (e.current().controls[0].bounds.w / 2.) as u32;
-                let border = image.get_pixel(middle, 24).0;
-                assert_eq!(&border[..3], &color, "{kind:?} {state}");
+                // The outermost Sketch pixel can be antialiased. Check the
+                // narrow top-border band for the opaque state color.
+                assert!(
+                    (24..27).any(|y| image.get_pixel(middle, y).0[..3] == color),
+                    "{kind:?} {state} must use its state color in the top border"
+                );
                 let fill = image.get_pixel(28, 28).0;
                 assert_eq!(
                     fill[..3],

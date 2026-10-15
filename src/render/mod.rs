@@ -29,6 +29,7 @@ mod mobile_keyboard;
 mod mobile_rows;
 mod multiline_button;
 mod navigation;
+mod outlines;
 mod phone;
 mod pickers;
 mod pointed_button;
@@ -495,6 +496,10 @@ impl Scene {
         }
         if c.kind == Kind::Table {
             return self.table(layer, sketch, fonts);
+        }
+        if c.kind == Kind::Rectangle {
+            self.rectangle_control(layer, sketch);
+            return Ok(());
         }
         let supported = matches!(
             c.kind,

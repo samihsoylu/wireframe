@@ -145,6 +145,10 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
         | Kind::BarChart
         | Kind::LineChart
         | Kind::PieChart
+        | Kind::HorizontalBrace
+        | Kind::VerticalBrace
+        | Kind::RedCross
+        | Kind::ScratchOut
         | Kind::Callout
         | Kind::StickyNote
         | Kind::Tooltip

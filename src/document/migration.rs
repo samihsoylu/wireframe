@@ -164,6 +164,11 @@ fn migrate_control(c: legacy::Control) -> Node {
         legacy::Kind::BarChart => "bar_chart",
         legacy::Kind::LineChart => "line_chart",
         legacy::Kind::PieChart => "pie_chart",
+        legacy::Kind::HorizontalBrace => "horizontal_brace",
+        legacy::Kind::VerticalBrace => "vertical_brace",
+        legacy::Kind::RedCross => "red_cross",
+        legacy::Kind::ScratchOut => "scratch_out",
+
         legacy::Kind::Callout => "callout",
         legacy::Kind::StickyNote => "sticky_note",
         legacy::Kind::Tooltip => "tooltip",

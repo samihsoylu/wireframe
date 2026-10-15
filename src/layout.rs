@@ -385,8 +385,14 @@ impl<M: TextMeasurer> Engine<'_, M> {
                 | "bar_chart"
                 | "line_chart"
                 | "pie_chart"
+                | "horizontal_brace"
+                | "vertical_brace"
+                | "red_cross"
+                | "scratch_out"
         ) {
-            let default = if let Some(f) = crate::charts::Family::for_id(kind) {
+            let default = if let Some(f) = crate::markup::Family::for_id(kind) {
+                f.default_size()
+            } else if let Some(f) = crate::charts::Family::for_id(kind) {
                 f.default_size()
             } else if kind == "video" {
                 (300., 200.)

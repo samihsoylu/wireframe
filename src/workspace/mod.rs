@@ -316,6 +316,10 @@ impl Editor {
                     | Kind::BarChart
                     | Kind::LineChart
                     | Kind::PieChart
+                    | Kind::HorizontalBrace
+                    | Kind::VerticalBrace
+                    | Kind::RedCross
+                    | Kind::ScratchOut
                     | Kind::Callout
                     | Kind::StickyNote
                     | Kind::Tooltip
@@ -378,6 +382,11 @@ impl Editor {
                     Kind::BarChart => "bar_chart",
                     Kind::LineChart => "line_chart",
                     Kind::PieChart => "pie_chart",
+                    Kind::HorizontalBrace => "horizontal_brace",
+                    Kind::VerticalBrace => "vertical_brace",
+                    Kind::RedCross => "red_cross",
+                    Kind::ScratchOut => "scratch_out",
+
                     Kind::Callout => "callout",
                     Kind::StickyNote => "sticky_note",
                     Kind::Tooltip => "tooltip",

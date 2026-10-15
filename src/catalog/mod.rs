@@ -235,7 +235,15 @@ impl ControlSpec {
     }
     pub fn create(&self, id: u64, origin: Point) -> Node {
         let mut node = Node::control(id, self.id, origin, self.default_size);
-        node.markup = matches!(self.id, "callout" | "sticky_note");
+        node.markup = matches!(
+            self.id,
+            "callout"
+                | "sticky_note"
+                | "horizontal_brace"
+                | "vertical_brace"
+                | "red_cross"
+                | "scratch_out"
+        );
         if self.id == "phone" {
             node.properties
                 .insert("device_model".into(), Value::Choice("notched".into()));

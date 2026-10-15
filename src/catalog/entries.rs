@@ -889,7 +889,9 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         DefaultValue::FontSize
     };
     let mut fill = prop("fill", "Fill", PropertyType::Color, Value::Color([255; 4]));
-    fill.default = if c.id == "app_bar" {
+    fill.default = if c.id == "scratch_out" {
+        DefaultValue::FormInk
+    } else if c.id == "app_bar" {
         DefaultValue::Literal(Value::Color([221, 221, 221, 255]))
     } else if c.id == "callout" {
         DefaultValue::CalloutFill
@@ -908,7 +910,9 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         PropertyType::Color,
         Value::Color([0, 0, 0, 255]),
     );
-    ink.default = if c.id == "link" {
+    ink.default = if matches!(c.id, "horizontal_brace" | "vertical_brace") {
+        DefaultValue::FormInk
+    } else if c.id == "link" {
         DefaultValue::LinkColor
     } else if matches!(
         c.id,
@@ -952,6 +956,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "browser" => crate::browser::DEFAULT,
         "window" => crate::window::DEFAULT,
         "field_set" => crate::field_set::DEFAULT,
+        "horizontal_brace" | "vertical_brace" => crate::markup::DEFAULT_TEXT,
         "callout" => "1",
         "sticky_note" => "A comment",
         "tooltip" => "a tooltip",
@@ -1347,6 +1352,23 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         c.properties.retain(|p| p.key != "border");
         c.properties
             .push(choice("border", "Border", &["solid", "none"], "solid"));
+    }
+    if matches!(c.id, "horizontal_brace" | "vertical_brace") {
+        let horizontal = c.id == "horizontal_brace";
+        c.properties.push(choice(
+            "direction",
+            "Direction",
+            if horizontal {
+                &["top", "bottom"]
+            } else {
+                &["left", "right"]
+            },
+            if horizontal { "top" } else { "left" },
+        ));
+    }
+    if c.id == "scratch_out" {
+        c.properties
+            .push(number("background_opacity", "Opacity", 1., 0., 1., false));
     }
     if c.id == "pointed_button" {
         c.properties.push(choice(

@@ -60,3 +60,4 @@ pub mod video;
 pub mod annotations;
 
 pub mod charts;
+pub mod markup;

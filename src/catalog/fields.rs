@@ -210,6 +210,7 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "value",
         ],
         "vertical_brace" => &[
+            "direction",
             "bold",
             "font_size",
             "italic",
@@ -218,6 +219,7 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "underline",
         ],
         "horizontal_brace" => &[
+            "direction",
             "bold",
             "font_size",
             "italic",
@@ -419,7 +421,7 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
         "red_cross" => &[],
         "horizontal_rule" => &[],
         "vertical_rule" => &[],
-        "scratch_out" => &["fill"],
+        "scratch_out" => &["fill", "background_opacity"],
         "horizontal_scrollbar" => &["value"],
         "vertical_scrollbar" => &["value"],
         "search" => &[

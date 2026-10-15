@@ -4,7 +4,7 @@ A local desktop workspace for turning rough ideas into clear wireframes. Built i
 
 ## Features
 
-- 69 controls for forms, text, shapes, navigation, devices, media, charts and layout.
+- 73 controls for forms, text, shapes, navigation, devices, media, charts and layout.
 - Pages, notes, searchable library and layers.
 - Move, resize, align, nest groups, duplicate and lock controls.
 - Text-defined menus and menu bars with shortcuts, selection, row links and optional bar icons.
@@ -25,6 +25,7 @@ A local desktop workspace for turning rough ideas into clear wireframes. Built i
 - Callouts, sticky notes and tooltips with rich text, inline links and configurable pointers.
 
 - Static column, bar, line and pie charts with independent resizing and shared canvas/export rendering.
+- [Braces and markup strokes](docs/MARKUP.md) with directional rich text, fixed-color crosses and translucent scratch-out marks.
 
 ## Run from source
 

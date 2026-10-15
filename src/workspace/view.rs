@@ -361,6 +361,11 @@ pub(super) fn control(node: &LayoutNode) -> Control {
         "bar_chart" => Kind::BarChart,
         "line_chart" => Kind::LineChart,
         "pie_chart" => Kind::PieChart,
+        "horizontal_brace" => Kind::HorizontalBrace,
+        "vertical_brace" => Kind::VerticalBrace,
+        "red_cross" => Kind::RedCross,
+        "scratch_out" => Kind::ScratchOut,
+
         "callout" => Kind::Callout,
         "sticky_note" => Kind::StickyNote,
         "tooltip" => Kind::Tooltip,

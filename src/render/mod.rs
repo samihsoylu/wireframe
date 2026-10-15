@@ -20,6 +20,7 @@ mod forms;
 mod images;
 mod linear_controls;
 mod list;
+mod markup;
 pub mod mask;
 mod media_controls;
 mod menu;
@@ -385,6 +386,9 @@ impl Scene {
         if matches!(c.kind, Kind::Callout | Kind::StickyNote | Kind::Tooltip) {
             return self.annotation(layer, sketch, fonts);
         }
+        if let Some(family) = crate::markup::Family::for_kind(c.kind) {
+            return self.markup(layer, family, sketch, fonts);
+        }
         if let Some(family) = crate::charts::Family::for_kind(c.kind) {
             self.chart(layer, family, sketch);
             return Ok(());
@@ -568,6 +572,19 @@ impl Scene {
         options: PaintOptions,
         cull_outside_rows: bool,
     ) -> Result<(), String> {
+        self.text_rows_anchored(text, style, area, fonts, options, cull_outside_rows, false)
+    }
+    #[allow(clippy::too_many_arguments)]
+    fn text_rows_anchored(
+        &mut self,
+        text: &RichText,
+        style: TextStyle,
+        area: TextBox,
+        fonts: &EguiMeasurer<'_>,
+        options: PaintOptions,
+        cull_outside_rows: bool,
+        bottom: bool,
+    ) -> Result<(), String> {
         let painted = fonts.rich_galley_with(
             text,
             style,
@@ -578,7 +595,9 @@ impl Scene {
         if let Some(error) = &painted.error {
             return Err(error.clone());
         }
-        let vertical = if area.middle {
+        let vertical = if bottom {
+            area.bounds.h - painted.size.y
+        } else if area.middle {
             (area.bounds.h - painted.size.y) / 2.
         } else {
             0.

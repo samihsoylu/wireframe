@@ -8,6 +8,16 @@ Work directly as Engineer. Preserve user files and explicit deferrals. Use synth
 
 ## Current checkpoint — 2026-10-15
 
+Horizontal and vertical braces, Red cross and Scratch out now use the Markup library, Quick Add, typed inspector and shared canvas/PNG/SVG renderer. The available library has 73 entries, with 13 remaining. Braces have directional rich text with fixed natural dimensions; static marks expose geometry, plus color/opacity for Scratch out. All four are markup by default, enforce a ten-unit editing minimum and retain smaller saved geometry. See docs/MARKUP.md.
+
+All 427 tests pass, including six markup tests and 47 app tests. All-target Clippy, formatting, signature and diff checks pass. A regression caught a folded scratch-out ribbon at its bends; applying the variation after constructing the ribbon corrected it. Controlled comparison matches 576 layouts through 5,376 assertions within 0.000001 units. Twenty-four color/opacity checks pass within one channel value. Original contours, text metrics and antialiasing still differ; exact visual identity is not claimed.
+
+Native macOS verifies insertion, independent minimums, Undo, brace text/direction edits and opacity Undo/Redo. The four-control project survives a full-process restart and resaves byte-for-byte. The 40-control gallery also resaves identically; four native PNG/SVG exports match generated renders byte-for-byte. The final build verifies static Scratch out Enter behavior and corrected artwork; insertion/minimum/direction history checks preceded the artwork-only correction. Component-local edits and tiny selection have automated coverage. Native component editing, link navigation, Windows/Linux and independent review were not performed.
+
+Signed development bundle UUID D623F251-DF0F-358D-92C8-00F78B414ADE; canonical executable identity verifies. The app runs the saved Markup gallery, Clean style at 37% fit, 40 controls/no selection, Library hidden. No build/test sessions remain. Continue targeted investigation of remaining text controls before implementation. Exact contours/fonts, legacy shape/rule coverage, held-library-drag cadence/autoscroll, broader group/component/clipping/snapping/clock behavior, platforms, recovery and release acceptance remain open. The overall goal remains active.
+
+Previous chart checkpoint:
+
 Column, bar, line and pie charts now use the Charts library, Quick Add, typed inspector and shared canvas/PNG/SVG renderer. The available library has 69 entries, with 17 remaining. Charts have static sample graphics, independent dimensions, a ten-unit editing minimum and no text or data editor. Smaller saved geometry remains intact. See docs/CHARTS.md.
 
 All 421 tests pass, including seven chart tests and 47 app tests. Final all-target Clippy, formatting and diff checks pass. Correcting an ineffective keyboard-test harness first reproduced the chart Enter-editing defect; one shared editing rule now covers keyboard, double-click and context-menu entry. Controlled geometry comparison matches 1,224 cases within 0.000021 units, and 120 sampled interior colors match exactly. Full-image comparison retains differences in original contours and antialiasing; this is not exact visual identity.

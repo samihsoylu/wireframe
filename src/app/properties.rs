@@ -69,7 +69,10 @@ fn supported(kind: &str, key: &str) -> bool {
             kind == "window"
         }
         "tab_position" => matches!(kind, "tabs" | "vertical_tabs"),
-        "direction" => matches!(kind, "pointed_button" | "tooltip"),
+        "direction" => matches!(
+            kind,
+            "pointed_button" | "tooltip" | "horizontal_brace" | "vertical_brace"
+        ),
         "label_position" => matches!(kind, "icon_label" | "circle_button"),
         "text" | "font_size" | "bold" | "italic" | "underline" | "text_color" | "align" => true,
         "sketch_filter" => matches!(kind, "image" | "cover_flow"),
@@ -149,6 +152,7 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "tree"
                 | "field_set"
                 | "callout"
+                | "scratch_out"
         ),
         "selected_index" => matches!(
             kind,
@@ -168,6 +172,7 @@ fn supported(kind: &str, key: &str) -> bool {
         "fill" => matches!(
             kind,
             "callout"
+                | "scratch_out"
                 | "sticky_note"
                 | "app_bar"
                 | "horizontal_slider"
@@ -280,6 +285,10 @@ impl WireframeApp {
                 | "bar_chart"
                 | "line_chart"
                 | "pie_chart"
+                | "horizontal_brace"
+                | "vertical_brace"
+                | "red_cross"
+                | "scratch_out"
                 | "callout"
                 | "sticky_note"
                 | "tooltip"
@@ -617,6 +626,9 @@ mod tests {
             ("callout", vec!["fill", "background_opacity", "text"]),
             ("sticky_note", vec!["fill", "align", "text"]),
             ("tooltip", vec!["direction", "align", "text"]),
+            ("horizontal_brace", vec!["direction", "text", "text_color"]),
+            ("vertical_brace", vec!["direction", "text", "text_color"]),
+            ("scratch_out", vec!["fill", "background_opacity"]),
         ] {
             for key in fields {
                 assert!(supported(kind, key));

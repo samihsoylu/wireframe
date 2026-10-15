@@ -146,6 +146,10 @@ pub enum Kind {
     BarChart,
     LineChart,
     PieChart,
+    HorizontalBrace,
+    VerticalBrace,
+    RedCross,
+    ScratchOut,
     Callout,
     StickyNote,
     Tooltip,
@@ -160,7 +164,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 69] = [
+    pub const ALL: [Kind; 73] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -218,6 +222,10 @@ impl Kind {
         Self::BarChart,
         Self::LineChart,
         Self::PieChart,
+        Self::HorizontalBrace,
+        Self::VerticalBrace,
+        Self::RedCross,
+        Self::ScratchOut,
         Self::Callout,
         Self::StickyNote,
         Self::Tooltip,
@@ -290,6 +298,10 @@ impl Kind {
             Self::BarChart => "Bar chart",
             Self::LineChart => "Line chart",
             Self::PieChart => "Pie chart",
+            Self::HorizontalBrace => "Horizontal brace",
+            Self::VerticalBrace => "Vertical brace",
+            Self::RedCross => "Red cross",
+            Self::ScratchOut => "Scratch out",
             Self::Callout => "Callout",
             Self::StickyNote => "Sticky note",
             Self::Tooltip => "Tooltip",
@@ -306,7 +318,13 @@ impl Kind {
     }
     pub fn category(self) -> &'static str {
         match self {
-            Self::Callout | Self::StickyNote | Self::Tooltip => "Markup",
+            Self::Callout
+            | Self::StickyNote
+            | Self::Tooltip
+            | Self::HorizontalBrace
+            | Self::VerticalBrace
+            | Self::RedCross
+            | Self::ScratchOut => "Markup",
             Self::ColumnChart | Self::BarChart | Self::LineChart | Self::PieChart => "Charts",
             Self::Label
             | Self::Heading
@@ -389,6 +407,10 @@ impl Kind {
             Self::CoverFlow => (493., 198.),
             Self::ColumnChart | Self::BarChart | Self::LineChart => (187., 175.),
             Self::PieChart => (180., 180.),
+            Self::HorizontalBrace => (200., 80.),
+            Self::VerticalBrace => (180., 140.),
+            Self::RedCross => (240., 104.),
+            Self::ScratchOut => (205., 107.),
             Self::Callout => (39., 39.),
             Self::StickyNote => (109., 123.),
             Self::Tooltip => (87., 33.),
@@ -414,11 +436,14 @@ impl Kind {
                 | Self::BarChart
                 | Self::LineChart
                 | Self::PieChart
+                | Self::RedCross
+                | Self::ScratchOut
         )
     }
     pub fn initial_text(self) -> &'static str {
         match self {
             Self::Button | Self::PointedButton => "Button",
+            Self::HorizontalBrace | Self::VerticalBrace => crate::markup::DEFAULT_TEXT,
             Self::Callout => "1",
             Self::StickyNote => "A comment",
             Self::Tooltip => "a tooltip",

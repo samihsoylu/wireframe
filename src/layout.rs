@@ -223,7 +223,15 @@ impl<M: TextMeasurer> Engine<'_, M> {
                 context.font_size = self.project.settings.font_size;
                 context.sketch = self.project.settings.sketch;
                 let mut props = spec.effective(node, &context).map_err(|e| e.to_string())?;
-                if crate::annotations::Family::for_id(kind).is_some() {
+                if kind == "text_block" {
+                    props.insert(
+                        "_project_font_size".into(),
+                        Value::Number(f64::from(self.project.settings.font_size)),
+                    );
+                }
+                if crate::annotations::Family::for_id(kind).is_some()
+                    || matches!(kind.as_str(), "heading" | "subtitle")
+                {
                     props.insert("_page_title".into(), Value::Text(title.into()));
                 }
                 let (w, h) = self.measure(kind, &props, size.width, size.height, warnings)?;
@@ -296,6 +304,33 @@ impl<M: TextMeasurer> Engine<'_, M> {
             bold: boolean(props, "bold"),
             italic: boolean(props, "italic"),
         };
+        if matches!(kind, "heading" | "subtitle") {
+            let title = match props.get("_page_title") {
+                Some(Value::Text(t)) => t.as_str(),
+                _ => "",
+            };
+            let parsed = crate::text_controls::title_text(text, kind == "subtitle", title);
+            let measured = self.measurer.measure_rich(&parsed, style, None, true);
+            let w = match width {
+                Dimension::Auto => measured.width.max(1.),
+                Dimension::Fixed(w) => w,
+            };
+            let h = (measured.height + 4.).max(1.);
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
+        if let Some(default) = crate::text_controls::fixed_size(kind) {
+            let w = match width {
+                Dimension::Auto => default.0,
+                Dimension::Fixed(w) => w,
+            };
+            let h = match height {
+                Dimension::Auto => default.1,
+                Dimension::Fixed(h) => h,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         if matches!(kind, "breadcrumbs" | "link_bar") {
             let nav = crate::navigation::Navigation::parse(text, kind == "breadcrumbs")?;
             let m = nav.measure(self.measurer, style);

@@ -41,6 +41,7 @@ mod svg;
 mod table;
 mod tablet;
 mod tabs;
+mod text_controls;
 mod tree;
 mod video;
 mod window;
@@ -382,6 +383,12 @@ impl Scene {
         ) {
             self.linear_control(layer, sketch);
             return Ok(());
+        }
+        if matches!(
+            c.kind,
+            Kind::Heading | Kind::Subtitle | Kind::TextBlock | Kind::TextLine | Kind::TagCloud
+        ) {
+            return self.text_control(layer, sketch, fonts);
         }
         if matches!(c.kind, Kind::Callout | Kind::StickyNote | Kind::Tooltip) {
             return self.annotation(layer, sketch, fonts);

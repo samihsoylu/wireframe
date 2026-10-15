@@ -284,6 +284,21 @@ impl ControlSpec {
             }
             values.insert(key.clone(), value.clone());
         }
+        if matches!(self.id, "heading" | "subtitle")
+            && matches!(values.get("text"), Some(Value::Text(s)) if s.is_empty())
+        {
+            values.insert(
+                "text".into(),
+                Value::Text(
+                    if self.id == "heading" {
+                        "Title"
+                    } else {
+                        "Subtitle"
+                    }
+                    .into(),
+                ),
+            );
+        }
         if self.id == "alert"
             && !node.properties.contains_key("text_color")
             && values.get("button_style") == Some(&Value::Choice("inline".into()))

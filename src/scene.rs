@@ -116,7 +116,11 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
         .cloned()
         .unwrap_or_default();
     match c.kind {
-        Kind::Icon
+        Kind::Subtitle
+        | Kind::TextBlock
+        | Kind::TextLine
+        | Kind::TagCloud
+        | Kind::Icon
         | Kind::IconLabel
         | Kind::CircleButton
         | Kind::PointedButton

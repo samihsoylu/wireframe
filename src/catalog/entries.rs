@@ -910,7 +910,10 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         PropertyType::Color,
         Value::Color([0, 0, 0, 255]),
     );
-    ink.default = if matches!(c.id, "horizontal_brace" | "vertical_brace") {
+    ink.default = if matches!(
+        c.id,
+        "horizontal_brace" | "vertical_brace" | "heading" | "subtitle" | "tag_cloud"
+    ) {
         DefaultValue::FormInk
     } else if c.id == "link" {
         DefaultValue::LinkColor
@@ -963,6 +966,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "label" => "Some text",
         "heading" => "Title",
         "subtitle" => "Subtitle",
+        "tag_cloud" => crate::text_controls::CLOUD_DEFAULT,
         "paragraph" => "Write your ideas here.",
         "text_input" => "",
         "search" => "search",
@@ -1547,7 +1551,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             .iter_mut()
             .find(|p| p.key == "font_size")
             .unwrap();
-        p.default = DefaultValue::Literal(Value::Number(28.));
+        p.default = DefaultValue::Literal(Value::Number(40.));
     }
     if c.id == "subtitle" {
         let p = c
@@ -1555,7 +1559,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             .iter_mut()
             .find(|p| p.key == "font_size")
             .unwrap();
-        p.default = DefaultValue::Literal(Value::Number(20.));
+        p.default = DefaultValue::Literal(Value::Number(24.));
     }
     for property in &mut c.properties {
         property.visible = super::fields::visible(c.id, property.key);

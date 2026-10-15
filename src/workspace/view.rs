@@ -308,6 +308,11 @@ pub(super) fn control(node: &LayoutNode) -> Control {
         "button" => Kind::Button,
         "label" => Kind::Label,
         "heading" => Kind::Heading,
+        "subtitle" => Kind::Subtitle,
+        "text_block" => Kind::TextBlock,
+        "text_line" => Kind::TextLine,
+        "tag_cloud" => Kind::TagCloud,
+
         "paragraph" => Kind::Paragraph,
         "text_input" => Kind::TextInput,
         "text_area" => Kind::TextArea,

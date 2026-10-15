@@ -23,6 +23,7 @@ pub mod scene;
 pub mod snapping;
 pub mod storage;
 pub mod tabs;
+pub mod text_controls;
 pub mod tree;
 pub mod viewport;
 pub mod window;

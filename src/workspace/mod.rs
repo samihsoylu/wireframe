@@ -8,6 +8,7 @@ pub use images::{ImageTarget, ImportChoice};
 mod components;
 mod overrides;
 mod properties;
+mod text_controls;
 mod view;
 use crate::{
     catalog,
@@ -280,7 +281,12 @@ impl Editor {
             };
             if matches!(
                 kind,
-                Kind::Checkbox
+                Kind::Heading
+                    | Kind::Subtitle
+                    | Kind::TextBlock
+                    | Kind::TextLine
+                    | Kind::TagCloud
+                    | Kind::Checkbox
                     | Kind::Radio
                     | Kind::CheckboxGroup
                     | Kind::RadioGroup
@@ -382,6 +388,11 @@ impl Editor {
                     Kind::BarChart => "bar_chart",
                     Kind::LineChart => "line_chart",
                     Kind::PieChart => "pie_chart",
+                    Kind::Heading => "heading",
+                    Kind::Subtitle => "subtitle",
+                    Kind::TextBlock => "text_block",
+                    Kind::TextLine => "text_line",
+                    Kind::TagCloud => "tag_cloud",
                     Kind::HorizontalBrace => "horizontal_brace",
                     Kind::VerticalBrace => "vertical_brace",
                     Kind::RedCross => "red_cross",

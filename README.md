@@ -4,8 +4,9 @@ A local desktop workspace for turning rough ideas into clear wireframes. Built i
 
 ## Features
 
-- 73 controls for forms, text, shapes, navigation, devices, media, charts and layout.
+- 77 controls for forms, text, shapes, navigation, devices, media, charts and layout.
 - Pages, notes, searchable library and layers.
+- [Text controls](docs/TEXT-CONTROLS.md): headings, subtitles, editable placeholders and rich tag clouds.
 - Move, resize, align, nest groups, duplicate and lock controls.
 - Text-defined menus and menu bars with shortcuts, selection, row links and optional bar icons.
 - Tree panes with indented hierarchy rows, folder and status symbols, selection and row destinations.

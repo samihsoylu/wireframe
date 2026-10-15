@@ -92,6 +92,11 @@ pub enum Kind {
     Button,
     Label,
     Heading,
+    Subtitle,
+    TextBlock,
+    TextLine,
+    TagCloud,
+
     Paragraph,
     TextInput,
     TextArea,
@@ -164,10 +169,14 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 73] = [
+    pub const ALL: [Kind; 77] = [
         Self::Button,
         Self::Label,
         Self::Heading,
+        Self::Subtitle,
+        Self::TextBlock,
+        Self::TextLine,
+        Self::TagCloud,
         Self::Paragraph,
         Self::TextInput,
         Self::TextArea,
@@ -244,6 +253,11 @@ impl Kind {
             Self::Button => "Button",
             Self::Label => "Text label",
             Self::Heading => "Heading",
+            Self::Subtitle => "Subtitle",
+            Self::TextBlock => "Text block",
+            Self::TextLine => "Text line",
+            Self::TagCloud => "Tag cloud",
+
             Self::Paragraph => "Paragraph",
             Self::TextInput => "Text input",
             Self::TextArea => "Text area",
@@ -328,6 +342,10 @@ impl Kind {
             Self::ColumnChart | Self::BarChart | Self::LineChart | Self::PieChart => "Charts",
             Self::Label
             | Self::Heading
+            | Self::Subtitle
+            | Self::TextBlock
+            | Self::TextLine
+            | Self::TagCloud
             | Self::Paragraph
             | Self::Link
             | Self::Breadcrumbs
@@ -370,7 +388,11 @@ impl Kind {
             Self::LinkBar => (226., 21.),
             Self::IconLabel => (65., 63.),
             Self::Label | Self::Link => (140., 28.),
-            Self::Heading => (300., 48.),
+            Self::Heading => (300., 44.),
+            Self::Subtitle => (140., 28.),
+            Self::TextBlock => (275., 80.),
+            Self::TextLine => (200., 27.),
+            Self::TagCloud => (350., 110.),
             Self::Paragraph => (300., 100.),
             Self::TextInput | Self::Dropdown | Self::Search => (220., 38.),
             Self::TextArea => (260., 120.),
@@ -453,7 +475,10 @@ impl Kind {
             Self::Breadcrumbs => crate::navigation::BREADCRUMBS,
             Self::LinkBar => crate::navigation::LINK_BAR,
             Self::Label => "Some text",
-            Self::Heading => "Your next great idea",
+            Self::Heading => "Title",
+            Self::Subtitle => "Subtitle",
+            Self::TextBlock | Self::TextLine => "",
+            Self::TagCloud => crate::text_controls::CLOUD_DEFAULT,
             Self::Paragraph => "Describe the idea here.\nKeep it simple and make it clear.",
             Self::TextInput => "Enter text…",
             Self::TextArea => "Write something…",
@@ -522,8 +547,12 @@ impl Control {
             kind,
             bounds: Bounds::new(x, y, w, h),
             text: kind.initial_text().into(),
-            font_size: if kind == Kind::Heading { 28. } else { 15. },
-            bold: kind == Kind::Heading,
+            font_size: match kind {
+                Kind::Heading => 40.,
+                Kind::Subtitle => 24.,
+                _ => 15.,
+            },
+            bold: false,
             fill: [255, 255, 255],
             checked: false,
             locked: false,

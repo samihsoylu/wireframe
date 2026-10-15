@@ -8,6 +8,16 @@ Work directly as Engineer. Preserve user files and explicit deferrals. Use synth
 
 ## Current checkpoint — 2026-10-15
 
+Text blocks, text lines, subtitles and tag clouds now use the library, Quick Add, typed inspector and shared canvas/PNG/SVG renderer. The available catalog has77 entries, with9 remaining. Heading defaults are corrected to40 and subtitle24; title height is measured and width can be automatic. Placeholder conversion precedes text editing and is independently undoable while retaining identity and references. See docs/TEXT-CONTROLS.md.
+
+The full regression run passed434 tests. Final focused text tests7 and app tests49 pass, covering436 current tests across runs. All-target Clippy, final focused Clippy, formatting and diff checks pass. Controlled geometry comparison matches1,116 cases through12,280 assertions, maximum error0.000118. Twenty-two image checks confirm non-block font invariance, Clean placeholder interiors and strict visibility boundaries. Original Sketch word rhythm/artwork and typography remain different;56 Sketch block geometry cases are explicitly outside that comparison.
+
+Native macOS confirms all four insertions, placeholder/cloud minimums and Undo, both Enter conversions with Escape/Undo, subtitle width minimum/Auto-size/Undo, cloud text Undo/Redo and multiline Heading font40/height140. Full-process restart/resave of the native fixture is byte-identical. Four native PNG/SVG exports match generated renders; the gallery's resave matches a regenerated baseline. Automated component-local text edits and blocked structural conversion are covered; native component edits and link activation remain unperformed. Self-review only.
+
+Signed development bundle UUID DF501AFE-EB76-3D5F-9D9A-69454B659991; signature and canonical executable identity verify. It runs the saved Text layouts gallery, Clean44%,40controls/no selection, Libraryhidden. No build/test sessions remain. Continue research for the remaining catalog and shared interactions. Exact artwork/fonts, title serialization normalization, legacy shape/rule coverage, held-drag cadence/autoscroll, broader component/group/clipping/snapping/clock behavior, native Windows/Linux, recovery and release acceptance remain open. The overall goal remains active.
+
+Previous markup checkpoint:
+
 Horizontal and vertical braces, Red cross and Scratch out now use the Markup library, Quick Add, typed inspector and shared canvas/PNG/SVG renderer. The available library has 73 entries, with 13 remaining. Braces have directional rich text with fixed natural dimensions; static marks expose geometry, plus color/opacity for Scratch out. All four are markup by default, enforce a ten-unit editing minimum and retain smaller saved geometry. See docs/MARKUP.md.
 
 All 427 tests pass, including six markup tests and 47 app tests. All-target Clippy, formatting, signature and diff checks pass. A regression caught a folded scratch-out ribbon at its bends; applying the variation after constructing the ribbon corrected it. Controlled comparison matches 576 layouts through 5,376 assertions within 0.000001 units. Twenty-four color/opacity checks pass within one channel value. Original contours, text metrics and antialiasing still differ; exact visual identity is not claimed.

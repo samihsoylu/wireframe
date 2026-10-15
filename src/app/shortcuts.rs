@@ -107,7 +107,7 @@ impl WireframeApp {
                     && c.group.is_none()
                     && c.kind.text_editable()
                 {
-                    self.text_edit = Some((c.id, c.text.clone()));
+                    self.begin_text_edit(c.id);
                 }
             } else {
                 for (k, dx, dy) in [

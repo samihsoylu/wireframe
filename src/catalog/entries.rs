@@ -1482,7 +1482,6 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             | "vertical_slider"
             | "horizontal_scrollbar"
             | "vertical_scrollbar"
-            | "volume_slider"
     ) {
         c.properties.push(number(
             "value",

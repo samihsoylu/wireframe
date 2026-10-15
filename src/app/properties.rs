@@ -262,6 +262,9 @@ impl WireframeApp {
                 | "vertical_scrollbar"
                 | "horizontal_splitter"
                 | "vertical_splitter"
+                | "volume_slider"
+                | "playback"
+                | "webcam"
                 | "date_chooser"
                 | "checkbox"
                 | "radio"
@@ -308,7 +311,7 @@ impl WireframeApp {
         let local = self.editor.editing_instance();
         ui.add_space(10.);
         ui.add_enabled_ui(!locked, |ui| {
-            if !matches!(spec.id,"image"|"icon"|"breadcrumbs"|"link_bar") && spec.autosize != wireframe::catalog::AutoSize::None && ui.button("Auto-size").clicked() {
+            if !matches!(spec.id,"image"|"icon"|"breadcrumbs"|"link_bar"|"playback") && spec.autosize != wireframe::catalog::AutoSize::None && ui.button("Auto-size").clicked() {
                 self.editor.commit();
                 self.editor.begin("Auto-size control");
                 if let Err(error) = self.editor.auto_size_control(id) { self.error = Some(error); }

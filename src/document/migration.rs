@@ -155,6 +155,10 @@ fn migrate_control(c: legacy::Control) -> Node {
         legacy::Kind::VerticalScrollbar => "vertical_scrollbar",
         legacy::Kind::HorizontalSplitter => "horizontal_splitter",
         legacy::Kind::VerticalSplitter => "vertical_splitter",
+        legacy::Kind::VolumeSlider => "volume_slider",
+        legacy::Kind::Playback => "playback",
+        legacy::Kind::Webcam => "webcam",
+
         legacy::Kind::Panel => "panel",
         legacy::Kind::FieldSet => "field_set",
         legacy::Kind::List => "list",

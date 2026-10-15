@@ -352,6 +352,10 @@ pub(super) fn control(node: &LayoutNode) -> Control {
         "vertical_scrollbar" => Kind::VerticalScrollbar,
         "horizontal_splitter" => Kind::HorizontalSplitter,
         "vertical_splitter" => Kind::VerticalSplitter,
+        "volume_slider" => Kind::VolumeSlider,
+        "playback" => Kind::Playback,
+        "webcam" => Kind::Webcam,
+
         "panel" | "window" => Kind::Panel,
         "field_set" => Kind::FieldSet,
         "list" => Kind::List,

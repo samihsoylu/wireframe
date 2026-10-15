@@ -137,6 +137,9 @@ pub enum Kind {
     VerticalScrollbar,
     HorizontalSplitter,
     VerticalSplitter,
+    VolumeSlider,
+    Playback,
+    Webcam,
     Panel,
     FieldSet,
     List,
@@ -148,7 +151,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 57] = [
+    pub const ALL: [Kind; 60] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -197,6 +200,9 @@ impl Kind {
         Self::VerticalScrollbar,
         Self::HorizontalSplitter,
         Self::VerticalSplitter,
+        Self::VolumeSlider,
+        Self::Playback,
+        Self::Webcam,
         Self::Panel,
         Self::FieldSet,
         Self::List,
@@ -257,6 +263,9 @@ impl Kind {
             Self::VerticalScrollbar => "Vertical scrollbar",
             Self::HorizontalSplitter => "Horizontal splitter",
             Self::VerticalSplitter => "Vertical splitter",
+            Self::VolumeSlider => "Volume slider",
+            Self::Playback => "Playback controls",
+            Self::Webcam => "Webcam",
             Self::Panel => "Window",
             Self::FieldSet => "Field set",
             Self::List => "List",
@@ -277,6 +286,7 @@ impl Kind {
             | Self::Breadcrumbs
             | Self::LinkBar => "Text",
             Self::Icon | Self::IconLabel => "Icons",
+            Self::VolumeSlider | Self::Playback | Self::Webcam => "Media",
             Self::Button
             | Self::CircleButton
             | Self::PointedButton
@@ -341,6 +351,9 @@ impl Kind {
             Self::VerticalScrollbar => (16., 100.),
             Self::HorizontalSplitter => (100., 12.),
             Self::VerticalSplitter => (12., 100.),
+            Self::VolumeSlider => (72., 16.),
+            Self::Playback => (110., 36.),
+            Self::Webcam => (177., 146.),
             Self::Panel => (450., 400.),
             Self::FieldSet => (200., 170.),
             Self::List | Self::Table => (300., 180.),
@@ -377,7 +390,10 @@ impl Kind {
             | Self::HorizontalScrollbar
             | Self::VerticalScrollbar
             | Self::HorizontalSplitter
-            | Self::VerticalSplitter => "",
+            | Self::VerticalSplitter
+            | Self::VolumeSlider
+            | Self::Playback
+            | Self::Webcam => "",
             Self::DateChooser => crate::date_controls::CHOOSER_DEFAULT,
             Self::Menu => crate::menu::MENU,
             Self::MenuBar => crate::menu::BAR,

@@ -18,6 +18,7 @@ mod images;
 mod linear_controls;
 mod list;
 pub mod mask;
+mod media_controls;
 mod menu;
 mod mobile_keyboard;
 mod mobile_rows;
@@ -375,6 +376,10 @@ impl Scene {
                 | Kind::VerticalSplitter
         ) {
             self.linear_control(layer, sketch);
+            return Ok(());
+        }
+        if matches!(c.kind, Kind::VolumeSlider | Kind::Playback | Kind::Webcam) {
+            self.media_control(layer, sketch);
             return Ok(());
         }
         if matches!(c.kind, Kind::HorizontalSlider | Kind::VerticalSlider) {

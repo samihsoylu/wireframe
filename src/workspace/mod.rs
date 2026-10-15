@@ -307,6 +307,9 @@ impl Editor {
                     | Kind::VerticalScrollbar
                     | Kind::HorizontalSplitter
                     | Kind::VerticalSplitter
+                    | Kind::VolumeSlider
+                    | Kind::Playback
+                    | Kind::Webcam
                     | Kind::DateChooser
                     | Kind::FieldSet
                     | Kind::Button
@@ -357,6 +360,9 @@ impl Editor {
                     Kind::VerticalScrollbar => "vertical_scrollbar",
                     Kind::HorizontalSplitter => "horizontal_splitter",
                     Kind::VerticalSplitter => "vertical_splitter",
+                    Kind::VolumeSlider => "volume_slider",
+                    Kind::Playback => "playback",
+                    Kind::Webcam => "webcam",
                     Kind::Button => "button",
                     Kind::TextInput => "text_input",
                     Kind::TextArea => "text_area",

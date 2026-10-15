@@ -13,7 +13,7 @@ impl Axis {
         let (vertical, thickness) = match kind {
             Kind::HorizontalSlider | Kind::HorizontalSplitter => (false, 12.),
             Kind::VerticalSlider | Kind::VerticalSplitter => (true, 12.),
-            Kind::HorizontalScrollbar => (false, 16.),
+            Kind::HorizontalScrollbar | Kind::VolumeSlider => (false, 16.),
             Kind::VerticalScrollbar => (true, 16.),
             _ => return None,
         };

@@ -348,8 +348,21 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(w, h)?;
             return Ok((w, h));
         }
-        if matches!(kind, "calendar" | "date_picker" | "time_picker") {
-            let default = if kind == "calendar" {
+        if kind == "playback" {
+            return Ok((110., 36.));
+        }
+        if kind == "volume_slider" {
+            let w = match width {
+                Dimension::Auto => 72.,
+                Dimension::Fixed(w) => w,
+            };
+            validate_size(w, 16.)?;
+            return Ok((w, 16.));
+        }
+        if matches!(kind, "calendar" | "date_picker" | "time_picker" | "webcam") {
+            let default = if kind == "webcam" {
+                (177., 146.)
+            } else if kind == "calendar" {
                 (96., 96.)
             } else {
                 (320., 473.)

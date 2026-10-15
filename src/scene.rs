@@ -136,6 +136,9 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
         | Kind::VerticalScrollbar
         | Kind::HorizontalSplitter
         | Kind::VerticalSplitter
+        | Kind::VolumeSlider
+        | Kind::Playback
+        | Kind::Webcam
         | Kind::Alert
         | Kind::AppBar
         | Kind::FieldSet

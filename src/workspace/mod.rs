@@ -834,15 +834,21 @@ impl Editor {
             let selected = e.selection.clone();
             let context = e.context.clone();
             let mut remap = HashMap::new();
-            let mut inserted = HashSet::new();
+            let mut selection = selected.clone();
+            let mut removed = HashSet::new();
             let nodes = std::mem::take(e.nodes_mut());
             let mut result = vec![];
             let mut used: HashSet<_> = nodes.iter().map(|n| n.id).collect();
             for n in nodes {
-                if selected.contains(&n.id) && matches!(n.content, NodeContent::Group { .. }) {
+                if selected.contains(&n.id)
+                    && !n.locked
+                    && matches!(n.content, NodeContent::Group { .. })
+                {
                     let id = n.id;
                     match n.clone().ungroup() {
                         Ok(mut children) => {
+                            removed.insert(id);
+                            selection.remove(&id);
                             for child in &mut children {
                                 let old = child.id;
                                 if used.contains(&old)
@@ -852,7 +858,7 @@ impl Editor {
                                 }
                                 used.insert(child.id);
                                 remap.insert((id, old), child.id);
-                                inserted.insert(child.id);
+                                selection.insert(child.id);
                             }
                             result.extend(children);
                         }
@@ -868,7 +874,15 @@ impl Editor {
             *e.nodes_mut() = result;
             e.active_content_mut().paint_order = order
                 .into_iter()
-                .map(|mut p| {
+                .filter_map(|mut p| {
+                    // Empty groups are paint units too; their removed paths
+                    // must not survive after the wrapper is dissolved.
+                    if p.starts_with(&context)
+                        && p.len() == context.len() + 1
+                        && removed.contains(&p[context.len()])
+                    {
+                        return None;
+                    }
                     if p.starts_with(&context)
                         && p.len() > context.len() + 1
                         && let Some(id) = remap.get(&(p[context.len()], p[context.len() + 1]))
@@ -876,10 +890,10 @@ impl Editor {
                         p.remove(context.len());
                         p[context.len()] = *id;
                     }
-                    p
+                    Some(p)
                 })
                 .collect();
-            e.selection = inserted;
+            e.selection = selection;
         });
     }
     pub fn lock(&mut self, locked: bool) {

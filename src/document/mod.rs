@@ -229,10 +229,11 @@ impl Node {
         }
     }
     /// Translate immediate children into the parent's coordinate system.
-    /// Cropped groups need an explicit layout-aware operation instead.
+    /// Discard this group's crop, revealing children in their existing positions.
+    /// Origins are stored before cropping; descendant crops remain unchanged.
     pub fn ungroup(self) -> Result<Vec<Node>, String> {
-        if self.crop.is_some() || self.locked {
-            return Err("Unlock and remove the crop before ungrouping".into());
+        if self.locked {
+            return Err("Unlock the group before ungrouping".into());
         }
         match self.content {
             NodeContent::Group { mut children } => {

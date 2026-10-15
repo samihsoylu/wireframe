@@ -290,3 +290,29 @@ fn local_acknowledgement_does_not_claim_newer_edits_are_durable() {
         &app.editor.document
     );
 }
+
+#[test]
+fn clean_save_receipt_finishes_status_without_a_separate_saved_event() {
+    let (dir, ctx, mut app) = fixture();
+    let path = dir.path().join("Project.wireframe");
+    named(&mut app, &ctx, &path);
+    let saved = app.editor.document.clone();
+    for newer_edit in [false, true] {
+        assert!(app.queue_save(path.clone(), false));
+        assert_eq!(app.status, "Saving…");
+        if newer_edit {
+            app.editor.add(Kind::Label, 200., 200.);
+        }
+        drain(&mut app, &ctx);
+        assert_eq!(app.editor.dirty(), newer_edit);
+        assert_eq!(ProjectStore.load(&path).unwrap(), saved);
+        assert_eq!(
+            app.status,
+            if newer_edit {
+                "Saved · newer edits pending"
+            } else {
+                "Saved to your computer"
+            }
+        );
+    }
+}

@@ -267,6 +267,13 @@ impl WireframeApp {
                             self.persistence.as_mut().unwrap().id = Some(receipt.copy_id);
                             self.file = Some(receipt.path);
                             self.editor.mark_saved_snapshot(&receipt.snapshot);
+                            // A clean flush can finish without a Saved event.
+                            self.status = if self.editor.dirty() {
+                                "Saved · newer edits pending"
+                            } else {
+                                "Saved to your computer"
+                            }
+                            .into();
                             if let Some(warning) = receipt.warning {
                                 self.error = Some(warning);
                             }

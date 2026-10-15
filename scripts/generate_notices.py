@@ -53,8 +53,16 @@ def main():
             output.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(path, output)
             files.append(str(output.relative_to(DEST)))
+        if package['name'] == 'krilla':
+            # Its upstream NOTICE attributes content_draw_path to MPL code.
+            # Retain the unchanged containing source alongside those notices.
+            covered = folder / 'src' / 'content.rs'
+            covered.parent.mkdir(exist_ok=True)
+            shutil.copyfile(source / 'src' / 'content.rs', covered)
+            files.append(str(covered.relative_to(DEST)))
         # Workspace crates sometimes exclude the repository-root license.
-        need_root = not files or package['name'] == 'epaint_default_fonts'
+        # These packages contain asset notices but omit the library's own terms.
+        need_root = not files or package['name'] in ('epaint_default_fonts', 'krilla')
         if need_root:
             vcs = source / '.cargo_vcs_info.json'
             sha = json.loads(vcs.read_text())['git']['sha1'] if vcs.exists() else None
@@ -81,7 +89,7 @@ def main():
             # Supply the unchanged covered source alongside the binary notices.
             shutil.copytree(source / 'src', folder / 'src', dirs_exist_ok=True)
             shutil.copyfile(source / 'Cargo.toml.orig', folder / 'Cargo.toml')
-    candidates = ('LICENSE', 'LICENSE-MIT', 'LICENSE-APACHE', 'LICENSE.md', 'LICENSE.txt', 'LICENSE-MIT.txt', 'LICENSE-APACHE.txt', 'licenses/MIT.txt', 'licenses/Apache-2.0.txt', 'COPYING')
+    candidates = ('LICENSE', 'LICENSE-MIT', 'LICENSE-APACHE', 'LICENSE_MIT', 'LICENSE_APACHE', 'LICENSE.md', 'LICENSE.txt', 'LICENSE-MIT.txt', 'LICENSE-APACHE.txt', 'licenses/MIT.txt', 'licenses/Apache-2.0.txt', 'COPYING', 'NOTICE', 'NOTICE.md')
     jobs = [(repo, sha, name, f'https://raw.githubusercontent.com/{repo}/{sha}/{name}') for repo, sha in upstream for name in candidates]
     with concurrent.futures.ThreadPoolExecutor(max_workers=12) as pool:
         for (repo,sha,name,url), data in zip(jobs, pool.map(lambda job: fetch(job[3]), jobs)):
@@ -90,11 +98,17 @@ def main():
                     output = folder / ('upstream-' + name.replace('/', '-'))
                     output.write_bytes(data)
                     files.append(str(output.relative_to(DEST)))
+    for folders in upstream.values():
+        for folder, files in folders:
+            if not any(Path(f).name.startswith('upstream-') and
+                       any(term in Path(f).name.lower() for term in ('license', 'licence', 'copying', 'mit', 'apache'))
+                       for f in files):
+                missing.append(folder.name + ' (repository-root license)')
     missing.extend(f"{p['name']}-{p['version']}" for p in manifest if not p['files'])
     if missing:
         raise SystemExit('No notices found for: ' + ', '.join(sorted(set(missing))))
     (DEST / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
-    rows = ['# Third-party notices', '', 'Wireframe project code is GPL-3.0-only licensed. Dependencies retain the terms below. This inventory covers the locked normal and build dependency graph for macOS, Windows and Linux; some entries are build tools or platform-specific.', '', 'Full license texts and applicable copyright notices are in `licenses/`. The unchanged MPL-covered option-ext source is included there. The dispatch crate ships an MIT declaration without a license text; its exact declaration, source and SPDX reference terms are included. Dual-license expressions are upstream choices; inclusion of both texts does not remove that choice.', '', '| Package | License | Notices |', '| --- | --- | --- |']
+    rows = ['# Third-party notices', '', 'Wireframe project code is GPL-3.0-only licensed. Dependencies retain the terms below. This inventory covers the locked normal and build dependency graph for macOS, Windows and Linux; some entries are build tools or platform-specific.', '', 'Full license texts and applicable copyright notices are in `licenses/`. Unchanged source for option-ext and the file containing Krilla\'s MPL-attributed path conversion is included there. The dispatch crate ships an MIT declaration without a license text; its exact declaration, source and SPDX reference terms are included. Dual-license expressions are upstream choices; inclusion of both texts does not remove that choice.', '', '| Package | License | Notices |', '| --- | --- | --- |']
     for p in manifest:
         key = f"{p['name']}-{p['version']}"
         rows.append(f"| {key} | {p['license']} | [files](licenses/{key}/) |")

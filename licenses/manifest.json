@@ -1479,7 +1479,11 @@
     "license": "MIT OR Apache-2.0",
     "repository": "https://github.com/LaurenzV/krilla",
     "files": [
-      "krilla-0.8.2/icc/LICENSE"
+      "krilla-0.8.2/icc/LICENSE",
+      "krilla-0.8.2/src/content.rs",
+      "krilla-0.8.2/upstream-LICENSE_MIT",
+      "krilla-0.8.2/upstream-LICENSE_APACHE",
+      "krilla-0.8.2/upstream-NOTICE.md"
     ]
   },
   {

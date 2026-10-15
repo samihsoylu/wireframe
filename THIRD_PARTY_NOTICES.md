@@ -2,7 +2,7 @@
 
 Wireframe project code is GPL-3.0-only licensed. Dependencies retain the terms below. This inventory covers the locked normal and build dependency graph for macOS, Windows and Linux; some entries are build tools or platform-specific.
 
-Full license texts and applicable copyright notices are in `licenses/`. The unchanged MPL-covered option-ext source is included there. The dispatch crate ships an MIT declaration without a license text; its exact declaration, source and SPDX reference terms are included. Dual-license expressions are upstream choices; inclusion of both texts does not remove that choice.
+Full license texts and applicable copyright notices are in `licenses/`. Unchanged source for option-ext and the file containing Krilla's MPL-attributed path conversion is included there. The dispatch crate ships an MIT declaration without a license text; its exact declaration, source and SPDX reference terms are included. Dual-license expressions are upstream choices; inclusion of both texts does not remove that choice.
 
 | Package | License | Notices |
 | --- | --- | --- |

@@ -197,8 +197,21 @@ fn taller_tables_keep_text_rows_fixed_and_fill_empty_rows() {
     assert!(tall.items.len() > short.items.len());
     let text: String = glyphs(&short).iter().map(|g| g.text.as_str()).collect();
     assert_eq!(text, "NameReadyAdaBob");
-    assert!(short.items.iter().any(|item| matches!(&item.drawing,
-        Drawing::Primitive(wireframe::scene::Primitive::Rect { b, .. }) if b.w == 12. && b.h == 12.)));
+    let choices = |s: &Scene| {
+        s.items
+            .iter()
+            .filter_map(|item| match &item.drawing {
+                Drawing::Icon { id, bounds, .. } => Some((id.clone(), *bounds)),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+    };
+    let symbols = choices(&short);
+    assert_eq!(symbols.len(), 2);
+    assert_eq!(symbols[0].0, "square-check-regular");
+    assert_eq!(symbols[1].0, "square-regular");
+    assert!(symbols.iter().all(|(_, b)| b.w == 12. && b.h == 12.));
+    assert_eq!(symbols, choices(&tall));
 }
 
 #[test]

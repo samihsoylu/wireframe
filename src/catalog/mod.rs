@@ -299,6 +299,16 @@ impl ControlSpec {
                 ),
             );
         }
+        if self.id == "table" {
+            // Derived layout hints, never stored in the document. Each row resolves
+            // automatic ink independently from its own background.
+            for key in ["text_color", "link_color"] {
+                values.insert(
+                    format!("__table_auto_{key}"),
+                    Value::Bool(!node.properties.contains_key(key)),
+                );
+            }
+        }
         if self.id == "alert"
             && !node.properties.contains_key("text_color")
             && values.get("button_style") == Some(&Value::Choice("inline".into()))
@@ -361,7 +371,8 @@ impl ControlSpec {
         context: &Context,
     ) -> Result<(), PropertyError> {
         // Preserve explicit colors across dependent fill or button-style changes.
-        if key == "text_color" && matches!(self.id, "text_input" | "text_area" | "alert") {
+        if key == "text_color" && matches!(self.id, "text_input" | "text_area" | "alert" | "table")
+        {
             self.property(key)
                 .expect("Control text color")
                 .validate(&value)?;

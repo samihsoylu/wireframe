@@ -1558,6 +1558,9 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         ]);
     }
     if c.id == "table" {
+        if let Some(text) = c.properties.iter_mut().find(|p| p.key == "text_color") {
+            text.default = DefaultValue::FormInk;
+        }
         c.properties.extend([
             boolean("header", "Header row", true),
             boolean("vertical_lines", "Vertical lines", true),

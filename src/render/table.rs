@@ -34,14 +34,19 @@ impl Scene {
             clip,
         );
         let selected = number(p, "selected_index", -1.) as i32;
+        let rule_ink = if sketch { [0; 3] } else { [51; 3] };
+        let disabled = matches!(p.get("state"), Some(Value::Choice(s)) if s.contains("disabled"));
         let mut y = b.y + metrics.top;
         let mut row_index = 0usize;
         while y < b.y + b.h {
             let height = metrics.rows.get(row_index).copied().unwrap_or(row_height);
             let background = if header && row_index == 0 {
                 [204, 204, 204]
-            } else if selected >= 0 && row_index as i32 == selected + i32::from(header) {
-                [0, 102, 204]
+            } else if selected >= 0
+                && row_index < grid.rows.len()
+                && row_index as i32 == selected + i32::from(header)
+            {
+                [149, 188, 242]
             } else if row_index % 2 == 1 {
                 alternate
             } else {
@@ -60,7 +65,7 @@ impl Scene {
                 self.primitive(
                     Primitive::Line {
                         points: vec![[b.x, y], [b.x + b.w, y]],
-                        color: [0, 0, 0],
+                        color: rule_ink,
                         width: 1.,
                     },
                     clip,
@@ -77,9 +82,17 @@ impl Scene {
                     };
                     let mut available = (width - pad).max(0.);
                     let mut options = paint_options(p);
-                    if background == [0, 102, 204] {
-                        options.ink = Color32::WHITE;
-                        options.link = Color32::WHITE;
+                    let dark = u32::from(background[0]) * 299
+                        + u32::from(background[1]) * 587
+                        + u32::from(background[2]) * 114
+                        < 153_000;
+                    if dark && !disabled {
+                        if boolean(p, "__table_auto_text_color") {
+                            options.ink = Color32::WHITE;
+                        }
+                        if boolean(p, "__table_auto_link_color") {
+                            options.link = Color32::WHITE;
+                        }
                     }
                     let align =
                         grid.columns
@@ -148,7 +161,7 @@ impl Scene {
                 self.primitive(
                     Primitive::Line {
                         points: vec![[x - 1., b.y], [x - 1., b.y + b.h]],
-                        color: [0, 0, 0],
+                        color: rule_ink,
                         width: 1.,
                     },
                     clip,
@@ -164,7 +177,7 @@ impl Scene {
             self.primitive(
                 Primitive::Line {
                     points,
-                    color: [0, 0, 0],
+                    color: rule_ink,
                     width: 1.,
                 },
                 layer.clip,
@@ -173,54 +186,14 @@ impl Scene {
         Ok(())
     }
     fn choice(&mut self, choice: Choice, x: f32, y: f32, clip: Option<Bounds>, color: Color32) {
-        let ink = [color.r(), color.g(), color.b()];
-        let b = Bounds::new(x, y, 12., 12.);
+        use super::choice::Mark;
         let radio = matches!(choice, Choice::RadioOff | Choice::RadioOn);
-        if radio {
-            self.primitive(
-                Primitive::Ellipse {
-                    b,
-                    fill: [255, 255, 255],
-                },
-                clip,
-            );
-        } else {
-            self.primitive(
-                Primitive::Rect {
-                    b,
-                    fill: [255, 255, 255],
-                    stroke: true,
-                    radius: 1.,
-                },
-                clip,
-            );
-        }
-        match choice {
-            Choice::Checked => self.primitive(
-                Primitive::Line {
-                    points: vec![[x + 2., y + 6.], [x + 5., y + 9.], [x + 11., y + 2.]],
-                    color: ink,
-                    width: 1.5,
-                },
-                clip,
-            ),
-            Choice::Indeterminate => self.primitive(
-                Primitive::Line {
-                    points: vec![[x + 3., y + 6.], [x + 9., y + 6.]],
-                    color: ink,
-                    width: 2.,
-                },
-                clip,
-            ),
-            Choice::RadioOn => self.primitive(
-                Primitive::Ellipse {
-                    b: Bounds::new(x + 3., y + 3., 6., 6.),
-                    fill: ink,
-                },
-                clip,
-            ),
-            _ => {}
-        }
+        let mark = match choice {
+            Choice::Checked | Choice::RadioOn => Mark::Selected,
+            Choice::Indeterminate => Mark::Mixed,
+            _ => Mark::Empty,
+        };
+        self.choice_symbol(Bounds::new(x, y, 12., 12.), radio, mark, clip, color);
     }
     fn sort_icon(&mut self, x: f32, y: f32, sort: Sort, clip: Option<Bounds>, color: Color32) {
         let color = [color.r(), color.g(), color.b()];

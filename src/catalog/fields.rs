@@ -116,7 +116,15 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "underline",
         ],
         "calendar" => &[],
-        "callout" => &["bold", "fill", "font_size", "italic", "text", "underline"],
+        "callout" => &[
+            "background_opacity",
+            "bold",
+            "fill",
+            "font_size",
+            "italic",
+            "text",
+            "underline",
+        ],
         "rectangle" => &["border", "fill", "link", "value"],
         "radio" => &[
             "bold",
@@ -538,7 +546,15 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "text_color",
             "underline",
         ],
-        "tooltip" => &["align", "bold", "font_size", "italic", "text", "underline"],
+        "tooltip" => &[
+            "direction",
+            "align",
+            "bold",
+            "font_size",
+            "italic",
+            "text",
+            "underline",
+        ],
         "tree" => &[
             "row_links",
             "vertical_scrollbar",

@@ -142,6 +142,9 @@ pub enum Kind {
     Webcam,
     Video,
     CoverFlow,
+    Callout,
+    StickyNote,
+    Tooltip,
     Panel,
     FieldSet,
     List,
@@ -153,7 +156,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 62] = [
+    pub const ALL: [Kind; 65] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -207,6 +210,9 @@ impl Kind {
         Self::Webcam,
         Self::Video,
         Self::CoverFlow,
+        Self::Callout,
+        Self::StickyNote,
+        Self::Tooltip,
         Self::Panel,
         Self::FieldSet,
         Self::List,
@@ -272,6 +278,9 @@ impl Kind {
             Self::Webcam => "Webcam",
             Self::Video => "Video player",
             Self::CoverFlow => "Cover flow",
+            Self::Callout => "Callout",
+            Self::StickyNote => "Sticky note",
+            Self::Tooltip => "Tooltip",
             Self::Panel => "Window",
             Self::FieldSet => "Field set",
             Self::List => "List",
@@ -285,6 +294,7 @@ impl Kind {
     }
     pub fn category(self) -> &'static str {
         match self {
+            Self::Callout | Self::StickyNote | Self::Tooltip => "Markup",
             Self::Label
             | Self::Heading
             | Self::Paragraph
@@ -364,6 +374,9 @@ impl Kind {
             Self::Webcam => (177., 146.),
             Self::Video => (300., 200.),
             Self::CoverFlow => (493., 198.),
+            Self::Callout => (39., 39.),
+            Self::StickyNote => (109., 123.),
+            Self::Tooltip => (87., 33.),
             Self::Panel => (450., 400.),
             Self::FieldSet => (200., 170.),
             Self::List | Self::Table => (300., 180.),
@@ -377,6 +390,9 @@ impl Kind {
     pub fn initial_text(self) -> &'static str {
         match self {
             Self::Button | Self::PointedButton => "Button",
+            Self::Callout => "1",
+            Self::StickyNote => "A comment",
+            Self::Tooltip => "a tooltip",
             Self::IconLabel => "Icon Name",
             Self::MultilineButton => "Multiline Button\nSecond line of text",
             Self::ButtonBar => "One, Two, Three",

@@ -69,7 +69,7 @@ fn supported(kind: &str, key: &str) -> bool {
             kind == "window"
         }
         "tab_position" => matches!(kind, "tabs" | "vertical_tabs"),
-        "direction" => kind == "pointed_button",
+        "direction" => matches!(kind, "pointed_button" | "tooltip"),
         "label_position" => matches!(kind, "icon_label" | "circle_button"),
         "text" | "font_size" | "bold" | "italic" | "underline" | "text_color" | "align" => true,
         "sketch_filter" => matches!(kind, "image" | "cover_flow"),
@@ -148,6 +148,7 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "vertical_tabs"
                 | "tree"
                 | "field_set"
+                | "callout"
         ),
         "selected_index" => matches!(
             kind,
@@ -166,7 +167,9 @@ fn supported(kind: &str, key: &str) -> bool {
         "shape" | "search_icon" | "microphone_icon" => kind == "search",
         "fill" => matches!(
             kind,
-            "app_bar"
+            "callout"
+                | "sticky_note"
+                | "app_bar"
                 | "horizontal_slider"
                 | "vertical_slider"
                 | "field_set"
@@ -198,6 +201,10 @@ fn choice_label(value: &str) -> &str {
         "notched" => "Notched",
         "phone" => "Phone",
         "tablet" => "Tablet",
+        "top_left" => "Top left",
+        "top_right" => "Top right",
+        "bottom_left" => "Bottom left",
+        "bottom_right" => "Bottom right",
         "portrait" => "Portrait",
         "landscape" => "Landscape",
         "stretch" => "Stretch",
@@ -269,6 +276,9 @@ impl WireframeApp {
                 | "webcam"
                 | "video"
                 | "cover_flow"
+                | "callout"
+                | "sticky_note"
+                | "tooltip"
                 | "date_chooser"
                 | "checkbox"
                 | "radio"
@@ -598,9 +608,29 @@ mod tests {
         }
     }
     #[test]
+    fn annotation_inspector_fields_have_renderer_support() {
+        for (kind, fields) in [
+            ("callout", vec!["fill", "background_opacity", "text"]),
+            ("sticky_note", vec!["fill", "align", "text"]),
+            ("tooltip", vec!["direction", "align", "text"]),
+        ] {
+            for key in fields {
+                assert!(supported(kind, key));
+                assert!(
+                    wireframe::catalog::get(kind)
+                        .unwrap()
+                        .property(key)
+                        .unwrap()
+                        .visible
+                );
+            }
+        }
+    }
+    #[test]
     fn fractional_typing_is_one_undo_step_on_enter_or_blur() {
         for (kind, key) in [
             (Kind::FieldSet, "background_opacity"),
+            (Kind::Callout, "background_opacity"),
             (Kind::Browser, "value"),
         ] {
             for blur in [false, true] {

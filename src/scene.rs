@@ -141,6 +141,9 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
         | Kind::Webcam
         | Kind::Video
         | Kind::CoverFlow
+        | Kind::Callout
+        | Kind::StickyNote
+        | Kind::Tooltip
         | Kind::Alert
         | Kind::AppBar
         | Kind::FieldSet

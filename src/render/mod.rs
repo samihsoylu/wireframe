@@ -3,6 +3,7 @@
 //! Shared positioned drawing data for the canvas and vector/raster exports.
 mod accordion;
 mod alert;
+mod annotations;
 mod app_bar;
 mod browser;
 mod button_bar;
@@ -380,6 +381,9 @@ impl Scene {
             self.linear_control(layer, sketch);
             return Ok(());
         }
+        if matches!(c.kind, Kind::Callout | Kind::StickyNote | Kind::Tooltip) {
+            return self.annotation(layer, sketch, fonts);
+        }
         if c.kind == Kind::CoverFlow {
             self.cover_flow(layer, sketch, rasters);
             return Ok(());
@@ -547,6 +551,18 @@ impl Scene {
         fonts: &EguiMeasurer<'_>,
         options: PaintOptions,
     ) -> Result<(), String> {
+        self.text_rows(text, style, area, fonts, options, false)
+    }
+    #[allow(clippy::too_many_arguments)]
+    fn text_rows(
+        &mut self,
+        text: &RichText,
+        style: TextStyle,
+        area: TextBox,
+        fonts: &EguiMeasurer<'_>,
+        options: PaintOptions,
+        cull_outside_rows: bool,
+    ) -> Result<(), String> {
         let painted = fonts.rich_galley_with(
             text,
             style,
@@ -562,6 +578,14 @@ impl Scene {
         } else {
             0.
         };
+        let visible: Vec<bool> = painted
+            .rows
+            .iter()
+            .map(|row| {
+                !cull_outside_rows
+                    || (vertical + row.top + row.height >= 0. && vertical + row.top < area.bounds.h)
+            })
+            .collect();
         let mut widths = Vec::new();
         for (row_index, source_runs) in painted.runs.iter().enumerate() {
             let mut runs = source_runs.clone();
@@ -586,6 +610,9 @@ impl Scene {
                 painted.rows[row_index].width
             };
             widths.push(width);
+            if !visible[row_index] {
+                continue;
+            }
             let dx = area.bounds.x + area.align.offset(area.bounds.w, width);
             let dy = area.bounds.y + vertical;
             for run in runs {
@@ -628,6 +655,9 @@ impl Scene {
             }
         }
         for link in painted.links {
+            if !visible[link.row] {
+                continue;
+            }
             let width = widths[link.row];
             let dx = area.align.offset(area.bounds.w, width);
             let mut bounds = Bounds::new(

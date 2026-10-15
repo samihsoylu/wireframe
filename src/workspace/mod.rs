@@ -312,6 +312,9 @@ impl Editor {
                     | Kind::Webcam
                     | Kind::Video
                     | Kind::CoverFlow
+                    | Kind::Callout
+                    | Kind::StickyNote
+                    | Kind::Tooltip
                     | Kind::DateChooser
                     | Kind::FieldSet
                     | Kind::Button
@@ -367,6 +370,9 @@ impl Editor {
                     Kind::Webcam => "webcam",
                     Kind::Video => "video",
                     Kind::CoverFlow => "cover_flow",
+                    Kind::Callout => "callout",
+                    Kind::StickyNote => "sticky_note",
+                    Kind::Tooltip => "tooltip",
                     Kind::Button => "button",
                     Kind::TextInput => "text_input",
                     Kind::TextArea => "text_area",

@@ -56,3 +56,5 @@ pub mod media_controls;
 
 pub mod cover_flow;
 pub mod video;
+
+pub mod annotations;

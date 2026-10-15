@@ -57,6 +57,7 @@ pub enum DefaultValue {
     Ink,
     Fill,
     ButtonFill,
+    CalloutFill,
     SearchInk,
     FormInk,
     SliderInk,
@@ -161,6 +162,11 @@ impl PropertySpec {
             DefaultValue::FontSize => Value::Number(context.font_size as f64),
             DefaultValue::Ink => Value::Color(context.ink),
             DefaultValue::Fill => Value::Color(context.fill),
+            DefaultValue::CalloutFill => Value::Color(if context.sketch {
+                [255, 255, 0, 255]
+            } else {
+                [38, 117, 231, 255]
+            }),
             DefaultValue::ButtonFill => Value::Color(if context.sketch {
                 context.fill
             } else {
@@ -229,6 +235,7 @@ impl ControlSpec {
     }
     pub fn create(&self, id: u64, origin: Point) -> Node {
         let mut node = Node::control(id, self.id, origin, self.default_size);
+        node.markup = matches!(self.id, "callout" | "sticky_note");
         if self.id == "phone" {
             node.properties
                 .insert("device_model".into(), Value::Choice("notched".into()));

@@ -80,7 +80,7 @@ impl Editor {
         if let Some(layout) = cache.pages.get(&id) {
             return layout.clone();
         }
-        let (_, content) = self.surface(id).ok_or("Workspace no longer exists")?;
+        let (title, content) = self.surface(id).ok_or("Workspace no longer exists")?;
         let mut result = Err("Font layout did not run".into());
         let output = self.fonts.run_ui(egui::RawInput::default(), |ui| {
             let measurer = layout::EguiMeasurer {
@@ -93,7 +93,7 @@ impl Editor {
                 measurer: &measurer,
                 context: Context::default(),
             }
-            .layout(content);
+            .layout_named(content, title);
         });
         output.drop_without_applying_deltas();
         cache.pages.insert(id, result.clone());
@@ -357,6 +357,9 @@ pub(super) fn control(node: &LayoutNode) -> Control {
         "webcam" => Kind::Webcam,
         "video" => Kind::Video,
         "cover_flow" => Kind::CoverFlow,
+        "callout" => Kind::Callout,
+        "sticky_note" => Kind::StickyNote,
+        "tooltip" => Kind::Tooltip,
 
         "panel" | "window" => Kind::Panel,
         "field_set" => Kind::FieldSet,

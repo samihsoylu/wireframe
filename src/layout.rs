@@ -165,6 +165,15 @@ pub struct Engine<'a, M: TextMeasurer> {
 }
 impl<M: TextMeasurer> Engine<'_, M> {
     pub fn layout(&self, content: &Content) -> Result<Layout, String> {
+        let title = self
+            .project
+            .pages
+            .iter()
+            .find(|p| p.content == *content)
+            .map_or("", |p| p.name.as_str());
+        self.layout_named(content, title)
+    }
+    pub fn layout_named(&self, content: &Content, title: &str) -> Result<Layout, String> {
         let mut result = Layout {
             paint_order: if content.paint_order.is_empty() {
                 vec![]
@@ -181,6 +190,7 @@ impl<M: TextMeasurer> Engine<'_, M> {
             }
             result.nodes.push(self.node(
                 &expanded.root,
+                title,
                 Point::default(),
                 false,
                 false,
@@ -190,9 +200,11 @@ impl<M: TextMeasurer> Engine<'_, M> {
         }
         Ok(result)
     }
+    #[allow(clippy::too_many_arguments)]
     fn node(
         &self,
         node: &Node,
+        title: &str,
         parent: Point,
         locked: bool,
         markup: bool,
@@ -210,7 +222,10 @@ impl<M: TextMeasurer> Engine<'_, M> {
                 let mut context = self.context;
                 context.font_size = self.project.settings.font_size;
                 context.sketch = self.project.settings.sketch;
-                let props = spec.effective(node, &context).map_err(|e| e.to_string())?;
+                let mut props = spec.effective(node, &context).map_err(|e| e.to_string())?;
+                if crate::annotations::Family::for_id(kind).is_some() {
+                    props.insert("_page_title".into(), Value::Text(title.into()));
+                }
                 let (w, h) = self.measure(kind, &props, size.width, size.height, warnings)?;
                 (
                     Some(kind.clone()),
@@ -227,7 +242,7 @@ impl<M: TextMeasurer> Engine<'_, M> {
             NodeContent::Group { children } => {
                 let mut layouts = vec![];
                 for child in children {
-                    layouts.push(self.node(child, origin, locked, markup, path, warnings)?);
+                    layouts.push(self.node(child, title, origin, locked, markup, path, warnings)?);
                 }
                 let bounds = layouts
                     .iter()
@@ -457,6 +472,27 @@ impl<M: TextMeasurer> Engine<'_, M> {
             let h = match height {
                 Dimension::Auto => h,
                 Dimension::Fixed(v) => v,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
+        if let Some(family) = crate::annotations::Family::for_id(kind) {
+            let title = match props.get("_page_title") {
+                Some(Value::Text(s)) => s.as_str(),
+                _ => "",
+            };
+            let parsed = family.parse(text, title);
+            let (w, h) = family.intrinsic(
+                self.measurer.measure_rich(&parsed, style, None, true),
+                self.project.settings.sketch,
+            );
+            let w = match width {
+                Dimension::Auto => w,
+                Dimension::Fixed(w) => w,
+            };
+            let h = match height {
+                Dimension::Auto => h,
+                Dimension::Fixed(h) => h,
             };
             validate_size(w, h)?;
             return Ok((w, h));

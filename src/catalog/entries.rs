@@ -891,6 +891,10 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     let mut fill = prop("fill", "Fill", PropertyType::Color, Value::Color([255; 4]));
     fill.default = if c.id == "app_bar" {
         DefaultValue::Literal(Value::Color([221, 221, 221, 255]))
+    } else if c.id == "callout" {
+        DefaultValue::CalloutFill
+    } else if c.id == "sticky_note" {
+        DefaultValue::Literal(Value::Color([241, 194, 50, 255]))
     } else if c.id == "button" {
         DefaultValue::ButtonFill
     } else if c.id == "circle_button" {
@@ -948,6 +952,9 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "browser" => crate::browser::DEFAULT,
         "window" => crate::window::DEFAULT,
         "field_set" => crate::field_set::DEFAULT,
+        "callout" => "1",
+        "sticky_note" => "A comment",
+        "tooltip" => "a tooltip",
         "label" => "Some text",
         "heading" => "Title",
         "subtitle" => "Subtitle",
@@ -979,7 +986,8 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "align",
         "Alignment",
         &["left", "center", "right"],
-        if matches!(c.family, Family::Button) || c.id == "alert" {
+        if matches!(c.family, Family::Button) || matches!(c.id, "alert" | "sticky_note" | "tooltip")
+        {
             "center"
         } else {
             "left"
@@ -1185,7 +1193,15 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             boolean("status_bar", "Show status bar", true),
         ]);
     }
-    if c.id == "field_set" {
+    if c.id == "tooltip" {
+        c.properties.push(choice(
+            "direction",
+            "Pointer",
+            &["top_left", "top_right", "bottom_left", "bottom_right"],
+            "top_left",
+        ));
+    }
+    if matches!(c.id, "field_set" | "callout") {
         c.properties.push(number(
             "background_opacity",
             "Fill opacity",

@@ -141,6 +141,7 @@ pub enum Kind {
     Playback,
     Webcam,
     Video,
+    CoverFlow,
     Panel,
     FieldSet,
     List,
@@ -152,7 +153,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 61] = [
+    pub const ALL: [Kind; 62] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -205,6 +206,7 @@ impl Kind {
         Self::Playback,
         Self::Webcam,
         Self::Video,
+        Self::CoverFlow,
         Self::Panel,
         Self::FieldSet,
         Self::List,
@@ -269,6 +271,7 @@ impl Kind {
             Self::Playback => "Playback controls",
             Self::Webcam => "Webcam",
             Self::Video => "Video player",
+            Self::CoverFlow => "Cover flow",
             Self::Panel => "Window",
             Self::FieldSet => "Field set",
             Self::List => "List",
@@ -289,7 +292,9 @@ impl Kind {
             | Self::Breadcrumbs
             | Self::LinkBar => "Text",
             Self::Icon | Self::IconLabel => "Icons",
-            Self::VolumeSlider | Self::Playback | Self::Webcam | Self::Video => "Media",
+            Self::VolumeSlider | Self::Playback | Self::Webcam | Self::Video | Self::CoverFlow => {
+                "Media"
+            }
             Self::Button
             | Self::CircleButton
             | Self::PointedButton
@@ -358,6 +363,7 @@ impl Kind {
             Self::Playback => (110., 36.),
             Self::Webcam => (177., 146.),
             Self::Video => (300., 200.),
+            Self::CoverFlow => (493., 198.),
             Self::Panel => (450., 400.),
             Self::FieldSet => (200., 170.),
             Self::List | Self::Table => (300., 180.),
@@ -398,7 +404,8 @@ impl Kind {
             | Self::VolumeSlider
             | Self::Playback
             | Self::Webcam
-            | Self::Video => "",
+            | Self::Video
+            | Self::CoverFlow => "",
             Self::DateChooser => crate::date_controls::CHOOSER_DEFAULT,
             Self::Menu => crate::menu::MENU,
             Self::MenuBar => crate::menu::BAR,

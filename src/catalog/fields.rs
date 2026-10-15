@@ -194,7 +194,13 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "value",
             "vertical_scrollbar",
         ],
-        "cover_flow" => &["grayscale", "image", "rotation", "value"],
+        "cover_flow" => &[
+            "sketch_filter",
+            "image",
+            "rotation",
+            "vertical_scrollbar",
+            "value",
+        ],
         "vertical_brace" => &[
             "bold",
             "font_size",

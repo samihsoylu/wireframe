@@ -356,6 +356,7 @@ pub(super) fn control(node: &LayoutNode) -> Control {
         "playback" => Kind::Playback,
         "webcam" => Kind::Webcam,
         "video" => Kind::Video,
+        "cover_flow" => Kind::CoverFlow,
 
         "panel" | "window" => Kind::Panel,
         "field_set" => Kind::FieldSet,

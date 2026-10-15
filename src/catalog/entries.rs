@@ -1025,6 +1025,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             | "accordion"
             | "browser"
             | "window"
+            | "cover_flow"
     ) {
         c.properties.extend([
             boolean("vertical_scrollbar", "Scrollbar", false),
@@ -1232,12 +1233,16 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             ink.label = "Button color";
         }
     }
-    if matches!(c.id, "image" | "icon") {
+    if matches!(c.id, "image" | "icon" | "cover_flow") {
         let mut asset = prop("image", "Image", PropertyType::Asset, Value::Null);
         asset.nullable = true;
         c.properties.push(asset);
         c.properties
             .push(number("rotation", "Rotation", 0., 0., 359., true));
+    }
+    if c.id == "cover_flow" {
+        c.properties
+            .push(boolean("sketch_filter", "Sketch filter", false));
     }
     if c.id == "image" {
         c.properties.push(boolean("grayscale", "Grayscale", false));

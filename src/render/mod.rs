@@ -10,6 +10,7 @@ mod choice;
 mod choice_group;
 mod circle_button;
 mod control_icons;
+mod cover_flow;
 mod date_controls;
 mod dropdown;
 mod field_set;
@@ -377,6 +378,10 @@ impl Scene {
                 | Kind::VerticalSplitter
         ) {
             self.linear_control(layer, sketch);
+            return Ok(());
+        }
+        if c.kind == Kind::CoverFlow {
+            self.cover_flow(layer, sketch, rasters);
             return Ok(());
         }
         if c.kind == Kind::Video {

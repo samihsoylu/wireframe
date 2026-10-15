@@ -311,6 +311,7 @@ impl Editor {
                     | Kind::Playback
                     | Kind::Webcam
                     | Kind::Video
+                    | Kind::CoverFlow
                     | Kind::DateChooser
                     | Kind::FieldSet
                     | Kind::Button
@@ -365,6 +366,7 @@ impl Editor {
                     Kind::Playback => "playback",
                     Kind::Webcam => "webcam",
                     Kind::Video => "video",
+                    Kind::CoverFlow => "cover_flow",
                     Kind::Button => "button",
                     Kind::TextInput => "text_input",
                     Kind::TextArea => "text_area",

@@ -19,7 +19,13 @@ pub enum ImportChoice {
 impl Editor {
     /// Full and visible rectangles in workspace coordinates, plus the effective crop.
     pub fn image_geometry(&self, id: Id) -> Result<(Bounds, Bounds, Option<Crop>), String> {
-        self.editable_image(id)?;
+        self.editable_image_source(id)?;
+        if self
+            .control_properties(id)
+            .is_none_or(|(spec, _)| spec.id != "image")
+        {
+            return Err("Cropping requires an image control".into());
+        }
         let mut path = self.context.clone();
         path.push(id);
         let layout = self.layout_page(self.surface_id())?;
@@ -81,6 +87,15 @@ impl Editor {
         )
     }
     pub fn rotate_image(&mut self, id: Id) -> Result<(), String> {
+        self.editable_image_source(id)?;
+        if let Some((spec, props)) = self.control_properties(id)
+            && spec.id == "cover_flow"
+        {
+            let turns = (crate::images::quarter_turns(&props) + 3) % 4;
+            return self.component_change("Rotate image", |e| {
+                e.set_control_property(id, "rotation", Value::Number(f64::from(turns) * 90.))
+            });
+        }
         let (full, visible, crop) = self.image_geometry(id)?;
         let before = self
             .nodes()
@@ -162,7 +177,7 @@ impl Editor {
         }
         self.write_image_node(&before, after)
     }
-    fn editable_image(&self, id: Id) -> Result<(), String> {
+    fn editable_image_source(&self, id: Id) -> Result<(), String> {
         let c = self
             .current()
             .controls
@@ -174,7 +189,7 @@ impl Editor {
         }
         if self
             .control_properties(id)
-            .is_none_or(|(spec, _)| spec.id != "image")
+            .is_none_or(|(spec, _)| !matches!(spec.id, "image" | "cover_flow"))
         {
             return Err("Select an image control".into());
         }
@@ -197,7 +212,7 @@ impl Editor {
             .map(|a| a.id)
     }
     pub fn assign_image(&mut self, id: Id, asset: Option<Id>) -> Result<(), String> {
-        self.editable_image(id)?;
+        self.editable_image_source(id)?;
         if asset.is_some_and(|id| !self.document.assets.iter().any(|a| a.id == id)) {
             return Err("Image resource no longer exists".into());
         }
@@ -220,7 +235,7 @@ impl Editor {
         choice: ImportChoice,
     ) -> Result<Id, String> {
         match target {
-            ImageTarget::Control(id) => self.editable_image(id)?,
+            ImageTarget::Control(id) => self.editable_image_source(id)?,
             ImageTarget::Icon(id) => {
                 let (spec, _) = self
                     .control_properties(id)

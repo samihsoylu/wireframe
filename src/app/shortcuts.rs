@@ -107,7 +107,11 @@ impl WireframeApp {
                     && c.group.is_none()
                     && !matches!(
                         c.kind,
-                        Kind::VolumeSlider | Kind::Playback | Kind::Webcam | Kind::Video
+                        Kind::VolumeSlider
+                            | Kind::Playback
+                            | Kind::Webcam
+                            | Kind::Video
+                            | Kind::CoverFlow
                     )
                 {
                     self.text_edit = Some((c.id, c.text.clone()));

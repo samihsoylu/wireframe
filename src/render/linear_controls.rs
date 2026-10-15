@@ -6,7 +6,6 @@ impl Scene {
         let b = layer.control.bounds;
         let axis = crate::linear_controls::Axis::for_kind(layer.control.kind).unwrap();
         let vertical = axis.vertical;
-        let length = if vertical { b.h } else { b.w };
         let scroll = matches!(
             layer.control.kind,
             Kind::HorizontalScrollbar | Kind::VerticalScrollbar
@@ -15,12 +14,33 @@ impl Scene {
             Some(Value::Number(n)) => *n as f32,
             _ => 0.,
         };
+        self.draw_linear(b, vertical, scroll, value, sketch, layer.clip);
+    }
+    pub(super) fn horizontal_scrollbar(
+        &mut self,
+        b: Bounds,
+        value: f32,
+        sketch: bool,
+        clip: Option<Bounds>,
+    ) {
+        self.draw_linear(b, false, true, value, sketch, clip);
+    }
+    fn draw_linear(
+        &mut self,
+        b: Bounds,
+        vertical: bool,
+        scroll: bool,
+        value: f32,
+        sketch: bool,
+        parent_clip: Option<Bounds>,
+    ) {
+        let length = if vertical { b.h } else { b.w };
         let layout = if scroll {
             crate::linear_controls::scrollbar(vertical, length, value, sketch)
         } else {
             crate::linear_controls::splitter(vertical, length, sketch)
         };
-        let clip = clip_with(layer.clip, b);
+        let clip = clip_with(parent_clip, b);
         let translate = |r: Bounds| Bounds::new(b.x + r.x, b.y + r.y, r.w, r.h);
         let point = |along: f32, cross: f32| {
             if vertical {

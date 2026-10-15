@@ -69,7 +69,12 @@ pub fn scrollbar(vertical: bool, length: f32, value: f32, sketch: bool) -> Layou
     let along = 13. + (length - 48.) * value.clamp(0., 1.);
     Layout {
         frame,
-        background: Some(Bounds::new(2., 2., frame.w - 4., frame.h - 4.)),
+        background: Some(Bounds::new(
+            1.,
+            1.,
+            (frame.w - 2.).max(1.),
+            (frame.h - 2.).max(1.),
+        )),
         thumb: (length > 45.).then(|| {
             if vertical {
                 Bounds::new(4., along, 8., 21.)

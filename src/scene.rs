@@ -140,6 +140,7 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
         | Kind::Playback
         | Kind::Webcam
         | Kind::Video
+        | Kind::CoverFlow
         | Kind::Alert
         | Kind::AppBar
         | Kind::FieldSet

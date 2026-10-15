@@ -1,6 +1,6 @@
 # Scroll indicators and dividers
 
-Horizontal and Vertical scrollbars start at 100×16 and 16×100. The inspector controls their position from 0 to 1, starting at 0. A 21×8 thumb appears only when length exceeds 45. The short-axis thickness remains 16. These are illustrative controls for wireframes; their arrows do not scroll the editor.
+Horizontal and Vertical scrollbars start at 100×16 and 16×100. The inspector controls their position from 0 to 1, starting at 0. A 21×8 thumb appears only when length exceeds 45. The short-axis thickness remains 16. The background starts one unit inside the frame, with each dimension reduced by two and clamped to at least one. These are illustrative controls for wireframes; their arrows do not scroll the editor.
 
 Horizontal and Vertical splitters start at 100×12 and 12×100. They have two rails and a centered three-dot grip, with transparent space between marks. Their thickness remains 12 and they have no editable text or state.
 

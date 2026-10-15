@@ -16,7 +16,13 @@ pub(super) struct CropEdit {
 }
 
 impl WireframeApp {
-    pub(super) fn image_properties(&mut self, ui: &mut egui::Ui, id: Id, props: &Properties) {
+    pub(super) fn image_properties(
+        &mut self,
+        ui: &mut egui::Ui,
+        id: Id,
+        props: &Properties,
+        standalone: bool,
+    ) {
         let mut selected = match props.get("image") {
             Some(Value::Asset(id)) => Some(*id),
             _ => None,
@@ -66,7 +72,7 @@ impl WireframeApp {
                 {
                     self.error = Some(e);
                 }
-                if ui.button("Crop image").clicked() {
+                if standalone && ui.button("Crop image").clicked() {
                     let result = (|| {
                         let (full, _, crop) = self.editor.image_geometry(id)?;
                         let asset = self
@@ -102,18 +108,19 @@ impl WireframeApp {
                         Err(e) => self.error = Some(e),
                     }
                 }
-                if self
-                    .editor
-                    .nodes()
-                    .iter()
-                    .any(|n| n.id == id && n.crop.is_some())
+                if standalone
+                    && self
+                        .editor
+                        .nodes()
+                        .iter()
+                        .any(|n| n.id == id && n.crop.is_some())
                     && ui.button("Remove crop").clicked()
                     && let Err(e) = self.editor.crop_image(id, None)
                 {
                     self.error = Some(e);
                 }
             }
-            if ui.button("Auto-size").clicked() {
+            if standalone && ui.button("Auto-size").clicked() {
                 self.editor.begin("Auto-size image");
                 if let Err(e) = self.editor.auto_size_control(id) {
                     self.error = Some(e);

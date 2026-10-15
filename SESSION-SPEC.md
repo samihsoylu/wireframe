@@ -8,6 +8,16 @@ Work directly as Engineer. Preserve user files and explicit deferrals. Use synth
 
 ## Current checkpoint — 2026-10-15
 
+Cover Flow is implemented through the shared library, inspector, canvas and PNG/SVG renderer, bringing the implemented library to 62 families with 24 remaining. Its original seven-panel artwork supports independent sizing, embedded images, image-only quarter-turn rotation, sketch filtering and an optional horizontal scroll indicator. Shared scrollbar backgrounds now use a one-unit inset with a one-unit minimum dimension. See docs/COVER-FLOW.md.
+
+All 402 tests pass, including five new carousel tests and expanded app interaction cases. Final all-target Clippy, formatting and diff checks pass. External comparison matches 1,248 geometry cases within 0.000011 units and 64 solid interior samples within one channel value. Sixteen image-interior comparisons record resampling/filter differences; exact pixel or contour identity is not claimed. Native macOS verifies insertion, dimensions/minimums, import/rotation/filter/scrollbar/value/removal, Undo/Redo, full-process restart and byte-identical resave. Four native PNG/SVG exports match the shared renderer byte-for-byte. Component-local edits and one-unit selection have automated coverage; the attempted native one-unit click missed and establishes no result. Self-review only.
+
+Signed development bundle UUID 7714B165-E961-3C4B-96E9-4E41532BC167; signature and canonical executable identity verify. It runs the saved Image carousels gallery in Clean style at 40%, 23 controls/no selection, Library hidden. No build/test sessions remain.
+
+Exact artwork/fonts, broader minimum/group resizing, native component editing, nested clipping/snapping, clocks, held-library-drag onset/cadence/autoscroll, native Windows/Linux, recovery and release acceptance remain open. Continue targeted research before adding the remaining families. The overall goal remains active.
+
+Previous document-command checkpoint:
+
 Document keyboard commands now run once per event in input order. This fixes Undo→Save writing the previous state and repeated Undo presses collapsing within a frame. Save→Undo retains its intentionally earlier saved snapshot and marks the editor dirty. Modal/text/library-drag boundaries remain intact, and Command/Ctrl+Shift+N now adds a page before the less-specific New Project shortcut can consume it. See docs/KEYBOARD-COMMANDS.md.
 
 All 44 app tests pass, including seven new tests using real temporary files. Two regressions failed before the fix; the reversed Save/Undo case already passed. Existing text-local Undo, Quick Add, library preview and canvas interaction coverage passes. Final all-target Clippy, formatting and diff checks pass. The unchanged library/rendering tests retain the previous 390-test run; no full-suite rerun is claimed for this app-only change. Native macOS confirms rapid Undo/Save, Redo/Save, reversed Save/Undo, repeated Undo, New Page and full process restart/resave. Native saved documents match their expected states, with restart resave byte-identical. Self-review only.

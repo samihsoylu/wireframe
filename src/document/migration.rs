@@ -159,6 +159,7 @@ fn migrate_control(c: legacy::Control) -> Node {
         legacy::Kind::Playback => "playback",
         legacy::Kind::Webcam => "webcam",
         legacy::Kind::Video => "video",
+        legacy::Kind::CoverFlow => "cover_flow",
 
         legacy::Kind::Panel => "panel",
         legacy::Kind::FieldSet => "field_set",

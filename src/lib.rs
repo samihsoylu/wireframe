@@ -54,4 +54,5 @@ pub mod sliders;
 pub mod linear_controls;
 pub mod media_controls;
 
+pub mod cover_flow;
 pub mod video;

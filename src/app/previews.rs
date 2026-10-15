@@ -74,7 +74,10 @@ mod tests {
             clock: frozen,
             ..Default::default()
         };
-        for sketch in [true, false] {
+        for (font, sketch) in [None, Some(wireframe::fonts::default_project_font())]
+            .into_iter()
+            .flat_map(|font| [true, false].map(|sketch| (font.clone(), sketch)))
+        {
             let settings = Settings {
                 sketch,
                 font_size: 13.,
@@ -83,14 +86,19 @@ mod tests {
                 let mut editor = Editor::with_clock(
                     Project {
                         settings: settings.clone(),
+                        font: font.clone(),
                         ..Project::default()
                     },
                     frozen,
                 );
                 editor.add(kind, 0., 0.);
                 let expected = editor.rendered_scene(editor.page).unwrap();
-                let actual = previews.scene(kind, &settings, &None).unwrap();
-                assert_eq!(actual.svg(), expected.svg(), "{kind:?}, sketch={sketch}");
+                let actual = previews.scene(kind, &settings, &font).unwrap();
+                assert!(
+                    actual.svg() == expected.svg(),
+                    "{kind:?}, sketch={sketch}, embedded_font={}",
+                    font.is_some()
+                );
                 assert!(actual.bounds.w > 0. && actual.bounds.h > 0.);
             }
         }

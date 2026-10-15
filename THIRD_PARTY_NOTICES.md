@@ -358,6 +358,8 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 
 Comic Neue regular, bold, italic and bold italic are redistributed unchanged under OFL-1.1. Copyright 2014 The Comic Neue Project Authors. See [font license](assets/fonts/comic-neue/OFL.txt) and [provenance](assets/fonts/comic-neue/PROVENANCE.json).
 
+Wireframe Draft regular, bold, italic and bold italic are modified derivatives of Comic Neue Bold and Bold Italic, redistributed under OFL-1.1 with the original copyright retained. See [license](assets/fonts/wireframe-draft/OFL.txt), [modifications](assets/fonts/wireframe-draft/MODIFICATIONS.txt) and [reproducible build](docs/PROJECT-FONTS.md).
+
 ## Bundled icons
 
 Font Awesome Free 6.7.2 by Fonticons, Inc. is bundled under CC BY 4.0. SVG path data and dimensions are unchanged; metadata is compacted and free styles are selected. See [license](assets/icons/font-awesome-free/LICENSE.txt), [upstream](https://fontawesome.com), and [provenance](assets/icons/font-awesome-free/PROVENANCE.json). SVG and PNG exports containing these icons include attribution metadata.

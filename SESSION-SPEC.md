@@ -8,13 +8,13 @@ Work directly as Engineer. Preserve user files and explicit deferrals. Use synth
 
 ## Current checkpoint — 2026-10-15
 
-Notched phone frames now have rounded shoulders, short vertical necks and rounded lower corners in both styles. Original analytic geometry uses the existing fit/stretch and orientation transforms; transparent screen openings and the continuous frame mesh remain intact. See docs/PHONE-LAYOUT.md.
+New projects embed Wireframe Draft, a reproducibly built four-face drawing font derived from the retained OFL Comic Neue sources. Regular, bold, italic and bold italic remain distinct. Accented letters share their base-letter outlines; detached bold marks retain clearance. Copyright, OFL and modification notices ship with the font and project. See docs/PROJECT-FONTS.md.
 
-The four integrated scenarios retain 48 controls and five page links. Both project files and all six non-phone PNG outputs remain byte-identical to the preceding checkpoint. Two four-page PDFs retain five internal links each; all eight rendered pages were inspected. A raster regression verifies the notch neck, opening and solid body over underlying artwork in both orientations, sizing modes and styles. Existing small/extreme dimensions and other phone behaviors still pass.
+Existing files without a font resource keep Comic Neue. All eight legacy scenario renders remain byte-identical. The font dialog provides both bundled choices and supports undo. Native macOS checks cover new-project defaults, switching both ways, undo/save, full restart and explicit reopen; the saved scenario is byte-identical after resaving. The four integrated scenarios retain 48 controls and five links. Both four-page PDFs retain their links, searchable text and font notices; all eight rendered pages were inspected.
 
-All 570 tests, all-target Clippy and formatting pass. Native macOS inspection covers both styles in the phone contact scenario; Undo and Save restore the exact original project bytes. The signed debug bundle is running, UUID 33044FA1-9A68-3214-B867-3C3BC0383C5D, with Clean phone contact at 82%, no selection. No build/test jobs remain. Self-review only. Exact frame/detail weights, typography and other geometry differences remain; the overall goal is active.
+All 571 tests pass across the all-target run and corrected app-target rerun. One preview test initially compared different font settings; it now checks every catalog entry in both styles with both bundled choices. All-target Clippy, formatting and reproducible font generation pass. The signed debug bundle is running, UUID 5949A546-C849-32F6-9343-B776FCF86EE2, showing the Clean landing page at 85%, no selection. Self-review only. Native Windows/Linux typography and full release acceptance remain open.
 
-The previous PDF export checkpoint remains accepted: background immutable snapshots, atomic output, page/alternate selection, paper sizing, decoration, cancellation retention, Preview navigation and preserving an existing destination on failure. Remaining PDF typography, native close-during-export and sustained responsiveness checks are still open. Native Windows/Linux and full release acceptance are not established.
+The previous rounded notched-phone contour remains accepted. PDF export retains background immutable snapshots, atomic output, page/alternate selection, paper sizing, decoration, cancellation retention, Preview navigation and preserving an existing destination on failure. Remaining PDF typography, native close-during-export and sustained responsiveness checks are still open. Exact text tones, letter shapes, device details and drawing style differences remain; the overall goal is active.
 
 ## Existing capabilities and limits
 
@@ -24,7 +24,7 @@ Save, Save As, automatic/manual named saving, New/Open/close and local recovery 
 
 ## Next work and unresolved acceptance
 
-Keep the four integrated scenarios as repeatable acceptance fixtures. Prioritize typography and constrained wrapping while preserving distinct regular, bold, italic and bold-italic roles. Refine device geometry and drawing style details against the established specification. Continue canvas/export and native interaction checks without treating catalog coverage as complete fidelity.
+Keep the four integrated scenarios as repeatable acceptance fixtures. Continue text-tone, typography and constrained-wrapping comparisons while preserving distinct regular, bold, italic and bold-italic roles. Refine device geometry and drawing style details against the established specification. Continue canvas/export and native interaction checks without treating catalog coverage as complete fidelity.
 
 1. Continue targeted shared-interaction investigation: native held library-drag cadence, display-pixel alignment and library autoscroll. Six screen points is the current onset threshold, not an exact timing acceptance result. Do not repeat completed preview foundations or claim native held verification from post-release captures.
 2. Complete remaining group/component crop, lock and resize combinations, clipping, snapping and alignment behavior. Cropped-group ungrouping and group crop creation/adjustment/removal UI have scoped native acceptance; broader nested component combinations remain. Alternate versions, page hierarchy and presentation target/history behavior need broader acceptance.

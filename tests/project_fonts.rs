@@ -25,7 +25,11 @@ fn font() -> Arc<ProjectFont> {
     )
 }
 fn project() -> Project {
-    let mut p = Project::default();
+    // This fixture represents an existing document with no embedded font.
+    let mut p = Project {
+        font: None,
+        ..Project::default()
+    };
     let mut label = catalog::get("label").unwrap().create(2, Point::new(0., 0.));
     label
         .properties
@@ -36,6 +40,35 @@ fn project() -> Project {
     p.pages.push(second);
     p.next_id = 4;
     p
+}
+
+#[test]
+fn new_projects_embed_distinct_default_faces_without_restyling_old_files() {
+    let new = Project::default();
+    let family = new.font.as_ref().unwrap();
+    assert_eq!(family.name(), "Wireframe Draft");
+    let faces = family.faces();
+    for i in 0..4 {
+        ProjectFont::inspect_face(faces[i]).unwrap();
+        for other in &faces[i + 1..] {
+            assert_ne!(faces[i], *other);
+        }
+    }
+    assert!(
+        family
+            .notices()
+            .contains("Copyright 2014 The Comic Neue Project Authors")
+    );
+    assert!(family.notices().contains("SIL OPEN FONT LICENSE"));
+    assert!(family.notices().contains("Renamed Wireframe Draft"));
+    let saved = new.encode().unwrap();
+    assert_eq!(decode(&saved).unwrap(), new);
+    assert_eq!(decode(&saved).unwrap().encode().unwrap(), saved);
+    let old = project().encode().unwrap();
+    assert!(decode(&old).unwrap().font.is_none());
+    assert_eq!(decode(&old).unwrap().encode().unwrap(), old);
+    let second = Project::default();
+    assert!(Arc::ptr_eq(family, second.font.as_ref().unwrap()));
 }
 
 #[test]

@@ -39,10 +39,16 @@ impl WireframeApp {
                     ui.available_width(),
                 );
                 ui.label(
-                    "Imported fonts are saved in this project and used for its canvas and exports.",
+                    "Project fonts are saved with the document and used for its canvas and exports.",
                 );
+                let bundled = wireframe::fonts::default_project_font();
+                if self.editor.document.font.as_deref() != Some(bundled.as_ref())
+                    && ui.button("Use Wireframe Draft").clicked()
+                {
+                    apply = Some(bundled);
+                }
                 if self.editor.document.font.is_some()
-                    && ui.button("Use bundled Comic Neue").clicked()
+                    && ui.button("Use Comic Neue").clicked()
                 {
                     reset = true;
                 }

@@ -8,6 +8,38 @@ pub const BOLD: &[u8] = include_bytes!("../assets/fonts/comic-neue/ComicNeue-Bol
 pub const ITALIC: &[u8] = include_bytes!("../assets/fonts/comic-neue/ComicNeue-Italic.ttf");
 pub const BOLD_ITALIC: &[u8] =
     include_bytes!("../assets/fonts/comic-neue/ComicNeue-BoldItalic.ttf");
+
+/// New documents retain their font bytes, keeping their appearance stable when
+/// opened on another computer or after a later bundled-font update.
+pub fn default_project_font() -> std::sync::Arc<ProjectFont> {
+    static FONT: std::sync::OnceLock<std::sync::Arc<ProjectFont>> = std::sync::OnceLock::new();
+    FONT.get_or_init(|| {
+        std::sync::Arc::new(
+            ProjectFont::new(
+                "Wireframe Draft".into(),
+                [
+                    include_bytes!("../assets/fonts/wireframe-draft/WireframeDraft-Regular.ttf")
+                        .as_slice(),
+                    include_bytes!("../assets/fonts/wireframe-draft/WireframeDraft-Bold.ttf")
+                        .as_slice(),
+                    include_bytes!("../assets/fonts/wireframe-draft/WireframeDraft-Italic.ttf")
+                        .as_slice(),
+                    include_bytes!("../assets/fonts/wireframe-draft/WireframeDraft-BoldItalic.ttf")
+                        .as_slice(),
+                ]
+                .map(<[u8]>::to_vec),
+                concat!(
+                    include_str!("../assets/fonts/wireframe-draft/OFL.txt"),
+                    "\n",
+                    include_str!("../assets/fonts/wireframe-draft/MODIFICATIONS.txt")
+                )
+                .into(),
+            )
+            .expect("Bundled project font must be valid"),
+        )
+    })
+    .clone()
+}
 pub fn family(bold: bool, italic: bool) -> egui::FontFamily {
     egui::FontFamily::Name(
         match (bold, italic) {

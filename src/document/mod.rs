@@ -341,7 +341,7 @@ impl Default for Project {
             }],
             definitions: vec![],
             assets: vec![],
-            font: None,
+            font: Some(crate::fonts::default_project_font()),
         }
     }
 }

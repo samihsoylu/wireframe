@@ -1,0 +1,4039 @@
+[
+  {
+    "style": "Regular",
+    "source": "ComicNeue-Bold.ttf",
+    "source_sha256": "3e7e5fccfd7e0788f317b43312151c1bd5cf058c9697a8d83eac3939050bd61e",
+    "sha256": "043f1eca9e4cb6d2609931ad3f514f7f6d8463b68642a5a88ec43bdb520719f4",
+    "horizontal_scale": 1.02,
+    "stroke": 10.0,
+    "stroke_caps": [],
+    "mark_shifts": [],
+    "preserved_components": [
+      {
+        "glyph": "onequarter",
+        "parts": [
+          "uni00B9",
+          "fraction",
+          "uni2074"
+        ]
+      },
+      {
+        "glyph": "onehalf",
+        "parts": [
+          "uni00B2",
+          "uni00B9",
+          "fraction"
+        ]
+      },
+      {
+        "glyph": "threequarters",
+        "parts": [
+          "uni00B3",
+          "fraction",
+          "uni2074"
+        ]
+      },
+      {
+        "glyph": "Agrave",
+        "parts": [
+          "A",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Aacute",
+        "parts": [
+          "A",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Acircumflex",
+        "parts": [
+          "A",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Atilde",
+        "parts": [
+          "A",
+          "tildecomb.case"
+        ]
+      },
+      {
+        "glyph": "Adieresis",
+        "parts": [
+          "A",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Aring",
+        "parts": [
+          "A",
+          "uni030A.case"
+        ]
+      },
+      {
+        "glyph": "Egrave",
+        "parts": [
+          "E",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Eacute",
+        "parts": [
+          "E",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Ecircumflex",
+        "parts": [
+          "E",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Edieresis",
+        "parts": [
+          "E",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Igrave",
+        "parts": [
+          "I",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Iacute",
+        "parts": [
+          "I",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Icircumflex",
+        "parts": [
+          "I",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Idieresis",
+        "parts": [
+          "I",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Ntilde",
+        "parts": [
+          "N",
+          "tildecomb.case"
+        ]
+      },
+      {
+        "glyph": "Ograve",
+        "parts": [
+          "O",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Oacute",
+        "parts": [
+          "O",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Ocircumflex",
+        "parts": [
+          "O",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Otilde",
+        "parts": [
+          "O",
+          "tildecomb.case"
+        ]
+      },
+      {
+        "glyph": "Odieresis",
+        "parts": [
+          "O",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Ugrave",
+        "parts": [
+          "U",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Uacute",
+        "parts": [
+          "U",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Ucircumflex",
+        "parts": [
+          "U",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Udieresis",
+        "parts": [
+          "U",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Yacute",
+        "parts": [
+          "Y",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "agrave",
+        "parts": [
+          "a",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "aacute",
+        "parts": [
+          "a",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "acircumflex",
+        "parts": [
+          "a",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "atilde",
+        "parts": [
+          "a",
+          "tildecomb"
+        ]
+      },
+      {
+        "glyph": "adieresis",
+        "parts": [
+          "a",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "aring",
+        "parts": [
+          "a",
+          "uni030A"
+        ]
+      },
+      {
+        "glyph": "egrave",
+        "parts": [
+          "e",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "eacute",
+        "parts": [
+          "e",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "ecircumflex",
+        "parts": [
+          "e",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "edieresis",
+        "parts": [
+          "e",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "igrave",
+        "parts": [
+          "dotlessi",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "iacute",
+        "parts": [
+          "dotlessi",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "icircumflex",
+        "parts": [
+          "dotlessi",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "idieresis",
+        "parts": [
+          "dotlessi",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "ntilde",
+        "parts": [
+          "n",
+          "tildecomb"
+        ]
+      },
+      {
+        "glyph": "ograve",
+        "parts": [
+          "o",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "oacute",
+        "parts": [
+          "o",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "ocircumflex",
+        "parts": [
+          "o",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "otilde",
+        "parts": [
+          "o",
+          "tildecomb"
+        ]
+      },
+      {
+        "glyph": "odieresis",
+        "parts": [
+          "o",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "ugrave",
+        "parts": [
+          "u",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "uacute",
+        "parts": [
+          "u",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "ucircumflex",
+        "parts": [
+          "u",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "udieresis",
+        "parts": [
+          "u",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "yacute",
+        "parts": [
+          "y",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "ydieresis",
+        "parts": [
+          "y",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "amacron",
+        "parts": [
+          "a",
+          "uni0304"
+        ]
+      },
+      {
+        "glyph": "Abreve",
+        "parts": [
+          "A",
+          "uni0306.case"
+        ]
+      },
+      {
+        "glyph": "abreve",
+        "parts": [
+          "a",
+          "uni0306"
+        ]
+      },
+      {
+        "glyph": "Cacute",
+        "parts": [
+          "C",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "cacute",
+        "parts": [
+          "c",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Ccircumflex",
+        "parts": [
+          "C",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "ccircumflex",
+        "parts": [
+          "c",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "Ccaron",
+        "parts": [
+          "C",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "ccaron",
+        "parts": [
+          "c",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "Dcaron",
+        "parts": [
+          "D",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "dcaron",
+        "parts": [
+          "d",
+          "uni030C.alt"
+        ]
+      },
+      {
+        "glyph": "Ecaron",
+        "parts": [
+          "E",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "ecaron",
+        "parts": [
+          "e",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "Gcircumflex",
+        "parts": [
+          "G",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "gcircumflex",
+        "parts": [
+          "g",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "Hcircumflex",
+        "parts": [
+          "H",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "hcircumflex",
+        "parts": [
+          "h",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Jcircumflex",
+        "parts": [
+          "J",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "jcircumflex",
+        "parts": [
+          "uni0237",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "Lacute",
+        "parts": [
+          "L",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "lacute",
+        "parts": [
+          "l",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Lcaron",
+        "parts": [
+          "L",
+          "uni030C.alt"
+        ]
+      },
+      {
+        "glyph": "lcaron",
+        "parts": [
+          "l",
+          "uni030C.alt"
+        ]
+      },
+      {
+        "glyph": "Nacute",
+        "parts": [
+          "N",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "nacute",
+        "parts": [
+          "n",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Ncaron",
+        "parts": [
+          "N",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "ncaron",
+        "parts": [
+          "n",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "Ohungarumlaut",
+        "parts": [
+          "O",
+          "uni030B.case"
+        ]
+      },
+      {
+        "glyph": "ohungarumlaut",
+        "parts": [
+          "o",
+          "uni030B"
+        ]
+      },
+      {
+        "glyph": "Racute",
+        "parts": [
+          "R",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "racute",
+        "parts": [
+          "r",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Rcaron",
+        "parts": [
+          "R",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "rcaron",
+        "parts": [
+          "r",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "Sacute",
+        "parts": [
+          "S",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "sacute",
+        "parts": [
+          "s",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Scircumflex",
+        "parts": [
+          "S",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "scircumflex",
+        "parts": [
+          "s",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "Scaron",
+        "parts": [
+          "S",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "scaron",
+        "parts": [
+          "s",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "uni021A",
+        "parts": [
+          "T",
+          "uni0326"
+        ]
+      },
+      {
+        "glyph": "uni021B",
+        "parts": [
+          "t",
+          "uni0326"
+        ]
+      },
+      {
+        "glyph": "Tcaron",
+        "parts": [
+          "T",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "tcaron",
+        "parts": [
+          "t",
+          "uni030C.alt"
+        ]
+      },
+      {
+        "glyph": "Ubreve",
+        "parts": [
+          "U",
+          "uni0306.case"
+        ]
+      },
+      {
+        "glyph": "ubreve",
+        "parts": [
+          "u",
+          "uni0306"
+        ]
+      },
+      {
+        "glyph": "Uring",
+        "parts": [
+          "U",
+          "uni030A.case"
+        ]
+      },
+      {
+        "glyph": "uring",
+        "parts": [
+          "u",
+          "uni030A"
+        ]
+      },
+      {
+        "glyph": "Uhungarumlaut",
+        "parts": [
+          "U",
+          "uni030B.case"
+        ]
+      },
+      {
+        "glyph": "uhungarumlaut",
+        "parts": [
+          "u",
+          "uni030B"
+        ]
+      },
+      {
+        "glyph": "Ydieresis",
+        "parts": [
+          "Y",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Zacute",
+        "parts": [
+          "Z",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "zacute",
+        "parts": [
+          "z",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Zdotaccent",
+        "parts": [
+          "Z",
+          "uni0307.case"
+        ]
+      },
+      {
+        "glyph": "zdotaccent",
+        "parts": [
+          "z",
+          "uni0307"
+        ]
+      },
+      {
+        "glyph": "Zcaron",
+        "parts": [
+          "Z",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "zcaron",
+        "parts": [
+          "z",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "quotedblleft",
+        "parts": [
+          "quoteleft",
+          "quoteleft"
+        ]
+      },
+      {
+        "glyph": "quotedblright",
+        "parts": [
+          "quoteright",
+          "quoteright"
+        ]
+      },
+      {
+        "glyph": "zero.tf",
+        "parts": [
+          "zero"
+        ]
+      },
+      {
+        "glyph": "two.tf",
+        "parts": [
+          "two"
+        ]
+      },
+      {
+        "glyph": "three.tf",
+        "parts": [
+          "three"
+        ]
+      },
+      {
+        "glyph": "five.tf",
+        "parts": [
+          "five"
+        ]
+      },
+      {
+        "glyph": "six.tf",
+        "parts": [
+          "six"
+        ]
+      },
+      {
+        "glyph": "eight.tf",
+        "parts": [
+          "eight"
+        ]
+      },
+      {
+        "glyph": "nine.tf",
+        "parts": [
+          "nine"
+        ]
+      },
+      {
+        "glyph": "guillemotleft",
+        "parts": [
+          "guilsinglleft",
+          "guilsinglleft"
+        ]
+      },
+      {
+        "glyph": "guillemotright",
+        "parts": [
+          "guilsinglright",
+          "guilsinglright"
+        ]
+      }
+    ],
+    "glyphs": 328,
+    "cmap_entries": 303,
+    "ink_y_bounds": [
+      -240,
+      938
+    ],
+    "win_ascent": 1000,
+    "win_descent": 350,
+    "typo_ascent": 900,
+    "typo_descent": -250
+  },
+  {
+    "style": "Bold",
+    "source": "ComicNeue-Bold.ttf",
+    "source_sha256": "3e7e5fccfd7e0788f317b43312151c1bd5cf058c9697a8d83eac3939050bd61e",
+    "sha256": "986b255c61d7602b26e2344effb96ce33af01a072a9341a32ce20e9cda94f00d",
+    "horizontal_scale": 1.02,
+    "stroke": 34.0,
+    "stroke_caps": [
+      {
+        "glyph": "percent",
+        "requested": 34.0,
+        "actual": 31.0
+      },
+      {
+        "glyph": "plusminus",
+        "requested": 34.0,
+        "actual": 30.0
+      },
+      {
+        "glyph": "divide",
+        "requested": 34.0,
+        "actual": 32.0
+      },
+      {
+        "glyph": "hungarumlaut",
+        "requested": 34.0,
+        "actual": 30.0
+      },
+      {
+        "glyph": "trademark",
+        "requested": 34.0,
+        "actual": 31.0
+      },
+      {
+        "glyph": "uni030B",
+        "requested": 34.0,
+        "actual": 30.0
+      },
+      {
+        "glyph": "uni030B.case",
+        "requested": 34.0,
+        "actual": 23.0
+      }
+    ],
+    "mark_shifts": [
+      {
+        "glyph": "uni0308",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni0307",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "gravecomb",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "acutecomb",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni030B",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni030C.alt",
+        "dx": 24,
+        "dy": 0
+      },
+      {
+        "glyph": "uni0302",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni030C",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni0306",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni030A",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "tildecomb",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni0304",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni0326",
+        "dx": 0,
+        "dy": -24
+      },
+      {
+        "glyph": "uni0308.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni0307.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "gravecomb.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "acutecomb.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni030B.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni0302.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni030C.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni0306.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni030A.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "tildecomb.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni0304.case",
+        "dx": 0,
+        "dy": 24
+      }
+    ],
+    "preserved_components": [
+      {
+        "glyph": "onequarter",
+        "parts": [
+          "uni00B9",
+          "fraction",
+          "uni2074"
+        ]
+      },
+      {
+        "glyph": "onehalf",
+        "parts": [
+          "uni00B2",
+          "uni00B9",
+          "fraction"
+        ]
+      },
+      {
+        "glyph": "threequarters",
+        "parts": [
+          "uni00B3",
+          "fraction",
+          "uni2074"
+        ]
+      },
+      {
+        "glyph": "Agrave",
+        "parts": [
+          "A",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Aacute",
+        "parts": [
+          "A",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Acircumflex",
+        "parts": [
+          "A",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Atilde",
+        "parts": [
+          "A",
+          "tildecomb.case"
+        ]
+      },
+      {
+        "glyph": "Adieresis",
+        "parts": [
+          "A",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Aring",
+        "parts": [
+          "A",
+          "uni030A.case"
+        ]
+      },
+      {
+        "glyph": "Egrave",
+        "parts": [
+          "E",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Eacute",
+        "parts": [
+          "E",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Ecircumflex",
+        "parts": [
+          "E",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Edieresis",
+        "parts": [
+          "E",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Igrave",
+        "parts": [
+          "I",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Iacute",
+        "parts": [
+          "I",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Icircumflex",
+        "parts": [
+          "I",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Idieresis",
+        "parts": [
+          "I",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Ntilde",
+        "parts": [
+          "N",
+          "tildecomb.case"
+        ]
+      },
+      {
+        "glyph": "Ograve",
+        "parts": [
+          "O",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Oacute",
+        "parts": [
+          "O",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Ocircumflex",
+        "parts": [
+          "O",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Otilde",
+        "parts": [
+          "O",
+          "tildecomb.case"
+        ]
+      },
+      {
+        "glyph": "Odieresis",
+        "parts": [
+          "O",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Ugrave",
+        "parts": [
+          "U",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Uacute",
+        "parts": [
+          "U",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Ucircumflex",
+        "parts": [
+          "U",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Udieresis",
+        "parts": [
+          "U",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Yacute",
+        "parts": [
+          "Y",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "agrave",
+        "parts": [
+          "a",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "aacute",
+        "parts": [
+          "a",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "acircumflex",
+        "parts": [
+          "a",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "atilde",
+        "parts": [
+          "a",
+          "tildecomb"
+        ]
+      },
+      {
+        "glyph": "adieresis",
+        "parts": [
+          "a",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "aring",
+        "parts": [
+          "a",
+          "uni030A"
+        ]
+      },
+      {
+        "glyph": "egrave",
+        "parts": [
+          "e",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "eacute",
+        "parts": [
+          "e",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "ecircumflex",
+        "parts": [
+          "e",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "edieresis",
+        "parts": [
+          "e",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "igrave",
+        "parts": [
+          "dotlessi",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "iacute",
+        "parts": [
+          "dotlessi",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "icircumflex",
+        "parts": [
+          "dotlessi",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "idieresis",
+        "parts": [
+          "dotlessi",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "ntilde",
+        "parts": [
+          "n",
+          "tildecomb"
+        ]
+      },
+      {
+        "glyph": "ograve",
+        "parts": [
+          "o",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "oacute",
+        "parts": [
+          "o",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "ocircumflex",
+        "parts": [
+          "o",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "otilde",
+        "parts": [
+          "o",
+          "tildecomb"
+        ]
+      },
+      {
+        "glyph": "odieresis",
+        "parts": [
+          "o",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "ugrave",
+        "parts": [
+          "u",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "uacute",
+        "parts": [
+          "u",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "ucircumflex",
+        "parts": [
+          "u",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "udieresis",
+        "parts": [
+          "u",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "yacute",
+        "parts": [
+          "y",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "ydieresis",
+        "parts": [
+          "y",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "amacron",
+        "parts": [
+          "a",
+          "uni0304"
+        ]
+      },
+      {
+        "glyph": "Abreve",
+        "parts": [
+          "A",
+          "uni0306.case"
+        ]
+      },
+      {
+        "glyph": "abreve",
+        "parts": [
+          "a",
+          "uni0306"
+        ]
+      },
+      {
+        "glyph": "Cacute",
+        "parts": [
+          "C",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "cacute",
+        "parts": [
+          "c",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Ccircumflex",
+        "parts": [
+          "C",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "ccircumflex",
+        "parts": [
+          "c",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "Ccaron",
+        "parts": [
+          "C",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "ccaron",
+        "parts": [
+          "c",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "Dcaron",
+        "parts": [
+          "D",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "dcaron",
+        "parts": [
+          "d",
+          "uni030C.alt"
+        ]
+      },
+      {
+        "glyph": "Ecaron",
+        "parts": [
+          "E",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "ecaron",
+        "parts": [
+          "e",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "Gcircumflex",
+        "parts": [
+          "G",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "gcircumflex",
+        "parts": [
+          "g",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "Hcircumflex",
+        "parts": [
+          "H",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "hcircumflex",
+        "parts": [
+          "h",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Jcircumflex",
+        "parts": [
+          "J",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "jcircumflex",
+        "parts": [
+          "uni0237",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "Lacute",
+        "parts": [
+          "L",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "lacute",
+        "parts": [
+          "l",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Lcaron",
+        "parts": [
+          "L",
+          "uni030C.alt"
+        ]
+      },
+      {
+        "glyph": "lcaron",
+        "parts": [
+          "l",
+          "uni030C.alt"
+        ]
+      },
+      {
+        "glyph": "Nacute",
+        "parts": [
+          "N",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "nacute",
+        "parts": [
+          "n",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Ncaron",
+        "parts": [
+          "N",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "ncaron",
+        "parts": [
+          "n",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "Ohungarumlaut",
+        "parts": [
+          "O",
+          "uni030B.case"
+        ]
+      },
+      {
+        "glyph": "ohungarumlaut",
+        "parts": [
+          "o",
+          "uni030B"
+        ]
+      },
+      {
+        "glyph": "Racute",
+        "parts": [
+          "R",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "racute",
+        "parts": [
+          "r",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Rcaron",
+        "parts": [
+          "R",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "rcaron",
+        "parts": [
+          "r",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "Sacute",
+        "parts": [
+          "S",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "sacute",
+        "parts": [
+          "s",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Scircumflex",
+        "parts": [
+          "S",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "scircumflex",
+        "parts": [
+          "s",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "Scaron",
+        "parts": [
+          "S",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "scaron",
+        "parts": [
+          "s",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "uni021A",
+        "parts": [
+          "T",
+          "uni0326"
+        ]
+      },
+      {
+        "glyph": "uni021B",
+        "parts": [
+          "t",
+          "uni0326"
+        ]
+      },
+      {
+        "glyph": "Tcaron",
+        "parts": [
+          "T",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "tcaron",
+        "parts": [
+          "t",
+          "uni030C.alt"
+        ]
+      },
+      {
+        "glyph": "Ubreve",
+        "parts": [
+          "U",
+          "uni0306.case"
+        ]
+      },
+      {
+        "glyph": "ubreve",
+        "parts": [
+          "u",
+          "uni0306"
+        ]
+      },
+      {
+        "glyph": "Uring",
+        "parts": [
+          "U",
+          "uni030A.case"
+        ]
+      },
+      {
+        "glyph": "uring",
+        "parts": [
+          "u",
+          "uni030A"
+        ]
+      },
+      {
+        "glyph": "Uhungarumlaut",
+        "parts": [
+          "U",
+          "uni030B.case"
+        ]
+      },
+      {
+        "glyph": "uhungarumlaut",
+        "parts": [
+          "u",
+          "uni030B"
+        ]
+      },
+      {
+        "glyph": "Ydieresis",
+        "parts": [
+          "Y",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Zacute",
+        "parts": [
+          "Z",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "zacute",
+        "parts": [
+          "z",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Zdotaccent",
+        "parts": [
+          "Z",
+          "uni0307.case"
+        ]
+      },
+      {
+        "glyph": "zdotaccent",
+        "parts": [
+          "z",
+          "uni0307"
+        ]
+      },
+      {
+        "glyph": "Zcaron",
+        "parts": [
+          "Z",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "zcaron",
+        "parts": [
+          "z",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "quotedblleft",
+        "parts": [
+          "quoteleft",
+          "quoteleft"
+        ]
+      },
+      {
+        "glyph": "quotedblright",
+        "parts": [
+          "quoteright",
+          "quoteright"
+        ]
+      },
+      {
+        "glyph": "zero.tf",
+        "parts": [
+          "zero"
+        ]
+      },
+      {
+        "glyph": "two.tf",
+        "parts": [
+          "two"
+        ]
+      },
+      {
+        "glyph": "three.tf",
+        "parts": [
+          "three"
+        ]
+      },
+      {
+        "glyph": "five.tf",
+        "parts": [
+          "five"
+        ]
+      },
+      {
+        "glyph": "six.tf",
+        "parts": [
+          "six"
+        ]
+      },
+      {
+        "glyph": "eight.tf",
+        "parts": [
+          "eight"
+        ]
+      },
+      {
+        "glyph": "nine.tf",
+        "parts": [
+          "nine"
+        ]
+      },
+      {
+        "glyph": "guillemotleft",
+        "parts": [
+          "guilsinglleft",
+          "guilsinglleft"
+        ]
+      },
+      {
+        "glyph": "guillemotright",
+        "parts": [
+          "guilsinglright",
+          "guilsinglright"
+        ]
+      }
+    ],
+    "glyphs": 328,
+    "cmap_entries": 303,
+    "ink_y_bounds": [
+      -276,
+      974
+    ],
+    "win_ascent": 1000,
+    "win_descent": 350,
+    "typo_ascent": 900,
+    "typo_descent": -250
+  },
+  {
+    "style": "Italic",
+    "source": "ComicNeue-BoldItalic.ttf",
+    "source_sha256": "5c312c2a2fa64eee82f3b87fcfab8f3b12a5e59b043124401d322eb323cfbf16",
+    "sha256": "bd1b88404fc4154398ad7aff3d37158d025367b87312df396379c890f67184eb",
+    "horizontal_scale": 1.02,
+    "stroke": 10.0,
+    "stroke_caps": [],
+    "mark_shifts": [],
+    "preserved_components": [
+      {
+        "glyph": "onequarter",
+        "parts": [
+          "uni00B9",
+          "fraction",
+          "uni2074"
+        ]
+      },
+      {
+        "glyph": "onehalf",
+        "parts": [
+          "uni00B9",
+          "fraction",
+          "uni00B2"
+        ]
+      },
+      {
+        "glyph": "threequarters",
+        "parts": [
+          "uni00B9",
+          "fraction",
+          "uni2074"
+        ]
+      },
+      {
+        "glyph": "Agrave",
+        "parts": [
+          "A",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Aacute",
+        "parts": [
+          "A",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Acircumflex",
+        "parts": [
+          "A",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Atilde",
+        "parts": [
+          "A",
+          "tildecomb.case"
+        ]
+      },
+      {
+        "glyph": "Adieresis",
+        "parts": [
+          "A",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Aring",
+        "parts": [
+          "A",
+          "uni030A.case"
+        ]
+      },
+      {
+        "glyph": "Egrave",
+        "parts": [
+          "E",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Eacute",
+        "parts": [
+          "E",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Ecircumflex",
+        "parts": [
+          "E",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Edieresis",
+        "parts": [
+          "E",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Igrave",
+        "parts": [
+          "I",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Iacute",
+        "parts": [
+          "I",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Icircumflex",
+        "parts": [
+          "I",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Idieresis",
+        "parts": [
+          "I",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Ntilde",
+        "parts": [
+          "N",
+          "tildecomb.case"
+        ]
+      },
+      {
+        "glyph": "Ograve",
+        "parts": [
+          "O",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Oacute",
+        "parts": [
+          "O",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Ocircumflex",
+        "parts": [
+          "O",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Otilde",
+        "parts": [
+          "O",
+          "tildecomb.case"
+        ]
+      },
+      {
+        "glyph": "Odieresis",
+        "parts": [
+          "O",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Ugrave",
+        "parts": [
+          "U",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Uacute",
+        "parts": [
+          "U",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Ucircumflex",
+        "parts": [
+          "U",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Udieresis",
+        "parts": [
+          "U",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Yacute",
+        "parts": [
+          "Y",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "agrave",
+        "parts": [
+          "a",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "aacute",
+        "parts": [
+          "a",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "acircumflex",
+        "parts": [
+          "a",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "atilde",
+        "parts": [
+          "a",
+          "tildecomb"
+        ]
+      },
+      {
+        "glyph": "adieresis",
+        "parts": [
+          "a",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "aring",
+        "parts": [
+          "a",
+          "uni030A"
+        ]
+      },
+      {
+        "glyph": "egrave",
+        "parts": [
+          "e",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "eacute",
+        "parts": [
+          "e",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "ecircumflex",
+        "parts": [
+          "e",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "edieresis",
+        "parts": [
+          "e",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "igrave",
+        "parts": [
+          "dotlessi",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "iacute",
+        "parts": [
+          "dotlessi",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "icircumflex",
+        "parts": [
+          "dotlessi",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "idieresis",
+        "parts": [
+          "dotlessi",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "ntilde",
+        "parts": [
+          "n",
+          "tildecomb"
+        ]
+      },
+      {
+        "glyph": "ograve",
+        "parts": [
+          "o",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "oacute",
+        "parts": [
+          "o",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "ocircumflex",
+        "parts": [
+          "o",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "otilde",
+        "parts": [
+          "o",
+          "tildecomb"
+        ]
+      },
+      {
+        "glyph": "odieresis",
+        "parts": [
+          "o",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "ugrave",
+        "parts": [
+          "u",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "uacute",
+        "parts": [
+          "u",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "ucircumflex",
+        "parts": [
+          "u",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "udieresis",
+        "parts": [
+          "u",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "yacute",
+        "parts": [
+          "y",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "ydieresis",
+        "parts": [
+          "y",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "Amacron",
+        "parts": [
+          "A",
+          "uni0304.case"
+        ]
+      },
+      {
+        "glyph": "amacron",
+        "parts": [
+          "a",
+          "uni0304"
+        ]
+      },
+      {
+        "glyph": "Abreve",
+        "parts": [
+          "A",
+          "uni0306.case"
+        ]
+      },
+      {
+        "glyph": "abreve",
+        "parts": [
+          "a",
+          "uni0306"
+        ]
+      },
+      {
+        "glyph": "Cacute",
+        "parts": [
+          "C",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "cacute",
+        "parts": [
+          "c",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Ccircumflex",
+        "parts": [
+          "C",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "ccircumflex",
+        "parts": [
+          "c",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "Ccaron",
+        "parts": [
+          "C",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "ccaron",
+        "parts": [
+          "c",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "Dcaron",
+        "parts": [
+          "D",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "dcaron",
+        "parts": [
+          "d",
+          "uni030C.alt"
+        ]
+      },
+      {
+        "glyph": "Dcroat",
+        "parts": [
+          "Eth"
+        ]
+      },
+      {
+        "glyph": "Ecaron",
+        "parts": [
+          "E",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "ecaron",
+        "parts": [
+          "e",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "Gcircumflex",
+        "parts": [
+          "G",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "gcircumflex",
+        "parts": [
+          "g",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "Hcircumflex",
+        "parts": [
+          "H",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "hcircumflex",
+        "parts": [
+          "h",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Jcircumflex",
+        "parts": [
+          "J",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "jcircumflex",
+        "parts": [
+          "uni0237",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "Lacute",
+        "parts": [
+          "L",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "lacute",
+        "parts": [
+          "l",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Lcaron",
+        "parts": [
+          "L",
+          "uni030C.alt"
+        ]
+      },
+      {
+        "glyph": "lcaron",
+        "parts": [
+          "l",
+          "uni030C.alt"
+        ]
+      },
+      {
+        "glyph": "Nacute",
+        "parts": [
+          "N",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "nacute",
+        "parts": [
+          "n",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Ncaron",
+        "parts": [
+          "N",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "ncaron",
+        "parts": [
+          "n",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "Ohungarumlaut",
+        "parts": [
+          "O",
+          "uni030B.case"
+        ]
+      },
+      {
+        "glyph": "ohungarumlaut",
+        "parts": [
+          "o",
+          "uni030B"
+        ]
+      },
+      {
+        "glyph": "Racute",
+        "parts": [
+          "R",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "racute",
+        "parts": [
+          "r",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Rcaron",
+        "parts": [
+          "R",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "rcaron",
+        "parts": [
+          "r",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "Sacute",
+        "parts": [
+          "S",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "sacute",
+        "parts": [
+          "s",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Scircumflex",
+        "parts": [
+          "S",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "scircumflex",
+        "parts": [
+          "s",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "Scaron",
+        "parts": [
+          "S",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "scaron",
+        "parts": [
+          "s",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "Tcaron",
+        "parts": [
+          "T",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "tcaron",
+        "parts": [
+          "t",
+          "uni030C.alt"
+        ]
+      },
+      {
+        "glyph": "Ubreve",
+        "parts": [
+          "U",
+          "uni0306.case"
+        ]
+      },
+      {
+        "glyph": "ubreve",
+        "parts": [
+          "u",
+          "uni0306"
+        ]
+      },
+      {
+        "glyph": "Uring",
+        "parts": [
+          "U",
+          "uni030A.case"
+        ]
+      },
+      {
+        "glyph": "uring",
+        "parts": [
+          "u",
+          "uni030A"
+        ]
+      },
+      {
+        "glyph": "Uhungarumlaut",
+        "parts": [
+          "U",
+          "uni030B.case"
+        ]
+      },
+      {
+        "glyph": "uhungarumlaut",
+        "parts": [
+          "u",
+          "uni030B"
+        ]
+      },
+      {
+        "glyph": "Ydieresis",
+        "parts": [
+          "Y",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Zacute",
+        "parts": [
+          "Z",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "zacute",
+        "parts": [
+          "z",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Zdotaccent",
+        "parts": [
+          "Z",
+          "uni0307.case"
+        ]
+      },
+      {
+        "glyph": "zdotaccent",
+        "parts": [
+          "z",
+          "uni0307"
+        ]
+      },
+      {
+        "glyph": "Zcaron",
+        "parts": [
+          "Z",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "zcaron",
+        "parts": [
+          "z",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "uni021A",
+        "parts": [
+          "T",
+          "uni0326.case"
+        ]
+      },
+      {
+        "glyph": "quotesinglbase",
+        "parts": [
+          "quoteright"
+        ]
+      },
+      {
+        "glyph": "quotedblleft",
+        "parts": [
+          "quoteleft",
+          "quoteleft"
+        ]
+      },
+      {
+        "glyph": "quotedblright",
+        "parts": [
+          "quoteright",
+          "quoteright"
+        ]
+      },
+      {
+        "glyph": "quotedblbase",
+        "parts": [
+          "quoteright",
+          "quoteright"
+        ]
+      },
+      {
+        "glyph": "zero.tf",
+        "parts": [
+          "zero"
+        ]
+      },
+      {
+        "glyph": "two.tf",
+        "parts": [
+          "two"
+        ]
+      },
+      {
+        "glyph": "three.tf",
+        "parts": [
+          "three"
+        ]
+      },
+      {
+        "glyph": "five.tf",
+        "parts": [
+          "five"
+        ]
+      },
+      {
+        "glyph": "six.tf",
+        "parts": [
+          "six"
+        ]
+      },
+      {
+        "glyph": "eight.tf",
+        "parts": [
+          "eight"
+        ]
+      },
+      {
+        "glyph": "nine.tf",
+        "parts": [
+          "nine"
+        ]
+      },
+      {
+        "glyph": "uni1E3E",
+        "parts": [
+          "M",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Wacute",
+        "parts": [
+          "W",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Wcircumflex",
+        "parts": [
+          "W",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Wdieresis",
+        "parts": [
+          "W",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Wgrave",
+        "parts": [
+          "W",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Ycircumflex",
+        "parts": [
+          "Y",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Ygrave",
+        "parts": [
+          "Y",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "uni1E3F",
+        "parts": [
+          "m",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "uni021B",
+        "parts": [
+          "t",
+          "uni0326"
+        ]
+      },
+      {
+        "glyph": "wacute",
+        "parts": [
+          "w",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "wcircumflex",
+        "parts": [
+          "w",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "wdieresis",
+        "parts": [
+          "w",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "wgrave",
+        "parts": [
+          "w",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "ycircumflex",
+        "parts": [
+          "y",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "ygrave",
+        "parts": [
+          "y",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "guillemotleft",
+        "parts": [
+          "guilsinglleft",
+          "guilsinglleft"
+        ]
+      },
+      {
+        "glyph": "guillemotright",
+        "parts": [
+          "guilsinglright",
+          "guilsinglright"
+        ]
+      }
+    ],
+    "glyphs": 344,
+    "cmap_entries": 319,
+    "ink_y_bounds": [
+      -241,
+      944
+    ],
+    "win_ascent": 1000,
+    "win_descent": 350,
+    "typo_ascent": 900,
+    "typo_descent": -250
+  },
+  {
+    "style": "BoldItalic",
+    "source": "ComicNeue-BoldItalic.ttf",
+    "source_sha256": "5c312c2a2fa64eee82f3b87fcfab8f3b12a5e59b043124401d322eb323cfbf16",
+    "sha256": "a33b075e3973a1b5e7bdf03dd8822cc26eebf02081ccc3b62186f19fb2a6632d",
+    "horizontal_scale": 1.02,
+    "stroke": 34.0,
+    "stroke_caps": [
+      {
+        "glyph": "percent",
+        "requested": 34.0,
+        "actual": 27.0
+      },
+      {
+        "glyph": "plusminus",
+        "requested": 34.0,
+        "actual": 30.0
+      },
+      {
+        "glyph": "paragraph",
+        "requested": 34.0,
+        "actual": 33.0
+      },
+      {
+        "glyph": "divide",
+        "requested": 34.0,
+        "actual": 32.0
+      },
+      {
+        "glyph": "hungarumlaut",
+        "requested": 34.0,
+        "actual": 27.0
+      },
+      {
+        "glyph": "trademark",
+        "requested": 34.0,
+        "actual": 21.0
+      },
+      {
+        "glyph": "uni2074",
+        "requested": 34.0,
+        "actual": 24.0
+      },
+      {
+        "glyph": "uni030B",
+        "requested": 34.0,
+        "actual": 27.0
+      },
+      {
+        "glyph": "uni030B.case",
+        "requested": 34.0,
+        "actual": 20.0
+      }
+    ],
+    "mark_shifts": [
+      {
+        "glyph": "uni0326",
+        "dx": 0,
+        "dy": -24
+      },
+      {
+        "glyph": "uni0308",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni0307",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "gravecomb",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "acutecomb",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni030B",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni030C.alt",
+        "dx": 24,
+        "dy": 0
+      },
+      {
+        "glyph": "uni0302",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni030C",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni0306",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni030A",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "tildecomb",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni0304",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni0308.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni0307.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "gravecomb.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "acutecomb.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni030B.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni0302.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni030C.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni0306.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni030A.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "tildecomb.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni0304.case",
+        "dx": 0,
+        "dy": 24
+      },
+      {
+        "glyph": "uni0326.case",
+        "dx": 0,
+        "dy": -24
+      }
+    ],
+    "preserved_components": [
+      {
+        "glyph": "onequarter",
+        "parts": [
+          "uni00B9",
+          "fraction",
+          "uni2074"
+        ]
+      },
+      {
+        "glyph": "onehalf",
+        "parts": [
+          "uni00B9",
+          "fraction",
+          "uni00B2"
+        ]
+      },
+      {
+        "glyph": "threequarters",
+        "parts": [
+          "uni00B9",
+          "fraction",
+          "uni2074"
+        ]
+      },
+      {
+        "glyph": "Agrave",
+        "parts": [
+          "A",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Aacute",
+        "parts": [
+          "A",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Acircumflex",
+        "parts": [
+          "A",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Atilde",
+        "parts": [
+          "A",
+          "tildecomb.case"
+        ]
+      },
+      {
+        "glyph": "Adieresis",
+        "parts": [
+          "A",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Aring",
+        "parts": [
+          "A",
+          "uni030A.case"
+        ]
+      },
+      {
+        "glyph": "Egrave",
+        "parts": [
+          "E",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Eacute",
+        "parts": [
+          "E",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Ecircumflex",
+        "parts": [
+          "E",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Edieresis",
+        "parts": [
+          "E",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Igrave",
+        "parts": [
+          "I",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Iacute",
+        "parts": [
+          "I",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Icircumflex",
+        "parts": [
+          "I",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Idieresis",
+        "parts": [
+          "I",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Ntilde",
+        "parts": [
+          "N",
+          "tildecomb.case"
+        ]
+      },
+      {
+        "glyph": "Ograve",
+        "parts": [
+          "O",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Oacute",
+        "parts": [
+          "O",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Ocircumflex",
+        "parts": [
+          "O",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Otilde",
+        "parts": [
+          "O",
+          "tildecomb.case"
+        ]
+      },
+      {
+        "glyph": "Odieresis",
+        "parts": [
+          "O",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Ugrave",
+        "parts": [
+          "U",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Uacute",
+        "parts": [
+          "U",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Ucircumflex",
+        "parts": [
+          "U",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Udieresis",
+        "parts": [
+          "U",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Yacute",
+        "parts": [
+          "Y",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "agrave",
+        "parts": [
+          "a",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "aacute",
+        "parts": [
+          "a",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "acircumflex",
+        "parts": [
+          "a",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "atilde",
+        "parts": [
+          "a",
+          "tildecomb"
+        ]
+      },
+      {
+        "glyph": "adieresis",
+        "parts": [
+          "a",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "aring",
+        "parts": [
+          "a",
+          "uni030A"
+        ]
+      },
+      {
+        "glyph": "egrave",
+        "parts": [
+          "e",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "eacute",
+        "parts": [
+          "e",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "ecircumflex",
+        "parts": [
+          "e",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "edieresis",
+        "parts": [
+          "e",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "igrave",
+        "parts": [
+          "dotlessi",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "iacute",
+        "parts": [
+          "dotlessi",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "icircumflex",
+        "parts": [
+          "dotlessi",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "idieresis",
+        "parts": [
+          "dotlessi",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "ntilde",
+        "parts": [
+          "n",
+          "tildecomb"
+        ]
+      },
+      {
+        "glyph": "ograve",
+        "parts": [
+          "o",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "oacute",
+        "parts": [
+          "o",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "ocircumflex",
+        "parts": [
+          "o",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "otilde",
+        "parts": [
+          "o",
+          "tildecomb"
+        ]
+      },
+      {
+        "glyph": "odieresis",
+        "parts": [
+          "o",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "ugrave",
+        "parts": [
+          "u",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "uacute",
+        "parts": [
+          "u",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "ucircumflex",
+        "parts": [
+          "u",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "udieresis",
+        "parts": [
+          "u",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "yacute",
+        "parts": [
+          "y",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "ydieresis",
+        "parts": [
+          "y",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "Amacron",
+        "parts": [
+          "A",
+          "uni0304.case"
+        ]
+      },
+      {
+        "glyph": "amacron",
+        "parts": [
+          "a",
+          "uni0304"
+        ]
+      },
+      {
+        "glyph": "Abreve",
+        "parts": [
+          "A",
+          "uni0306.case"
+        ]
+      },
+      {
+        "glyph": "abreve",
+        "parts": [
+          "a",
+          "uni0306"
+        ]
+      },
+      {
+        "glyph": "Cacute",
+        "parts": [
+          "C",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "cacute",
+        "parts": [
+          "c",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Ccircumflex",
+        "parts": [
+          "C",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "ccircumflex",
+        "parts": [
+          "c",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "Ccaron",
+        "parts": [
+          "C",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "ccaron",
+        "parts": [
+          "c",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "Dcaron",
+        "parts": [
+          "D",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "dcaron",
+        "parts": [
+          "d",
+          "uni030C.alt"
+        ]
+      },
+      {
+        "glyph": "Dcroat",
+        "parts": [
+          "Eth"
+        ]
+      },
+      {
+        "glyph": "Ecaron",
+        "parts": [
+          "E",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "ecaron",
+        "parts": [
+          "e",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "Gcircumflex",
+        "parts": [
+          "G",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "gcircumflex",
+        "parts": [
+          "g",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "Hcircumflex",
+        "parts": [
+          "H",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "hcircumflex",
+        "parts": [
+          "h",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Jcircumflex",
+        "parts": [
+          "J",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "jcircumflex",
+        "parts": [
+          "uni0237",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "Lacute",
+        "parts": [
+          "L",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "lacute",
+        "parts": [
+          "l",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Lcaron",
+        "parts": [
+          "L",
+          "uni030C.alt"
+        ]
+      },
+      {
+        "glyph": "lcaron",
+        "parts": [
+          "l",
+          "uni030C.alt"
+        ]
+      },
+      {
+        "glyph": "Nacute",
+        "parts": [
+          "N",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "nacute",
+        "parts": [
+          "n",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Ncaron",
+        "parts": [
+          "N",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "ncaron",
+        "parts": [
+          "n",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "Ohungarumlaut",
+        "parts": [
+          "O",
+          "uni030B.case"
+        ]
+      },
+      {
+        "glyph": "ohungarumlaut",
+        "parts": [
+          "o",
+          "uni030B"
+        ]
+      },
+      {
+        "glyph": "Racute",
+        "parts": [
+          "R",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "racute",
+        "parts": [
+          "r",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Rcaron",
+        "parts": [
+          "R",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "rcaron",
+        "parts": [
+          "r",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "Sacute",
+        "parts": [
+          "S",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "sacute",
+        "parts": [
+          "s",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Scircumflex",
+        "parts": [
+          "S",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "scircumflex",
+        "parts": [
+          "s",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "Scaron",
+        "parts": [
+          "S",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "scaron",
+        "parts": [
+          "s",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "Tcaron",
+        "parts": [
+          "T",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "tcaron",
+        "parts": [
+          "t",
+          "uni030C.alt"
+        ]
+      },
+      {
+        "glyph": "Ubreve",
+        "parts": [
+          "U",
+          "uni0306.case"
+        ]
+      },
+      {
+        "glyph": "ubreve",
+        "parts": [
+          "u",
+          "uni0306"
+        ]
+      },
+      {
+        "glyph": "Uring",
+        "parts": [
+          "U",
+          "uni030A.case"
+        ]
+      },
+      {
+        "glyph": "uring",
+        "parts": [
+          "u",
+          "uni030A"
+        ]
+      },
+      {
+        "glyph": "Uhungarumlaut",
+        "parts": [
+          "U",
+          "uni030B.case"
+        ]
+      },
+      {
+        "glyph": "uhungarumlaut",
+        "parts": [
+          "u",
+          "uni030B"
+        ]
+      },
+      {
+        "glyph": "Ydieresis",
+        "parts": [
+          "Y",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Zacute",
+        "parts": [
+          "Z",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "zacute",
+        "parts": [
+          "z",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "Zdotaccent",
+        "parts": [
+          "Z",
+          "uni0307.case"
+        ]
+      },
+      {
+        "glyph": "zdotaccent",
+        "parts": [
+          "z",
+          "uni0307"
+        ]
+      },
+      {
+        "glyph": "Zcaron",
+        "parts": [
+          "Z",
+          "uni030C.case"
+        ]
+      },
+      {
+        "glyph": "zcaron",
+        "parts": [
+          "z",
+          "uni030C"
+        ]
+      },
+      {
+        "glyph": "uni021A",
+        "parts": [
+          "T",
+          "uni0326.case"
+        ]
+      },
+      {
+        "glyph": "quotesinglbase",
+        "parts": [
+          "quoteright"
+        ]
+      },
+      {
+        "glyph": "quotedblleft",
+        "parts": [
+          "quoteleft",
+          "quoteleft"
+        ]
+      },
+      {
+        "glyph": "quotedblright",
+        "parts": [
+          "quoteright",
+          "quoteright"
+        ]
+      },
+      {
+        "glyph": "quotedblbase",
+        "parts": [
+          "quoteright",
+          "quoteright"
+        ]
+      },
+      {
+        "glyph": "zero.tf",
+        "parts": [
+          "zero"
+        ]
+      },
+      {
+        "glyph": "two.tf",
+        "parts": [
+          "two"
+        ]
+      },
+      {
+        "glyph": "three.tf",
+        "parts": [
+          "three"
+        ]
+      },
+      {
+        "glyph": "five.tf",
+        "parts": [
+          "five"
+        ]
+      },
+      {
+        "glyph": "six.tf",
+        "parts": [
+          "six"
+        ]
+      },
+      {
+        "glyph": "eight.tf",
+        "parts": [
+          "eight"
+        ]
+      },
+      {
+        "glyph": "nine.tf",
+        "parts": [
+          "nine"
+        ]
+      },
+      {
+        "glyph": "uni1E3E",
+        "parts": [
+          "M",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Wacute",
+        "parts": [
+          "W",
+          "acutecomb.case"
+        ]
+      },
+      {
+        "glyph": "Wcircumflex",
+        "parts": [
+          "W",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Wdieresis",
+        "parts": [
+          "W",
+          "uni0308.case"
+        ]
+      },
+      {
+        "glyph": "Wgrave",
+        "parts": [
+          "W",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "Ycircumflex",
+        "parts": [
+          "Y",
+          "uni0302.case"
+        ]
+      },
+      {
+        "glyph": "Ygrave",
+        "parts": [
+          "Y",
+          "gravecomb.case"
+        ]
+      },
+      {
+        "glyph": "uni1E3F",
+        "parts": [
+          "m",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "uni021B",
+        "parts": [
+          "t",
+          "uni0326"
+        ]
+      },
+      {
+        "glyph": "wacute",
+        "parts": [
+          "w",
+          "acutecomb"
+        ]
+      },
+      {
+        "glyph": "wcircumflex",
+        "parts": [
+          "w",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "wdieresis",
+        "parts": [
+          "w",
+          "uni0308"
+        ]
+      },
+      {
+        "glyph": "wgrave",
+        "parts": [
+          "w",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "ycircumflex",
+        "parts": [
+          "y",
+          "uni0302"
+        ]
+      },
+      {
+        "glyph": "ygrave",
+        "parts": [
+          "y",
+          "gravecomb"
+        ]
+      },
+      {
+        "glyph": "guillemotleft",
+        "parts": [
+          "guilsinglleft",
+          "guilsinglleft"
+        ]
+      },
+      {
+        "glyph": "guillemotright",
+        "parts": [
+          "guilsinglright",
+          "guilsinglright"
+        ]
+      }
+    ],
+    "glyphs": 344,
+    "cmap_entries": 319,
+    "ink_y_bounds": [
+      -277,
+      980
+    ],
+    "win_ascent": 1000,
+    "win_descent": 350,
+    "typo_ascent": 900,
+    "typo_descent": -250
+  }
+]

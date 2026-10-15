@@ -8,6 +8,17 @@ Work directly as Engineer. Preserve user files and explicit deferrals. Use synth
 
 ## Current checkpoint — 2026-10-15
 
+Popover and Site map now use the library, Quick Add, typed inspector and shared canvas/PNG/SVG renderer. The available catalog has 86 entries. Popover supports four pointer sides, five positions, rich text, fill and linked Auto-size. Site map computes its layout from hierarchy text, supports two orientations and per-node destinations, and populates labels plus page links atomically. Malformed text keeps destinations available during repair. See docs/DIAGRAMS.md.
+
+The full regression run passed 455 tests. After final inspector changes, 50 app tests passed; after a final thin-panel winding correction, six diagram tests passed. Final all-target Clippy, formatting and diff checks pass. Geometry checks match 1,672 cases through 22,980 assertions, with 48 deliberately different readable error-card cases. Sixty scoped image checks pass. Self-review found and fixed overlapping fill triangles and reversed winding for extremely thin saved panels. Exact contours, typography and rasterization remain different.
+
+Native macOS verifies insertion, dimension minimums/Undo, pointer direction/position, Auto-size, text history, map orientation, project population and per-node destination history. The manual fixture survives a full-process restart and resaves byte-for-byte on the final build. The 38-control gallery also resaves unchanged; all four final native PNG/SVG exports equal generated renders. Automated checks cover component-local population, link preservation through invalid text, storage and tiny geometry. Native component editing, presentation link activation and Windows/Linux were not performed. Self-review only.
+
+Signed development bundle UUID 1627E774-1ACF-37CE-AB05-34441C27510A; signature and canonical executable identity verify. The app runs the saved Panels and page maps gallery in Clean style at 20%, 38 controls/no selection, Library hidden. No build/test sessions remain. The catalog inventory is covered; full product fidelity is not complete. Next prioritize shared interaction and recovery requirements, including held library-drag cadence/autoscroll, legacy shape/rule behavior, group/component/clipping/snapping/clock behavior, native Windows/Linux and release acceptance. The overall goal remains active.
+
+Previous accepted checkpoint:
+
+
 Formatting toolbar, Street map, Modal overlay and Vertical rule now use the library, Quick Add, typed inspector and shared canvas/PNG/SVG renderer. The available catalog has 84 entries, with two remaining. Toolbar and rule retain fixed thickness; map and overlay resize independently. Editable dimensions have a ten-unit minimum while smaller saved geometry is retained. See docs/STATIC-LAYOUTS.md.
 
 All 449 tests pass, including six focused tests and 50 app tests. Final all-target Clippy, formatting and diff checks pass. Controlled comparison matches 800 geometry cases through 6,526 assertions. Fifty-four image checks pass. Visual review caught map partition seams, corrected by drawing one mesh surface. The solid Sketch rule also uses an explicit mesh. Original map/rule contours, toolbar typography and rasterization still differ; exact visual identity is not claimed.

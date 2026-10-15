@@ -64,3 +64,6 @@ pub mod annotations;
 
 pub mod charts;
 pub mod markup;
+
+pub mod popover;
+pub mod site_map;

@@ -304,6 +304,25 @@ impl<M: TextMeasurer> Engine<'_, M> {
             bold: boolean(props, "bold"),
             italic: boolean(props, "italic"),
         };
+        if kind == "popover" {
+            let w = match width {
+                Dimension::Auto => 222.,
+                Dimension::Fixed(v) => v,
+            };
+            let h = match height {
+                Dimension::Auto => 187.,
+                Dimension::Fixed(v) => v,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
+        if kind == "site_map" {
+            let horizontal =
+                matches!(props.get("direction"),Some(Value::Choice(v)) if v == "horizontal");
+            let l = crate::site_map::Tree::parse(text).layout(self.measurer, style, horizontal);
+            validate_size(l.width, l.height)?;
+            return Ok((l.width, l.height));
+        }
         if let Some(size) = crate::static_layouts::size(kind, width, height) {
             validate_size(size.0, size.1)?;
             return Ok(size);

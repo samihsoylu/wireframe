@@ -14,6 +14,7 @@ mod circle_button;
 mod control_icons;
 mod cover_flow;
 mod date_controls;
+mod diagrams;
 mod dropdown;
 mod field_set;
 mod forms;
@@ -345,6 +346,9 @@ impl Scene {
             Kind::FormattingToolbar | Kind::StreetMap | Kind::ModalOverlay | Kind::VerticalRule
         ) {
             return self.static_layout(layer, sketch, fonts);
+        }
+        if matches!(c.kind, Kind::Popover | Kind::SiteMap) {
+            return self.diagram(layer, sketch, fonts);
         }
         if c.kind == Kind::Calendar {
             return self.calendar_control(layer, sketch, fonts);

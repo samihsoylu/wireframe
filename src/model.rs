@@ -93,6 +93,8 @@ pub enum Kind {
     Label,
     Heading,
     Subtitle,
+    Popover,
+    SiteMap,
     FormattingToolbar,
     StreetMap,
     ModalOverlay,
@@ -177,11 +179,13 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 84] = [
+    pub const ALL: [Kind; 86] = [
         Self::Button,
         Self::Label,
         Self::Heading,
         Self::Subtitle,
+        Self::Popover,
+        Self::SiteMap,
         Self::FormattingToolbar,
         Self::StreetMap,
         Self::ModalOverlay,
@@ -269,6 +273,8 @@ impl Kind {
             Self::Label => "Text label",
             Self::Heading => "Heading",
             Self::Subtitle => "Subtitle",
+            Self::Popover => "Popover",
+            Self::SiteMap => "Site map",
             Self::FormattingToolbar => "Formatting toolbar",
             Self::StreetMap => "Street map",
             Self::ModalOverlay => "Modal overlay",
@@ -357,7 +363,8 @@ impl Kind {
         match self {
             Self::FormattingToolbar | Self::VerticalRule => "Layout",
             Self::StreetMap => "Media",
-            Self::ModalOverlay => "Containers",
+            Self::ModalOverlay | Self::Popover => "Containers",
+            Self::SiteMap => "Navigation",
             Self::Callout
             | Self::StickyNote
             | Self::Tooltip
@@ -419,6 +426,8 @@ impl Kind {
             Self::Label | Self::Link => (140., 28.),
             Self::Heading => (300., 44.),
             Self::Subtitle => (140., 28.),
+            Self::Popover => (222., 187.),
+            Self::SiteMap => (340., 310.),
             Self::FormattingToolbar => (261., 29.),
             Self::StreetMap => (252., 222.),
             Self::ModalOverlay => (318., 240.),
@@ -520,6 +529,8 @@ impl Kind {
             Self::Label => "Some text",
             Self::Heading => "Title",
             Self::Subtitle => "Subtitle",
+            Self::Popover => "",
+            Self::SiteMap => crate::site_map::DEFAULT,
             Self::FormattingToolbar => "",
             Self::StreetMap => "",
             Self::ModalOverlay => "",

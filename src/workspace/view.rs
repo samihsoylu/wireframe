@@ -310,6 +310,8 @@ pub(super) fn control(node: &LayoutNode) -> Control {
         "heading" => Kind::Heading,
         "subtitle" => Kind::Subtitle,
         "formatting_toolbar" => Kind::FormattingToolbar,
+        "popover" => Kind::Popover,
+        "site_map" => Kind::SiteMap,
         "map" => Kind::StreetMap,
         "modal_overlay" => Kind::ModalOverlay,
         "vertical_rule" => Kind::VerticalRule,

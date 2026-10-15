@@ -282,6 +282,8 @@ impl Editor {
             if matches!(
                 kind,
                 Kind::Heading
+                    | Kind::Popover
+                    | Kind::SiteMap
                     | Kind::FormattingToolbar
                     | Kind::StreetMap
                     | Kind::ModalOverlay
@@ -397,6 +399,8 @@ impl Editor {
                     Kind::PieChart => "pie_chart",
                     Kind::Heading => "heading",
                     Kind::Subtitle => "subtitle",
+                    Kind::Popover => "popover",
+                    Kind::SiteMap => "site_map",
                     Kind::FormattingToolbar => "formatting_toolbar",
                     Kind::StreetMap => "map",
                     Kind::ModalOverlay => "modal_overlay",
@@ -626,6 +630,7 @@ impl Editor {
                                 | Kind::MenuBar
                                 | Kind::MobileMenu
                                 | Kind::Tree
+                                | Kind::SiteMap
                                 | Kind::Accordion
                                 | Kind::Alert
                                 | Kind::ButtonBar
@@ -650,6 +655,8 @@ impl Editor {
                                 crate::alert::apply_text
                             } else if c.kind == Kind::Accordion {
                                 crate::accordion::apply_text
+                            } else if c.kind == Kind::SiteMap {
+                                crate::site_map::apply_text
                             } else if c.kind == Kind::Tree {
                                 crate::tree::apply_text
                             } else if c.kind == Kind::ButtonBar {

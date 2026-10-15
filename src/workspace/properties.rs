@@ -43,6 +43,7 @@ impl Editor {
                 | "accordion"
                 | "alert"
                 | "app_bar"
+                | "site_map"
         ) {
             return None;
         }
@@ -71,7 +72,7 @@ impl Editor {
             .collect::<Vec<_>>();
         let nodes = children(&resolved, &self.context)?;
         let node = nodes.iter().find(|n| n.id == id)?;
-        if !matches!(&node.content,NodeContent::Control{kind,..} if matches!(kind.as_str(), "list" | "button_bar" | "breadcrumbs" | "link_bar" | "tabs" | "vertical_tabs" | "checkbox_group" | "radio_group" | "menu" | "menu_bar" | "mobile_menu" | "tree" | "accordion" | "alert" | "app_bar"))
+        if !matches!(&node.content,NodeContent::Control{kind,..} if matches!(kind.as_str(), "list" | "button_bar" | "breadcrumbs" | "link_bar" | "tabs" | "vertical_tabs" | "checkbox_group" | "radio_group" | "menu" | "menu_bar" | "mobile_menu" | "tree" | "accordion" | "alert" | "app_bar" | "site_map"))
         {
             return None;
         }
@@ -162,6 +163,8 @@ impl Editor {
                 crate::accordion::apply_text(&mut edited, &text, &baseline)?;
             } else if matches!(&edited.content,NodeContent::Control {kind,..} if kind=="alert") {
                 crate::alert::apply_text(&mut edited, &text, &baseline)?;
+            } else if matches!(&edited.content,NodeContent::Control {kind,..} if kind=="site_map") {
+                crate::site_map::apply_text(&mut edited, &text, &baseline)?;
             } else if matches!(&edited.content,NodeContent::Control {kind,..} if kind=="tree") {
                 crate::tree::apply_text(&mut edited, &text, &baseline)?;
             } else if matches!(&edited.content,NodeContent::Control {kind,..} if kind=="button_bar")
@@ -253,6 +256,47 @@ impl Editor {
         spec.reset_property(node, key).map_err(|e| e.to_string())
     }
 
+    /// Replace diagram labels and destinations together inside the caller's transaction.
+    pub fn populate_site_map(&mut self, id: Id) -> Result<(), String> {
+        let (spec, _) = self.control_properties(id).ok_or("Select a site map")?;
+        if spec.id != "site_map" {
+            return Err("Select a site map".into());
+        }
+        let before = self
+            .nodes()
+            .iter()
+            .find(|n| n.id == id)
+            .cloned()
+            .ok_or("Control no longer exists")?;
+        if before.locked {
+            return Err("Unlock the control before editing".into());
+        }
+        let mut edited = before.clone();
+        let (text, links) = crate::site_map::from_project(&self.document);
+        spec.set_property(
+            &mut edited,
+            "text",
+            Value::Text(text),
+            &self.property_context(),
+        )
+        .map_err(|e| e.to_string())?;
+        spec.set_property(
+            &mut edited,
+            "row_links",
+            Value::Links(links),
+            &self.property_context(),
+        )
+        .map_err(|e| e.to_string())?;
+        if self.editing_instance() {
+            return self.write_local_node(id, &before, &edited);
+        }
+        *self.nodes_mut().iter_mut().find(|n| n.id == id).unwrap() = edited;
+        if let Err(e) = self.layout_page(self.surface_id()) {
+            *self.nodes_mut().iter_mut().find(|n| n.id == id).unwrap() = before;
+            return Err(e);
+        }
+        Ok(())
+    }
     pub fn auto_size_control(&mut self, id: Id) -> Result<(), String> {
         let (spec, _) = self
             .control_properties(id)

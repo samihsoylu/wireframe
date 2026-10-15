@@ -111,6 +111,8 @@ fn migrate_control(c: legacy::Control) -> Node {
         legacy::Kind::Label => "label",
         legacy::Kind::Heading => "heading",
         legacy::Kind::Subtitle => "subtitle",
+        legacy::Kind::Popover => "popover",
+        legacy::Kind::SiteMap => "site_map",
         legacy::Kind::FormattingToolbar => "formatting_toolbar",
         legacy::Kind::StreetMap => "map",
         legacy::Kind::ModalOverlay => "modal_overlay",

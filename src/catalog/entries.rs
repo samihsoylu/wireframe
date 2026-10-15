@@ -966,6 +966,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "callout" => "1",
         "sticky_note" => "A comment",
         "tooltip" => "a tooltip",
+        "site_map" => crate::site_map::DEFAULT,
         "label" => "Some text",
         "heading" => "Title",
         "subtitle" => "Subtitle",
@@ -1214,6 +1215,34 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             ),
             boolean("transparent_background", "Transparent screen", false),
             boolean("status_bar", "Show status bar", true),
+        ]);
+    }
+    if c.id == "popover" {
+        c.properties.extend([
+            choice(
+                "direction",
+                "Pointer",
+                &["top", "right", "bottom", "left"],
+                "top",
+            ),
+            number("arrow_position", "Arrow position", 2., 0., 4., true),
+        ]);
+    }
+    if c.id == "site_map" {
+        c.autosize = AutoSize::None;
+        c.properties.extend([
+            choice(
+                "direction",
+                "Direction",
+                &["vertical", "horizontal"],
+                "vertical",
+            ),
+            prop(
+                "row_links",
+                "Page links",
+                PropertyType::Links,
+                Value::Links(vec![]),
+            ),
         ]);
     }
     if c.id == "tooltip" {

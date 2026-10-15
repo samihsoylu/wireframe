@@ -314,7 +314,7 @@ fn group_layout_tracks_child_edits_overrides_and_clip_intersection() {
     });
 }
 #[test]
-fn unsupported_automatic_layout_is_explicit_not_a_fake_completed_renderer() {
+fn unknown_control_layout_is_explicit_not_a_fake_completed_renderer() {
     with_fonts(|fonts| {
         let p = Project::default();
         let mut node = catalog::get("site_map")
@@ -322,6 +322,9 @@ fn unsupported_automatic_layout_is_explicit_not_a_fake_completed_renderer() {
             .create(2, Point::default());
         if let NodeContent::Control { size, .. } = &mut node.content {
             size.width = Dimension::Auto;
+        }
+        if let NodeContent::Control { kind, .. } = &mut node.content {
+            *kind = "unknown_widget".into();
         }
         let content = Content {
             nodes: vec![node],
@@ -334,7 +337,7 @@ fn unsupported_automatic_layout_is_explicit_not_a_fake_completed_renderer() {
         }
         .layout(&content)
         .unwrap_err();
-        assert!(error.contains("not implemented for site_map"));
+        assert!(error.contains("Unknown control type: unknown_widget"));
     });
 }
 

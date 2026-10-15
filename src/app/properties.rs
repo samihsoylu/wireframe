@@ -22,6 +22,7 @@ fn supported(kind: &str, key: &str) -> bool {
     match key {
         "link" => matches!(kind, "help_button" | "modal_overlay"),
         "stroke" => kind == "vertical_rule",
+        "arrow_position" => kind == "popover",
         "slider_thumb" => matches!(kind, "horizontal_slider" | "vertical_slider"),
         "date_mode" => kind == "date_picker",
         "device_model" | "background_pattern" => kind == "phone",
@@ -49,6 +50,7 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "time_picker"
                 | "alert"
                 | "app_bar"
+                | "site_map"
         ),
         "row_icons" => kind == "list",
         "icon" | "icon_size" | "icon_rotation" => {
@@ -73,7 +75,12 @@ fn supported(kind: &str, key: &str) -> bool {
         "tab_position" => matches!(kind, "tabs" | "vertical_tabs"),
         "direction" => matches!(
             kind,
-            "pointed_button" | "tooltip" | "horizontal_brace" | "vertical_brace"
+            "pointed_button"
+                | "tooltip"
+                | "horizontal_brace"
+                | "vertical_brace"
+                | "popover"
+                | "site_map"
         ),
         "label_position" => matches!(kind, "icon_label" | "circle_button"),
         "text" | "font_size" | "bold" | "italic" | "underline" | "text_color" | "align" => true,
@@ -141,6 +148,7 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "browser"
                 | "alert"
                 | "app_bar"
+                | "site_map"
                 | "tree"
                 | "text_input"
                 | "list"
@@ -182,10 +190,12 @@ fn supported(kind: &str, key: &str) -> bool {
         "fill" => matches!(
             kind,
             "color_picker"
+                | "popover"
                 | "callout"
                 | "scratch_out"
                 | "sticky_note"
                 | "app_bar"
+                | "site_map"
                 | "horizontal_slider"
                 | "vertical_slider"
                 | "field_set"
@@ -221,6 +231,8 @@ fn choice_label(value: &str) -> &str {
         "top_right" => "Top right",
         "bottom_left" => "Bottom left",
         "bottom_right" => "Bottom right",
+        "vertical" => "Vertical",
+        "horizontal" => "Horizontal",
         "portrait" => "Portrait",
         "landscape" => "Landscape",
         "stretch" => "Stretch",
@@ -267,6 +279,8 @@ impl WireframeApp {
         if !matches!(
             spec.id,
             "image"
+                | "popover"
+                | "site_map"
                 | "formatting_toolbar"
                 | "map"
                 | "modal_overlay"
@@ -366,7 +380,12 @@ impl WireframeApp {
                 if let Err(error) = self.editor.auto_size_control(id) { self.error = Some(error); }
                 self.editor.commit();
             }
-            for key in ["stroke", "link", "slider_thumb", "date_mode", "keyboard_device", "device_model", "orientation", "device_resizing", "background_pattern", "transparent_background", "status_bar", "image_border", "sketch_filter", "text", "header_height", "footer_height", "minimize", "maximize", "close", "resize_handle", "button_style", "tab_position", "direction", "label_position", "icon", "icon_size", "icon_rotation", "nav_icon", "filter_icon", "menu_icon", "icons", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+            if spec.id=="site_map" && ui.button("Populate from project").clicked() {
+                self.editor.commit();self.editor.begin("Populate site map");
+                if let Err(error)=self.editor.populate_site_map(id){self.error=Some(error);}
+                self.editor.commit();
+            }
+            for key in ["arrow_position", "stroke", "link", "slider_thumb", "date_mode", "keyboard_device", "device_model", "orientation", "device_resizing", "background_pattern", "transparent_background", "status_bar", "image_border", "sketch_filter", "text", "header_height", "footer_height", "minimize", "maximize", "close", "resize_handle", "button_style", "tab_position", "direction", "label_position", "icon", "icon_size", "icon_rotation", "nav_icon", "filter_icon", "menu_icon", "icons", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
                 if key == "sketch_filter" && spec.id == "cover_flow" && !matches!(values.get("image"), Some(Value::Asset(_))) { continue; }
                 if matches!(key, "icon_size" | "icon_rotation") && !matches!(values.get("icon"),Some(Value::Icon(_))) {continue;}
                 if key == "value" && !matches!(spec.id,"horizontal_slider"|"vertical_slider"|"horizontal_scrollbar"|"vertical_scrollbar") && values.get("vertical_scrollbar") != Some(&Value::Bool(true)) { continue; }
@@ -439,7 +458,7 @@ impl WireframeApp {
                         }
                         (PropertyType::Links, Value::Links(links)) => {
                             let source=match values.get("text") {Some(Value::Text(s))=>s.as_str(),_=>""};
-                            let labels:Vec<String>=if matches!(spec.id,"date_picker"|"time_picker") {wireframe::pickers::BUTTONS.iter().map(|s|s.to_string()).collect()} else if spec.id=="app_bar" {wireframe::app_bar::labels(&values)} else if spec.id=="alert" {wireframe::alert::labels(source)} else if spec.id=="accordion" {wireframe::accordion::labels(source)} else if spec.id=="tree" {wireframe::tree::labels(source)} else if matches!(spec.id,"menu"|"menu_bar") {wireframe::menu::labels(source,spec.id=="menu_bar")} else if matches!(spec.id,"tabs"|"vertical_tabs") {wireframe::tabs::labels(source,spec.id=="vertical_tabs")} else if matches!(spec.id,"breadcrumbs"|"link_bar") {wireframe::navigation::labels(source,spec.id=="breadcrumbs")} else if spec.id=="button_bar" {wireframe::button_bar::labels(source).into_iter().map(str::to_owned).collect()} else {source.split('\n').map(str::to_owned).collect()};
+                            let labels:Vec<String>=if matches!(spec.id,"date_picker"|"time_picker") {wireframe::pickers::BUTTONS.iter().map(|s|s.to_string()).collect()} else if spec.id=="app_bar" {wireframe::app_bar::labels(&values)} else if spec.id=="alert" {wireframe::alert::labels(source)} else if spec.id=="accordion" {wireframe::accordion::labels(source)} else if spec.id=="site_map" {wireframe::site_map::labels(source)} else if spec.id=="tree" {wireframe::tree::labels(source)} else if matches!(spec.id,"menu"|"menu_bar") {wireframe::menu::labels(source,spec.id=="menu_bar")} else if matches!(spec.id,"tabs"|"vertical_tabs") {wireframe::tabs::labels(source,spec.id=="vertical_tabs")} else if matches!(spec.id,"breadcrumbs"|"link_bar") {wireframe::navigation::labels(source,spec.id=="breadcrumbs")} else if spec.id=="button_bar" {wireframe::button_bar::labels(source).into_iter().map(str::to_owned).collect()} else {source.split('\n').map(str::to_owned).collect()};
                             links.resize(labels.len(),None);
                             // Keep partial URL input outside document history until Apply.
                             egui::CollapsingHeader::new(if spec.id=="app_bar" {"Edit icon links"} else if matches!(spec.id,"alert"|"date_picker"|"time_picker") {"Edit button links"} else if matches!(spec.id,"tabs"|"vertical_tabs") {"Edit tab links"} else if spec.id=="button_bar" {"Edit segment links"} else if matches!(spec.id,"breadcrumbs"|"link_bar"|"menu_bar") {"Edit item links"} else {"Edit row links"}).show(ui,|ui| {
@@ -480,7 +499,7 @@ impl WireframeApp {
                         }
                         (PropertyType::Number {..}, Value::Number(v)) if key == "selected_index" && matches!(spec.id, "list" | "button_bar" | "link_bar" | "tabs" | "vertical_tabs" | "menu" | "menu_bar" | "tree" | "accordion") => {
                             let source=match values.get("text") {Some(Value::Text(s))=>s.as_str(),_=>""};
-                            let raw:Vec<String>=if spec.id=="accordion" {wireframe::accordion::labels(source)} else if spec.id=="tree" {wireframe::tree::labels(source)} else if matches!(spec.id,"menu"|"menu_bar") {wireframe::menu::labels(source,spec.id=="menu_bar")} else if matches!(spec.id,"tabs"|"vertical_tabs") {wireframe::tabs::labels(source,spec.id=="vertical_tabs")} else if spec.id=="link_bar" {wireframe::navigation::labels(source,false)} else if spec.id=="button_bar" {wireframe::button_bar::labels(source).into_iter().map(str::to_owned).collect()} else {wireframe::list::labels(source,values.get("header")==Some(&Value::Bool(true))).into_iter().map(str::to_owned).collect()};
+                            let raw:Vec<String>=if spec.id=="accordion" {wireframe::accordion::labels(source)} else if spec.id=="site_map" {wireframe::site_map::labels(source)} else if spec.id=="tree" {wireframe::tree::labels(source)} else if matches!(spec.id,"menu"|"menu_bar") {wireframe::menu::labels(source,spec.id=="menu_bar")} else if matches!(spec.id,"tabs"|"vertical_tabs") {wireframe::tabs::labels(source,spec.id=="vertical_tabs")} else if spec.id=="link_bar" {wireframe::navigation::labels(source,false)} else if spec.id=="button_bar" {wireframe::button_bar::labels(source).into_iter().map(str::to_owned).collect()} else {wireframe::list::labels(source,values.get("header")==Some(&Value::Bool(true))).into_iter().map(str::to_owned).collect()};
                             let labels=raw.iter().map(|s|wireframe::rich_text::RichText::parse(s,false).display_text(false)).collect::<Vec<_>>();
                             let current=if *v<0. {"None"} else {labels.get(*v as usize).map_or("No matching item",String::as_str)};
                             ui_text::combo_box(ui,"selection",if current.is_empty(){"(Empty item)"}else{current},|ui| {
@@ -504,6 +523,10 @@ impl WireframeApp {
                         }
                         (PropertyType::Number {..}, Value::Number(v)) if matches!(key, "value" | "background_opacity") => {
                             finish = fraction_slider(ui, v).1;
+                        }
+                        (PropertyType::Number {..}, Value::Number(v)) if key == "arrow_position" => {
+                            let response=ui.add(egui::Slider::new(v,0.0..=4.0).integer());
+                            finish=response.lost_focus() || response.drag_stopped() || (response.changed() && !response.dragged() && !response.has_focus());
                         }
                         (PropertyType::Number {min,max,integer}, Value::Number(v)) => {
                             let mut edit = egui::DragValue::new(v).range(*min..=*max).speed(1.);
@@ -666,6 +689,11 @@ mod tests {
     #[test]
     fn annotation_inspector_fields_have_renderer_support() {
         for (kind, fields) in [
+            (
+                "popover",
+                vec!["direction", "arrow_position", "fill", "text"],
+            ),
+            ("site_map", vec!["direction", "row_links", "text"]),
             ("help_button", vec!["link"]),
             ("color_picker", vec!["fill"]),
             ("numeric_stepper", vec!["text", "state", "border_color"]),

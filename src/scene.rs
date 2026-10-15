@@ -116,7 +116,9 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
         .cloned()
         .unwrap_or_default();
     match c.kind {
-        Kind::FormattingToolbar
+        Kind::Popover
+        | Kind::SiteMap
+        | Kind::FormattingToolbar
         | Kind::StreetMap
         | Kind::ModalOverlay
         | Kind::VerticalRule

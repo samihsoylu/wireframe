@@ -17,7 +17,7 @@ A local desktop workspace for turning rough ideas into clear wireframes. Built i
 - Browser frames with title/address text, content colors, scrollbars and transparent torn edges.
 - Window frames with rich titles, adjustable headers/footers, chrome buttons and resize handles.
 - Undo/redo, local project files and recovery copies.
-- Sketch and clean styles; PNG and SVG export.
+- Sketch and clean styles; PNG, SVG and multi-page PDF export with page selection, paper sizing, notes and clickable links.
 - [Project fonts](docs/PROJECT-FONTS.md): import four font faces, save them with the project, and use them on canvas and in exports.
 - Page links and presentation mode, including individual links on list rows, checkbox/radio group rows, button-bar segments, breadcrumbs, link bars and tabs.
 - Searchable offline icons and imported project images for Lists, Buttons, Dropdowns, circular buttons, Icons and Icon labels, with size/rotation controls, undoable assignments and self-contained exports.

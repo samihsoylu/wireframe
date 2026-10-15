@@ -9,6 +9,7 @@ use wireframe::{
 };
 fn page(items: Vec<Item>) -> Page {
     Page {
+        decoration: None,
         scene: Scene {
             title: "Export".into(),
             bounds: Bounds::new(0., 0., 200., 100.),
@@ -151,6 +152,7 @@ fn every_catalog_control_encodes_in_both_styles_without_mutating_the_project() {
             let mut scene = editor.rendered_scene(1).unwrap();
             scene.title = format!("{kind:?}, sketch={sketch}");
             let input = Page {
+                decoration: None,
                 size: [scene.bounds.w + 48., scene.bounds.h + 48.],
                 scene,
                 origin: [24., 24.],

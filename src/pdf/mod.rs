@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 //! PDF encoding of an already positioned document snapshot. No UI or file writes.
+mod export;
+mod plan;
 mod text;
+pub use export::ExportJob;
+pub use plan::{Entry, Options, Orientation, Paper, Selection, entries, plan};
 mod vectors;
 use crate::{
     model::Bounds,
@@ -32,6 +36,8 @@ pub struct Link {
 #[derive(Clone, Debug)]
 pub struct Page {
     pub scene: Scene,
+    /// Headers, notes and hints in page coordinates, independent of artwork scaling.
+    pub decoration: Option<Scene>,
     pub size: [f32; 2],
     /// Position of the scene's top-left content bound on the PDF page.
     pub origin: [f32; 2],
@@ -98,6 +104,9 @@ pub fn encode(title: &str, pages: &[Page]) -> Result<Vec<u8>, String> {
             .map_err(|e| format!("Page {} ({}): {e}", page_index + 1, input.scene.title));
         surface.pop();
         result?;
+        if let Some(decoration) = &input.decoration {
+            draw_scene(&mut surface, decoration, &mut fonts)?;
+        }
         surface.finish();
         for link in &input.links {
             let target = match &link.destination {

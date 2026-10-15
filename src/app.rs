@@ -8,6 +8,7 @@ mod fonts;
 mod icon_picker;
 mod images;
 mod library_drag;
+mod pdf_export;
 mod persistence;
 mod previews;
 mod properties;
@@ -71,6 +72,9 @@ pub struct WireframeApp {
     editor: Editor,
     installed_font: Option<std::sync::Arc<wireframe::fonts::ProjectFont>>,
     font_import: Option<fonts::FontImport>,
+    pdf_options: Option<wireframe::pdf::Options>,
+    pdf_job: Option<wireframe::pdf::ExportJob>,
+    quit_after_pdf: bool,
     store: Box<dyn ProjectRepository>,
     persistence: Option<persistence::Persistence>,
     file: Option<PathBuf>,
@@ -129,7 +133,8 @@ impl WireframeApp {
         self.alignment_guides.clear();
     }
     fn canvas_input_blocked(&self) -> bool {
-        self.save_busy()
+        self.pdf_options.is_some()
+            || self.save_busy()
             || self.recovery_chooser_open()
             || self.pending.is_some()
             || self.text_edit.is_some()
@@ -198,6 +203,9 @@ impl WireframeApp {
             editor: Editor::default(),
             installed_font: None,
             font_import: None,
+            pdf_options: None,
+            pdf_job: None,
+            quit_after_pdf: false,
             store: Box::new(ProjectStore),
             persistence: None,
             file: None,
@@ -328,6 +336,12 @@ impl WireframeApp {
         if self.save_busy() {
             return;
         }
+        if matches!(pending, Pending::Quit) && self.pdf_job.is_some() {
+            self.quit_after_pdf = true;
+            self.status = "Finishing PDF export before closing…".into();
+            return;
+        }
+        self.pdf_options = None;
         self.end_pointer_gestures();
         if self.automatic_named() {
             self.pending = Some(pending);
@@ -564,6 +578,14 @@ impl WireframeApp {
                         }
                         ui.separator();
                         self.persistence_menu(ui);
+                        if ui
+                            .add_enabled(self.pdf_job.is_none(), egui::Button::new("Export PDF…"))
+                            .clicked()
+                        {
+                            self.end_pointer_gestures();
+                            self.pdf_options = Some(wireframe::pdf::Options::default());
+                            ui.close();
+                        }
                         if ui.button("Export page as PNG…").clicked() {
                             self.export(true);
                             ui.close();
@@ -2208,20 +2230,28 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     ui.label(include_str!("../LICENSE"));
                 });
             });
-        egui::Window::new("Working with Wireframe").open(&mut self.help).default_width(470.).show(ctx,|ui|{ui.label("Copyright 2026 Wireframe contributors · GNU GPL v3.0 only · No warranty.");if ui.button("View license").clicked(){self.about=true;}ui.separator();ui.label("Everything stays on your computer. Save editable projects as .wireframe files; export the current page as PNG or SVG.");ui.separator();for (keys,what)in [("Click / Shift-click","Select one or several controls"),("Drag empty canvas","Select an area"),("Drag a selection","Move controls"),("Eight resize handles","Resize; hold Shift for aspect ratio"),("Arrow / Shift+Arrow","Move by 1 / 10 units"),("Double-click / Enter","Edit selected control text"),("⌘/Ctrl Z · Shift Z","Undo · Redo"),("⌘/Ctrl D · G · Shift G","Duplicate · Group · Ungroup"),("Space + drag","Pan the canvas"),("⌘/Ctrl + scroll","Zoom around the pointer")]{ui.horizontal(|ui|{ui.strong(keys);ui.label(what);});}ui.separator();ui.label("Groups move and resize together. Double-click a group to edit its children; Escape or Exit group returns to its parent. Images are embedded in the project. Rotate or crop them from the inspector. Click page links in Present mode.");});
+        egui::Window::new("Working with Wireframe").open(&mut self.help).default_width(470.).show(ctx,|ui|{ui.label("Copyright 2026 Wireframe contributors · GNU GPL v3.0 only · No warranty.");if ui.button("View license").clicked(){self.about=true;}ui.separator();ui.label("Everything stays on your computer. Save editable projects as .wireframe files; export pages as PDF or the current page as PNG or SVG.");ui.separator();for (keys,what)in [("Click / Shift-click","Select one or several controls"),("Drag empty canvas","Select an area"),("Drag a selection","Move controls"),("Eight resize handles","Resize; hold Shift for aspect ratio"),("Arrow / Shift+Arrow","Move by 1 / 10 units"),("Double-click / Enter","Edit selected control text"),("⌘/Ctrl Z · Shift Z","Undo · Redo"),("⌘/Ctrl D · G · Shift G","Duplicate · Group · Ungroup"),("Space + drag","Pan the canvas"),("⌘/Ctrl + scroll","Zoom around the pointer")]{ui.horizontal(|ui|{ui.strong(keys);ui.label(what);});}ui.separator();ui.label("Groups move and resize together. Double-click a group to edit its children; Escape or Exit group returns to its parent. Images are embedded in the project. Rotate or crop them from the inspector. Click page links in Present mode.");});
     }
 }
 impl eframe::App for WireframeApp {
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        if let Some(job) = self.pdf_job.take() {
+            let _ = job.finish();
+        }
         self.shutdown_persistence();
     }
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.image_import_dialog(ui.ctx());
         let ctx = ui.ctx().clone();
         self.poll_saves(&ctx);
+        self.poll_pdf_export(&ctx);
         if ctx.input(|i| i.viewport().close_requested()) && !self.quit_allowed {
             self.editor.commit();
-            if self.persistence.is_some() {
+            if self.pdf_job.is_some() {
+                ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+                self.quit_after_pdf = true;
+                self.status = "Finishing PDF export before closing…".into();
+            } else if self.persistence.is_some() {
                 ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
                 self.request(Pending::Quit, &ctx);
             } else if self.editor.dirty() {
@@ -2233,6 +2263,7 @@ impl eframe::App for WireframeApp {
         }
         if !self.save_busy()
             && !self.recovery_chooser_open()
+            && self.pdf_options.is_none()
             && self.pending.is_none()
             && self.text_edit.is_none()
             && self.recovery_offer.is_none()
@@ -2298,6 +2329,7 @@ impl eframe::App for WireframeApp {
         if let Some(error) = self.editor.error.take() {
             self.error = Some(error);
         }
+        self.pdf_export_dialog(&ctx);
         self.dialogs(&ctx);
         self.observe_project();
         self.sync_recovery(false);

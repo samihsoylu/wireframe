@@ -162,6 +162,7 @@ impl Scene {
                     let bounds = clip.map_or(bounds, |c| intersect(bounds, c));
                     if bounds.w > 0. && bounds.h > 0. {
                         self.links.push(LinkRegion {
+                            hint: bounds,
                             target: target.target(),
                             bounds,
                         });

@@ -172,3 +172,18 @@ fn duplicate_copy_and_delete_follow_the_input_order() {
             .any(|c| c.id == original)
     );
 }
+
+#[test]
+fn pdf_options_block_document_shortcuts_until_the_dialog_is_closed() {
+    let ctx = egui::Context::default();
+    let mut app = WireframeApp::workspace(&ctx, None);
+    app.editor.add(Kind::Button, 50., 50.);
+    let before = app.editor.document.clone();
+    app.pdf_options = Some(wireframe::pdf::Options::default());
+    dispatch(&ctx, &mut app, vec![key(Key::Z, false), key(Key::N, false)]);
+    assert_eq!(app.editor.document, before);
+    assert!(app.pending.is_none());
+    app.pdf_options = None;
+    dispatch(&ctx, &mut app, vec![key(Key::Z, false)]);
+    assert_ne!(app.editor.document, before);
+}

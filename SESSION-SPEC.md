@@ -8,11 +8,11 @@ Work directly as Engineer. Preserve user files and explicit deferrals. Use synth
 
 ## Current checkpoint — 2026-10-15
 
-Shared Scene snapshots now encode as PDF pages with vector primitives/icons, embedded fonts/images, clipping, masks and transparency. Positioned native text retains exact glyph placement and font sources; legacy text uses the SVG resolver. The encoder accepts explicit page geometry and resolved internal/web links. Graphics state unwinds on errors. Krilla 0.8.2 is pinned with notices; existing locked package versions are unchanged.
+File > Export PDF now exports all/current/chosen pages and existing alternates in navigator order. Content-sized and six standard paper sizes support independent names, numbers, notes and link hints. Large artwork shrinks without enlarging small artwork. A background worker captures an immutable snapshot and writes atomically; cancellation retains dialog options, errors preserve prior output, and closing waits for active export completion.
 
-All 560 tests pass, including all 86 catalog controls in both styles and nested export failure paths. Catalog coverage exposed a non-finite brace endpoint; the shared renderer now clamps its taper calculation. Both full-size and half-size rendered PDF comparisons match the shared scene, with bounding edges within one raster pixel. Six fonts embed; two small images remain. Real URI/page destinations and transformed annotation rectangles are verified. PDFKit preserves the sample mixed-script logical order, while other readers vary. Bitmap emoji and outline-only text are visible but not reliably searchable. Clippy, formatting, diff, product exclusions and first-commit GPL checks pass. Self-review only.
+All 567 tests pass. Planner/worker coverage includes alternate destinations, excluded links, empty pages, overflowing notes, snapshot ownership and destination preservation. Shared whole-control links now respect specialized links and occlusion; paper hints appear once per original region. A PDF text-transform correction preserves rendered pixels while restoring header/note line separation in the tested reader. Clippy, formatting, diff, product exclusions and first-commit GPL checks pass. Self-review only.
 
-PDF export is not available in the app yet. Page selection/layout, notes/headers/hints, the export dialog and background atomic output remain next under docs/PDF-EXPORT.md. No new package or native app flow is claimed. The running bundle remains the coordinate-rounding build, UUID E3D0023B-D1DD-3EF6-9315-3AC709828229. No build/test jobs remain at this checkpoint. Native Windows/Linux, variable-font PDF rendering, general typography fidelity and large-document profiling remain open. The overall goal remains active.
+Native macOS checks cover export, save-panel cancellation, current-page output and A4 output. The final native A4 PDF is byte-identical to the inspected planner output, reopens in Preview and follows an internal link to page two. A fresh signed debug bundle is running, UUID E9FD4E0F-8627-3F4E-B5AC-D2239613508A. A native oversized-notes failure preserves the prior destination byte for byte; application tests also verify failure cancels deferred quit. No build/test jobs remain. Native close-during-export checks, sustained editing/performance, header typography, mixed-script extraction, native Windows/Linux and full release acceptance remain open. See docs/PDF-EXPORT.md for evidence scope. The overall goal remains active.
 
 ## Existing capabilities and limits
 
@@ -22,10 +22,12 @@ Save, Save As, automatic/manual named saving, New/Open/close and local recovery 
 
 ## Next work and unresolved acceptance
 
+Next integrated fixture set: a landing page with two buttons, a linked desktop contact page, an iPhone contact page and a tablet order page. Check complete layouts, spacing/alignment, text wrapping, control states, navigation and canvas/PDF consistency at fixed viewport sizes. Retain original product fixtures for repeatable acceptance.
+
 1. Continue targeted shared-interaction investigation: native held library-drag cadence, display-pixel alignment and library autoscroll. Six screen points is the current onset threshold, not an exact timing acceptance result. Do not repeat completed preview foundations or claim native held verification from post-release captures.
 2. Complete remaining group/component crop, lock and resize combinations, clipping, snapping and alignment behavior. Cropped-group ungrouping and group crop creation/adjustment/removal UI have scoped native acceptance; broader nested component combinations remain. Alternate versions, page hierarchy and presentation target/history behavior need broader acceptance.
 3. Refine typography, state styling and geometric/visual edge cases against the established specification. Keep original artwork and fonts properly licensed. Legacy shape/rule coverage, image metadata and placeholder/filter behavior remain open where identified in family documents.
-4. Complete PDF export, image scale/options, links, notes and font handling. Preserve shared canvas/export geometry.
+4. Complete PDF typography and remaining native failure/performance acceptance, image scale/options and broader font handling. Preserve shared canvas/export geometry.
 5. Package and run native macOS, Windows and Linux acceptance and release checks. Large-document profiling, revision-based cache invalidation, forced failures and recovery remain outstanding. No full cross-platform or complete-fidelity claim.
 
 ## Durable specifications
@@ -36,7 +38,7 @@ Save, Save As, automatic/manual named saving, New/Open/close and local recovery 
 - docs/DOCUMENT-FORMAT.md and docs/RECURSIVE-EDITOR.md: recursive data and live editing/storage boundaries.
 - docs/CATALOG-AND-LAYOUT.md and control-family documents: rendering and property requirements.
 - docs/RICH-TEXT.md, docs/PROJECT-FONTS.md and docs/TEXT-ENTRY.md: text and fonts.
-- docs/PDF-EXPORT.md: page selection, sizing, notes, text/link fidelity, architecture boundaries and pending integrated acceptance.
+- docs/PDF-EXPORT.md: page selection, sizing, notes, text/link fidelity, architecture boundaries and scoped integrated acceptance.
 - docs/IMAGES.md and docs/COMPONENTS.md: image and component behavior and remaining gaps.
 
 Keep product-only fixtures/evidence local unless selected for distribution. Update this checkpoint and commit completed product work. No unattended supervision beyond active goal execution is implied. The overall goal remains active.

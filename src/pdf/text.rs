@@ -285,10 +285,18 @@ fn legacy(
                                 font
                             };
                             let t = glyph.transform();
+                            let size = glyph.font_size();
+                            let scale = size / font.units_per_em();
+                            // Keep the PDF font size in points. Baking all sizing
+                            // into the transform confuses reader line detection.
                             surface.push_transform(&Transform::from_row(
-                                t.sx, t.ky, t.kx, t.sy, t.tx, t.ty,
+                                t.sx / scale,
+                                t.ky / scale,
+                                t.kx / scale,
+                                t.sy / scale,
+                                t.tx,
+                                t.ty,
                             ));
-                            let size = font.units_per_em();
                             let g = KrillaGlyph {
                                 glyph_id: GlyphId::new(glyph.id.0),
                                 text_range: 0..glyph.text.len(),

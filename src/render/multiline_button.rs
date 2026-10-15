@@ -18,6 +18,7 @@ impl Scene {
             let bounds = clip.unwrap_or(b);
             if bounds.w > 0. && bounds.h > 0. {
                 self.links.push(LinkRegion {
+                    hint: bounds,
                     target: link.target(),
                     bounds,
                 });

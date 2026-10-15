@@ -99,6 +99,8 @@ pub struct Item {
 pub struct LinkRegion {
     pub target: String,
     pub bounds: Bounds,
+    /// Original visible link area, retained when occlusion splits annotations.
+    pub hint: Bounds,
 }
 #[derive(Clone, Debug)]
 pub struct Scene {
@@ -172,12 +174,14 @@ impl Scene {
                         subtract(link.bounds, visible)
                             .into_iter()
                             .map(move |bounds| LinkRegion {
+                                hint: link.hint,
                                 target: link.target.clone(),
                                 bounds,
                             })
                     })
                     .collect();
             }
+            let own_links_start = scene.links.len();
             let image = if layer.control.kind == Kind::Image && layer.control.group.is_none() {
                 if let Some(Value::Asset(id)) = layer.properties.get("image") {
                     let turns = crate::images::quarter_turns(&layer.properties);
@@ -223,6 +227,31 @@ impl Scene {
                         layer.clip,
                     );
                 }
+            }
+            // Whole-control links share the same clipped/occluded regions as
+            // inline links. Specialized text/item links take precedence.
+            if let Some(Value::Link(link)) = layer.properties.get("link") {
+                let own_links = scene.links.split_off(own_links_start);
+                let mut regions = vec![visible];
+                for own in &own_links {
+                    regions = regions
+                        .into_iter()
+                        .flat_map(|b| subtract(b, own.bounds))
+                        .collect();
+                }
+                scene
+                    .links
+                    .extend(
+                        regions
+                            .into_iter()
+                            .filter(|b| b.w > 0. && b.h > 0.)
+                            .map(|bounds| LinkRegion {
+                                hint: visible,
+                                target: link.target(),
+                                bounds,
+                            }),
+                    );
+                scene.links.extend(own_links);
             }
             if scene.items.len() + scene.links.len() > 1_000_000 {
                 return Err("This page exceeds the drawing complexity limit".into());
@@ -577,7 +606,7 @@ impl Scene {
         }
         Ok(())
     }
-    fn text(
+    pub(crate) fn text(
         &mut self,
         text: &RichText,
         style: TextStyle,
@@ -726,6 +755,7 @@ impl Scene {
             }
             if bounds.w > 0. && bounds.h > 0. {
                 self.links.push(LinkRegion {
+                    hint: bounds,
                     target: link.target,
                     bounds,
                 });

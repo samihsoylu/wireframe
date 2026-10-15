@@ -187,6 +187,13 @@ impl Editor {
             self.record(name, before);
         }
     }
+    /// Recalculate an absolute gesture preview from its initial geometry.
+    /// Keep the transaction open so release records only one history entry.
+    pub fn reset_preview(&mut self) {
+        if let Some((_, before)) = &self.pending {
+            self.restore(before.clone());
+        }
+    }
     pub fn cancel(&mut self) {
         if let Some((_, before)) = self.pending.take() {
             self.restore(before);
@@ -1151,6 +1158,23 @@ fn transform(
             _ => {}
         }
     }
+    let resizing = from.w != to.w || from.h != to.h;
+    if resizing {
+        match node.content {
+            NodeContent::Control { .. } => {
+                // Round after the parent displacement is included, in the original
+                // parent coordinate system. Rounding child-local scales loses pixels.
+                next.x = parent.x + crate::model::round_coordinate(next.x - parent.x);
+                next.y = parent.y + crate::model::round_coordinate(next.y - parent.y);
+            }
+            NodeContent::Group { .. } => {
+                // Keep the coordinate anchor stable while descendants transform.
+                // The visible group rectangle is derived from their rounded union.
+                next = world;
+            }
+            NodeContent::Instance { .. } => unreachable!(),
+        }
+    }
     node.origin = Point::new(next.x - new_parent.x, next.y - new_parent.y);
     match &mut node.content {
         NodeContent::Control { kind, size } => {
@@ -1166,13 +1190,13 @@ fn transform(
                     axes,
                     catalog::ResizeAxes::Both | catalog::ResizeAxes::Horizontal
                 ) {
-                    size.width = Dimension::Fixed(nw);
+                    size.width = Dimension::Fixed(crate::model::round_coordinate(nw));
                 }
                 if matches!(
                     axes,
                     catalog::ResizeAxes::Both | catalog::ResizeAxes::Vertical
                 ) {
-                    size.height = Dimension::Fixed(nh);
+                    size.height = Dimension::Fixed(crate::model::round_coordinate(nh));
                 }
             }
         }

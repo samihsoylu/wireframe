@@ -303,7 +303,9 @@ fn whitespace_only_link_remains_editable_and_ancestor_crop_limits_item_targets()
         let scene = e.rendered_scene(e.page).unwrap();
         assert!(!scene.links.is_empty());
         for link in &scene.links {
-            assert!(link.bounds.x + link.bounds.w <= original.x + original.w * 0.4 + 0.001);
+            assert!(
+                link.bounds.x + link.bounds.w <= original.x + (original.w * 0.4).round() + 0.001
+            );
         }
         assert!(scene.items.iter().all(|i| i.clip.is_some()));
         assert!(scene.png().is_ok());

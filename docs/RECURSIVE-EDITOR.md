@@ -47,6 +47,17 @@ Focused checks cover nested crop geometry, relative paint order, isolated previe
 
 Resizing an unlocked group or component transforms all descendants, including children whose direct position/content editing is locked. Their lock flags remain set. Scalable control dimensions stop at 10 units; arrows retain a 1-unit minimum. Fixed and computed dimensions retain their size. Moving a parent without resizing preserves existing smaller stored geometry.
 
-A cropped parent's frame follows the actual union after child size limits apply. Its resulting size can exceed the requested size, and the normalized crop offset can shift the visible corner. The crop mask remains unchanged. Component resizing writes local geometry overrides and preserves its source and other instances. Undo/Redo restore exact document snapshots. Fractional coordinate quantization and broader nested fixed-axis combinations remain acceptance work.
+A cropped parent's frame follows the actual union after child size limits apply. Its resulting size can exceed the requested size, and the normalized crop offset can shift the visible corner. The crop mask remains unchanged. Component resizing writes local geometry overrides and preserves its source and other instances. Undo/Redo restore exact document snapshots. Broader nested fixed-axis combinations remain acceptance work.
 
 The inspector and drag handles use the catalog minimum. Selecting an existing subminimum value does not clamp it. Generic drag handles preserve the opposite edge when a minimum is reached, including aspect-preserving resizing.
+
+
+## Coordinate rounding
+
+Explicit resizing rounds transformed leaf positions and scalable dimensions to whole units; half ties go toward positive infinity. Parent displacement is included before rounding in the original parent coordinate system. Group coordinate anchors remain stable during resizing, and their visible bounds follow the transformed child union. This avoids accumulating a different rounding error at each group level. Component instances use the same geometry policy without changing their source or siblings.
+
+Stored fractional geometry remains valid and survives loading, selection and move-only edits. Fixed and computed axes retain their existing size. Group crop origins and dimensions round separately in derived layout, without rewriting the normalized mask. Leaf/image crops retain their existing policy.
+
+A very small group crop can resolve to zero width or height. Its content stays intact and selectable through Layers or Select All. Zero-size axes have no resize handle or editable size field; Remove crop restores the content at the visible corner, with exact Undo/Redo. Dragging the remaining nonzero axis uses finite scale factors.
+
+Resize previews derive each frame from the transaction-start snapshot. Rounded descendants must not accumulate error as pointer samples arrive; direct and multi-frame movement to the same endpoint produce identical geometry. Release records one history entry, returning to the start records none, and focus loss cancels the preview.

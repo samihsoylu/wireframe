@@ -109,7 +109,7 @@ fn apply_moves_artwork_and_changes_mask_atomically_without_resizing_children() {
         after,
         Bounds::new(full.x + 12., full.y - 8., full.w, full.h)
     );
-    assert!((visible.x - (after.x + after.w * 0.1)).abs() < 0.001);
+    assert_eq!(visible.x, (after.x + after.w * 0.1).round());
     assert_eq!(
         e.nodes()[0].content,
         before.pages[0].content.nodes[0].content

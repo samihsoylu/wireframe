@@ -267,11 +267,20 @@ impl<M: TextMeasurer> Engine<'_, M> {
             NodeContent::Instance { .. } => return Err("Unresolved component instance".into()),
         };
         let empty = matches!(&node.content, NodeContent::Group { children } if children.is_empty());
-        let clip = node.crop.filter(|_| !empty).map(|c| Rect {
-            x: uncropped.x + c.x * uncropped.width,
-            y: uncropped.y + c.y * uncropped.height,
-            width: c.width * uncropped.width,
-            height: c.height * uncropped.height,
+        let clip = node.crop.filter(|_| !empty).map(|c| {
+            let mut clip = Rect {
+                x: uncropped.x + c.x * uncropped.width,
+                y: uncropped.y + c.y * uncropped.height,
+                width: c.width * uncropped.width,
+                height: c.height * uncropped.height,
+            };
+            if kind.is_none() {
+                clip.x = parent.x + crate::model::round_coordinate(clip.x - parent.x);
+                clip.y = parent.y + crate::model::round_coordinate(clip.y - parent.y);
+                clip.width = crate::model::round_coordinate(clip.width);
+                clip.height = crate::model::round_coordinate(clip.height);
+            }
+            clip
         });
         let result = LayoutNode {
             path: path.clone(),

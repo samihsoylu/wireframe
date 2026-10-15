@@ -7,6 +7,11 @@ use std::collections::HashSet;
 pub type Id = u64;
 pub const FORMAT_VERSION: u32 = 1;
 
+/// Round a coordinate to the nearest unit, with half ties toward positive infinity.
+pub fn round_coordinate(value: f32) -> f32 {
+    (f64::from(value) + 0.5).floor() as f32
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Bounds {
     pub x: f32,

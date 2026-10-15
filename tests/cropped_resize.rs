@@ -77,13 +77,17 @@ fn cropped_parent_resize_respects_child_minimum_and_retains_lock_and_mask() {
         };
         assert_eq!(size.width, Dimension::Fixed(10.));
         assert!(children[1].locked);
-        assert!((children[1].origin.x - 170. / 9.).abs() < 0.001);
+        let layout = e.layout_page(e.page).unwrap();
+        let root_layout = &layout.nodes[0];
+        let group_layout = if instance {
+            &root_layout.children[0]
+        } else {
+            root_layout
+        };
+        assert_eq!(group_layout.children[1].bounds.x, 114.);
         let visible = e.current().controls[0].bounds;
-        assert!(visible.w > 10., "Child minimum expands the cropped union");
-        assert!(
-            visible.x > 100.,
-            "The normalized crop offset follows the actual union"
-        );
+        assert_eq!(visible.w, 15., "Rounded minimum-clamped child union");
+        assert_eq!(visible.x, 102., "Rounded crop follows the actual union");
         assert_eq!(e.document.definitions, before.definitions);
         if instance {
             assert_eq!(

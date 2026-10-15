@@ -1133,7 +1133,7 @@ if r.lost_focus(){self.editor.commit();}
                 }
                 ui.heading(if selected.len()==1{self.editor.selection_label(selected[0].id)}else{format!("{} controls",selected.len())});
                 if selected.len()==1 {let mut c=selected[0].clone();let original=c.clone();let fixed_axis=wireframe::linear_controls::Axis::for_kind(c.kind);let minimum=self.editor.control_properties(c.id).map_or(10., |(spec,_)| spec.minimum_resize_dimension());
-                    ui.add_space(10.);ui.label("Position & size");egui::Grid::new("geometry").num_columns(4).spacing([7.,8.]).show(ui,|ui|{ui.label("X");ui.add(egui::DragValue::new(&mut c.bounds.x).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.label("Y");ui.add(egui::DragValue::new(&mut c.bounds.y).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.end_row();ui.label("W");ui.add_enabled(!matches!(c.kind,Kind::SiteMap|Kind::ColorPicker|Kind::HelpButton|Kind::Icon|Kind::Breadcrumbs|Kind::LinkBar|Kind::Playback) && !fixed_axis.is_some_and(|a| a.vertical) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id),egui::DragValue::new(&mut c.bounds.w).update_while_editing(false).speed(1.).clamp_existing_to_range(false).range(minimum..=10_000.0));ui.label("H");ui.add_enabled(!matches!(c.kind,Kind::SiteMap|Kind::ColorPicker|Kind::HelpButton|Kind::Icon|Kind::IconLabel|Kind::PointedButton|Kind::Heading|Kind::Subtitle|Kind::NumericStepper|Kind::Breadcrumbs|Kind::LinkBar|Kind::Playback) && !fixed_axis.is_some_and(|a| !a.vertical) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id),egui::DragValue::new(&mut c.bounds.h).update_while_editing(false).speed(1.).clamp_existing_to_range(false).range(minimum..=10_000.0));ui.end_row();});
+                    ui.add_space(10.);ui.label("Position & size");egui::Grid::new("geometry").num_columns(4).spacing([7.,8.]).show(ui,|ui|{ui.label("X");ui.add(egui::DragValue::new(&mut c.bounds.x).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.label("Y");ui.add(egui::DragValue::new(&mut c.bounds.y).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.end_row();ui.label("W");ui.add_enabled(!matches!(c.kind,Kind::SiteMap|Kind::ColorPicker|Kind::HelpButton|Kind::Icon|Kind::Breadcrumbs|Kind::LinkBar|Kind::Playback) && !fixed_axis.is_some_and(|a| a.vertical) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id) && c.bounds.w>0.,egui::DragValue::new(&mut c.bounds.w).update_while_editing(false).speed(1.).clamp_existing_to_range(false).range(minimum..=10_000.0));ui.label("H");ui.add_enabled(!matches!(c.kind,Kind::SiteMap|Kind::ColorPicker|Kind::HelpButton|Kind::Icon|Kind::IconLabel|Kind::PointedButton|Kind::Heading|Kind::Subtitle|Kind::NumericStepper|Kind::Breadcrumbs|Kind::LinkBar|Kind::Playback) && !fixed_axis.is_some_and(|a| !a.vertical) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id) && c.bounds.h>0.,egui::DragValue::new(&mut c.bounds.h).update_while_editing(false).speed(1.).clamp_existing_to_range(false).range(minimum..=10_000.0));ui.end_row();});
                     if c.group.is_none() && !self.typed_properties(ui, c.id) {ui.add_space(10.);ui.label("Text");wireframe::text_entry::multiline(ui, &mut c.text, 4, false);if c.kind==Kind::Table {ui.small("Separate columns with commas and rows with new lines.");}
 if c.kind==Kind::Tabs {ui.small("Separate tabs with commas.");}
                     ui.horizontal(|ui|{ui.label("Size");ui.add(egui::DragValue::new(&mut c.font_size).range(6.0..=120.0));ui.checkbox(&mut c.bold,"Bold");});
@@ -1442,7 +1442,12 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
             (1, 1),
         ]
         .into_iter()
-        .filter(|(x, y)| (!horizontal || *y == 0) && (!vertical || *x == 0))
+        .filter(|(x, y)| {
+            (!horizontal || *y == 0)
+                && (!vertical || *x == 0)
+                && (bounds.w > 0. || *x == 0)
+                && (bounds.h > 0. || *y == 0)
+        })
         .map(|(x, y)| {
             (
                 (x, y),
@@ -1756,6 +1761,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                             handle,
                             targets,
                         } => {
+                            self.editor.reset_preview();
                             let mut delta = now - start;
                             let modifiers = ui.input(|i| i.modifiers);
                             let bypass = modifiers.command || modifiers.alt;
@@ -1855,12 +1861,20 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                             }
                             self.editor.selected_mut(|c| {
                                 if let Some((_, b)) = original.iter().find(|v| v.0 == c.id) {
-                                    c.bounds.x =
-                                        resized.x + (b.x - bounds.x) * resized.w / bounds.w;
-                                    c.bounds.y =
-                                        resized.y + (b.y - bounds.y) * resized.h / bounds.h;
-                                    c.bounds.w = (b.w * resized.w / bounds.w).max(1.);
-                                    c.bounds.h = (b.h * resized.h / bounds.h).max(1.);
+                                    let sx = if bounds.w > 0. {
+                                        resized.w / bounds.w
+                                    } else {
+                                        1.
+                                    };
+                                    let sy = if bounds.h > 0. {
+                                        resized.h / bounds.h
+                                    } else {
+                                        1.
+                                    };
+                                    c.bounds.x = resized.x + (b.x - bounds.x) * sx;
+                                    c.bounds.y = resized.y + (b.y - bounds.y) * sy;
+                                    c.bounds.w = if b.w == 0. { 0. } else { (b.w * sx).max(1.) };
+                                    c.bounds.h = if b.h == 0. { 0. } else { (b.h * sy).max(1.) };
                                 }
                             });
                             self.drag = Some(Drag::Resize {
@@ -2690,6 +2704,180 @@ mod tests {
                 }
             }
         }
+    }
+    #[test]
+    fn nested_resize_preview_is_independent_of_pointer_frames() {
+        use wireframe::document::{Content, Definition, Node, NodeContent, Point, Project, Size};
+        for instance in [false, true] {
+            let mut outcomes = vec![];
+            for steps in [vec![13.], vec![6., 9., 13.], vec![20., -10., 13.]] {
+                let ctx = egui::Context::default();
+                let mut app = WireframeApp::workspace(&ctx, None);
+                let leaf = |id, x, y, w, h| {
+                    Node::control(id, "rectangle", Point::new(x, y), Size::fixed(w, h))
+                };
+                let mut group = Node::group(
+                    2,
+                    Point::new(100., 100.),
+                    vec![
+                        leaf(3, 0., 0., 40., 30.),
+                        Node::group(
+                            4,
+                            Point::new(75., 20.),
+                            vec![leaf(5, 0., 0., 35., 25.), leaf(6, 80., 45., 45., 25.)],
+                        ),
+                    ],
+                );
+                let mut project = Project {
+                    next_id: 30,
+                    ..Project::default()
+                };
+                let selected = if instance {
+                    group.origin = Point::default();
+                    project.definitions.push(Definition {
+                        id: 20,
+                        name: "Panel".into(),
+                        content: Content {
+                            nodes: vec![group],
+                            paint_order: vec![],
+                        },
+                    });
+                    let mut node = Node::group(21, Point::new(100., 100.), vec![]);
+                    node.content = NodeContent::Instance {
+                        definition: 20,
+                        overrides: vec![],
+                    };
+                    project.pages[0].content.nodes.push(node);
+                    21
+                } else {
+                    project.pages[0].content.nodes.push(group);
+                    2
+                };
+                app.editor = Editor::new(project);
+                app.editor.select(selected, false);
+                frame(&ctx, &mut app, vec![]);
+                let before = app.editor.document.clone();
+                let bounds = app.editor.selected_views()[0].bounds;
+                let start = app
+                    .resize_handles(bounds)
+                    .into_iter()
+                    .find(|h| h.0 == (1, 1))
+                    .unwrap()
+                    .1;
+                alignment_frame(
+                    &ctx,
+                    &mut app,
+                    vec![egui::Event::PointerMoved(start), pointer(start, true)],
+                    Modifiers::COMMAND,
+                    true,
+                );
+                for step in steps {
+                    alignment_frame(
+                        &ctx,
+                        &mut app,
+                        vec![egui::Event::PointerMoved(start + Vec2::new(step, 0.))],
+                        Modifiers::COMMAND,
+                        true,
+                    );
+                }
+                assert!(matches!(app.drag, Some(Drag::Resize { .. })));
+                let after = app.editor.document.clone();
+                alignment_frame(
+                    &ctx,
+                    &mut app,
+                    vec![pointer(start + Vec2::new(13., 0.), false)],
+                    Modifiers::COMMAND,
+                    true,
+                );
+                assert_eq!(app.editor.document, after);
+                assert_eq!(app.editor.undo_name(), Some("Resize"));
+                app.editor.undo();
+                assert_eq!(app.editor.document, before);
+                assert_eq!(app.editor.undo_name(), None);
+                app.editor.redo();
+                assert_eq!(app.editor.document, after);
+                outcomes.push(after);
+                app.editor.undo();
+                for cancel in [false, true] {
+                    alignment_frame(
+                        &ctx,
+                        &mut app,
+                        vec![egui::Event::PointerMoved(start), pointer(start, true)],
+                        Modifiers::COMMAND,
+                        true,
+                    );
+                    alignment_frame(
+                        &ctx,
+                        &mut app,
+                        vec![egui::Event::PointerMoved(start + Vec2::new(20., 0.))],
+                        Modifiers::COMMAND,
+                        true,
+                    );
+                    assert_ne!(app.editor.document, before);
+                    if cancel {
+                        alignment_frame(&ctx, &mut app, vec![], Modifiers::COMMAND, false);
+                    } else {
+                        alignment_frame(
+                            &ctx,
+                            &mut app,
+                            vec![egui::Event::PointerMoved(start), pointer(start, false)],
+                            Modifiers::COMMAND,
+                            true,
+                        );
+                    }
+                    assert_eq!(app.editor.document, before);
+                    assert_eq!(app.editor.undo_name(), None);
+                    assert!(app.drag.is_none());
+                }
+            }
+            assert_eq!(
+                outcomes[0], outcomes[1],
+                "intermediate frames changed final geometry"
+            );
+            assert_eq!(
+                outcomes[0], outcomes[2],
+                "pointer detour changed final geometry"
+            );
+        }
+    }
+    #[test]
+    fn zero_crop_selection_has_no_resize_handles_and_preserves_content() {
+        use wireframe::document::{Crop, Node, Point, Size};
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        let mut group = Node::group(
+            2,
+            Point::new(100., 100.),
+            vec![Node::control(
+                3,
+                "rectangle",
+                Point::default(),
+                Size::fixed(100., 100.),
+            )],
+        );
+        group.crop = Some(Crop {
+            x: 0.25,
+            y: 0.25,
+            width: 0.001,
+            height: 0.001,
+        });
+        app.editor.document.pages[0].content.nodes = vec![group];
+        app.editor.document.next_id = 4;
+        app.editor.select(2, false);
+        let saved = app.editor.document.clone();
+        frame(&ctx, &mut app, vec![]);
+        assert!(
+            app.resize_handles(app.editor.selected_views()[0].bounds)
+                .is_empty()
+        );
+        assert_eq!(app.editor.document, saved);
+        app.editor.crop_group(2, None, Point::default()).unwrap();
+        assert!(
+            !app.resize_handles(app.editor.selected_views()[0].bounds)
+                .is_empty()
+        );
+        app.editor.undo();
+        assert_eq!(app.editor.document, saved);
     }
     #[test]
     fn selecting_subminimum_controls_does_not_rewrite_saved_sizes() {

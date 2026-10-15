@@ -294,7 +294,7 @@ fn group_layout_tracks_child_edits_overrides_and_clip_intersection() {
         let root = &result.nodes[0];
         assert_eq!(root.bounds.x, 105.);
         assert_eq!(root.bounds.y, 210.);
-        assert_eq!(root.bounds.width, root.uncropped.width * 0.5);
+        assert_eq!(root.bounds.width, (root.uncropped.width * 0.5).round());
         let leaves = result.leaves();
         assert_eq!(leaves.len(), 1);
         assert_eq!(leaves[0].0.path, vec![3, 2]);

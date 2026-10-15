@@ -37,6 +37,23 @@ fn small_outlines_are_finite_bounded_and_do_not_paint_the_transparent_interior()
                     {
                         assert!(indices.iter().all(|i| (*i as usize) < points.len()));
                         assert!(points.iter().flatten().all(|x| x.is_finite()));
+                        for tri in indices
+                            .as_chunks::<3>()
+                            .0
+                            .iter()
+                            .filter(|_| border != "dashed")
+                        {
+                            // Solid rings must have an interior diagonal. A stroked
+                            // dashed path can overlap itself at tight turns.
+                            let [a, b, c] = [
+                                points[tri[0] as usize],
+                                points[tri[1] as usize],
+                                points[tri[2] as usize],
+                            ];
+                            let area =
+                                (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+                            assert!(area >= -0.0001, "{border} {w} x {h} must not fold: {area}");
+                        }
                         // Stroke fragments may extend beyond a tiny logical frame but must be clipped.
                         assert!(item.clip.is_some());
                     }
@@ -117,5 +134,86 @@ fn sketch_corner_geometry_is_stable_when_only_the_center_stretches() {
             c.bounds.h = 120.;
         });
         assert_eq!(normal, points(&e));
+    }
+}
+
+#[test]
+fn button_shadow_steps_outside_the_frame_without_folded_small_geometry() {
+    for (w, h) in [
+        (1., 1.),
+        (3., 8.),
+        (8., 3.),
+        (8., 8.),
+        (20., 20.),
+        (70., 40.),
+        (180., 40.),
+    ] {
+        let mut p = Project::default();
+        let id = p.allocate_id().unwrap();
+        let mut n = catalog::get("button")
+            .unwrap()
+            .create(id, Point::new(20., 20.));
+        n.properties
+            .insert("text".into(), Value::Text(String::new()));
+        n.content = NodeContent::Control {
+            kind: "button".into(),
+            size: Size::fixed(w, h),
+        };
+        p.pages[0].content.nodes.push(n);
+        let e = Editor::new(p);
+        let scene = e.rendered_scene(e.page).unwrap();
+        assert_eq!(
+            (scene.bounds.w, scene.bounds.h),
+            (w, h),
+            "Stored dimensions must not pass through an interactive resize helper"
+        );
+        for item in &scene.items {
+            if let Drawing::Primitive(Primitive::Mesh {
+                points, indices, ..
+            }) = &item.drawing
+            {
+                assert!(points.iter().flatten().all(|v| v.is_finite()));
+                assert!(
+                    points
+                        .iter()
+                        .all(|p| (20. ..=20. + w).contains(&p[0])
+                            && (20. ..=20. + h).contains(&p[1]))
+                );
+                for tri in indices.as_chunks::<3>().0 {
+                    let [a, b, c] = [
+                        points[tri[0] as usize],
+                        points[tri[1] as usize],
+                        points[tri[2] as usize],
+                    ];
+                    let area = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+                    assert!(
+                        area >= -0.0001,
+                        "A {w} x {h} border must not fold over itself: {area}; {a:?} {b:?} {c:?}"
+                    );
+                }
+            }
+        }
+        if w >= 8. && h >= 8. {
+            let image = image::load_from_memory(&scene.png().unwrap())
+                .unwrap()
+                .to_rgb8();
+            assert_eq!(
+                image.get_pixel(24 + w as u32 - 1, 24).0,
+                [255; 3],
+                "The shadow starts below the top edge"
+            );
+            assert_eq!(
+                image.get_pixel(24, 24 + h as u32 - 1).0,
+                [255; 3],
+                "The shadow starts right of the left edge"
+            );
+            assert!(
+                image
+                    .get_pixel(24 + w as u32 - 2, 24 + h as u32 - 2)
+                    .0
+                    .iter()
+                    .all(|v| *v < 100)
+            );
+        }
     }
 }

@@ -80,16 +80,23 @@ fn ring(outer: Vec<[f32; 2]>, inner: Vec<[f32; 2]>, color: [u8; 3]) -> Primitive
     let mut points = outer;
     points.extend(inner);
     let mut indices = Vec::with_capacity(n * 6);
+    let area = |a: usize, b: usize, c: usize| {
+        let (a, b, c) = (points[a], points[b], points[c]);
+        (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+    };
     for i in 0..n {
         let j = (i + 1) % n;
-        indices.extend([
-            i as u32,
-            j as u32,
-            (n + i) as u32,
-            j as u32,
-            (n + j) as u32,
-            (n + i) as u32,
-        ]);
+        // Compression can make a border quad concave. Choose its interior
+        // diagonal after mapping rather than folding a triangle across it.
+        let triangles = if (area(i, j, n + i) < 0. || area(j, n + j, n + i) < 0.)
+            && area(i, j, n + j) >= 0.
+            && area(i, n + j, n + i) >= 0.
+        {
+            [i, j, n + j, i, n + j, n + i]
+        } else {
+            [i, j, n + i, j, n + j, n + i]
+        };
+        indices.extend(triangles.map(|i| i as u32));
     }
     Primitive::Mesh {
         points,
@@ -99,6 +106,9 @@ fn ring(outer: Vec<[f32; 2]>, inner: Vec<[f32; 2]>, color: [u8; 3]) -> Primitive
 }
 
 pub(super) fn sketch(b: Bounds, profile: Profile, color: [u8; 3]) -> Primitive {
+    if matches!(profile, Profile::Button) {
+        return sketch_button(b, color);
+    }
     let (base, margins, outer, inner) = match profile {
         Profile::Square => (
             [48., 34.],
@@ -106,23 +116,14 @@ pub(super) fn sketch(b: Bounds, profile: Profile, color: [u8; 3]) -> Primitive {
             contour(Bounds::new(0.25, 0.2, 47.5, 33.6), 1.4, 1.4, 1.1, 0.5),
             contour(Bounds::new(2.05, 2., 43.9, 30.), 0.8, 0.7, 0.6, 0.35),
         ),
-        Profile::Button => (
-            [48., 34.],
-            [5., 6., 4., 6.],
-            contour(Bounds::new(0.25, 0.2, 47.5, 33.6), 1.4, 1.5, 1., 0.45),
-            contour(Bounds::new(2., 2., 42., 28.), 0.6, 0.6, 0.4, 0.45),
-        ),
+        Profile::Button => unreachable!(),
         Profile::Rounded => (
-            [70., 42.],
+            [69., 41.],
             [20., 20., 15., 12.],
-            contour(
-                Bounds::new(0.25, 0.25, 69.5, 41.5),
-                19.75,
-                14.75,
-                11.75,
-                0.6,
-            ),
-            contour(Bounds::new(2.1, 2.05, 65.8, 37.9), 17.9, 12.95, 9.95, 0.4),
+            // The curve continues into the stretchable center regions; the
+            // fixed corner footprint does not define its complete radius.
+            contour(Bounds::new(0.3, 0.3, 68.4, 40.4), 28., 20.2, 20.2, 0.3),
+            contour(Bounds::new(2.1, 2.1, 64.8, 36.8), 25.9, 18.4, 18.4, 0.25),
         ),
     };
     let map = |points: Vec<[f32; 2]>| {
@@ -137,6 +138,72 @@ pub(super) fn sketch(b: Bounds, profile: Profile, color: [u8; 3]) -> Primitive {
             .collect()
     };
     ring(map(outer), map(inner), color)
+}
+
+fn sketch_button(b: Bounds, color: [u8; 3]) -> Primitive {
+    let map = |points: Vec<[f32; 2]>| {
+        points
+            .into_iter()
+            .map(|p| {
+                [
+                    b.x + axis(p[0], 42., b.w, 5., 6.),
+                    b.y + axis(p[1], 27., b.h, 4., 6.),
+                ]
+            })
+            .collect::<Vec<_>>()
+    };
+    let outer = map(contour(
+        Bounds::new(0.35, 0.3, 38.5, 23.4),
+        1.4,
+        1.4,
+        1.2,
+        0.45,
+    ));
+    let inner = map(contour(
+        Bounds::new(2.4, 2.4, 34.2, 19.2),
+        0.6,
+        0.6,
+        0.5,
+        0.35,
+    ));
+    let Primitive::Mesh {
+        mut points,
+        mut indices,
+        ..
+    } = ring(outer, inner, color)
+    else {
+        unreachable!()
+    };
+    // Connected lower/right bands step beyond the foreground frame. Keep
+    // them in the same surface so shared edges do not receive separate AA.
+    let n = points.len() as u32;
+    points.extend(map(vec![
+        [3., 23.2],
+        [38.5, 23.2],
+        [38.5, 3.],
+        [41.9, 3.],
+        [41.9, 26.6],
+        [3., 26.6],
+    ]));
+    indices.extend([
+        n,
+        n + 1,
+        n + 4,
+        n,
+        n + 4,
+        n + 5,
+        n + 1,
+        n + 2,
+        n + 3,
+        n + 1,
+        n + 3,
+        n + 4,
+    ]);
+    Primitive::Mesh {
+        points,
+        indices,
+        fill: color,
+    }
 }
 
 fn dash_mesh(path: &[[f32; 2]], width: f32, color: [u8; 3]) -> Primitive {
@@ -254,8 +321,29 @@ impl Scene {
                     unreachable!()
                 };
                 points.truncate(points.len() / 2);
-                Primitive::Polygon {
+                // Collapsed corner regions can repeat points or form a
+                // non-convex boundary. The canvas convex-path tessellator
+                // cannot fill that reliably. Use a shared triangle fan with
+                // its anchor mapped through the same corner regions.
+                let center = points.len() as u32;
+                points.push([
+                    b.x + axis(34.5, 69., b.w, 20., 20.),
+                    b.y + axis(20.5, 41., b.h, 15., 12.),
+                ]);
+                let mut indices = Vec::with_capacity(center as usize * 3);
+                for i in 0..center {
+                    let j = (i + 1) % center;
+                    let a = points[center as usize];
+                    let p = points[i as usize];
+                    let q = points[j as usize];
+                    let area = (p[0] - a[0]) * (q[1] - a[1]) - (p[1] - a[1]) * (q[0] - a[0]);
+                    if area > 0. {
+                        indices.extend([center, i, j]);
+                    }
+                }
+                Primitive::Mesh {
                     points,
+                    indices,
                     fill: layer.control.fill,
                 }
             } else {

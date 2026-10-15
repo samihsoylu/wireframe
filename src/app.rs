@@ -2393,6 +2393,75 @@ fn example_document() -> Document {
 mod tests {
     use super::*;
 
+    #[test]
+    fn rounded_fill_survives_canvas_tessellation_at_small_sizes_and_zoom() {
+        use wireframe::document::{NodeContent, Point, Project, Size, Value};
+        let color = Color32::from_rgb(255, 220, 168);
+        for (w, h) in [(8., 8.), (20., 20.), (70., 40.), (180., 40.), (70., 120.)] {
+            let mut project = Project::default();
+            let id = project.allocate_id().unwrap();
+            let mut node = wireframe::catalog::get("rectangle")
+                .unwrap()
+                .create(id, Point::new(20., 20.));
+            node.content = NodeContent::Control {
+                kind: "rectangle".into(),
+                size: Size::fixed(w, h),
+            };
+            node.properties
+                .insert("border".into(), Value::Choice("rounded".into()));
+            node.properties
+                .insert("fill".into(), Value::Color([255, 220, 168, 255]));
+            project.pages[0].content.nodes.push(node);
+            let editor = wireframe::workspace::Editor::new(project);
+            let scene = editor.rendered_scene(editor.page).unwrap();
+            for scale in [0.72, 1., 1.5] {
+                let ctx = egui::Context::default();
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(500., 400.))),
+                        ..Default::default()
+                    },
+                    |ui| WireframeApp::paint_scene(ui.painter(), &scene, Pos2::ZERO, scale),
+                );
+                let jobs =
+                    ctx.tessellate(std::mem::take(&mut output.shapes), output.pixels_per_point);
+                output.textures_delta.clear();
+                for fx in [0.35, 0.5, 0.65] {
+                    for fy in [0.35, 0.5, 0.65] {
+                        let p = Pos2::new((20. + w * fx) * scale, (20. + h * fy) * scale);
+                        let covered = jobs.iter().any(|job| {
+                            let egui::epaint::Primitive::Mesh(mesh) = &job.primitive else {
+                                return false;
+                            };
+                            mesh.indices.as_chunks::<3>().0.iter().any(|tri| {
+                                let vertices = tri.map(|i| mesh.vertices[i as usize]);
+                                if vertices.iter().any(|v| v.color != color) {
+                                    return false;
+                                }
+                                let [a, b, c] = vertices.map(|v| v.pos);
+                                let cross = |a: Pos2, b: Pos2, c: Pos2| {
+                                    (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
+                                };
+                                let area = cross(a, b, c);
+                                if area.abs() < 0.00001 {
+                                    return false;
+                                }
+                                let sign = area.signum();
+                                [cross(a, b, p), cross(b, c, p), cross(c, a, p)]
+                                    .iter()
+                                    .all(|v| *v * sign >= -0.0001)
+                            })
+                        });
+                        assert!(
+                            covered,
+                            "Rounded {w} x {h} at scale {scale} lost its fill at {fx}, {fy}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
     fn frame(ctx: &egui::Context, app: &mut WireframeApp, events: Vec<egui::Event>) {
         let mut output = ctx.run_ui(
             egui::RawInput {

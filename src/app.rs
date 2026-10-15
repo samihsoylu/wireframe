@@ -86,7 +86,7 @@ pub struct WireframeApp {
     drag: Option<Drag>,
     drag_scroll: Option<wireframe::viewport::DragScroll>,
     library_drag: Option<Kind>,
-    library_press: Option<(Kind, Pos2)>,
+    library_press: Option<library_drag::LibraryPress>,
     library_anchor: Vec2,
     alignment_guides: Vec<snapping::Guide>,
     canvas_press: Option<Pos2>,
@@ -116,6 +116,25 @@ pub struct WireframeApp {
     canvas_rect: Rect,
 }
 impl WireframeApp {
+    /// End transient pointer state at document/action boundaries. Commit the
+    /// last visible canvas edit before a save captures its immutable document.
+    fn end_pointer_gestures(&mut self) {
+        self.editor.commit();
+        self.drag = None;
+        self.drag_scroll = None;
+        self.library_drag = None;
+        self.library_press = None;
+        self.canvas_press = None;
+        self.alignment_guides.clear();
+    }
+    fn canvas_input_blocked(&self) -> bool {
+        self.save_busy()
+            || self.recovery_chooser_open()
+            || self.pending.is_some()
+            || self.text_edit.is_some()
+            || self.error.is_some()
+            || self.recovery_offer.is_some()
+    }
     fn begin_text_edit(&mut self, id: Id) {
         match self.editor.prepare_text_edit(id) {
             Ok(draft) => self.text_edit = draft,
@@ -308,7 +327,7 @@ impl WireframeApp {
         if self.save_busy() {
             return;
         }
-        self.editor.commit();
+        self.end_pointer_gestures();
         if self.automatic_named() {
             self.pending = Some(pending);
             self.queue_save(self.file.clone().unwrap(), false);
@@ -1463,6 +1482,10 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE.fill(Color32::WHITE))
             .show(ui, |ui| {
+                if self.canvas_input_blocked() {
+                    self.end_pointer_gestures();
+                    ui.disable();
+                }
                 let (response, painter) =
                     ui.allocate_painter(ui.available_size(), Sense::click_and_drag());
                 self.canvas_rect = response.rect;

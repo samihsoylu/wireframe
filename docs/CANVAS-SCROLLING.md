@@ -2,7 +2,7 @@
 
 Moving or resizing controls, or dragging an area selection, scrolls the canvas when the pointer enters its 10-point edge band. Holding the pointer still continues scrolling every 100ms. A pointer farther than80 points outside the visible canvas requests a larger step. Horizontal and vertical scrolling work together at corners.
 
-The viewport moves before the gesture is recalculated, so the control or selection continues to follow the pointer. Movement and resize remain a single Undo operation. Releasing, Escape or losing app focus ends scrolling. Space-drag panning, presentation, image cropping and library insertion use their own interaction paths.
+The viewport moves before the gesture is recalculated, so the control or selection continues to follow the pointer. Movement and resize remain a single Undo operation. Releasing, Escape or losing app focus ends scrolling. Save and decision/recovery dialogs end pointer gestures at the last visible edit; later held motion cannot continue scrolling or change the captured document. Space-drag panning, presentation, image cropping and library insertion use their own interaction paths.
 
 Scrollable bounds include 400 viewport points beyond the content, up to the 10000-document-unit workspace extent and trailing margin. Bounds can grow while a gesture is held but do not shrink until it ends. Existing free pan outside those bounds remains available; edge scrolling moves toward the permitted range gradually rather than jumping.
 

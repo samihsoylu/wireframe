@@ -2,6 +2,7 @@
 // Copyright 2026 Wireframe contributors
 use super::*;
 
+#[derive(Clone, Copy)]
 pub(super) struct TileImage {
     pub origin: Pos2,
     pub scale: f32,
@@ -26,6 +27,30 @@ impl TileImage {
     }
 }
 
+#[derive(Clone, Copy)]
+pub(super) struct LibraryPress {
+    kind: Kind,
+    point: Pos2,
+    image_area: Rect,
+    image: TileImage,
+}
+impl LibraryPress {
+    fn activation(&self, point: Pos2) -> Option<Vec2> {
+        if point.distance(self.point) <= 6. {
+            return None;
+        }
+        if self.image_area.contains(point) {
+            Some(self.image.anchor(point))
+        } else if self.image_area.contains(self.point) {
+            // Fast/coalesced input can omit every intermediate source sample.
+            // Preserve that usable gesture using its known image-area press.
+            Some(self.image.anchor(self.point))
+        } else {
+            None
+        }
+    }
+}
+
 impl WireframeApp {
     pub(super) fn library_drag_source(
         &mut self,
@@ -47,17 +72,21 @@ impl WireframeApp {
             } = event
                 && visible.contains(pos)
                 && ui.ctx().layer_id_at(pos) == Some(ui.layer_id())
+                && let Ok(scene) = self.previews.scene(
+                    kind,
+                    &self.editor.document.settings,
+                    &self.editor.document.font,
+                )
             {
-                self.library_press = Some((kind, pos));
-                self.library_anchor = self
-                    .previews
-                    .scene(
-                        kind,
-                        &self.editor.document.settings,
-                        &self.editor.document.font,
-                    )
-                    .map(|scene| TileImage::new(rect, scene.bounds).anchor(pos))
-                    .unwrap_or(Vec2::ZERO);
+                let image = TileImage::new(rect, scene.bounds);
+                self.library_press = Some(LibraryPress {
+                    kind,
+                    point: pos,
+                    image,
+                    image_area: Rect::from_min_size(rect.min, Vec2::new(68., 46.))
+                        .intersect(ui.clip_rect()),
+                });
+                self.library_anchor = image.anchor(pos);
             }
         }
     }
@@ -65,7 +94,7 @@ impl WireframeApp {
     // Resolve after viewport layout and before painting, so release has no
     // empty frame between the transient preview and the committed control.
     pub(super) fn library_drag_update(&mut self, ctx: &egui::Context) {
-        let (focused, escape, held, released, pointer, crossed_threshold) = ctx.input(|i| {
+        let (focused, escape, held, released, pointer, activation) = ctx.input(|i| {
             // Consider only motion belonging to this press, ending at its release.
             // The GUI framework also starts drags after a stationary long hold.
             let first = i
@@ -101,11 +130,15 @@ impl WireframeApp {
                     _ => None,
                 })
                 .or_else(|| i.pointer.latest_pos());
-            let crossed_threshold = self.library_press.is_some_and(|(_, start)| {
-                pointer.is_some_and(|pos| pos.distance(start) > 6.)
-                    || i.events[first..release.unwrap_or(i.events.len())].iter().any(|e| {
-                        matches!(e, egui::Event::PointerMoved(pos) if pos.distance(start) > 6.)
+            let activation = self.library_press.and_then(|press| {
+                i.events[first..release.unwrap_or(i.events.len())]
+                    .iter()
+                    .filter_map(|e| match e {
+                        egui::Event::PointerMoved(pos) => Some(*pos),
+                        _ => None,
                     })
+                    .find_map(|point| press.activation(point))
+                    .or_else(|| pointer.and_then(|point| press.activation(point)))
             });
             (
                 i.focused,
@@ -113,7 +146,7 @@ impl WireframeApp {
                 i.pointer.primary_down(),
                 i.pointer.button_released(egui::PointerButton::Primary),
                 pointer,
-                crossed_threshold,
+                activation,
             )
         });
         if !focused
@@ -121,6 +154,8 @@ impl WireframeApp {
             || self.present
             || !self.show_library
             || self.image_crop.is_some()
+            || self.save_busy()
+            || self.recovery_chooser_open()
             || self.pending.is_some()
             || self.text_edit.is_some()
             || self.error.is_some()
@@ -131,11 +166,11 @@ impl WireframeApp {
             return;
         }
         if (held || released)
-            && crossed_threshold
             && self.library_drag.is_none()
-            && let Some((kind, _)) = self.library_press
+            && let (Some(press), Some(anchor)) = (self.library_press, activation)
         {
-            self.library_drag = Some(kind);
+            self.library_anchor = anchor;
+            self.library_drag = Some(press.kind);
         }
         if released || !held {
             self.library_press = None;
@@ -319,7 +354,12 @@ mod tests {
             frame(&ctx, &mut app, events, true);
             assert_eq!(app.library_drag.is_some(), excursion);
             let target = app.canvas_rect.center();
-            let expected = app.world(target - Vec2::splat(24.));
+            let anchor = if excursion {
+                Vec2::new(31. * 48. / 46., 24.)
+            } else {
+                Vec2::splat(24.)
+            };
+            let expected = app.world(target - anchor);
             frame(
                 &ctx,
                 &mut app,
@@ -622,5 +662,97 @@ mod tests {
                 "{mode}"
             );
         }
+    }
+    #[test]
+    fn staged_drag_samples_the_activation_point_and_keeps_it_until_release() {
+        for zoom in [0.5, 1., 2.] {
+            let ctx = egui::Context::default();
+            let mut app = WireframeApp::workspace(&ctx, None);
+            app.zoom = zoom;
+            let start = begin(&ctx, &mut app);
+            frame(
+                &ctx,
+                &mut app,
+                vec![egui::Event::PointerMoved(start + Vec2::new(8., 4.))],
+                true,
+            );
+            // 48-unit artwork is fitted to 46 points, with 11 points of left
+            // padding. Activation is at image-field coordinate (42, 27).
+            let anchor = Vec2::new(31. * 48. / 46., 27. * 48. / 46.);
+            assert!((app.library_anchor - anchor).length() < 0.001);
+            let target = app.screen([160., 200.]);
+            frame(
+                &ctx,
+                &mut app,
+                vec![egui::Event::PointerMoved(target)],
+                true,
+            );
+            assert!((app.library_anchor - anchor).length() < 0.001);
+            assert!(app.editor.current().controls.is_empty());
+            frame(&ctx, &mut app, vec![pointer(target, false)], true);
+            let b = app.editor.current().controls[0].bounds;
+            assert!((b.x - (160. - anchor.x / zoom)).abs() < 0.001);
+            assert!((b.y - (200. - anchor.y / zoom)).abs() < 0.001);
+            app.editor.undo();
+            assert!(app.editor.current().controls.is_empty());
+        }
+    }
+    #[test]
+    fn label_press_needs_to_enter_the_image_area_before_starting_a_drag() {
+        for enters_image in [false, true] {
+            let ctx = egui::Context::default();
+            let mut app = WireframeApp::workspace(&ctx, None);
+            frame(&ctx, &mut app, vec![], true);
+            let (source, _) = frame(&ctx, &mut app, vec![], true);
+            let start = source.min + Vec2::new(34., 60.);
+            frame(
+                &ctx,
+                &mut app,
+                vec![egui::Event::PointerMoved(start), pointer(start, true)],
+                true,
+            );
+            if enters_image {
+                frame(
+                    &ctx,
+                    &mut app,
+                    vec![egui::Event::PointerMoved(source.min + Vec2::new(34., 23.))],
+                    true,
+                );
+                assert!(app.library_drag.is_some());
+            }
+            let target = app.canvas_rect.center();
+            frame(
+                &ctx,
+                &mut app,
+                vec![egui::Event::PointerMoved(target), pointer(target, false)],
+                true,
+            );
+            assert_eq!(
+                app.editor.current().controls.len(),
+                usize::from(enters_image)
+            );
+        }
+    }
+    #[test]
+    fn save_boundary_cancels_a_held_library_preview_before_it_can_insert() {
+        let dir = tempfile::tempdir().unwrap();
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        app.enable_persistence(&ctx, dir.path().to_owned());
+        begin(&ctx, &mut app);
+        let target = app.canvas_rect.center();
+        frame(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(target)],
+            true,
+        );
+        assert!(app.library_drag.is_some());
+        let before = app.editor.document.clone();
+        assert!(app.queue_save(dir.path().join("new.wireframe"), true));
+        frame(&ctx, &mut app, vec![pointer(target, false)], true);
+        assert_eq!(app.editor.document, before);
+        assert!(app.library_drag.is_none() && app.library_press.is_none());
+        assert!(app.editor.undo_name().is_none());
     }
 }

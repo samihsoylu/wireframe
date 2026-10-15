@@ -151,7 +151,7 @@ impl WireframeApp {
         if self.save_busy() {
             return false;
         }
-        self.editor.commit();
+        self.end_pointer_gestures();
         // A failed worker may be replaced only by an explicit Save As. Preserve
         // its old record and create a fresh source from the visible document.
         if choose && self.persistence.as_ref().unwrap().failed {

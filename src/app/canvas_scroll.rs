@@ -11,10 +11,7 @@ impl WireframeApp {
         ) && ctx
             .input(|i| i.focused && i.pointer.primary_down() && !i.key_pressed(Key::Escape))
             && !self.present
-            && self.pending.is_none()
-            && self.error.is_none()
-            && self.recovery_offer.is_none()
-            && self.text_edit.is_none();
+            && !self.canvas_input_blocked();
         if !active {
             self.drag_scroll = None;
             return false;
@@ -242,5 +239,49 @@ mod tests {
             frame(&ctx, &mut app, 1., vec![], escape);
             assert_eq!(app.pan.x, -1.);
         }
+    }
+    #[test]
+    fn saving_finishes_the_visible_canvas_move_and_stops_edge_scrolling() {
+        let dir = tempfile::tempdir().unwrap();
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        app.enable_persistence(&ctx, dir.path().to_owned());
+        app.editor.add(Kind::CircleButton, 850., 300.);
+        let before = app.editor.document.clone();
+        frame(&ctx, &mut app, 0., vec![], true);
+        let start = app.screen([874., 324.]);
+        frame(
+            &ctx,
+            &mut app,
+            0.01,
+            vec![egui::Event::PointerMoved(start), button(start, true)],
+            true,
+        );
+        let end = Pos2::new(995., start.y);
+        frame(
+            &ctx,
+            &mut app,
+            0.02,
+            vec![egui::Event::PointerMoved(end)],
+            true,
+        );
+        assert!(app.drag.is_some());
+        assert_eq!(app.pan.x, -1.);
+        let captured = app.editor.document.clone();
+        assert!(app.queue_save(dir.path().join("gesture.wireframe"), true));
+        assert!(app.drag.is_none() && app.drag_scroll.is_none());
+        frame(
+            &ctx,
+            &mut app,
+            0.2,
+            vec![egui::Event::PointerMoved(end + Vec2::new(30., 20.))],
+            true,
+        );
+        assert_eq!(app.editor.document, captured);
+        assert_eq!(app.pan.x, -1.);
+        frame(&ctx, &mut app, 0.3, vec![button(end, false)], true);
+        assert_eq!(app.editor.document, captured);
+        app.editor.undo();
+        assert_eq!(app.editor.document, before);
     }
 }

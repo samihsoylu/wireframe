@@ -1,0 +1,23 @@
+# Per-project working copies
+
+`WorkingCopies` is the durable storage boundary for the save coordinator. Each named project has a record identified by its canonical native path; each unnamed project gets its own reserved identifier. An OS file lock owns one record at a time. Multiple projects can coexist, and dropping ownership leaves their edits available for reopening. A random identifier collision is checked under the lock and never replaces earlier unnamed work.
+
+One atomically replaced JSON record contains the local document, saved-file identity, acknowledged file/content fingerprints and an optional pending-write fingerprint. Native path units are preserved without lossy Unicode conversion. Records are local application state, not a portable interchange format. Project serialization and validation remain unchanged.
+
+A checkpoint changes only the local document. `save_named` accepts an immutable snapshot which may be older than that document. It checks the named file against the acknowledged SHA-256 fingerprint, writes a pending journal locally, checks the named file again, writes that snapshot atomically, then acknowledges its fingerprint in the record. It never substitutes the snapshot for newer local edits.
+
+If a named write succeeds but acknowledgement fails, the pending fingerprint recognizes that write when reopening or retrying. Acknowledgement can then finish while retaining the latest local document. If the named write never happened, the old saved file and pending local work remain. A later external change is still a conflict. Scheduling and retry timing belong to the coordinator; the storage layer returns errors to its caller.
+
+Dirty state compares canonical project content against the last acknowledged named content, separately from the exact file-byte fingerprint. Formatting differences in a loaded file do not create false edits. Older-save completion cannot clear newer local edits. Unnamed work remains locally unsaved until the caller assigns a named destination or explicitly discards it.
+
+A valid local record can reopen when its named file is missing, unreadable or externally changed. The caller receives the named-file status and can select the appropriate candidate. Changed files are decoded for that decision but are not overwritten automatically. Missing files are not silently recreated by `save_named`. Save As destination assignment, external-change resolution and UI decisions are still integration work.
+
+Unreadable local records are visible in listing results. When a valid named file can be opened, an invalid local record is first moved to a unique archive and its original bytes are preserved; the returned copy exposes that location. Unsupported future record versions are left untouched and return an error. If neither candidate can be decoded, both remain intact. Non-regular local paths are not replaced during fallback. File reads are bounded, and decoded projects are validated before use.
+
+Explicit discard removes only the selected local record. Its stable lock file remains, preventing competing processes from locking different inodes during close. Named files and other projects are retained. Archives and lock files are excluded from the active working-copy list.
+
+Eighteen focused tests cover independent projects, ownership and aliases, reopen, dirty content, older saves, external changes, missing/unreadable files, preserved fallback, future formats, checkpoint/write/acknowledgement failures, identifier validation and collisions, explicit discard, native path encoding and non-regular paths. A worker-thread integration test connects the coordinator to real working-copy writes and verifies immutable snapshots, flush targets, ownership and reopening. The two existing coordinator disk tests are retained.
+
+Limits: checks immediately before atomic replacement detect ordinary external changes but cannot prevent an unrelated process from writing between the final check and replacement. Locks coordinate users of the same working-copy store; they do not lock out every external editor. Filesystem-specific aliases, hard links and inaccessible/missing parent paths can need further identity handling. Non-Unicode path units round-trip in metadata; actual filesystem acceptance varies. Tests run on macOS; native Windows/Linux, forced process termination and power-loss behavior are unverified.
+
+The desktop still uses its earlier recovery flow. This backend and the coordinator are not yet connected to UI automatic saving. Remaining work includes Save As ownership transfer, legacy recovery migration, persisted settings, candidate selection, error/status presentation, close-versus-quit behavior and native restart acceptance.

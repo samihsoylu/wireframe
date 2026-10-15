@@ -331,6 +331,16 @@
     ]
   },
   {
+    "name": "block-buffer",
+    "version": "0.12.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/RustCrypto/utils",
+    "files": [
+      "block-buffer-0.12.1/LICENSE-APACHE",
+      "block-buffer-0.12.1/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "block2",
     "version": "0.5.1",
     "license": "MIT",
@@ -515,6 +525,16 @@
     ]
   },
   {
+    "name": "const-oid",
+    "version": "0.10.2",
+    "license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/RustCrypto/formats",
+    "files": [
+      "const-oid-0.10.2/LICENSE-APACHE",
+      "const-oid-0.10.2/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "core-foundation",
     "version": "0.9.4",
     "license": "MIT OR Apache-2.0",
@@ -617,6 +637,16 @@
     ]
   },
   {
+    "name": "cpufeatures",
+    "version": "0.3.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/RustCrypto/utils",
+    "files": [
+      "cpufeatures-0.3.1/LICENSE-APACHE",
+      "cpufeatures-0.3.1/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "crc32fast",
     "version": "1.5.2",
     "license": "MIT OR Apache-2.0",
@@ -634,6 +664,16 @@
     "files": [
       "crossbeam-utils-0.8.23/LICENSE-APACHE",
       "crossbeam-utils-0.8.23/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "crypto-common",
+    "version": "0.2.2",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/RustCrypto/traits",
+    "files": [
+      "crypto-common-0.2.2/LICENSE-APACHE",
+      "crypto-common-0.2.2/LICENSE-MIT"
     ]
   },
   {
@@ -655,6 +695,16 @@
     "files": [
       "data-url-0.3.2/LICENSE-APACHE",
       "data-url-0.3.2/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "digest",
+    "version": "0.11.3",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/RustCrypto/traits",
+    "files": [
+      "digest-0.11.3/LICENSE-APACHE",
+      "digest-0.11.3/LICENSE-MIT"
     ]
   },
   {
@@ -1304,6 +1354,16 @@
     "files": [
       "hex-0.4.3/LICENSE-APACHE",
       "hex-0.4.3/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "hybrid-array",
+    "version": "0.4.15",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/RustCrypto/hybrid-array",
+    "files": [
+      "hybrid-array-0.4.15/LICENSE-APACHE",
+      "hybrid-array-0.4.15/LICENSE-MIT"
     ]
   },
   {
@@ -2116,6 +2176,16 @@
     ]
   },
   {
+    "name": "sha2",
+    "version": "0.11.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/RustCrypto/hashes",
+    "files": [
+      "sha2-0.11.1/LICENSE-APACHE",
+      "sha2-0.11.1/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "shlex",
     "version": "2.0.1",
     "license": "MIT OR Apache-2.0",
@@ -2484,6 +2554,17 @@
       "ttf-parser-0.25.1/LICENSE-APACHE",
       "ttf-parser-0.25.1/LICENSE-MIT",
       "ttf-parser-0.25.1/tests/fonts/colr_1_LICENSE"
+    ]
+  },
+  {
+    "name": "typenum",
+    "version": "1.20.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/paholg/typenum",
+    "files": [
+      "typenum-1.20.1/LICENSE",
+      "typenum-1.20.1/LICENSE-APACHE",
+      "typenum-1.20.1/LICENSE-MIT"
     ]
   },
   {

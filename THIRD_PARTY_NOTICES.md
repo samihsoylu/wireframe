@@ -39,6 +39,7 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | base64-0.23.1 | MIT OR Apache-2.0 | [files](licenses/base64-0.23.1/) |
 | bitflags-1.3.2 | MIT/Apache-2.0 | [files](licenses/bitflags-1.3.2/) |
 | bitflags-2.13.2 | MIT OR Apache-2.0 | [files](licenses/bitflags-2.13.2/) |
+| block-buffer-0.12.1 | MIT OR Apache-2.0 | [files](licenses/block-buffer-0.12.1/) |
 | block2-0.5.1 | MIT | [files](licenses/block2-0.5.1/) |
 | block2-0.6.2 | MIT | [files](licenses/block2-0.6.2/) |
 | blocking-1.7.0 | Apache-2.0 OR MIT | [files](licenses/blocking-1.7.0/) |
@@ -58,6 +59,7 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | color-0.3.3 | Apache-2.0 OR MIT | [files](licenses/color-0.3.3/) |
 | color_quant-1.1.0 | MIT | [files](licenses/color_quant-1.1.0/) |
 | concurrent-queue-2.5.0 | Apache-2.0 OR MIT | [files](licenses/concurrent-queue-2.5.0/) |
+| const-oid-0.10.2 | Apache-2.0 OR MIT | [files](licenses/const-oid-0.10.2/) |
 | core-foundation-0.9.4 | MIT OR Apache-2.0 | [files](licenses/core-foundation-0.9.4/) |
 | core-foundation-0.10.1 | MIT OR Apache-2.0 | [files](licenses/core-foundation-0.10.1/) |
 | core-foundation-sys-0.8.7 | MIT OR Apache-2.0 | [files](licenses/core-foundation-sys-0.8.7/) |
@@ -68,10 +70,13 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | core-text-22.0.0 | MIT OR Apache-2.0 | [files](licenses/core-text-22.0.0/) |
 | core_maths-0.1.1 | MIT | [files](licenses/core_maths-0.1.1/) |
 | cosmic-text-0.19.0 | MIT OR Apache-2.0 | [files](licenses/cosmic-text-0.19.0/) |
+| cpufeatures-0.3.1 | MIT OR Apache-2.0 | [files](licenses/cpufeatures-0.3.1/) |
 | crc32fast-1.5.2 | MIT OR Apache-2.0 | [files](licenses/crc32fast-1.5.2/) |
 | crossbeam-utils-0.8.23 | MIT OR Apache-2.0 | [files](licenses/crossbeam-utils-0.8.23/) |
+| crypto-common-0.2.2 | MIT OR Apache-2.0 | [files](licenses/crypto-common-0.2.2/) |
 | cursor-icon-1.2.0 | MIT OR Apache-2.0 OR Zlib | [files](licenses/cursor-icon-1.2.0/) |
 | data-url-0.3.2 | MIT OR Apache-2.0 | [files](licenses/data-url-0.3.2/) |
+| digest-0.11.3 | MIT OR Apache-2.0 | [files](licenses/digest-0.11.3/) |
 | directories-6.0.0 | MIT OR Apache-2.0 | [files](licenses/directories-6.0.0/) |
 | dirs-sys-0.5.0 | MIT OR Apache-2.0 | [files](licenses/dirs-sys-0.5.0/) |
 | dispatch-0.2.0 | MIT | [files](licenses/dispatch-0.2.0/) |
@@ -138,6 +143,7 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | hashbrown-0.16.1 | MIT OR Apache-2.0 | [files](licenses/hashbrown-0.16.1/) |
 | hashbrown-0.17.1 | MIT OR Apache-2.0 | [files](licenses/hashbrown-0.17.1/) |
 | hex-0.4.3 | MIT OR Apache-2.0 | [files](licenses/hex-0.4.3/) |
+| hybrid-array-0.4.15 | MIT OR Apache-2.0 | [files](licenses/hybrid-array-0.4.15/) |
 | iana-time-zone-0.1.65 | MIT OR Apache-2.0 | [files](licenses/iana-time-zone-0.1.65/) |
 | image-0.25.10 | MIT OR Apache-2.0 | [files](licenses/image-0.25.10/) |
 | image-webp-0.2.4 | MIT OR Apache-2.0 | [files](licenses/image-webp-0.2.4/) |
@@ -220,6 +226,7 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | serde_derive-1.0.229 | MIT OR Apache-2.0 | [files](licenses/serde_derive-1.0.229/) |
 | serde_json-1.0.154 | MIT OR Apache-2.0 | [files](licenses/serde_json-1.0.154/) |
 | serde_repr-0.1.21 | MIT OR Apache-2.0 | [files](licenses/serde_repr-0.1.21/) |
+| sha2-0.11.1 | MIT OR Apache-2.0 | [files](licenses/sha2-0.11.1/) |
 | shlex-2.0.1 | MIT OR Apache-2.0 | [files](licenses/shlex-2.0.1/) |
 | signal-hook-registry-1.4.8 | MIT OR Apache-2.0 | [files](licenses/signal-hook-registry-1.4.8/) |
 | simd-adler32-0.3.10 | MIT | [files](licenses/simd-adler32-0.3.10/) |
@@ -258,6 +265,7 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | tracing-attributes-0.1.31 | MIT | [files](licenses/tracing-attributes-0.1.31/) |
 | tracing-core-0.1.36 | MIT | [files](licenses/tracing-core-0.1.36/) |
 | ttf-parser-0.25.1 | MIT OR Apache-2.0 | [files](licenses/ttf-parser-0.25.1/) |
+| typenum-1.20.1 | MIT OR Apache-2.0 | [files](licenses/typenum-1.20.1/) |
 | unicode-bidi-0.3.18 | MIT OR Apache-2.0 | [files](licenses/unicode-bidi-0.3.18/) |
 | unicode-general-category-1.1.0 | Apache-2.0 | [files](licenses/unicode-general-category-1.1.0/) |
 | unicode-ident-1.0.27 | (MIT OR Apache-2.0) AND Unicode-3.0 | [files](licenses/unicode-ident-1.0.27/) |

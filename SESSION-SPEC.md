@@ -8,6 +8,16 @@ Work directly as Engineer. Preserve user files and explicit deferrals. Use synth
 
 ## Current checkpoint — 2026-10-15
 
+The per-project working-copy backend is implemented with scoped ownership, separate named/unnamed records, atomic local checkpoints, immutable named-save snapshots and a write journal. An interrupted named-write acknowledgement can finish on reopen without replacing newer local edits. External changes are detected before staging and rechecked before named replacement; missing or conflicting files are not silently overwritten. Invalid local records are preserved before valid-named fallback, while future versions and non-regular paths are left intact. Content-based dirty state avoids treating file formatting as edits. See docs/WORKING-COPIES.md.
+
+The full run passed 494 tests. Final checks after allocation/path guards passed 18 storage tests and three worker/disk integration tests, representing 495 current tests across runs. The worker test connects the save coordinator to real threaded file I/O, verifies flush targets and reopens the retained document. All-target Clippy, formatting and diff checks pass. Dependency notices were regenerated for 330 locked packages. Initial failures were in canonical-path injection and an unsupported macOS filename fixture; both were corrected and their limits recorded. Self-review only; no native UI, process-crash, power-loss or Windows/Linux acceptance claim.
+
+The desktop still uses its preceding recovery workflow. The running signed bundle remains UUID 6855AA2A-31F4-30C9-9D1B-461EB55154A8; no packaging refresh or UI automatic-save claim. Next connect coordinator and working copies to Save As ownership transfer, safe legacy recovery migration, automatic/manual settings, candidate selection, async snapshot retention, status/errors and close-versus-quit handling. Native restart and failure acceptance must precede enabling background writes. The final external-file check cannot prevent an unrelated writer changing the file in the remaining check-to-replace interval.
+
+The overall goal remains active. Held native library-drag cadence/autoscroll, broad shared editing fidelity, export PDF/options/links/notes, native Windows/Linux and release acceptance remain open. The 86-entry catalog is not overall completion.
+
+Previous coordinator checkpoint:
+
 The original revision-aware save coordinator is implemented as a library component. It separates current, locally durable and named-file revisions, schedules five-second automatic saves, retains immutable in-flight revisions, retries once after one second and waits for explicit flush targets. Session-bound tickets reject foreign or stale completions. A future debounce for a newer edit survives failure of an older write; expired work does not start an unlimited retry cycle. See docs/SAVE-COORDINATOR.md.
 
 The initial full suite passed 474 tests. A subsequently added retry-edge regression reproduced a missing-deadline bug; the correction passes all 16 coordinator tests and both real-disk integration tests, representing 476 current tests across runs. The disk checks verify immutable snapshots across overlapping saves and preservation/retry when the named destination is obstructed. All-target Clippy, formatting and diff checks pass. Self-review only; no crash, power-loss or native automatic-save claim.

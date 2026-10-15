@@ -31,6 +31,7 @@ pub mod tree;
 pub mod viewport;
 pub mod window;
 
+pub mod working_copy;
 pub mod workspace;
 
 pub mod field_set;

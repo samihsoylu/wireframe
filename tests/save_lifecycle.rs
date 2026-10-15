@@ -108,3 +108,75 @@ fn real_write_failure_keeps_local_data_and_retries_the_captured_snapshot() {
     // Failed temporary writes leave no stray files behind.
     assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 3);
 }
+
+#[test]
+fn worker_keeps_immutable_save_snapshots_and_releases_project_ownership_on_exit() {
+    use std::sync::mpsc;
+    use wireframe::{
+        save_coordinator::WriteTicket,
+        working_copy::{CopyError, WorkingCopies},
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let named = dir.path().join("project.wireframe");
+    ProjectStore.save(&named, &Project::default()).unwrap();
+    let copies = WorkingCopies::new(dir.path().join("working")).unwrap();
+    let mut copy = copies.open_named(&named).unwrap();
+    let id = copy.id().to_owned();
+    let (send, commands) = mpsc::sync_channel::<(Project, Option<WriteTicket>)>(1);
+    let (ack, results) = mpsc::sync_channel(1);
+    let worker = std::thread::spawn(move || {
+        for (snapshot, ticket) in commands {
+            let result = if ticket.is_some() {
+                copy.save_named(&snapshot)
+            } else {
+                copy.checkpoint(&snapshot)
+            };
+            ack.send((ticket, result.map_err(|e| e.to_string())))
+                .unwrap();
+        }
+        copy
+    });
+    let first = Project {
+        title: "Captured for saving".into(),
+        ..Project::default()
+    };
+    let latest = Project {
+        title: "Edited before that save completed".into(),
+        ..first.clone()
+    };
+    let mut c = SaveCoordinator::default();
+    let r1 = c.edited().unwrap();
+    send.send((first.clone(), None)).unwrap();
+    let (_, result) = results.recv().unwrap();
+    result.unwrap();
+    c.local_committed(r1, Duration::ZERO).unwrap();
+    let older = c.poll(Duration::from_secs(5)).unwrap().unwrap();
+    let r2 = c.edited().unwrap();
+    send.send((latest.clone(), None)).unwrap();
+    let (_, result) = results.recv().unwrap();
+    result.unwrap();
+    c.local_committed(r2, Duration::from_secs(6)).unwrap();
+    let target = c.request_flush();
+    send.send((first.clone(), Some(older))).unwrap();
+    let (ticket, result) = results.recv().unwrap();
+    c.complete(ticket.unwrap(), result, Duration::from_secs(7))
+        .unwrap();
+    assert_eq!(ProjectStore.load(&named).unwrap(), first);
+    assert!(c.named_revision() < target);
+    assert!(!c.is_clean());
+    let next = c.poll(Duration::from_secs(7)).unwrap().unwrap();
+    send.send((latest.clone(), Some(next))).unwrap();
+    let (ticket, result) = results.recv().unwrap();
+    c.complete(ticket.unwrap(), result, Duration::from_secs(8))
+        .unwrap();
+    assert!(c.is_clean());
+    drop(send);
+    let copy = worker.join().unwrap();
+    assert_eq!(copy.project(), &latest);
+    assert!(!copy.has_local_changes().unwrap());
+    assert!(matches!(copies.resume(&id), Err(CopyError::Busy)));
+    drop(copy);
+    let reopened = copies.resume(&id).unwrap();
+    assert_eq!(reopened.project(), &latest);
+    assert_eq!(ProjectStore.load(&named).unwrap(), latest);
+}

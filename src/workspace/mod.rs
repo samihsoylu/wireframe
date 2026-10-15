@@ -282,6 +282,10 @@ impl Editor {
             if matches!(
                 kind,
                 Kind::Heading
+                    | Kind::FormattingToolbar
+                    | Kind::StreetMap
+                    | Kind::ModalOverlay
+                    | Kind::VerticalRule
                     | Kind::NumericStepper
                     | Kind::ColorPicker
                     | Kind::HelpButton
@@ -393,6 +397,10 @@ impl Editor {
                     Kind::PieChart => "pie_chart",
                     Kind::Heading => "heading",
                     Kind::Subtitle => "subtitle",
+                    Kind::FormattingToolbar => "formatting_toolbar",
+                    Kind::StreetMap => "map",
+                    Kind::ModalOverlay => "modal_overlay",
+                    Kind::VerticalRule => "vertical_rule",
                     Kind::NumericStepper => "numeric_stepper",
                     Kind::ColorPicker => "color_picker",
                     Kind::HelpButton => "help_button",

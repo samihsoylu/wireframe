@@ -20,7 +20,8 @@ fn fraction_slider(ui: &mut egui::Ui, value: &mut f64) -> (egui::Response, bool)
 // catalog's full field inventory remains separate from completed rendering.
 fn supported(kind: &str, key: &str) -> bool {
     match key {
-        "link" => kind == "help_button",
+        "link" => matches!(kind, "help_button" | "modal_overlay"),
+        "stroke" => kind == "vertical_rule",
         "slider_thumb" => matches!(kind, "horizontal_slider" | "vertical_slider"),
         "date_mode" => kind == "date_picker",
         "device_model" | "background_pattern" => kind == "phone",
@@ -125,7 +126,8 @@ fn supported(kind: &str, key: &str) -> bool {
         ),
         "border_color" => matches!(
             kind,
-            "dropdown"
+            "vertical_rule"
+                | "dropdown"
                 | "text_input"
                 | "text_area"
                 | "link_bar"
@@ -151,7 +153,8 @@ fn supported(kind: &str, key: &str) -> bool {
         ),
         "background_opacity" => matches!(
             kind,
-            "text_input"
+            "vertical_rule"
+                | "text_input"
                 | "text_area"
                 | "multiline_button"
                 | "tabs"
@@ -264,6 +267,10 @@ impl WireframeApp {
         if !matches!(
             spec.id,
             "image"
+                | "formatting_toolbar"
+                | "map"
+                | "modal_overlay"
+                | "vertical_rule"
                 | "color_picker"
                 | "help_button"
                 | "icon"
@@ -359,7 +366,7 @@ impl WireframeApp {
                 if let Err(error) = self.editor.auto_size_control(id) { self.error = Some(error); }
                 self.editor.commit();
             }
-            for key in ["link", "slider_thumb", "date_mode", "keyboard_device", "device_model", "orientation", "device_resizing", "background_pattern", "transparent_background", "status_bar", "image_border", "sketch_filter", "text", "header_height", "footer_height", "minimize", "maximize", "close", "resize_handle", "button_style", "tab_position", "direction", "label_position", "icon", "icon_size", "icon_rotation", "nav_icon", "filter_icon", "menu_icon", "icons", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
+            for key in ["stroke", "link", "slider_thumb", "date_mode", "keyboard_device", "device_model", "orientation", "device_resizing", "background_pattern", "transparent_background", "status_bar", "image_border", "sketch_filter", "text", "header_height", "footer_height", "minimize", "maximize", "close", "resize_handle", "button_style", "tab_position", "direction", "label_position", "icon", "icon_size", "icon_rotation", "nav_icon", "filter_icon", "menu_icon", "icons", "row_links", "row_icons", "font_size", "bold", "italic", "underline", "align", "state", "shape", "search_icon", "microphone_icon", "vertical_scrollbar", "value", "text_color", "border", "border_color", "fill", "background_opacity", "header", "row_height", "selected_index", "alternate_fill", "horizontal_lines", "vertical_lines"] {
                 if key == "sketch_filter" && spec.id == "cover_flow" && !matches!(values.get("image"), Some(Value::Asset(_))) { continue; }
                 if matches!(key, "icon_size" | "icon_rotation") && !matches!(values.get("icon"),Some(Value::Icon(_))) {continue;}
                 if key == "value" && !matches!(spec.id,"horizontal_slider"|"vertical_slider"|"horizontal_scrollbar"|"vertical_scrollbar") && values.get("vertical_scrollbar") != Some(&Value::Bool(true)) { continue; }
@@ -505,12 +512,12 @@ impl WireframeApp {
                             finish = r.lost_focus() || r.drag_stopped();
                         }
                         (PropertyType::Choice(options), Value::Choice(v)) => {
-                            egui::ComboBox::from_id_salt("value").selected_text(choice_label(v)).show_ui(ui, |ui| {
+                            egui::ComboBox::from_id_salt("value").selected_text(if key == "stroke" { match v.as_str() { "solid" => "Solid", "dashed" => "Dashed", "dotted" => "Dotted", other => other } } else {choice_label(v)}).show_ui(ui, |ui| {
                                 for option in *options {
                                     if spec.id == "browser" && key == "border" && !matches!(*option, "solid" | "torn_bottom") {
                                         continue;
                                     }
-                                    if ui.selectable_value(v, (*option).into(), choice_label(option)).clicked() {
+                                    if ui.selectable_value(v, (*option).into(), if key == "stroke" { match *option { "solid" => "Solid", "dashed" => "Dashed", "dotted" => "Dotted", other => other } } else {choice_label(option)}).clicked() {
                                         ui.close();
                                     }
                                 }

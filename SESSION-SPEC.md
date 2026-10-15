@@ -8,6 +8,16 @@ Work directly as Engineer. Preserve user files and explicit deferrals. Use synth
 
 ## Current checkpoint — 2026-10-15
 
+Formatting toolbar, Street map, Modal overlay and Vertical rule now use the library, Quick Add, typed inspector and shared canvas/PNG/SVG renderer. The available catalog has 84 entries, with two remaining. Toolbar and rule retain fixed thickness; map and overlay resize independently. Editable dimensions have a ten-unit minimum while smaller saved geometry is retained. See docs/STATIC-LAYOUTS.md.
+
+All 449 tests pass, including six focused tests and 50 app tests. Final all-target Clippy, formatting and diff checks pass. Controlled comparison matches 800 geometry cases through 6,526 assertions. Fifty-four image checks pass. Visual review caught map partition seams, corrected by drawing one mesh surface. The solid Sketch rule also uses an explicit mesh. Original map/rule contours, toolbar typography and rasterization still differ; exact visual identity is not claimed.
+
+Native macOS confirms all four insertions, dimension minimums/Undo, overlay link history and rule stroke/opacity history. Rule RGB editing persists red. The four-control fixture survives a full-process restart and resaves byte-for-byte; the 28-control gallery also resaves identically. Four native PNG/SVG exports match generated renders byte-for-byte. Component-local link overrides, transparent map roads over colored content, fixed-axis pointer resizing with Shift, tiny selection and storage have automated coverage. Native link activation, component editing and Windows/Linux were not performed. Self-review only.
+
+Signed development bundle UUID 006BEF5B-7039-3911-8D5B-407E11F506B0; signature and canonical executable identity verify. It runs the saved Static layouts gallery, Clean style at 38%, 28 controls/no selection, Library hidden. No build/test sessions remain. Continue targeted investigation of Popover and Site map before implementation. Exact artwork/fonts, dimension serialization normalization, legacy shape/rule coverage, held-drag cadence/autoscroll, broader component/group/clipping/snapping/clock behavior, native Windows/Linux, recovery and release acceptance remain open. The overall goal remains active.
+
+Previous compact form checkpoint:
+
 Numeric stepper, Color picker and Help button now use the library, Quick Add, typed inspector and shared canvas/PNG/SVG renderer. The available catalog has 80 entries, with six remaining. Numeric stepper supports measured height, automatic/manual width, rich text, disabled state and horizontal-only resizing. Color picker and Help button have fixed dimensions and expose color/link respectively. See docs/SMALL-FORMS.md.
 
 The full regression run passed 443 tests. After review corrections, six focused tests and 50 app tests passed; the final inspector fixes were followed by another passing 50-app-test run and all-target Clippy. Formatting and diff checks pass. Controlled comparisons match 408 natural-size cases and 384 frame grid points through 3,792 assertions, maximum error 0.000000109. Sixty-two image checks pass. Forced-height direct-layout cases are excluded from frame comparisons because the reachable control measures its height. Fonts, contours and antialiasing still differ.

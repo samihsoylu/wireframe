@@ -1089,7 +1089,17 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         c.properties
             .push(choice("date_mode", "Kind", &["month", "year"], "month"));
     }
-    if matches!(c.id, "date_chooser" | "numeric_stepper") {
+    if c.id == "vertical_rule" {
+        c.properties.push(choice(
+            "stroke",
+            "Stroke",
+            &["solid", "dashed", "dotted"],
+            "solid",
+        ));
+        c.properties
+            .push(number("background_opacity", "Opacity", 1., 0., 1., false));
+    }
+    if matches!(c.id, "date_chooser" | "numeric_stepper" | "vertical_rule") {
         let mut border = prop(
             "border_color",
             "Border color",

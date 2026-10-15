@@ -11,6 +11,8 @@ pub struct Axis {
 impl Axis {
     pub fn for_kind(kind: Kind) -> Option<Self> {
         let (vertical, thickness) = match kind {
+            Kind::FormattingToolbar => (false, 29.),
+            Kind::VerticalRule => (true, 10.),
             Kind::HorizontalSlider | Kind::HorizontalSplitter => (false, 12.),
             Kind::VerticalSlider | Kind::VerticalSplitter => (true, 12.),
             Kind::HorizontalScrollbar | Kind::VolumeSlider => (false, 16.),

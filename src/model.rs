@@ -93,6 +93,10 @@ pub enum Kind {
     Label,
     Heading,
     Subtitle,
+    FormattingToolbar,
+    StreetMap,
+    ModalOverlay,
+    VerticalRule,
     NumericStepper,
     ColorPicker,
     HelpButton,
@@ -173,11 +177,15 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 80] = [
+    pub const ALL: [Kind; 84] = [
         Self::Button,
         Self::Label,
         Self::Heading,
         Self::Subtitle,
+        Self::FormattingToolbar,
+        Self::StreetMap,
+        Self::ModalOverlay,
+        Self::VerticalRule,
         Self::NumericStepper,
         Self::ColorPicker,
         Self::HelpButton,
@@ -261,6 +269,10 @@ impl Kind {
             Self::Label => "Text label",
             Self::Heading => "Heading",
             Self::Subtitle => "Subtitle",
+            Self::FormattingToolbar => "Formatting toolbar",
+            Self::StreetMap => "Street map",
+            Self::ModalOverlay => "Modal overlay",
+            Self::VerticalRule => "Vertical rule",
             Self::NumericStepper => "Numeric stepper",
             Self::ColorPicker => "Color picker",
             Self::HelpButton => "Help button",
@@ -343,6 +355,9 @@ impl Kind {
     }
     pub fn category(self) -> &'static str {
         match self {
+            Self::FormattingToolbar | Self::VerticalRule => "Layout",
+            Self::StreetMap => "Media",
+            Self::ModalOverlay => "Containers",
             Self::Callout
             | Self::StickyNote
             | Self::Tooltip
@@ -404,6 +419,10 @@ impl Kind {
             Self::Label | Self::Link => (140., 28.),
             Self::Heading => (300., 44.),
             Self::Subtitle => (140., 28.),
+            Self::FormattingToolbar => (261., 29.),
+            Self::StreetMap => (252., 222.),
+            Self::ModalOverlay => (318., 240.),
+            Self::VerticalRule => (10., 100.),
             Self::NumericStepper => (41., 24.),
             Self::ColorPicker => (26., 28.),
             Self::HelpButton => (18., 18.),
@@ -467,7 +486,11 @@ impl Kind {
     pub fn text_editable(self) -> bool {
         !matches!(
             self,
-            Self::ColorPicker
+            Self::FormattingToolbar
+                | Self::StreetMap
+                | Self::ModalOverlay
+                | Self::VerticalRule
+                | Self::ColorPicker
                 | Self::HelpButton
                 | Self::VolumeSlider
                 | Self::Playback
@@ -497,6 +520,10 @@ impl Kind {
             Self::Label => "Some text",
             Self::Heading => "Title",
             Self::Subtitle => "Subtitle",
+            Self::FormattingToolbar => "",
+            Self::StreetMap => "",
+            Self::ModalOverlay => "",
+            Self::VerticalRule => "",
             Self::NumericStepper => "3",
             Self::ColorPicker => "",
             Self::HelpButton => "",

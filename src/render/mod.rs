@@ -38,6 +38,7 @@ mod sliders;
 mod small_forms;
 mod smartphone;
 mod standalone_icons;
+mod static_layouts;
 mod svg;
 mod table;
 mod tablet;
@@ -338,6 +339,12 @@ impl Scene {
         }
         if matches!(c.kind, Kind::Menu | Kind::MenuBar) {
             return self.menu(layer, sketch, fonts, rasters);
+        }
+        if matches!(
+            c.kind,
+            Kind::FormattingToolbar | Kind::StreetMap | Kind::ModalOverlay | Kind::VerticalRule
+        ) {
+            return self.static_layout(layer, sketch, fonts);
         }
         if c.kind == Kind::Calendar {
             return self.calendar_control(layer, sketch, fonts);

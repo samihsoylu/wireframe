@@ -428,7 +428,7 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
         "progress" => &["fill"],
         "red_cross" => &[],
         "horizontal_rule" => &[],
-        "vertical_rule" => &[],
+        "vertical_rule" => &["stroke", "border_color", "background_opacity"],
         "scratch_out" => &["fill", "background_opacity"],
         "horizontal_scrollbar" => &["value"],
         "vertical_scrollbar" => &["value"],

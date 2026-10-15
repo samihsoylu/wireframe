@@ -22,6 +22,7 @@ pub mod rich_text;
 pub mod scene;
 pub mod small_forms;
 pub mod snapping;
+pub mod static_layouts;
 pub mod storage;
 pub mod tabs;
 pub mod text_controls;

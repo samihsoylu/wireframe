@@ -304,6 +304,10 @@ impl<M: TextMeasurer> Engine<'_, M> {
             bold: boolean(props, "bold"),
             italic: boolean(props, "italic"),
         };
+        if let Some(size) = crate::static_layouts::size(kind, width, height) {
+            validate_size(size.0, size.1)?;
+            return Ok(size);
+        }
         if let Some(size) = crate::small_forms::fixed_size(kind) {
             return Ok(size);
         }

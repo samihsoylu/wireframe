@@ -317,7 +317,9 @@ fn group_layout_tracks_child_edits_overrides_and_clip_intersection() {
 fn unsupported_automatic_layout_is_explicit_not_a_fake_completed_renderer() {
     with_fonts(|fonts| {
         let p = Project::default();
-        let mut node = catalog::get("map").unwrap().create(2, Point::default());
+        let mut node = catalog::get("site_map")
+            .unwrap()
+            .create(2, Point::default());
         if let NodeContent::Control { size, .. } = &mut node.content {
             size.width = Dimension::Auto;
         }
@@ -332,7 +334,7 @@ fn unsupported_automatic_layout_is_explicit_not_a_fake_completed_renderer() {
         }
         .layout(&content)
         .unwrap_err();
-        assert!(error.contains("not implemented for map"));
+        assert!(error.contains("not implemented for site_map"));
     });
 }
 

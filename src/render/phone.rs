@@ -13,18 +13,13 @@ pub(super) fn contour(b: Bounds, top: f32, bottom: f32, notch: bool) -> Vec<[f32
     let rt = top.min(b.w / 2.).min(b.h / 2.).max(0.);
     let rb = bottom.min(b.w / 2.).min(b.h / 2.).max(0.);
     let mut p = Vec::new();
-    let smooth = |t: f32| t * t * (3. - 2. * t);
-    for i in 0..=48 {
-        let t = i as f32 / 48.;
-        let x = b.x + rt + (b.w - 2. * rt) * t;
-        let dip = if notch {
-            let a = ((x - (b.x + b.w * 0.24)) / 10.).clamp(0., 1.);
-            let z = ((b.x + b.w * 0.76 - x) / 10.).clamp(0., 1.);
-            30. * smooth(a.min(z))
-        } else {
-            0.
-        };
-        p.push([x, b.y + dip]);
+    if notch {
+        p = notched_top(b, rt);
+    } else {
+        for i in 0..=48 {
+            let t = i as f32 / 48.;
+            p.push([b.x + rt + (b.w - 2. * rt) * t, b.y]);
+        }
     }
     for i in 1..=12 {
         let a = -FRAC_PI_2 + i as f32 / 12. * FRAC_PI_2;
@@ -49,6 +44,81 @@ pub(super) fn contour(b: Bounds, top: f32, bottom: f32, notch: bool) -> Vec<[f32
         p.push([b.x + rt + rt * a.cos(), b.y + rt + rt * a.sin()]);
     }
     p
+}
+
+// Sample each bend separately so narrow shoulders keep their curvature rather
+// than becoming diagonals between widely spaced points. The 49 top samples
+// correspond to the outer contour's top edge in the transparent frame mesh.
+fn notched_top(b: Bounds, radius: f32) -> Vec<[f32; 2]> {
+    let left = b.x + b.w * 0.22;
+    let right = b.x + b.w * 0.78;
+    let shoulder = 7.;
+    let lower = 18.;
+    let depth = 30.;
+    let mut points = vec![[b.x + radius, b.y]];
+    let mut line = |end: [f32; 2], steps: usize| {
+        let start = *points.last().unwrap();
+        for i in 1..=steps {
+            let t = i as f32 / steps as f32;
+            points.push([
+                start[0] + (end[0] - start[0]) * t,
+                start[1] + (end[1] - start[1]) * t,
+            ]);
+        }
+    };
+    line([left, b.y], 6);
+    for i in 1..=6 {
+        let angle = -FRAC_PI_2 + FRAC_PI_2 * i as f32 / 6.;
+        points.push([
+            left + shoulder * angle.cos(),
+            b.y + shoulder + shoulder * angle.sin(),
+        ]);
+    }
+    for i in 1..=2 {
+        points.push([
+            left + shoulder,
+            b.y + shoulder + (depth - lower - shoulder) * i as f32 / 2.,
+        ]);
+    }
+    for i in 1..=8 {
+        let angle = PI - FRAC_PI_2 * i as f32 / 8.;
+        points.push([
+            left + shoulder + lower + lower * angle.cos(),
+            b.y + depth - lower + lower * angle.sin(),
+        ]);
+    }
+    let floor_left = left + shoulder + lower;
+    let floor_right = right - shoulder - lower;
+    for i in 1..=4 {
+        points.push([
+            floor_left + (floor_right - floor_left) * i as f32 / 4.,
+            b.y + depth,
+        ]);
+    }
+    for i in 1..=8 {
+        let angle = FRAC_PI_2 - FRAC_PI_2 * i as f32 / 8.;
+        points.push([
+            floor_right + lower * angle.cos(),
+            b.y + depth - lower + lower * angle.sin(),
+        ]);
+    }
+    for i in 1..=2 {
+        points.push([
+            right - shoulder,
+            b.y + depth - lower - (depth - lower - shoulder) * i as f32 / 2.,
+        ]);
+    }
+    for i in 1..=6 {
+        let angle = PI + FRAC_PI_2 * i as f32 / 6.;
+        points.push([
+            right + shoulder * angle.cos(),
+            b.y + shoulder + shoulder * angle.sin(),
+        ]);
+    }
+    for i in 1..=6 {
+        points.push([right + (b.x + b.w - radius - right) * i as f32 / 6., b.y]);
+    }
+    points
 }
 pub(super) fn section_axis(p: f32, source: f32, target: f32, start: f32, end: f32) -> f32 {
     let compression = (target / (start + end)).min(1.);

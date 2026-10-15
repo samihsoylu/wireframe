@@ -328,6 +328,64 @@ fn frame_is_seamless_and_transparent_screen_preserves_background_and_pattern_bar
     }
 }
 #[test]
+fn notched_frame_has_rounded_neck_and_an_open_screen_in_both_orientations() {
+    let mut e = Editor::default();
+    e.add(Kind::FieldSet, 0., 0.);
+    let back = *e.selection.iter().next().unwrap();
+    set(&mut e, back, "text", Value::Text(String::new()));
+    set(&mut e, back, "fill", Value::Color([30, 170, 80, 255]));
+    e.selected_mut(|c| c.bounds = Bounds::new(0., 0., 900., 900.));
+    e.add(Kind::Phone, 0., 0.);
+    let front = *e.selection.iter().next().unwrap();
+    set(&mut e, front, "transparent_background", Value::Bool(true));
+    set(&mut e, front, "status_bar", Value::Bool(false));
+    for mode in ["fit", "stretch"] {
+        set(&mut e, front, "device_resizing", Value::Choice(mode.into()));
+        for landscape in [false, true] {
+            set(
+                &mut e,
+                front,
+                "orientation",
+                Value::Choice(if landscape { "landscape" } else { "portrait" }.into()),
+            );
+            e.selected_mut(|c| {
+                c.bounds = if landscape {
+                    Bounds::new(0., 0., 867., 436.)
+                } else {
+                    Bounds::new(0., 0., 436., 867.)
+                }
+            });
+            for sketch in [false, true] {
+                e.document.settings.sketch = sketch;
+                let scene = e.rendered_scene(e.page).unwrap();
+                let image = image::load_from_memory(&scene.png().unwrap())
+                    .unwrap()
+                    .to_rgba8();
+                let pixel = |x: u32, y: u32| {
+                    let (x, y) = if landscape { (y, 436 - x) } else { (x, y) };
+                    image.get_pixel(24 + x, 24 + y).0
+                };
+                let body = if sketch {
+                    [193, 192, 192, 255]
+                } else {
+                    [255; 4]
+                };
+                // The neck is vertical: the former diagonal exposed the underlay here.
+                assert_eq!(pixel(121, 35), body, "{mode} {landscape} {sketch}");
+                // Outside the rounded shoulder and below the notch, the screen stays open.
+                assert_eq!(pixel(109, 35), [30, 170, 80, 255]);
+                assert_eq!(pixel(124, 55), [30, 170, 80, 255]);
+                assert_eq!(pixel(218, 65), [30, 170, 80, 255]);
+                // A solid neck-to-floor strip guards against holes from ring triangulation.
+                for x in 140..295 {
+                    assert_eq!(pixel(x, 44), body);
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn every_model_renders_finite_clipped_geometry_at_small_and_extreme_sizes() {
     let (mut e, id) = fixture();
     for model in ["classic", "tall", "wide", "notched"] {

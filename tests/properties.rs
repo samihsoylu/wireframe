@@ -88,25 +88,15 @@ fn form_states_change_border_and_fill_without_moving_the_text() {
                     _ if sketch => [0, 0, 0],
                     _ => [51, 51, 51],
                 };
-                let border = scene
-                    .items
-                    .iter()
-                    .find_map(|i| match &i.drawing {
-                        Drawing::Primitive(Primitive::Line { color, .. }) => Some(*color),
-                        _ => None,
-                    })
-                    .unwrap();
-                assert_eq!(border, color, "{kind:?} {state}");
-                let fill = scene
-                    .items
-                    .iter()
-                    .find_map(|i| match &i.drawing {
-                        Drawing::Primitive(Primitive::Rect { fill, .. }) => Some(*fill),
-                        _ => None,
-                    })
-                    .unwrap();
+                let image = image::load_from_memory(&scene.png().unwrap())
+                    .unwrap()
+                    .to_rgba8();
+                let middle = 24 + (e.current().controls[0].bounds.w / 2.) as u32;
+                let border = image.get_pixel(middle, 24).0;
+                assert_eq!(&border[..3], &color, "{kind:?} {state}");
+                let fill = image.get_pixel(28, 28).0;
                 assert_eq!(
-                    fill,
+                    fill[..3],
                     if state == "selected" {
                         accent
                     } else if kind == Kind::Button && !sketch {

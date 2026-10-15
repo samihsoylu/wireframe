@@ -46,6 +46,10 @@ impl Scene {
             _ => "normal",
         };
         let button = control.kind == Kind::Button;
+        if button && !sketch {
+            self.form_border(layer, sketch);
+            return;
+        }
         let selection = selection_color(sketch);
         let fill = if button && state == "selected" {
             selection
@@ -102,6 +106,34 @@ impl Scene {
             _ => [51, 51, 51],
         };
         let clip = clip_with(layer.clip, bounds);
+        if button && !sketch {
+            let radius = 3.5_f32.min(bounds.w / 2.).min(bounds.h / 2.);
+            self.primitive(
+                Primitive::Rect {
+                    b: bounds,
+                    fill: border,
+                    stroke: false,
+                    radius,
+                },
+                clip,
+            );
+            if bounds.w > 2. && bounds.h > 2. {
+                self.primitive(
+                    Primitive::Rect {
+                        b: Bounds::new(bounds.x + 1., bounds.y + 1., bounds.w - 2., bounds.h - 2.),
+                        fill: if state == "selected" {
+                            selection
+                        } else {
+                            control.fill
+                        },
+                        stroke: false,
+                        radius: (radius - 1.).max(0.),
+                    },
+                    clip,
+                );
+            }
+            return;
+        }
         let frame = if button && sketch {
             Bounds::new(
                 bounds.x,

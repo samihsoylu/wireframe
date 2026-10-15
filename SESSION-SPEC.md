@@ -8,13 +8,13 @@ Work directly as Engineer. Preserve user files and explicit deferrals. Use synth
 
 ## Current checkpoint — 2026-10-15
 
-Clean standalone and embedded scrollbars now use one drawing function across both axes. Fixed #515151 ink, opaque one-unit frame strips, capsule thumbs and axis-specific arrows remove discrepancies between control families. Disabled Clean parent fields retain the same scrollbar ink. Placement, document properties, history and Sketch drawing are unchanged. See docs/LINEAR-CONTROLS.md.
+Project selection and link colors are editable through **Font and colors…**, using the picker or validated six-digit hex values. Applying both colors creates one undoable project edit and separately saves defaults for new projects. Existing projects retain their own palette; default colors remain omitted from serialized files. Explicit control/inline colors and disabled states are preserved. See docs/PROJECT-COLORS.md.
 
-All 587 tests, all-target Clippy, formatting, repository-boundary and signed-bundle checks pass. Three new pixel regressions cover frame corners, arrow/capsule geometry, both axes, short tracks and standalone/embedded consistency including disabled fields. Seventeen native cases corroborate the behavior. Seven isolated Clean bar comparisons have mean RGB error below 1 on the 0–255 scale. Ten existing scenario PNGs, six documents and both Sketch comparison pages remain byte-identical. Native macOS checks cover both styles, 100% zoom, a value edit with one Undo, style Undo and byte-identical save. The signed debug build remains on the Clean fixture at 76% Fit. Full native Windows/Linux acceptance remains open.
+All 595 tests, all-target Clippy, formatting, repository-boundary and signed-bundle checks pass. Ten palette/style combinations pass160 color checks. Six baseline documents and all12 scenario/options PNGs remain byte-identical. The default Clean SVG changes only its former selection blue to the project default. Four PDF pages retain searchable text, eight links each and expected colors; all were visually inspected. A component probe covers three instances on two pages, unchanged definitions/nodes, history and storage.
 
-The table border/scrollbar options and physical-pixel canvas-text alignment remain intact. Per-control placement/text differences, approximate Sketch contours, broader interaction and export acceptance remain open. No new PDFs are authored for this checkpoint.
+Native macOS acceptance covers invalid input, Cancel, RGB/hex synchronization, Clean/dark and Sketch/light palettes, canvas/thumbnail updates, Save, one Undo restoring exact original bytes, Redo, restart and clean new-project defaults. Legacy projects keep their colors when app defaults differ. Built-in defaults were restored after testing. The final signed debug build is open on the saved custom-color Clean fixture at91% Fit with24 controls and no selection. Native Windows/Linux remains unverified.
 
-Remaining scope includes selection-color customization, irregular outlines, glyph/device differences, held library-drag cadence, broader component combinations, PDF typography, native close-during-export, sustained responsiveness, failure/recovery and native Windows/Linux release acceptance. The overall goal remains active.
+The accepted table geometry/options, shared scrollbar artwork and physical-pixel text alignment remain intact. Remaining scope includes irregular outlines, glyph/device differences, held library-drag cadence, broader component combinations, PDF typography, native close-during-export, sustained responsiveness, failure/recovery and native Windows/Linux release acceptance. The overall goal remains active.
 
 ## Existing capabilities and limits
 
@@ -40,6 +40,7 @@ Keep the four integrated scenarios as repeatable acceptance fixtures. Keep the f
 - docs/DOCUMENT-FORMAT.md and docs/RECURSIVE-EDITOR.md: recursive data and live editing/storage boundaries.
 - docs/CATALOG-AND-LAYOUT.md and control-family documents: rendering and property requirements.
 - docs/RICH-TEXT.md, docs/PROJECT-FONTS.md and docs/TEXT-ENTRY.md: text and fonts.
+- docs/PROJECT-COLORS.md: project palette, contrast, history and new-project defaults.
 - docs/PDF-EXPORT.md: page selection, sizing, notes, text/link fidelity, architecture boundaries and scoped integrated acceptance.
 - docs/IMAGES.md and docs/COMPONENTS.md: image and component behavior and remaining gaps.
 

@@ -33,11 +33,7 @@ impl Scene {
         let fill = rgb(p, "fill", [255; 3]);
         let alternate = rgb(p, "alternate_fill", [255; 3]);
         let selected = number(p, "selected_index", -1.) as i32;
-        let accent = if sketch {
-            [149, 188, 242]
-        } else {
-            [151, 189, 240]
-        };
+        let accent = selection_color(p);
         let row_color = |i: usize| {
             if selected >= 0 && i as i32 == selected {
                 accent
@@ -98,14 +94,13 @@ impl Scene {
             let mut options = paint_options(p);
             if !is_header {
                 let background = row_color(i - usize::from(header));
-                let dark = u32::from(background[0]) * 299
-                    + u32::from(background[1]) * 587
-                    + u32::from(background[2]) * 114
-                    < 153_000;
-                if dark {
-                    options.ink = Color32::WHITE;
-                    options.link = Color32::WHITE;
-                }
+                options = background_text_options(
+                    p,
+                    background,
+                    1.,
+                    if sketch { [0; 3] } else { [51; 3] },
+                    false,
+                );
             }
             if let Some(Value::Icons(icons)) = p.get("row_icons")
                 && let Some(Some(source)) = icons.get(i)

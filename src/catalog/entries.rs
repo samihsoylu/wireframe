@@ -1527,7 +1527,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             Value::Color([0, 0, 0, 255]),
         ));
         if let Some(p) = c.properties.iter_mut().find(|p| p.key == "text_color") {
-            p.default = DefaultValue::Literal(Value::Color([8, 83, 148, 255]));
+            p.default = DefaultValue::LinkColor;
         }
     }
     if c.id == "list" {

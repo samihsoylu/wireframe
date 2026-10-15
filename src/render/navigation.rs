@@ -32,11 +32,11 @@ impl Scene {
         {
             let last = index + 1 == navigation.texts.len();
             let ink = if crumbs {
-                if last { normal } else { [8, 83, 148] }
+                if last { normal } else { link_color(p) }
             } else if selected == index as i32 {
                 separator
             } else {
-                rgb(p, "text_color", [8, 83, 148])
+                rgb(p, "text_color", link_color(p))
             };
             let mut options = paint_options(p);
             options.ink = Color32::from_rgb(ink[0], ink[1], ink[2]);

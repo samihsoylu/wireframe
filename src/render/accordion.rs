@@ -39,7 +39,7 @@ impl Scene {
             let local = placement.bounds;
             let area = Bounds::new(b.x + local.x, b.y + local.y, local.w, local.h);
             let fill = if row.selected {
-                [149, 188, 242]
+                selection_color(p)
             } else {
                 [255; 3]
             };
@@ -75,9 +75,7 @@ impl Scene {
             }
             let inset = a.left + if row.parent.is_some() { 10. } else { 0. };
             if area.w > inset && area.h > 0. {
-                let mut options = paint_options(p);
-                options.ink = Color32::from_rgb(ink[0], ink[1], ink[2]);
-                options.link = Color32::from_rgb(8, 83, 148);
+                let mut options = background_text_options(p, fill, 1., ink, false);
                 options.disabled_ink = Color32::from_rgb(128, 128, 139);
                 let prior = self.links.len();
                 self.text(

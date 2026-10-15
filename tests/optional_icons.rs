@@ -231,7 +231,7 @@ fn dropdown_header_moves_menu_and_keeps_narrow_icons() {
     assert!(
         s.items
             .iter()
-            .any(|i| matches!(&i.drawing,Drawing::Icon{color,..} if *color==[151,189,240,255]))
+            .any(|i| matches!(&i.drawing,Drawing::Icon{color,..} if *color==[149,188,242,255]))
     );
     choice(&mut e, id, "icon_size", "32");
     fixed(&mut e, 35., 32.);

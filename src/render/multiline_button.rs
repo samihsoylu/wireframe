@@ -73,7 +73,7 @@ impl Scene {
         options.link = if white {
             Color32::WHITE
         } else {
-            Color32::from_rgb(8, 83, 148)
+            color32(link_color(p))
         };
         let style = TextStyle {
             size: c.font_size,

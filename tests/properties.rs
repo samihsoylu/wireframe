@@ -61,11 +61,7 @@ fn form_insertion_defaults_and_style_specific_dimensions_survive_reopen() {
 #[test]
 fn form_states_change_border_and_fill_without_moving_the_text() {
     for sketch in [true, false] {
-        let accent = if sketch {
-            [149, 188, 242]
-        } else {
-            [151, 189, 240]
-        };
+        let accent = [149, 188, 242];
         for kind in [Kind::Button, Kind::TextInput, Kind::TextArea] {
             let mut e = Editor::default();
             e.document.settings.sketch = sketch;

@@ -92,6 +92,7 @@ impl TryFrom<legacy::Document> for Project {
             title: old.title,
             next_id: old.next_id,
             settings: Settings {
+                palette: Palette::default(),
                 sketch: old.sketch,
                 font_size: 15.,
             },

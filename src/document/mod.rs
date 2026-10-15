@@ -3,6 +3,8 @@
 
 //! Versioned project data. Layout caches and editor selection are not persisted here.
 mod migration;
+mod palette;
+pub use palette::Palette;
 mod resolve;
 mod validation;
 
@@ -304,6 +306,8 @@ pub struct Asset {
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Settings {
+    #[serde(default, skip_serializing_if = "Palette::is_default")]
+    pub palette: Palette,
     pub sketch: bool,
     pub font_size: f32,
 }
@@ -328,6 +332,7 @@ impl Default for Project {
             title: "Untitled project".into(),
             next_id: 2,
             settings: Settings {
+                palette: Palette::default(),
                 sketch: true,
                 font_size: 13.,
             },

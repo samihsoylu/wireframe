@@ -58,7 +58,7 @@ impl Scene {
                 && row_index < grid.rows.len()
                 && row_index as i32 == selected + i32::from(header)
             {
-                [149, 188, 242]
+                selection_color(p)
             } else if row_index % 2 == 1 {
                 alternate
             } else {

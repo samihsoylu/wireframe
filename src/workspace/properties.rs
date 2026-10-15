@@ -4,11 +4,7 @@ use super::*;
 
 impl Editor {
     pub(super) fn property_context(&self) -> catalog::Context {
-        catalog::Context {
-            font_size: self.document.settings.font_size,
-            sketch: self.document.settings.sketch,
-            ..catalog::Context::default()
-        }
+        catalog::Context::default().with_settings(&self.document.settings)
     }
     /// Values come from the canonical node, not the temporary canvas projection.
     pub fn control_properties(

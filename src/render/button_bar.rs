@@ -53,7 +53,7 @@ impl Scene {
                             w - left - right,
                             b.h - 1. - bottom,
                         ),
-                        fill: [149, 188, 242],
+                        fill: selection_color(p),
                         stroke: false,
                         radius: 0.,
                     },
@@ -81,9 +81,14 @@ impl Scene {
         );
         for (index, (&(x, w), text)) in columns.iter().zip(&bar.texts).enumerate() {
             let area = Bounds::new(b.x + x, b.y, w, b.h);
-            let mut options = paint_options(p);
-            options.ink = Color32::from_rgb(normal[0], normal[1], normal[2]);
-            options.link = Color32::from_rgb(8, 83, 148);
+            let background = if selected == index as i32 {
+                selection_color(p)
+            } else if sketch {
+                [255; 3]
+            } else {
+                [221; 3]
+            };
+            let options = background_text_options(p, background, 1., normal, false);
             let previous = self.links.len();
             self.text(
                 text,

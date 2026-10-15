@@ -168,12 +168,7 @@ fn input_borders_preserve_geometry_and_textarea_border_draws_after_text() {
                 match state {
                     "normal" => [190, 30, 70],
                     "disabled" => [128, 128, 139],
-                    _ =>
-                        if sketch {
-                            [149, 188, 242]
-                        } else {
-                            [151, 189, 240]
-                        },
+                    _ => [149, 188, 242],
                 }
             );
         }

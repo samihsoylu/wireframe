@@ -39,11 +39,7 @@ impl Scene {
             matches!(layer.properties.get("shape"), Some(Value::Choice(s)) if s == "rectangle");
         let ink = if disabled { [128, 128, 139] } else { [0, 0, 0] };
         let border = if focused {
-            if sketch {
-                [149, 188, 242]
-            } else {
-                [151, 189, 240]
-            }
+            selection_color(&layer.properties)
         } else {
             ink
         };

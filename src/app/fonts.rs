@@ -10,6 +10,7 @@ pub(super) struct FontImport {
     filenames: [String; 4],
     notices: String,
     error: Option<String>,
+    colors: Option<[palette::ColorDraft; 2]>,
 }
 
 impl WireframeApp {
@@ -19,13 +20,28 @@ impl WireframeApp {
         };
         let mut open = true;
         let mut apply = None;
+        let mut apply_colors = None;
         let mut reset = false;
         let mut cancel = false;
-        egui::Window::new("Project font")
+        egui::Window::new("Font and colors")
             .open(&mut open)
             .resizable(false)
             .default_width(440.)
             .show(ctx, |ui| {
+                ui.heading("Colors");
+                let colors = draft.colors.get_or_insert_with(|| [
+                    palette::ColorDraft::new(self.editor.document.settings.palette.selection),
+                    palette::ColorDraft::new(self.editor.document.settings.palette.link),
+                ]);
+                colors[0].show(ui, "Selection color");
+                colors[1].show(ui, "Link color");
+                let parsed = colors[0].value().zip(colors[1].value()).map(|(selection, link)| wireframe::document::Palette { selection, link });
+                let changed = parsed.is_some_and(|p| p != self.editor.document.settings.palette || p != self.palette_defaults.value);
+                if parsed.is_none() { ui.label("Enter six hexadecimal digits, such as #95BCF2."); }
+                ui.label("Applies to this project and becomes the default for new projects.");
+                if ui.add_enabled(changed, egui::Button::new("Apply colors")).clicked() { apply_colors = parsed; }
+                ui.separator();
+                ui.heading("Font");
                 ui_text::label(
                     ui,
                     &format!(
@@ -120,6 +136,10 @@ impl WireframeApp {
                     cancel = ui.button("Cancel").clicked();
                 });
             });
+        if let Some(palette) = apply_colors {
+            self.apply_project_palette(palette);
+            open = false;
+        }
         if apply.is_some() || reset {
             self.editor
                 .edit("Change project font", |e| e.document.font = apply);

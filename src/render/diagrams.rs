@@ -45,7 +45,7 @@ impl Scene {
         } else {
             Color32::from_rgb(51, 51, 51)
         };
-        options.link = Color32::from_rgb(8, 83, 148);
+        options.link = color32(link_color(p));
         if c.kind == Kind::Popover {
             let side = crate::popover::Side::parse(match p.get("direction") {
                 Some(Value::Choice(v)) => v,

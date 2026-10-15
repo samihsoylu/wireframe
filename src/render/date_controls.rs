@@ -8,13 +8,6 @@ fn translated(b: Bounds, origin: Bounds) -> Bounds {
 fn ink(sketch: bool) -> [u8; 3] {
     if sketch { [0; 3] } else { [51; 3] }
 }
-fn selection(sketch: bool) -> [u8; 3] {
-    if sketch {
-        [149, 188, 242]
-    } else {
-        [151, 189, 240]
-    }
-}
 impl Scene {
     pub(super) fn date_rect(&mut self, b: Bounds, color: [u8; 3], clip: Option<Bounds>) {
         self.primitive(
@@ -82,7 +75,7 @@ impl Scene {
             self.primitive(
                 Primitive::Polygon {
                     points: points.clone(),
-                    fill: selection(sketch),
+                    fill: selection_color(&layer.properties),
                 },
                 clip,
             );
@@ -188,7 +181,7 @@ impl Scene {
             ink(sketch)
         };
         let border = if focused {
-            selection(sketch)
+            selection_color(&layer.properties)
         } else if disabled {
             icon_color
         } else {

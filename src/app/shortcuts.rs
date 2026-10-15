@@ -28,7 +28,8 @@ impl WireframeApp {
     fn shortcut_event(&mut self, ctx: &egui::Context, event: &egui::Event) -> bool {
         // Re-evaluate after each command: New/Open/Enter can establish a modal
         // boundary that later events must not bypass.
-        if self.pdf_options.is_some()
+        if self.font_import.is_some()
+            || self.pdf_options.is_some()
             || self.save_busy()
             || self.recovery_chooser_open()
             || self.pending.is_some()

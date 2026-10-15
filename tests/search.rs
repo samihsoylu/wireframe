@@ -34,8 +34,7 @@ fn search_defaults_states_shapes_and_icons_share_geometry_and_survive_storage() 
                 let s = e.rendered_scene(1).unwrap();
                 let expected = match state {
                     "disabled" => [128, 128, 139],
-                    "focused" if sketch => [149, 188, 242],
-                    "focused" => [151, 189, 240],
+                    "focused" => [149, 188, 242],
                     _ => [0, 0, 0],
                 };
                 assert!(

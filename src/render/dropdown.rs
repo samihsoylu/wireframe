@@ -43,11 +43,7 @@ impl Scene {
         } else {
             rgb(&layer.properties, "border_color", [0, 0, 0])
         };
-        let accent = if sketch {
-            [149, 188, 242]
-        } else {
-            [151, 189, 240]
-        };
+        let accent = selection_color(&layer.properties);
         let left = if sketch { 6. } else { 4. };
         let arrow_width = if sketch { 22. } else { 20. };
         let thickness = if sketch { 3. } else { 1. };
@@ -195,7 +191,7 @@ impl Scene {
             let label_left = if menu.has_marks { 20. } else { left };
             let mut options = paint_options(&layer.properties);
             if row.selected {
-                options.link = Color32::BLACK;
+                options = background_text_options(&layer.properties, accent, 1., [0; 3], true);
             }
             self.text(
                 &RichText::parse(&row.text, false),
@@ -217,7 +213,11 @@ impl Scene {
                 fonts,
                 options,
             )?;
-            let mark_ink = if row.selected { [0; 3] } else { ink };
+            let mark_ink = if row.selected {
+                contrast(accent, [0; 3])
+            } else {
+                ink
+            };
             let mx = b.x + icon_left;
             match row.mark {
                 Mark::Dot => self.primitive(

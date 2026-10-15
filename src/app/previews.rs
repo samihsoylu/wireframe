@@ -79,6 +79,7 @@ mod tests {
             .flat_map(|font| [true, false].map(|sketch| (font.clone(), sketch)))
         {
             let settings = Settings {
+                palette: Default::default(),
                 sketch,
                 font_size: 13.,
             };
@@ -107,6 +108,7 @@ mod tests {
     fn previews_refresh_for_font_defaults_and_drawing_style() {
         let mut previews = LibraryPreviews::default();
         let mut settings = Settings {
+            palette: Default::default(),
             sketch: true,
             font_size: 13.,
         };
@@ -153,6 +155,21 @@ mod tests {
                 .unwrap()
                 .svg(),
             sketch
+        );
+    }
+    #[test]
+    fn palette_changes_refresh_cached_library_links() {
+        let mut previews = LibraryPreviews::default();
+        let mut settings = Project::default().settings;
+        let before = previews.scene(Kind::Link, &settings, &None).unwrap().svg();
+        settings.palette.link = [139, 0, 139];
+        let after = previews.scene(Kind::Link, &settings, &None).unwrap().svg();
+        assert_ne!(before, after);
+        assert!(after.contains("#8b008b"));
+        settings.palette = Default::default();
+        assert_eq!(
+            previews.scene(Kind::Link, &settings, &None).unwrap().svg(),
+            before
         );
     }
 }

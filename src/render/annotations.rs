@@ -262,7 +262,7 @@ impl Scene {
         if let Some(label) = l.label {
             let mut paint = paint_options(p);
             paint.ink = Color32::from_rgb(ink[0], ink[1], ink[2]);
-            paint.link = Color32::from_rgb(8, 83, 148);
+            paint.link = color32(link_color(p));
             if family != Family::Tooltip && annotations::light_text(family, c.fill, opacity, sketch)
             {
                 paint.ink = Color32::WHITE;

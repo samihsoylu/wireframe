@@ -147,7 +147,11 @@ impl Scene {
                         fonts,
                         PaintOptions {
                             ink: Color32::from_rgb(colors.text[0], colors.text[1], colors.text[2]),
-                            link: Color32::from_rgb(colors.link[0], colors.link[1], colors.link[2]),
+                            link: if disabled {
+                                color32(colors.link)
+                            } else {
+                                color32(link_color(p))
+                            },
                             underline: boolean(p, "underline"),
                             ..Default::default()
                         },

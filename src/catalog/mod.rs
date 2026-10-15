@@ -91,6 +91,7 @@ pub struct Context {
     pub ink: [u8; 4],
     pub fill: [u8; 4],
     pub link_color: [u8; 4],
+    pub selection_color: [u8; 4],
 }
 impl Default for Context {
     fn default() -> Self {
@@ -99,8 +100,18 @@ impl Default for Context {
             font_size: 13.,
             ink: [0, 0, 0, 255],
             fill: [255; 4],
-            link_color: [8, 83, 148, 255],
+            link_color: crate::document::Palette::default().link_rgba(),
+            selection_color: crate::document::Palette::default().selection_rgba(),
         }
+    }
+}
+impl Context {
+    pub fn with_settings(mut self, settings: &crate::document::Settings) -> Self {
+        self.sketch = settings.sketch;
+        self.font_size = settings.font_size;
+        self.link_color = settings.palette.link_rgba();
+        self.selection_color = settings.palette.selection_rgba();
+        self
     }
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -299,6 +310,20 @@ impl ControlSpec {
                 ),
             );
         }
+        values.insert(
+            "__project_selection_color".into(),
+            Value::Color(context.selection_color),
+        );
+        values.insert(
+            "__project_link_color".into(),
+            Value::Color(context.link_color),
+        );
+        for key in ["text_color", "link_color"] {
+            values.insert(
+                format!("__auto_{key}"),
+                Value::Bool(!node.properties.contains_key(key)),
+            );
+        }
         if self.id == "table" {
             // Derived layout hints, never stored in the document. Each row resolves
             // automatic ink independently from its own background.
@@ -313,11 +338,11 @@ impl ControlSpec {
             && !node.properties.contains_key("text_color")
             && values.get("button_style") == Some(&Value::Choice("inline".into()))
         {
-            values.insert("text_color".into(), Value::Color([8, 83, 148, 255]));
+            values.insert("text_color".into(), Value::Color(context.link_color));
         }
         if matches!(self.id, "text_input" | "text_area") {
             if !node.properties.contains_key("link_color") {
-                values.insert("link_color".into(), Value::Color([8, 83, 148, 255]));
+                values.insert("link_color".into(), Value::Color(context.link_color));
             }
             let fill = match values.get("fill") {
                 Some(Value::Color(c)) => *c,

@@ -8,6 +8,7 @@ mod fonts;
 mod icon_picker;
 mod images;
 mod library_drag;
+mod palette;
 mod pdf_export;
 mod persistence;
 mod previews;
@@ -72,6 +73,7 @@ pub struct WireframeApp {
     editor: Editor,
     installed_font: Option<std::sync::Arc<wireframe::fonts::ProjectFont>>,
     font_import: Option<fonts::FontImport>,
+    palette_defaults: palette::PaletteDefaults,
     pdf_options: Option<wireframe::pdf::Options>,
     pdf_job: Option<wireframe::pdf::ExportJob>,
     quit_after_pdf: bool,
@@ -203,6 +205,7 @@ impl WireframeApp {
             editor: Editor::default(),
             installed_font: None,
             font_import: None,
+            palette_defaults: Default::default(),
             pdf_options: None,
             pdf_job: None,
             quit_after_pdf: false,
@@ -253,6 +256,8 @@ impl WireframeApp {
         let mut app = Self::workspace(&cc.egui_ctx, storage::recovery_path());
         if let Some(path) = storage::recovery_path().and_then(|p| p.parent().map(|p| p.to_owned()))
         {
+            app.load_palette_defaults(&path);
+            app.editor = app.new_editor();
             app.enable_persistence(&cc.egui_ctx, path);
         }
         let args: Vec<_> = std::env::args().skip(1).collect();
@@ -264,6 +269,7 @@ impl WireframeApp {
         app
     }
     fn load(&mut self, path: PathBuf) -> bool {
+        self.font_import = None;
         if self.persistence.is_some() {
             return self.load_persistent(path);
         }
@@ -342,6 +348,7 @@ impl WireframeApp {
             return;
         }
         self.pdf_options = None;
+        self.font_import = None;
         self.end_pointer_gestures();
         if self.automatic_named() {
             self.pending = Some(pending);
@@ -359,7 +366,8 @@ impl WireframeApp {
         match pending {
             Pending::New => {
                 self.reset_session_identity();
-                self.editor = Editor::default();
+                self.editor = self.new_editor();
+                self.font_import = None;
                 self.file = None;
                 self.pan = Vec2::ZERO;
                 self.zoom = 1.;
@@ -727,7 +735,7 @@ impl WireframeApp {
                         self.editor
                             .edit("Change style", |e| e.document.settings.sketch = sketch);
                     }
-                    if ui.button("Project font…").clicked() {
+                    if ui.button("Font and colors…").clicked() {
                         self.font_import = Some(fonts::FontImport::default());
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {

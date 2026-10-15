@@ -219,9 +219,7 @@ impl<M: TextMeasurer> Engine<'_, M> {
             NodeContent::Control { kind, size } => {
                 let spec =
                     catalog::get(kind).ok_or_else(|| format!("Unknown control type: {kind}"))?;
-                let mut context = self.context;
-                context.font_size = self.project.settings.font_size;
-                context.sketch = self.project.settings.sketch;
+                let context = self.context.with_settings(&self.project.settings);
                 let mut props = spec.effective(node, &context).map_err(|e| e.to_string())?;
                 if kind == "text_block" {
                     props.insert(

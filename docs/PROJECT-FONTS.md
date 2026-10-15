@@ -2,7 +2,7 @@
 
 New projects use **Wireframe Draft**, a four-style drawing font derived from Comic Neue under the SIL Open Font License. Its font files are saved inside each new project, so later font updates do not change that document.
 
-Choose **Project font…** in the toolbar. Select the regular, bold, italic and bold italic TTF or OTF files, then choose **Apply font**. The name can be edited before applying. Optional font notices are saved with the project and included in its SVG and PDF exports.
+Choose **Font and colors…** in the toolbar. Select the regular, bold, italic and bold italic TTF or OTF files, then choose **Apply font**. The name can be edited before applying. Optional font notices are saved with the project and included in its SVG and PDF exports.
 
 Each project has one font family. All four faces are required, so each style has an explicit face. Font files may be chosen separately, including the same file for more than one role when desired. Files must contain a single outline font face and be no larger than 4 MB each; collections are unsupported. Invalid files are rejected before they enter the project.
 

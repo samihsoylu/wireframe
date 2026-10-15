@@ -41,7 +41,7 @@ impl Scene {
             let y = b.y + if border { 6. } else { 0. } + m.y;
             let x = b.x + if border { 8. } else { 0. } + row.depth as f32 * 25.;
             let background = if selected == index as i32 {
-                [149, 188, 242]
+                selection_color(p)
             } else {
                 c.fill
             };
@@ -68,13 +68,7 @@ impl Scene {
             } else {
                 normal
             };
-            let mut options = paint_options(p);
-            options.ink = Color32::from_rgb(ink[0], ink[1], ink[2]);
-            options.link = if disabled || dark {
-                options.ink
-            } else {
-                Color32::from_rgb(8, 83, 148)
-            };
+            let mut options = background_text_options(p, background, opacity, normal, false);
             options.disabled_ink = Color32::from_rgb(gray[0], gray[1], gray[2]);
             let prior = self.links.len();
             self.text(

@@ -148,7 +148,7 @@ fn list_rows_share_export_geometry_contrast_clipping_and_scrollbar_positions() {
     set(&mut e, id, "selected_index", Value::Number(1.));
     set(&mut e, id, "alternate_fill", Value::Color([0, 0, 0, 255]));
     let scene = e.rendered_scene(e.page).unwrap();
-    assert!(scene.items.iter().any(|i| matches!(&i.drawing,Drawing::Primitive(Primitive::Rect{b,fill,..}) if b.y==92. && *fill==[151,189,240])));
+    assert!(scene.items.iter().any(|i| matches!(&i.drawing,Drawing::Primitive(Primitive::Rect{b,fill,..}) if b.y==92. && *fill==[149,188,242])));
     let glyphs: Vec<_> = scene
         .items
         .iter()

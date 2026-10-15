@@ -834,9 +834,58 @@ fn alignment(p: &Properties) -> Alignment {
         _ => Alignment::Left,
     }
 }
+fn selection_color(p: &Properties) -> [u8; 3] {
+    rgb(
+        p,
+        "__project_selection_color",
+        crate::document::Palette::default().selection,
+    )
+}
+fn link_color(p: &Properties) -> [u8; 3] {
+    rgb(
+        p,
+        "link_color",
+        rgb(
+            p,
+            "__project_link_color",
+            crate::document::Palette::default().link,
+        ),
+    )
+}
+fn color32(rgb: [u8; 3]) -> Color32 {
+    Color32::from_rgb(rgb[0], rgb[1], rgb[2])
+}
+fn contrast(background: [u8; 3], normal: [u8; 3]) -> [u8; 3] {
+    crate::document::Palette::contrasting_ink(background, 1., normal)
+}
+fn background_text_options(
+    p: &Properties,
+    background: [u8; 3],
+    opacity: f32,
+    normal: [u8; 3],
+    menu_link: bool,
+) -> PaintOptions {
+    let mut options = paint_options(p);
+    if matches!(p.get("state"), Some(Value::Choice(s)) if s.contains("disabled")) {
+        return options;
+    }
+    if !matches!(p.get("__auto_text_color"), Some(Value::Bool(false))) {
+        options.ink = color32(crate::document::Palette::contrasting_ink(
+            background, opacity, normal,
+        ));
+    }
+    if !matches!(p.get("__auto_link_color"), Some(Value::Bool(false))) {
+        options.link = color32(crate::document::Palette::contrasting_ink(
+            background,
+            opacity,
+            if menu_link { [0; 3] } else { link_color(p) },
+        ));
+    }
+    options
+}
 fn paint_options(p: &Properties) -> PaintOptions {
     let color = rgb(p, "text_color", [0, 0, 0]);
-    let link = rgb(p, "link_color", [8, 83, 148]);
+    let link = link_color(p);
     PaintOptions {
         ink: if matches!(p.get("state"),Some(Value::Choice(s))if s.contains("disabled")) {
             Color32::from_rgb(128, 128, 139)

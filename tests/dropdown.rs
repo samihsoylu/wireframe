@@ -82,11 +82,7 @@ fn dropdown_open_closed_states_use_menu_height_palette_and_selected_title() {
             assert!(text.starts_with("Gamma"));
             assert_eq!(text == "Gamma", closed);
             let expected = if state.starts_with("focused") {
-                if sketch {
-                    [149, 188, 242]
-                } else {
-                    [151, 189, 240]
-                }
+                [149, 188, 242]
             } else if state.starts_with("disabled") {
                 if sketch { [137; 3] } else { [204; 3] }
             } else {

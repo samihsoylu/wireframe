@@ -34,17 +34,18 @@ impl Scene {
             self.rectangle_frame(b, normal, if sketch { 3. } else { 1. }, clip);
         }
         let options_for = |index: usize| {
-            let mut options = paint_options(p);
-            options.ink = if !bar && selected == index as i32 {
-                Color32::BLACK
-            } else {
-                Color32::from_rgb(normal[0], normal[1], normal[2])
-            };
-            options.link = if !bar && selected == index as i32 {
-                Color32::BLACK
-            } else {
-                Color32::from_rgb(8, 83, 148)
-            };
+            let is_selected = selected == index as i32;
+            let mut options = background_text_options(
+                p,
+                if is_selected {
+                    selection_color(p)
+                } else {
+                    [255; 3]
+                },
+                1.,
+                if is_selected && !bar { [0; 3] } else { normal },
+                is_selected && !bar,
+            );
             options.disabled_ink = Color32::from_rgb(128, 128, 139);
             options
         };
@@ -72,7 +73,7 @@ impl Scene {
             for item in metrics.items(b.w, size) {
                 let area = Bounds::new(b.x + item.x, b.y, item.width, b.h);
                 if selected == item.index as i32 {
-                    self.menu_selection(area, clip);
+                    self.menu_selection(area, clip, selection_color(p));
                 }
                 if !item.visible {
                     continue;
@@ -117,7 +118,7 @@ impl Scene {
                 let area =
                     Bounds::new(b.x + inset, b.y + m.y, (b.w - 2. * inset).max(0.), m.height);
                 if selected == index as i32 {
-                    self.menu_selection(area, clip);
+                    self.menu_selection(area, clip, selection_color(p));
                 }
                 if row.separator {
                     self.primitive(
@@ -189,6 +190,11 @@ impl Scene {
                                 Bounds::new(b.x + inset, area.y + 3., 12., 12.)
                             },
                             clip,
+                            if selected == index as i32 {
+                                contrast(selection_color(p), [0; 3])
+                            } else {
+                                [0; 3]
+                            },
                         );
                     }
                     if row.arrow {
@@ -196,6 +202,11 @@ impl Scene {
                             "angle-right-solid",
                             Bounds::new(b.x + b.w - 16., area.y + 3., 12., 12.),
                             clip,
+                            if selected == index as i32 {
+                                contrast(selection_color(p), [0; 3])
+                            } else {
+                                [0; 3]
+                            },
                         );
                     }
                 }
@@ -204,12 +215,12 @@ impl Scene {
         }
         Ok(())
     }
-    fn menu_selection(&mut self, b: Bounds, clip: Option<Bounds>) {
+    fn menu_selection(&mut self, b: Bounds, clip: Option<Bounds>, color: [u8; 3]) {
         if b.w > 0. && b.h > 0. {
             self.primitive(
                 Primitive::Rect {
                     b,
-                    fill: [149, 188, 242],
+                    fill: color,
                     stroke: false,
                     radius: 0.,
                 },
@@ -217,13 +228,13 @@ impl Scene {
             );
         }
     }
-    fn menu_symbol(&mut self, id: &str, bounds: Bounds, clip: Option<Bounds>) {
+    fn menu_symbol(&mut self, id: &str, bounds: Bounds, clip: Option<Bounds>, color: [u8; 3]) {
         self.items.push(Item {
             drawing: Drawing::Icon {
                 bounds,
                 id: id.into(),
                 turns: 0,
-                color: [0, 0, 0, 255],
+                color: [color[0], color[1], color[2], 255],
             },
             clip,
             opacity: 1.,

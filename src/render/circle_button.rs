@@ -15,7 +15,7 @@ impl Scene {
         let b = c.bounds;
         let diameter = b.w.min(b.h);
         let thickness = if sketch { 3. } else { 1. };
-        let selection = [149, 188, 242];
+        let selection = selection_color(p);
         let normal = if sketch { [0; 3] } else { [51; 3] };
         let disabled = [128, 128, 139];
         let state = match p.get("state") {
@@ -50,24 +50,7 @@ impl Scene {
             },
             layer.clip,
         );
-        let brightness =
-            u32::from(fill[0]) * 299 + u32::from(fill[1]) * 587 + u32::from(fill[2]) * 114;
-        let ink = if state == "disabled" {
-            disabled
-        } else if brightness < 153_000 {
-            [255; 3]
-        } else {
-            normal
-        };
-        let mut options = paint_options(p);
-        options.ink = Color32::from_rgb(ink[0], ink[1], ink[2]);
-        if state != "disabled" {
-            options.link = if brightness < 153_000 {
-                Color32::WHITE
-            } else {
-                Color32::from_rgb(8, 83, 148)
-            };
-        }
+        let options = background_text_options(p, fill, 1., normal, false);
         let style = TextStyle {
             size: c.font_size,
             bold: c.bold,

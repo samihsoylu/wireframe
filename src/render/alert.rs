@@ -124,7 +124,7 @@ impl Scene {
             {
                 let mut options = paint_options(p);
                 options.ink = Color32::from_rgb(ink[0], ink[1], ink[2]);
-                options.link = Color32::from_rgb(8, 83, 148);
+                options.link = color32(link_color(p));
                 let prior = self.links.len();
                 self.text(
                     text,
@@ -147,7 +147,7 @@ impl Scene {
         for button in &layout.buttons {
             let mut options = paint_options(p);
             options.underline = inline;
-            options.link = Color32::from_rgb(8, 83, 148);
+            options.link = color32(link_color(p));
             if button.text.w > 0. {
                 let prior = self.links.len();
                 self.text(

@@ -33,11 +33,7 @@ impl Scene {
         );
         let clip = clip_with(layer.clip, b);
         let ink = if sketch { [0; 3] } else { [51; 3] };
-        let selected = if sketch {
-            [149, 188, 242]
-        } else {
-            [151, 189, 240]
-        };
+        let selected = selection_color(p);
         let offset = |a: Bounds| Bounds::new(a.x + b.x, a.y + b.y, a.w, a.h);
         self.date_rect(b, [255; 3], clip);
         self.date_outline(b, ink, layout.border, clip);
@@ -113,7 +109,7 @@ impl Scene {
                 }
                 Ink::Active => [0; 3],
                 Ink::Inactive => [153; 3],
-                Ink::Link => [8, 83, 148],
+                Ink::Link => link_color(p),
             };
             let area = offset(label.bounds);
             if !label.text.is_empty() && label.size > 0. {

@@ -2,13 +2,6 @@
 // Copyright 2026 Wireframe contributors
 use super::*;
 
-fn selection_color(sketch: bool) -> [u8; 3] {
-    if sketch {
-        [149, 188, 242]
-    } else {
-        [151, 189, 240]
-    }
-}
 pub(super) fn button_text_colors(layer: &Layer, sketch: bool, options: &mut PaintOptions) {
     let state = match layer.properties.get("state") {
         Some(Value::Choice(s)) => s.as_str(),
@@ -18,23 +11,17 @@ pub(super) fn button_text_colors(layer: &Layer, sketch: bool, options: &mut Pain
         return;
     }
     let fill = if state == "selected" {
-        selection_color(sketch)
+        selection_color(&layer.properties)
     } else {
         layer.control.fill
     };
-    let brightness = u32::from(fill[0]) * 299 + u32::from(fill[1]) * 587 + u32::from(fill[2]) * 114;
-    options.ink = if brightness < 153_000 {
-        Color32::WHITE
-    } else if sketch {
-        Color32::BLACK
-    } else {
-        Color32::from_gray(51)
-    };
-    options.link = if brightness < 153_000 {
-        Color32::WHITE
-    } else {
-        Color32::from_rgb(8, 83, 148)
-    };
+    *options = background_text_options(
+        &layer.properties,
+        fill,
+        1.,
+        if sketch { [0; 3] } else { [51; 3] },
+        false,
+    );
 }
 
 impl Scene {
@@ -50,7 +37,7 @@ impl Scene {
             self.form_border(layer, sketch);
             return;
         }
-        let selection = selection_color(sketch);
+        let selection = selection_color(&layer.properties);
         let fill = if button && state == "selected" {
             selection
         } else {
@@ -92,7 +79,7 @@ impl Scene {
             _ => "normal",
         };
         let button = control.kind == Kind::Button;
-        let selection = selection_color(sketch);
+        let selection = selection_color(&layer.properties);
         let border = match state {
             "disabled" if button && !sketch => [204, 204, 204],
             "disabled" => [128, 128, 139],

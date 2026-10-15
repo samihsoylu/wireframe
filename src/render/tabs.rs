@@ -189,7 +189,7 @@ impl Scene {
                     options.link = if white {
                         Color32::WHITE
                     } else {
-                        Color32::from_rgb(8, 83, 148)
+                        color32(link_color(p))
                     };
                     let offset = if sketch && chosen {
                         match position {

@@ -34,6 +34,10 @@ impl Scene {
         sketch: bool,
         parent_clip: Option<Bounds>,
     ) {
+        if scroll && !sketch {
+            self.clean_scrollbar(b, vertical, value, parent_clip);
+            return;
+        }
         let length = if vertical { b.h } else { b.w };
         let layout = if scroll {
             crate::linear_controls::scrollbar(vertical, length, value, sketch)

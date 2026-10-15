@@ -87,12 +87,12 @@ fn embedded_scrollbars_keep_size_text_and_history_while_moving_the_thumb() {
                 let color = thumb(&e.rendered_scene(1).unwrap()).unwrap().1;
                 assert_eq!(
                     color,
-                    if state == "disabled" {
+                    if !sketch {
+                        [81; 3]
+                    } else if state == "disabled" {
                         [128, 128, 139]
-                    } else if sketch {
-                        [0; 3]
                     } else {
-                        [51; 3]
+                        [0; 3]
                     }
                 );
             }

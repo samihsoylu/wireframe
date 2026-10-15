@@ -8,17 +8,13 @@ Work directly as Engineer. Preserve user files and explicit deferrals. Use synth
 
 ## Current checkpoint — 2026-10-15
 
-Table Border, Scrollbar and Scroll position now control the optional frame and track layout. Header rows keep the track below the first row; borderless tables remove top padding. Automatic width adds 16 units while fixed columns reserve 14. The last sorted header cell can extend above the track. Defaults remain framed without a scrollbar. See docs/RICH-TEXT.md.
+Clean standalone and embedded scrollbars now use one drawing function across both axes. Fixed #515151 ink, opaque one-unit frame strips, capsule thumbs and axis-specific arrows remove discrepancies between control families. Disabled Clean parent fields retain the same scrollbar ink. Placement, document properties, history and Sketch drawing are unchanged. See docs/LINEAR-CONTROLS.md.
 
-All 584 tests pass. The final desktop field filter was corrected after native inspection exposed the hidden controls; all 80 desktop tests were rerun against that correction, including expanded inspector and fractional-edit coverage. Core/library/integration code remained unchanged during that rerun. Three new regressions cover both styles, frame/header combinations, thumb positions, PNG frame removal, autosizing, inspector metadata, history and round trips. All-target Clippy, formatting, product boundary, first-commit GPL and signed-bundle checks pass. Ten existing scenario PNGs and four project documents remain byte-identical.
+All 587 tests, all-target Clippy, formatting, repository-boundary and signed-bundle checks pass. Three new pixel regressions cover frame corners, arrow/capsule geometry, both axes, short tracks and standalone/embedded consistency including disabled fields. Seventeen native cases corroborate the behavior. Seven isolated Clean bar comparisons have mean RGB error below 1 on the 0–255 scale. Ten existing scenario PNGs, six documents and both Sketch comparison pages remain byte-identical. Native macOS checks cover both styles, 100% zoom, a value edit with one Undo, style Undo and byte-identical save. The signed debug build remains on the Clean fixture at 76% Fit. Full native Windows/Linux acceptance remains open.
 
-Native macOS checks verify all three inspector options, scrollbar and border toggle/undo, position 0.75/one-step-undo to 0.5, Sketch style/undo and byte-identical final save. Signed debug bundle UUID EA4B554B-9666-36B1-8F5D-A290EC328B6D is running on the Clean six-table page at 93% Fit with no selection. These are scoped self-checks, not independent review or complete visual acceptance.
+The table border/scrollbar options and physical-pixel canvas-text alignment remain intact. Per-control placement/text differences, approximate Sketch contours, broader interaction and export acceptance remain open. No new PDFs are authored for this checkpoint.
 
-The shared scrollbar artwork remains approximate: Clean uses a square thumb and extra arrow separator lines. Resolve that styling through broader family acceptance. No new PDF or native Windows/Linux acceptance is claimed.
-
-The prior canvas text correction remains intact: final raster placement aligns to physical pixels, preventing an extra filtering pass while preserving shaping, layout and exports. Controlled native evidence supports that scoped fix; other font/display differences remain open.
-
-Remaining scope includes shared scrollbar artwork, selection-color customization, irregular outlines, glyph/device differences, held library-drag cadence, broader component combinations, PDF typography, native close-during-export, sustained responsiveness, failure/recovery and native Windows/Linux release acceptance. The overall goal remains active.
+Remaining scope includes selection-color customization, irregular outlines, glyph/device differences, held library-drag cadence, broader component combinations, PDF typography, native close-during-export, sustained responsiveness, failure/recovery and native Windows/Linux release acceptance. The overall goal remains active.
 
 ## Existing capabilities and limits
 

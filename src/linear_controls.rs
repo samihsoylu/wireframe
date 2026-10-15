@@ -69,13 +69,14 @@ pub fn scrollbar(vertical: bool, length: f32, value: f32, sketch: bool) -> Layou
         Bounds::new(0., 0., length, 16.)
     };
     let along = 13. + (length - 48.) * value.clamp(0., 1.);
+    let inset = if sketch { 1. } else { 2. };
     Layout {
         frame,
         background: Some(Bounds::new(
-            1.,
-            1.,
-            (frame.w - 2.).max(1.),
-            (frame.h - 2.).max(1.),
+            inset,
+            inset,
+            (frame.w - 2. * inset).max(if sketch { 1. } else { 0. }),
+            (frame.h - 2. * inset).max(if sketch { 1. } else { 0. }),
         )),
         thumb: (length > 45.).then(|| {
             if vertical {
@@ -84,7 +85,7 @@ pub fn scrollbar(vertical: bool, length: f32, value: f32, sketch: bool) -> Layou
                 Bounds::new(along, 4., 21., 8.)
             }
         }),
-        ink: if sketch { [0; 3] } else { [51; 3] },
+        ink: if sketch { [0; 3] } else { [81; 3] },
     }
 }
 pub fn splitter(vertical: bool, length: f32, sketch: bool) -> Layout {

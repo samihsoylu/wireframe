@@ -57,7 +57,11 @@ fn defaults_and_scrollbar_boundaries() {
     let bg = wireframe::linear_controls::scrollbar(false, 1., 0., false)
         .background
         .unwrap();
-    assert_eq!(bg, Bounds::new(1., 1., 1., 14.));
+    assert_eq!(bg, Bounds::new(2., 2., 0., 12.));
+    let sketch_bg = wireframe::linear_controls::scrollbar(false, 1., 0., true)
+        .background
+        .unwrap();
+    assert_eq!(sketch_bg, Bounds::new(1., 1., 1., 14.));
 }
 #[test]
 fn image_rotation_keeps_frame_and_asset_and_roundtrips_history() {

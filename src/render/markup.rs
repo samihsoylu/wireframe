@@ -87,7 +87,9 @@ impl Scene {
                     &samples,
                     |i| {
                         let t = i as f32 / (count - 1) as f32;
-                        (PI * t).sin().sqrt() * if sketch { 1.6 } else { 1.25 }
+                        // f32 sin(PI) can be slightly negative at the tapered
+                        // endpoint; keep the ribbon coordinates finite.
+                        (PI * t).sin().max(0.).sqrt() * if sketch { 1.6 } else { 1.25 }
                     },
                     |[along, across]| {
                         let (x, y) = if l.horizontal {

@@ -36,6 +36,7 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | atspi-common-0.13.0 | Apache-2.0 OR MIT | [files](licenses/atspi-common-0.13.0/) |
 | atspi-proxies-0.13.0 | Apache-2.0 OR MIT | [files](licenses/atspi-proxies-0.13.0/) |
 | autocfg-1.5.1 | Apache-2.0 OR MIT | [files](licenses/autocfg-1.5.1/) |
+| base64-0.22.1 | MIT OR Apache-2.0 | [files](licenses/base64-0.22.1/) |
 | base64-0.23.1 | MIT OR Apache-2.0 | [files](licenses/base64-0.23.1/) |
 | bitflags-1.3.2 | MIT/Apache-2.0 | [files](licenses/bitflags-1.3.2/) |
 | bitflags-2.13.2 | MIT OR Apache-2.0 | [files](licenses/bitflags-2.13.2/) |
@@ -43,6 +44,7 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | block2-0.5.1 | MIT | [files](licenses/block2-0.5.1/) |
 | block2-0.6.2 | MIT | [files](licenses/block2-0.6.2/) |
 | blocking-1.7.0 | Apache-2.0 OR MIT | [files](licenses/blocking-1.7.0/) |
+| bumpalo-3.20.3 | MIT OR Apache-2.0 | [files](licenses/bumpalo-3.20.3/) |
 | bytemuck-1.25.2 | Zlib OR Apache-2.0 OR MIT | [files](licenses/bytemuck-1.25.2/) |
 | bytemuck_derive-1.12.1 | Zlib OR Apache-2.0 OR MIT | [files](licenses/bytemuck_derive-1.12.1/) |
 | byteorder-lite-0.1.0 | Unlicense OR MIT | [files](licenses/byteorder-lite-0.1.0/) |
@@ -147,11 +149,13 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | iana-time-zone-0.1.65 | MIT OR Apache-2.0 | [files](licenses/iana-time-zone-0.1.65/) |
 | image-0.25.10 | MIT OR Apache-2.0 | [files](licenses/image-0.25.10/) |
 | image-webp-0.2.4 | MIT OR Apache-2.0 | [files](licenses/image-webp-0.2.4/) |
+| imagesize-0.14.0 | MIT | [files](licenses/imagesize-0.14.0/) |
 | imagesize-0.15.0 | MIT | [files](licenses/imagesize-0.15.0/) |
 | indexmap-2.14.2 | Apache-2.0 OR MIT | [files](licenses/indexmap-2.14.2/) |
 | itertools-0.15.0 | MIT OR Apache-2.0 | [files](licenses/itertools-0.15.0/) |
 | itoa-1.0.18 | MIT OR Apache-2.0 | [files](licenses/itoa-1.0.18/) |
 | khronos_api-3.1.0 | Apache-2.0 | [files](licenses/khronos_api-3.1.0/) |
+| krilla-0.8.2 | MIT OR Apache-2.0 | [files](licenses/krilla-0.8.2/) |
 | kurbo-0.13.1 | Apache-2.0 OR MIT | [files](licenses/kurbo-0.13.1/) |
 | libc-0.2.190 | MIT OR Apache-2.0 | [files](licenses/libc-0.2.190/) |
 | libloading-0.8.9 | ISC | [files](licenses/libloading-0.8.9/) |
@@ -185,6 +189,7 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | parking-2.2.1 | Apache-2.0 OR MIT | [files](licenses/parking-2.2.1/) |
 | parking_lot-0.12.5 | MIT OR Apache-2.0 | [files](licenses/parking_lot-0.12.5/) |
 | parking_lot_core-0.9.12 | MIT OR Apache-2.0 | [files](licenses/parking_lot_core-0.9.12/) |
+| pdf-writer-0.15.0 | MIT OR Apache-2.0 | [files](licenses/pdf-writer-0.15.0/) |
 | peniko-0.6.1 | Apache-2.0 OR MIT | [files](licenses/peniko-0.6.1/) |
 | percent-encoding-2.3.2 | MIT OR Apache-2.0 | [files](licenses/percent-encoding-2.3.2/) |
 | phf-0.13.1 | MIT | [files](licenses/phf-0.13.1/) |
@@ -209,6 +214,7 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | rangemap-1.8.0 | MIT/Apache-2.0 | [files](licenses/rangemap-1.8.0/) |
 | raw-window-handle-0.6.2 | MIT OR Apache-2.0 OR Zlib | [files](licenses/raw-window-handle-0.6.2/) |
 | read-fonts-0.37.0 | MIT OR Apache-2.0 | [files](licenses/read-fonts-0.37.0/) |
+| read-fonts-0.39.2 | MIT OR Apache-2.0 | [files](licenses/read-fonts-0.39.2/) |
 | read-fonts-0.41.0 | MIT OR Apache-2.0 | [files](licenses/read-fonts-0.41.0/) |
 | resvg-0.48.1 | Apache-2.0 OR MIT | [files](licenses/resvg-0.48.1/) |
 | rfd-0.17.2 | MIT | [files](licenses/rfd-0.17.2/) |
@@ -218,6 +224,7 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | rustc-hash-2.1.3 | Apache-2.0 OR MIT | [files](licenses/rustc-hash-2.1.3/) |
 | rustix-0.38.44 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | [files](licenses/rustix-0.38.44/) |
 | rustix-1.1.5 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | [files](licenses/rustix-1.1.5/) |
+| ryu-1.0.23 | Apache-2.0 OR BSL-1.0 | [files](licenses/ryu-1.0.23/) |
 | scoped-tls-1.0.1 | MIT/Apache-2.0 | [files](licenses/scoped-tls-1.0.1/) |
 | scopeguard-1.2.0 | MIT OR Apache-2.0 | [files](licenses/scopeguard-1.2.0/) |
 | self_cell-1.3.0 | Apache-2.0 OR GPL-2.0-only | [files](licenses/self_cell-1.3.0/) |
@@ -233,6 +240,7 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | simplecss-0.2.2 | Apache-2.0 OR MIT | [files](licenses/simplecss-0.2.2/) |
 | siphasher-1.0.4 | MIT OR Apache-2.0 | [files](licenses/siphasher-1.0.4/) |
 | skrifa-0.40.0 | MIT OR Apache-2.0 | [files](licenses/skrifa-0.40.0/) |
+| skrifa-0.42.1 | MIT OR Apache-2.0 | [files](licenses/skrifa-0.42.1/) |
 | skrifa-0.44.0 | MIT OR Apache-2.0 | [files](licenses/skrifa-0.44.0/) |
 | slab-0.4.12 | MIT | [files](licenses/slab-0.4.12/) |
 | slotmap-1.1.1 | Zlib | [files](licenses/slotmap-1.1.1/) |
@@ -242,12 +250,15 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | smithay-clipboard-0.7.3 | MIT | [files](licenses/smithay-clipboard-0.7.3/) |
 | smol_str-0.2.2 | MIT OR Apache-2.0 | [files](licenses/smol_str-0.2.2/) |
 | smol_str-0.3.6 | MIT OR Apache-2.0 | [files](licenses/smol_str-0.3.6/) |
+| stable_deref_trait-1.2.1 | MIT OR Apache-2.0 | [files](licenses/stable_deref_trait-1.2.1/) |
 | static_assertions-1.1.0 | MIT OR Apache-2.0 | [files](licenses/static_assertions-1.1.0/) |
 | strict-num-0.1.1 | MIT | [files](licenses/strict-num-0.1.1/) |
+| subsetter-0.2.6 | MIT OR Apache-2.0 | [files](licenses/subsetter-0.2.6/) |
 | svgtypes-0.16.1 | Apache-2.0 OR MIT | [files](licenses/svgtypes-0.16.1/) |
 | swash-0.2.10 | Apache-2.0 OR MIT | [files](licenses/swash-0.2.10/) |
 | syn-2.0.119 | MIT OR Apache-2.0 | [files](licenses/syn-2.0.119/) |
 | syn-3.0.9 | MIT OR Apache-2.0 | [files](licenses/syn-3.0.9/) |
+| synstructure-0.14.0 | MIT | [files](licenses/synstructure-0.14.0/) |
 | sys-locale-0.3.2 | MIT OR Apache-2.0 | [files](licenses/sys-locale-0.3.2/) |
 | tempfile-3.27.0 | MIT OR Apache-2.0 | [files](licenses/tempfile-3.27.0/) |
 | thiserror-1.0.69 | MIT OR Apache-2.0 | [files](licenses/thiserror-1.0.69/) |
@@ -311,6 +322,7 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | windows_x86_64_msvc-0.53.1 | MIT OR Apache-2.0 | [files](licenses/windows_x86_64_msvc-0.53.1/) |
 | winit-0.30.13 | Apache-2.0 | [files](licenses/winit-0.30.13/) |
 | winnow-1.0.4 | MIT | [files](licenses/winnow-1.0.4/) |
+| write-fonts-0.48.1 | MIT OR Apache-2.0 | [files](licenses/write-fonts-0.48.1/) |
 | x11-dl-2.21.0 | MIT | [files](licenses/x11-dl-2.21.0/) |
 | x11rb-0.13.2 | MIT OR Apache-2.0 | [files](licenses/x11rb-0.13.2/) |
 | x11rb-protocol-0.13.2 | MIT OR Apache-2.0 | [files](licenses/x11rb-protocol-0.13.2/) |
@@ -319,7 +331,10 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | xkeysym-0.2.1 | MIT OR Apache-2.0 OR Zlib | [files](licenses/xkeysym-0.2.1/) |
 | xml-rs-0.8.29 | MIT | [files](licenses/xml-rs-0.8.29/) |
 | xmlwriter-0.1.0 | MIT | [files](licenses/xmlwriter-0.1.0/) |
+| xmp-writer-0.3.3 | MIT OR Apache-2.0 | [files](licenses/xmp-writer-0.3.3/) |
 | yazi-0.2.1 | Apache-2.0 OR MIT | [files](licenses/yazi-0.2.1/) |
+| yoke-0.8.3 | Unicode-3.0 | [files](licenses/yoke-0.8.3/) |
+| yoke-derive-0.8.4 | Unicode-3.0 | [files](licenses/yoke-derive-0.8.4/) |
 | zbus-5.19.0 | MIT | [files](licenses/zbus-5.19.0/) |
 | zbus-lockstep-0.5.2 | MIT | [files](licenses/zbus-lockstep-0.5.2/) |
 | zbus-lockstep-macros-0.5.2 | MIT | [files](licenses/zbus-lockstep-macros-0.5.2/) |
@@ -330,6 +345,8 @@ Full license texts and applicable copyright notices are in `licenses/`. The unch
 | zeno-0.3.3 | Apache-2.0 OR MIT | [files](licenses/zeno-0.3.3/) |
 | zerocopy-0.8.62 | BSD-2-Clause OR Apache-2.0 OR MIT | [files](licenses/zerocopy-0.8.62/) |
 | zerocopy-derive-0.8.62 | BSD-2-Clause OR Apache-2.0 OR MIT | [files](licenses/zerocopy-derive-0.8.62/) |
+| zerofrom-0.1.8 | Unicode-3.0 | [files](licenses/zerofrom-0.1.8/) |
+| zerofrom-derive-0.1.8 | Unicode-3.0 | [files](licenses/zerofrom-derive-0.1.8/) |
 | zmij-1.0.23 | MIT | [files](licenses/zmij-1.0.23/) |
 | zune-core-0.5.3 | MIT OR Apache-2.0 OR Zlib | [files](licenses/zune-core-0.5.3/) |
 | zune-jpeg-0.5.15 | MIT OR Apache-2.0 OR Zlib | [files](licenses/zune-jpeg-0.5.15/) |

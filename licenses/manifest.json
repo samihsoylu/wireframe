@@ -302,6 +302,16 @@
   },
   {
     "name": "base64",
+    "version": "0.22.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/marshallpierce/rust-base64",
+    "files": [
+      "base64-0.22.1/LICENSE-APACHE",
+      "base64-0.22.1/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "base64",
     "version": "0.23.1",
     "license": "MIT OR Apache-2.0",
     "repository": "https://github.com/marshallpierce/rust-base64",
@@ -366,6 +376,16 @@
     "files": [
       "blocking-1.7.0/LICENSE-APACHE",
       "blocking-1.7.0/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "bumpalo",
+    "version": "3.20.3",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/fitzgen/bumpalo",
+    "files": [
+      "bumpalo-3.20.3/LICENSE-APACHE",
+      "bumpalo-3.20.3/LICENSE-MIT"
     ]
   },
   {
@@ -1398,6 +1418,15 @@
   },
   {
     "name": "imagesize",
+    "version": "0.14.0",
+    "license": "MIT",
+    "repository": "https://github.com/Roughsketch/imagesize",
+    "files": [
+      "imagesize-0.14.0/LICENSE"
+    ]
+  },
+  {
+    "name": "imagesize",
     "version": "0.15.0",
     "license": "MIT",
     "repository": "https://github.com/Roughsketch/imagesize",
@@ -1442,6 +1471,15 @@
     "repository": "https://github.com/brendanzab/gl-rs/",
     "files": [
       "khronos_api-3.1.0/upstream-LICENSE"
+    ]
+  },
+  {
+    "name": "krilla",
+    "version": "0.8.2",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/LaurenzV/krilla",
+    "files": [
+      "krilla-0.8.2/icc/LICENSE"
     ]
   },
   {
@@ -1770,6 +1808,16 @@
     ]
   },
   {
+    "name": "pdf-writer",
+    "version": "0.15.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/typst/pdf-writer",
+    "files": [
+      "pdf-writer-0.15.0/LICENSE-APACHE",
+      "pdf-writer-0.15.0/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "peniko",
     "version": "0.6.1",
     "license": "Apache-2.0 OR MIT",
@@ -2006,6 +2054,16 @@
   },
   {
     "name": "read-fonts",
+    "version": "0.39.2",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/googlefonts/fontations",
+    "files": [
+      "read-fonts-0.39.2/LICENSE-APACHE",
+      "read-fonts-0.39.2/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "read-fonts",
     "version": "0.41.0",
     "license": "MIT OR Apache-2.0",
     "repository": "https://github.com/googlefonts/fontations",
@@ -2093,6 +2151,16 @@
       "rustix-1.1.5/LICENSE-APACHE",
       "rustix-1.1.5/LICENSE-Apache-2.0_WITH_LLVM-exception",
       "rustix-1.1.5/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "ryu",
+    "version": "1.0.23",
+    "license": "Apache-2.0 OR BSL-1.0",
+    "repository": "https://github.com/dtolnay/ryu",
+    "files": [
+      "ryu-1.0.23/LICENSE-APACHE",
+      "ryu-1.0.23/LICENSE-BOOST"
     ]
   },
   {
@@ -2247,6 +2315,16 @@
   },
   {
     "name": "skrifa",
+    "version": "0.42.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/googlefonts/fontations",
+    "files": [
+      "skrifa-0.42.1/LICENSE-APACHE",
+      "skrifa-0.42.1/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "skrifa",
     "version": "0.44.0",
     "license": "MIT OR Apache-2.0",
     "repository": "https://github.com/googlefonts/fontations",
@@ -2331,6 +2409,16 @@
     ]
   },
   {
+    "name": "stable_deref_trait",
+    "version": "1.2.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/storyyeller/stable_deref_trait",
+    "files": [
+      "stable_deref_trait-1.2.1/LICENSE-APACHE",
+      "stable_deref_trait-1.2.1/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "static_assertions",
     "version": "1.1.0",
     "license": "MIT OR Apache-2.0",
@@ -2347,6 +2435,17 @@
     "repository": "https://github.com/RazrFalcon/strict-num",
     "files": [
       "strict-num-0.1.1/LICENSE"
+    ]
+  },
+  {
+    "name": "subsetter",
+    "version": "0.2.6",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/typst/subsetter",
+    "files": [
+      "subsetter-0.2.6/LICENSE-APACHE",
+      "subsetter-0.2.6/LICENSE-MIT",
+      "subsetter-0.2.6/NOTICE"
     ]
   },
   {
@@ -2387,6 +2486,15 @@
     "files": [
       "syn-3.0.9/LICENSE-APACHE",
       "syn-3.0.9/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "synstructure",
+    "version": "0.14.0",
+    "license": "MIT",
+    "repository": "https://github.com/mystor/synstructure",
+    "files": [
+      "synstructure-0.14.0/LICENSE"
     ]
   },
   {
@@ -3006,6 +3114,16 @@
     ]
   },
   {
+    "name": "write-fonts",
+    "version": "0.48.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/googlefonts/fontations",
+    "files": [
+      "write-fonts-0.48.1/LICENSE-APACHE",
+      "write-fonts-0.48.1/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "x11-dl",
     "version": "2.21.0",
     "license": "MIT",
@@ -3082,6 +3200,16 @@
     ]
   },
   {
+    "name": "xmp-writer",
+    "version": "0.3.3",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/typst/xmp-writer",
+    "files": [
+      "xmp-writer-0.3.3/LICENSE-APACHE",
+      "xmp-writer-0.3.3/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "yazi",
     "version": "0.2.1",
     "license": "Apache-2.0 OR MIT",
@@ -3089,6 +3217,24 @@
     "files": [
       "yazi-0.2.1/LICENSE-APACHE",
       "yazi-0.2.1/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "yoke",
+    "version": "0.8.3",
+    "license": "Unicode-3.0",
+    "repository": "https://github.com/unicode-org/icu4x",
+    "files": [
+      "yoke-0.8.3/LICENSE"
+    ]
+  },
+  {
+    "name": "yoke-derive",
+    "version": "0.8.4",
+    "license": "Unicode-3.0",
+    "repository": "https://github.com/unicode-org/icu4x",
+    "files": [
+      "yoke-derive-0.8.4/LICENSE"
     ]
   },
   {
@@ -3184,6 +3330,24 @@
       "zerocopy-derive-0.8.62/LICENSE-APACHE",
       "zerocopy-derive-0.8.62/LICENSE-BSD",
       "zerocopy-derive-0.8.62/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "zerofrom",
+    "version": "0.1.8",
+    "license": "Unicode-3.0",
+    "repository": "https://github.com/unicode-org/icu4x",
+    "files": [
+      "zerofrom-0.1.8/LICENSE"
+    ]
+  },
+  {
+    "name": "zerofrom-derive",
+    "version": "0.1.8",
+    "license": "Unicode-3.0",
+    "repository": "https://github.com/unicode-org/icu4x",
+    "files": [
+      "zerofrom-derive-0.1.8/LICENSE"
     ]
   },
   {

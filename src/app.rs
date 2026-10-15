@@ -1151,15 +1151,15 @@ if r.lost_focus(){self.editor.commit();}
                     ui.add_space(14.);if ui.add_enabled(self.editor.document.pages.len()>1,egui::Button::new("Delete this page")).clicked(){self.editor.delete_page();}ui.separator();ui.small("Select a control on the canvas to change its content and appearance. Double-click it to edit text.");return;
                 }
                 ui.heading(if selected.len()==1{self.editor.selection_label(selected[0].id)}else{format!("{} controls",selected.len())});
-                if selected.len()==1 {let mut c=selected[0].clone();let original=c.clone();
-                    ui.add_space(10.);ui.label("Position & size");egui::Grid::new("geometry").num_columns(4).spacing([7.,8.]).show(ui,|ui|{ui.label("X");ui.add(egui::DragValue::new(&mut c.bounds.x).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.label("Y");ui.add(egui::DragValue::new(&mut c.bounds.y).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.end_row();ui.label("W");ui.add_enabled(!matches!(c.kind,Kind::Icon|Kind::Breadcrumbs|Kind::LinkBar|Kind::VerticalSlider) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id),egui::DragValue::new(&mut c.bounds.w).update_while_editing(false).speed(1.).range((if matches!(c.kind,Kind::Breadcrumbs|Kind::LinkBar|Kind::HorizontalSlider){1.0}else{8.0})..=10_000.0));ui.label("H");ui.add_enabled(!matches!(c.kind,Kind::Icon|Kind::IconLabel|Kind::PointedButton|Kind::Breadcrumbs|Kind::LinkBar|Kind::HorizontalSlider) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id),egui::DragValue::new(&mut c.bounds.h).update_while_editing(false).speed(1.).range((if c.kind==Kind::VerticalSlider {1.0}else{8.0})..=10_000.0));ui.end_row();});
+                if selected.len()==1 {let mut c=selected[0].clone();let original=c.clone();let fixed_axis=wireframe::linear_controls::Axis::for_kind(c.kind);
+                    ui.add_space(10.);ui.label("Position & size");egui::Grid::new("geometry").num_columns(4).spacing([7.,8.]).show(ui,|ui|{ui.label("X");ui.add(egui::DragValue::new(&mut c.bounds.x).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.label("Y");ui.add(egui::DragValue::new(&mut c.bounds.y).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.end_row();ui.label("W");ui.add_enabled(!matches!(c.kind,Kind::Icon|Kind::Breadcrumbs|Kind::LinkBar) && !fixed_axis.is_some_and(|a| a.vertical) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id),egui::DragValue::new(&mut c.bounds.w).update_while_editing(false).speed(1.).clamp_existing_to_range(fixed_axis.is_none()).range((if fixed_axis.is_some(){10.0}else if matches!(c.kind,Kind::Breadcrumbs|Kind::LinkBar){1.0}else{8.0})..=10_000.0));ui.label("H");ui.add_enabled(!matches!(c.kind,Kind::Icon|Kind::IconLabel|Kind::PointedButton|Kind::Breadcrumbs|Kind::LinkBar) && !fixed_axis.is_some_and(|a| !a.vertical) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id),egui::DragValue::new(&mut c.bounds.h).update_while_editing(false).speed(1.).clamp_existing_to_range(fixed_axis.is_none()).range((if fixed_axis.is_some(){10.0}else{8.0})..=10_000.0));ui.end_row();});
                     if c.group.is_none() && !self.typed_properties(ui, c.id) {ui.add_space(10.);ui.label("Text");wireframe::text_entry::multiline(ui, &mut c.text, 4, false);if c.kind==Kind::Table {ui.small("Separate columns with commas and rows with new lines.");}
 if c.kind==Kind::Tabs {ui.small("Separate tabs with commas.");}
                     ui.horizontal(|ui|{ui.label("Size");ui.add(egui::DragValue::new(&mut c.font_size).range(6.0..=120.0));ui.checkbox(&mut c.bold,"Bold");});
                     ui.horizontal(|ui|{ui.label("Fill");ui.color_edit_button_srgb(&mut c.fill);});if matches!(c.kind,Kind::Checkbox|Kind::Radio|Kind::Toggle){ui.checkbox(&mut c.checked,"Selected state");}
                     }
                     if !self.editor.editing_instance() {ui.checkbox(&mut c.locked,"Lock position and content");}
-                    if c.group.is_none() && !matches!(c.kind, Kind::ButtonBar | Kind::Breadcrumbs | Kind::LinkBar | Kind::Tabs | Kind::VerticalTabs | Kind::CheckboxGroup | Kind::RadioGroup | Kind::Menu | Kind::MenuBar | Kind::Tree | Kind::Accordion | Kind::Alert | Kind::AppBar) {
+                    if c.group.is_none() && fixed_axis.is_none() && !matches!(c.kind, Kind::ButtonBar | Kind::Breadcrumbs | Kind::LinkBar | Kind::Tabs | Kind::VerticalTabs | Kind::CheckboxGroup | Kind::RadioGroup | Kind::Menu | Kind::MenuBar | Kind::Tree | Kind::Accordion | Kind::Alert | Kind::AppBar) {
                     let link_caption=c.link.and_then(|id|self.editor.document.pages.iter().find(|p|p.id==id).map(|p|p.name.clone())).unwrap_or("No page link".into());
                     ui_text::combo_box(ui,"page-link",&link_caption,|ui|{if ui_text::selectable_value(ui,&mut c.link,None,"No page link").clicked(){ui.close();}for p in &self.editor.document.pages {if ui_text::selectable_value(ui,&mut c.link,Some(p.id),&p.name).clicked(){ui.close();}}});
                     } else if self.editor.is_group(c.id) && ui.button("Edit group contents").clicked(){self.editor.enter(c.id);}
@@ -1427,12 +1427,15 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
         {
             return vec![];
         }
+        let axis = if single {
+            wireframe::linear_controls::Axis::for_kind(selected[0].kind)
+        } else {
+            None
+        };
         let horizontal = single
-            && matches!(
-                selected[0].kind,
-                Kind::IconLabel | Kind::PointedButton | Kind::HorizontalSlider
-            );
-        let vertical = single && selected[0].kind == Kind::VerticalSlider;
+            && (matches!(selected[0].kind, Kind::IconLabel | Kind::PointedButton)
+                || axis.is_some_and(|a| !a.vertical));
+        let vertical = axis.is_some_and(|a| a.vertical);
         let r = self.screen_rect(bounds).expand(4.);
         [
             (-1, -1),
@@ -1761,19 +1764,15 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                                 delta.y = (delta.y / 10.).round() * 10.;
                             }
                             let selected = self.editor.selected_views();
-                            let slider = (selected.len() == 1 && original.len() == 1)
+                            let axis = (selected.len() == 1 && original.len() == 1)
                                 .then(|| selected[0].kind)
-                                .filter(|k| {
-                                    matches!(k, Kind::HorizontalSlider | Kind::VerticalSlider)
-                                });
-                            let aspect = modifiers.shift && slider.is_none();
-                            let mut resized = if let Some(kind) = slider {
-                                let vertical = kind == Kind::VerticalSlider;
-                                wireframe::sliders::resize(
+                                .and_then(wireframe::linear_controls::Axis::for_kind);
+                            let aspect = modifiers.shift && axis.is_none();
+                            let mut resized = if let Some(axis) = axis {
+                                axis.resize(
                                     bounds,
-                                    vertical,
-                                    if vertical { handle.1 } else { handle.0 },
-                                    if vertical { delta.y } else { delta.x },
+                                    if axis.vertical { handle.1 } else { handle.0 },
+                                    if axis.vertical { delta.y } else { delta.x },
                                 )
                             } else {
                                 bounds.resized(handle, (delta.x, delta.y), aspect)
@@ -1785,7 +1784,16 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                                     handle,
                                     aspect.then_some(bounds.w / bounds.h),
                                 );
-                                if result.bounds.w >= 1. && result.bounds.h >= 1. {
+                                if result.bounds.w >= 1.
+                                    && result.bounds.h >= 1.
+                                    && axis.is_none_or(|a| {
+                                        if a.vertical {
+                                            result.bounds.h >= 10.
+                                        } else {
+                                            result.bounds.w >= 10.
+                                        }
+                                    })
+                                {
                                     resized = result.bounds;
                                     self.alignment_guides = result.guides;
                                 }
@@ -2519,57 +2527,115 @@ mod tests {
         assert_eq!(app.editor.current().controls[0].bounds, before);
     }
     #[test]
-    fn slider_resize_handles_preserve_thickness_with_shift_and_undo() {
-        for kind in [Kind::HorizontalSlider, Kind::VerticalSlider] {
+    fn linear_resize_handles_preserve_thickness_minimum_anchor_and_history() {
+        for kind in [
+            Kind::HorizontalSlider,
+            Kind::VerticalSlider,
+            Kind::HorizontalScrollbar,
+            Kind::VerticalScrollbar,
+            Kind::HorizontalSplitter,
+            Kind::VerticalSplitter,
+        ] {
+            for end_index in [0, 1] {
+                for shrink in [false, true] {
+                    let ctx = egui::Context::default();
+                    let mut app = WireframeApp::workspace(&ctx, None);
+                    app.editor.add(kind, 200., 200.);
+                    frame(&ctx, &mut app, vec![]);
+                    let before = app.editor.current().controls[0].bounds;
+                    let axis = wireframe::linear_controls::Axis::for_kind(kind).unwrap();
+                    let handles = app.resize_handles(before);
+                    assert_eq!(handles.len(), 2);
+                    assert!(handles.iter().all(|((x, y), _)| if axis.vertical {
+                        *x == 0
+                    } else {
+                        *y == 0
+                    }));
+                    let start = handles[end_index].1;
+                    let old = if axis.vertical { before.h } else { before.w };
+                    let amount = if shrink { 5. - old } else { 70. };
+                    let direction = if end_index == 0 { -1. } else { 1. };
+                    let end = start
+                        + if axis.vertical {
+                            Vec2::new(40., amount * direction)
+                        } else {
+                            Vec2::new(amount * direction, 40.)
+                        };
+                    alignment_frame(
+                        &ctx,
+                        &mut app,
+                        vec![egui::Event::PointerMoved(start), pointer(start, true)],
+                        Modifiers::NONE,
+                        true,
+                    );
+                    alignment_frame(
+                        &ctx,
+                        &mut app,
+                        vec![egui::Event::PointerMoved(end)],
+                        Modifiers::SHIFT,
+                        true,
+                    );
+                    alignment_frame(
+                        &ctx,
+                        &mut app,
+                        vec![pointer(end, false)],
+                        Modifiers::SHIFT,
+                        true,
+                    );
+                    let after = app.editor.current().controls[0].bounds;
+                    let length = if shrink { 10. } else { old + 70. };
+                    assert_eq!(
+                        (after.w, after.h),
+                        if axis.vertical {
+                            (axis.thickness, length)
+                        } else {
+                            (length, axis.thickness)
+                        }
+                    );
+                    if end_index == 0 {
+                        assert_eq!(
+                            if axis.vertical {
+                                after.y + after.h
+                            } else {
+                                after.x + after.w
+                            },
+                            if axis.vertical {
+                                before.y + before.h
+                            } else {
+                                before.x + before.w
+                            }
+                        );
+                    } else {
+                        assert_eq!((after.x, after.y), (before.x, before.y));
+                    }
+                    app.editor.undo();
+                    assert_eq!(app.editor.current().controls[0].bounds, before);
+                    app.editor.redo();
+                    assert_eq!(app.editor.current().controls[0].bounds, after);
+                }
+            }
+        }
+    }
+    #[test]
+    fn selecting_subminimum_linear_controls_does_not_rewrite_saved_sizes() {
+        for kind in [
+            Kind::HorizontalSlider,
+            Kind::VerticalSlider,
+            Kind::HorizontalScrollbar,
+            Kind::VerticalScrollbar,
+            Kind::HorizontalSplitter,
+            Kind::VerticalSplitter,
+        ] {
             let ctx = egui::Context::default();
             let mut app = WireframeApp::workspace(&ctx, None);
             app.editor.add(kind, 100., 100.);
+            app.editor.selected_mut(|c| {
+                c.bounds.w = 1.;
+                c.bounds.h = 1.;
+            });
+            let saved = app.editor.document.encode().unwrap();
             frame(&ctx, &mut app, vec![]);
-            let before = app.editor.current().controls[0].bounds;
-            let handles = app.resize_handles(before);
-            assert_eq!(handles.len(), 2);
-            let vertical = kind == Kind::VerticalSlider;
-            assert!(
-                handles
-                    .iter()
-                    .all(|((x, y), _)| if vertical { *x == 0 } else { *y == 0 })
-            );
-            let start = handles[1].1;
-            let end = start
-                + if vertical {
-                    Vec2::new(40., 70.)
-                } else {
-                    Vec2::new(70., 40.)
-                };
-            alignment_frame(
-                &ctx,
-                &mut app,
-                vec![egui::Event::PointerMoved(start), pointer(start, true)],
-                Modifiers::NONE,
-                true,
-            );
-            alignment_frame(
-                &ctx,
-                &mut app,
-                vec![egui::Event::PointerMoved(end)],
-                Modifiers::SHIFT,
-                true,
-            );
-            alignment_frame(
-                &ctx,
-                &mut app,
-                vec![pointer(end, false)],
-                Modifiers::SHIFT,
-                true,
-            );
-            let after = app.editor.current().controls[0].bounds;
-            assert_eq!(
-                (after.w, after.h),
-                if vertical { (12., 103.) } else { (103., 12.) }
-            );
-            assert_eq!((after.x, after.y), (100., 100.));
-            app.editor.undo();
-            assert_eq!(app.editor.current().controls[0].bounds, before);
+            assert_eq!(app.editor.document.encode().unwrap(), saved);
         }
     }
     #[test]

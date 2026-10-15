@@ -50,3 +50,5 @@ pub mod tablet;
 pub mod pickers;
 
 pub mod sliders;
+
+pub mod linear_controls;

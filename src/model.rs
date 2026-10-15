@@ -133,6 +133,10 @@ pub enum Kind {
     TimePicker,
     HorizontalSlider,
     VerticalSlider,
+    HorizontalScrollbar,
+    VerticalScrollbar,
+    HorizontalSplitter,
+    VerticalSplitter,
     Panel,
     FieldSet,
     List,
@@ -144,7 +148,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 53] = [
+    pub const ALL: [Kind; 57] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -189,6 +193,10 @@ impl Kind {
         Self::TimePicker,
         Self::HorizontalSlider,
         Self::VerticalSlider,
+        Self::HorizontalScrollbar,
+        Self::VerticalScrollbar,
+        Self::HorizontalSplitter,
+        Self::VerticalSplitter,
         Self::Panel,
         Self::FieldSet,
         Self::List,
@@ -245,6 +253,10 @@ impl Kind {
             Self::TimePicker => "Time picker",
             Self::HorizontalSlider => "Horizontal slider",
             Self::VerticalSlider => "Vertical slider",
+            Self::HorizontalScrollbar => "Horizontal scrollbar",
+            Self::VerticalScrollbar => "Vertical scrollbar",
+            Self::HorizontalSplitter => "Horizontal splitter",
+            Self::VerticalSplitter => "Vertical splitter",
             Self::Panel => "Window",
             Self::FieldSet => "Field set",
             Self::List => "List",
@@ -325,6 +337,10 @@ impl Kind {
             Self::DatePicker | Self::TimePicker => (320., 473.),
             Self::HorizontalSlider => (33., 12.),
             Self::VerticalSlider => (12., 33.),
+            Self::HorizontalScrollbar => (100., 16.),
+            Self::VerticalScrollbar => (16., 100.),
+            Self::HorizontalSplitter => (100., 12.),
+            Self::VerticalSplitter => (12., 100.),
             Self::Panel => (450., 400.),
             Self::FieldSet => (200., 170.),
             Self::List | Self::Table => (300., 180.),
@@ -357,7 +373,11 @@ impl Kind {
             | Self::DatePicker
             | Self::TimePicker
             | Self::HorizontalSlider
-            | Self::VerticalSlider => "",
+            | Self::VerticalSlider
+            | Self::HorizontalScrollbar
+            | Self::VerticalScrollbar
+            | Self::HorizontalSplitter
+            | Self::VerticalSplitter => "",
             Self::DateChooser => crate::date_controls::CHOOSER_DEFAULT,
             Self::Menu => crate::menu::MENU,
             Self::MenuBar => crate::menu::BAR,

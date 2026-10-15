@@ -15,6 +15,7 @@ mod dropdown;
 mod field_set;
 mod forms;
 mod images;
+mod linear_controls;
 mod list;
 pub mod mask;
 mod menu;
@@ -365,6 +366,16 @@ impl Scene {
         }
         if c.kind == Kind::AppBar {
             return self.app_bar(layer, fonts, rasters);
+        }
+        if matches!(
+            c.kind,
+            Kind::HorizontalScrollbar
+                | Kind::VerticalScrollbar
+                | Kind::HorizontalSplitter
+                | Kind::VerticalSplitter
+        ) {
+            self.linear_control(layer, sketch);
+            return Ok(());
         }
         if matches!(c.kind, Kind::HorizontalSlider | Kind::VerticalSlider) {
             self.slider(layer, sketch);

@@ -1489,6 +1489,8 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             "Value",
             if matches!(c.id, "horizontal_slider" | "vertical_slider") {
                 0.05
+            } else if matches!(c.id, "horizontal_scrollbar" | "vertical_scrollbar") {
+                0.0
             } else {
                 0.5
             },

@@ -115,29 +115,9 @@ pub fn layout(o: Options) -> Layout {
 
 /// Resize one end without moving or scaling the fixed-thickness axis.
 pub fn resize(bounds: Bounds, vertical: bool, edge: i8, delta: f32) -> Bounds {
-    let old = if vertical { bounds.h } else { bounds.w };
-    let length = (old + delta * edge as f32).clamp(1., 10_000.);
-    if vertical {
-        Bounds::new(
-            bounds.x,
-            if edge < 0 {
-                bounds.y + old - length
-            } else {
-                bounds.y
-            },
-            12.,
-            length,
-        )
-    } else {
-        Bounds::new(
-            if edge < 0 {
-                bounds.x + old - length
-            } else {
-                bounds.x
-            },
-            bounds.y,
-            length,
-            12.,
-        )
+    crate::linear_controls::Axis {
+        vertical,
+        thickness: 12.,
     }
+    .resize(bounds, edge, delta)
 }

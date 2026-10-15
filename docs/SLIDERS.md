@@ -1,6 +1,6 @@
 # Sliders
 
-Horizontal slider and Vertical slider are illustrative controls for levels and other bounded values. They start at 33×12 and 12×33. Only the long axis resizes; thickness stays 12. The canvas exposes two end handles, and Shift does not stretch the fixed axis. Length can be reduced to one unit.
+Horizontal slider and Vertical slider are illustrative controls for levels and other bounded values. They start at 33×12 and 12×33. Only the long axis resizes; thickness stays 12. The canvas exposes two end handles, and Shift does not stretch the fixed axis. Resizing a single control has a minimum length of 10. Smaller saved dimensions remain readable and render without normalization.
 
 The inspector provides Pointy, Rectangle and Circle thumbs, a value from 0 to 1, Normal/Disabled state and a color. Value starts at 0.05 and moves left-to-right or top-to-bottom. Color applies to the leading segment. The remaining track and thumb use the style's default ink. Disabled state renders all parts gray while retaining the stored color.
 

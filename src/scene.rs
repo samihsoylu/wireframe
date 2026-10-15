@@ -132,6 +132,10 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
         | Kind::TimePicker
         | Kind::HorizontalSlider
         | Kind::VerticalSlider
+        | Kind::HorizontalScrollbar
+        | Kind::VerticalScrollbar
+        | Kind::HorizontalSplitter
+        | Kind::VerticalSplitter
         | Kind::Alert
         | Kind::AppBar
         | Kind::FieldSet

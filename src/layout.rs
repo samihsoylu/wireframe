@@ -315,16 +315,35 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(w, h)?;
             return Ok((w, h));
         }
-        if matches!(kind, "horizontal_slider" | "vertical_slider") {
-            let vertical = kind == "vertical_slider";
+        if matches!(
+            kind,
+            "horizontal_slider"
+                | "vertical_slider"
+                | "horizontal_scrollbar"
+                | "vertical_scrollbar"
+                | "horizontal_splitter"
+                | "vertical_splitter"
+        ) {
+            let vertical = kind.starts_with("vertical_");
+            let thickness = if kind.ends_with("scrollbar") {
+                16.
+            } else {
+                12.
+            };
             let length = match if vertical { height } else { width } {
-                Dimension::Auto => 33.,
+                Dimension::Auto => {
+                    if kind.ends_with("slider") {
+                        33.
+                    } else {
+                        100.
+                    }
+                }
                 Dimension::Fixed(n) => n,
             };
             let (w, h) = if vertical {
-                (12., length)
+                (thickness, length)
             } else {
-                (length, 12.)
+                (length, thickness)
             };
             validate_size(w, h)?;
             return Ok((w, h));

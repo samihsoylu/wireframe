@@ -303,6 +303,10 @@ impl Editor {
                     | Kind::TimePicker
                     | Kind::HorizontalSlider
                     | Kind::VerticalSlider
+                    | Kind::HorizontalScrollbar
+                    | Kind::VerticalScrollbar
+                    | Kind::HorizontalSplitter
+                    | Kind::VerticalSplitter
                     | Kind::DateChooser
                     | Kind::FieldSet
                     | Kind::Button
@@ -349,6 +353,10 @@ impl Editor {
                     Kind::TimePicker => "time_picker",
                     Kind::HorizontalSlider => "horizontal_slider",
                     Kind::VerticalSlider => "vertical_slider",
+                    Kind::HorizontalScrollbar => "horizontal_scrollbar",
+                    Kind::VerticalScrollbar => "vertical_scrollbar",
+                    Kind::HorizontalSplitter => "horizontal_splitter",
+                    Kind::VerticalSplitter => "vertical_splitter",
                     Kind::Button => "button",
                     Kind::TextInput => "text_input",
                     Kind::TextArea => "text_area",

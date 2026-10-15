@@ -196,7 +196,7 @@ fn local_component_value_and_shape_changes_do_not_modify_source() {
 }
 
 #[test]
-fn resizing_either_end_keeps_opposite_edge_and_allows_one_unit_length() {
+fn resizing_either_end_keeps_opposite_edge_and_clamps_interactive_length_to_ten() {
     use wireframe::model::Bounds;
     for vertical in [false, true] {
         let b = if vertical {
@@ -205,7 +205,7 @@ fn resizing_either_end_keeps_opposite_edge_and_allows_one_unit_length() {
             Bounds::new(20., 30., 33., 12.)
         };
         let shrink = sliders::resize(b, vertical, -1, 40.);
-        assert_eq!(if vertical { shrink.h } else { shrink.w }, 1.);
+        assert_eq!(if vertical { shrink.h } else { shrink.w }, 10.);
         assert_eq!(
             if vertical {
                 shrink.y + shrink.h

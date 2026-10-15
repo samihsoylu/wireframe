@@ -6,6 +6,7 @@ mod clipboard;
 mod images;
 pub use images::{ImageTarget, ImportChoice};
 mod components;
+mod crop;
 mod overrides;
 mod properties;
 mod text_controls;

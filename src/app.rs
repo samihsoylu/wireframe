@@ -3,6 +3,7 @@
 
 mod canvas_scroll;
 mod components;
+mod crop;
 mod fonts;
 mod icon_picker;
 mod images;
@@ -99,7 +100,7 @@ pub struct WireframeApp {
         wireframe::workspace::ImageTarget,
         wireframe::images::Prepared,
     )>,
-    image_crop: Option<images::CropEdit>,
+    image_crop: Option<crop::CropEdit>,
     quit_allowed: bool,
     text_edit: Option<(Id, String)>,
     clipboard: Clipboard,
@@ -1148,6 +1149,7 @@ if c.kind==Kind::Tabs {ui.small("Separate tabs with commas.");}
                     if !wireframe::text_entry::is_focused(ui.ctx()) && !ui.ctx().text_edit_focused()&&!ui.input(|i|i.pointer.any_down()){self.editor.commit();}
                 }else {ui.label("Align");ui.horizontal(|ui|{for(i,name)in ["Left","Center","Right"].iter().enumerate(){if ui.button(*name).clicked(){self.editor.align(0,i);}}});ui.horizontal(|ui|{for(i,name)in ["Top","Middle","Bottom"].iter().enumerate(){if ui.button(*name).clicked(){self.editor.align(1,i);}}});ui.horizontal(|ui|{if ui.button("Spread X").clicked(){self.editor.distribute(0);}
 if ui.button("Spread Y").clicked(){self.editor.distribute(1);}});}
+                if selected.len() == 1 { self.group_crop_properties(ui, selected[0].id); }
                 self.component_actions(ui);
                 if self.editor.editing_instance() {ui.small("Edit the source to add, remove or rearrange children.");return;}
                 ui.add_space(14.);ui.separator();ui.horizontal(|ui|{if ui.button("Group").clicked(){self.editor.group();}

@@ -100,11 +100,23 @@ impl Editor {
         result
     }
     pub fn rendered_scene(&self, id: Id) -> Result<crate::render::Scene, String> {
+        self.rendered_scene_excluding(id, None)
+    }
+    pub(super) fn rendered_scene_excluding(
+        &self,
+        id: Id,
+        excluded: Option<&[Id]>,
+    ) -> Result<crate::render::Scene, String> {
         self.layout_page(id)?;
-        if let Some(scene) = self.cache.borrow().scenes.get(&id) {
+        if excluded.is_none()
+            && let Some(scene) = self.cache.borrow().scenes.get(&id)
+        {
             return scene.clone();
         }
         let mut layers = self.layers(id)?;
+        if let Some(path) = excluded {
+            layers.retain(|l| !l.path.starts_with(path));
+        }
         {
             let mut cache = self.cache.borrow_mut();
             let paths = layers
@@ -112,12 +124,14 @@ impl Editor {
                 .filter(|l| ClockOptions::for_layer(l).is_some())
                 .map(|l| l.path.clone())
                 .collect::<HashSet<_>>();
-            cache
-                .clocks
-                .retain(|(surface, path), _| *surface != id || paths.contains(path));
-            cache
-                .dates
-                .retain(|(surface, path), _| *surface != id || paths.contains(path));
+            if excluded.is_none() {
+                cache
+                    .clocks
+                    .retain(|(surface, path), _| *surface != id || paths.contains(path));
+                cache
+                    .dates
+                    .retain(|(surface, path), _| *surface != id || paths.contains(path));
+            }
             for layer in &mut layers {
                 let Some(options) = ClockOptions::for_layer(layer) else {
                     continue;
@@ -173,7 +187,9 @@ impl Editor {
         if let Ok(scene) = &mut result {
             scene.font = self.document.font.clone();
         }
-        self.cache.borrow_mut().scenes.insert(id, result.clone());
+        if excluded.is_none() {
+            self.cache.borrow_mut().scenes.insert(id, result.clone());
+        }
         result
     }
     pub fn current(&self) -> model::Page {

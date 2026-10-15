@@ -105,9 +105,19 @@ impl NativePath {
 #[derive(Clone, Serialize, Deserialize)]
 struct NamedFile {
     path: NativePath,
-    base: Fingerprint,
-    base_content: Fingerprint,
+    #[serde(deserialize_with = "required_fingerprint")]
+    base: Option<Fingerprint>,
+    #[serde(deserialize_with = "required_fingerprint")]
+    base_content: Option<Fingerprint>,
+    #[serde(deserialize_with = "required_fingerprint")]
     pending: Option<Fingerprint>,
+}
+// Null is an explicit state; an omitted field is damaged metadata, not a
+// reservation to create a missing named file.
+fn required_fingerprint<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<Fingerprint>, D::Error> {
+    Option::<Fingerprint>::deserialize(deserializer)
 }
 #[derive(Clone, Serialize, Deserialize)]
 struct Record {
@@ -135,6 +145,7 @@ pub enum NamedStatus {
     Unreadable(String),
 }
 
+#[derive(Clone)]
 pub struct WorkingCopies {
     root: PathBuf,
 }
@@ -172,7 +183,9 @@ fn local_changes(record: &Record) -> Result<bool, CopyError> {
     Ok(match &record.named {
         None => true,
         Some(named) => {
-            fingerprint(&record.project.encode().map_err(CopyError::Invalid)?) != named.base_content
+            Some(fingerprint(
+                &record.project.encode().map_err(CopyError::Invalid)?,
+            )) != named.base_content
         }
     })
 }
@@ -354,8 +367,8 @@ impl WorkingCopies {
                 version: VERSION,
                 named: Some(NamedFile {
                     path: native,
-                    base: fingerprint(&bytes),
-                    base_content: fingerprint(&project.encode().map_err(CopyError::Invalid)?),
+                    base: Some(fingerprint(&bytes)),
+                    base_content: Some(fingerprint(&project.encode().map_err(CopyError::Invalid)?)),
                     pending: None,
                 }),
                 project,
@@ -393,6 +406,78 @@ impl WorkingCopies {
         };
         copy.reconcile_pending()?;
         Ok(copy)
+    }
+    /// Reserve an explicitly selected Save As destination before any named write.
+    /// Existing local records are archived, never silently discarded. The caller
+    /// keeps its source copy until save_named succeeds on this returned owner.
+    pub fn prepare_save_as(
+        &self,
+        destination: &Path,
+        project: &Project,
+    ) -> Result<WorkingCopy, CopyError> {
+        project.encode().map_err(CopyError::Invalid)?;
+        let named_path = normalize_named(destination)?;
+        let native = NativePath::capture(&named_path);
+        let id = native.key();
+        let (path, lock) = self.acquire(&id)?;
+        let original = match read_bounded(&named_path, document::MAX_FILE_BYTES) {
+            Ok(bytes) => Some(bytes),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => None,
+            Err(e) => return Err(e.into()),
+        };
+        let base = original.as_ref().map(|b| fingerprint(b));
+        let base_content = original
+            .as_ref()
+            .and_then(|b| document::decode(b).ok())
+            .and_then(|p| p.encode().ok())
+            .map(|b| fingerprint(&b));
+        let record = Record {
+            version: VERSION,
+            named: Some(NamedFile {
+                path: native,
+                base,
+                base_content,
+                pending: None,
+            }),
+            project: project.clone(),
+        };
+        let mut preserved = None;
+        match fs::symlink_metadata(&path) {
+            Ok(meta) => {
+                if !meta.is_file() {
+                    return Err(CopyError::Invalid(
+                        "Cannot replace a non-regular working copy".into(),
+                    ));
+                }
+                if let Err(CopyError::UnsupportedVersion(v)) = read_record(&path, &id) {
+                    return Err(CopyError::UnsupportedVersion(v));
+                }
+                let mut archive = tempfile::Builder::new()
+                    .prefix("previous-working-")
+                    .suffix(".json")
+                    .tempfile_in(&self.root)?
+                    .into_temp_path();
+                fs::rename(&path, &archive)?;
+                archive.disable_cleanup(true);
+                preserved = Some(archive.to_path_buf());
+            }
+            Err(e) if e.kind() == io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e.into()),
+        }
+        write_record(&path, &record).map_err(|e| match &preserved {
+            Some(archive) => CopyError::Io(format!(
+                "{e}. The previous working copy remains at {}",
+                archive.display()
+            )),
+            None => e,
+        })?;
+        Ok(WorkingCopy {
+            path,
+            id,
+            _lock: lock,
+            record,
+            preserved,
+        })
     }
     pub fn resume(&self, id: &str) -> Result<WorkingCopy, CopyError> {
         let (path, lock) = self.acquire(id)?;
@@ -461,6 +546,11 @@ impl WorkingCopy {
             .map(|n| n.path.restore())
             .transpose()
     }
+    pub fn owns_destination(&self, path: &Path) -> Result<bool, CopyError> {
+        Ok(self
+            .named_path()?
+            .is_some_and(|p| normalize_named(path).is_ok_and(|candidate| candidate == p)))
+    }
     pub fn has_local_changes(&self) -> Result<bool, CopyError> {
         local_changes(&self.record)
     }
@@ -487,8 +577,8 @@ impl WorkingCopy {
         if fingerprint(&bytes) == pending {
             let mut record = self.record.clone();
             let named = record.named.as_mut().unwrap();
-            named.base = pending;
-            named.base_content = pending;
+            named.base = Some(pending);
+            named.base_content = Some(pending);
             named.pending = None;
             write_record(&self.path, &record)?;
             self.record = record;
@@ -504,7 +594,7 @@ impl WorkingCopy {
             Err(e) => return Ok(NamedStatus::Unreadable(e.to_string())),
         };
         let actual = fingerprint(&bytes);
-        if actual == named.base || Some(actual) == named.pending {
+        if Some(actual) == named.base || Some(actual) == named.pending {
             return Ok(NamedStatus::Unchanged);
         }
         Ok(match document::decode(&bytes) {
@@ -528,17 +618,20 @@ impl WorkingCopy {
         let named = self.record.named.as_ref().ok_or(CopyError::NotNamed)?;
         let path = named.path.restore()?;
         let read_current = || match read_bounded(&path, document::MAX_FILE_BYTES) {
-            Ok(bytes) => Ok(fingerprint(&bytes)),
-            Err(e) if e.kind() == io::ErrorKind::NotFound => Err(CopyError::NamedMissing),
+            Ok(bytes) => Ok::<_, CopyError>(Some(fingerprint(&bytes))),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(None),
             Err(e) => Err(e.into()),
         };
         let actual = read_current()?;
+        if actual.is_none() && named.base.is_some() {
+            return Err(CopyError::NamedMissing);
+        }
         if actual != named.base {
             return Err(CopyError::NamedChanged);
         }
         let bytes = snapshot.encode().map_err(CopyError::Invalid)?;
         let target = fingerprint(&bytes);
-        if target == actual {
+        if Some(target) == actual {
             return Ok(());
         }
         let mut staged = self.record.clone();
@@ -551,8 +644,8 @@ impl WorkingCopy {
         write(&path, &bytes).map_err(CopyError::Io)?;
         let mut completed = self.record.clone();
         let named = completed.named.as_mut().unwrap();
-        named.base = target;
-        named.base_content = target;
+        named.base = Some(target);
+        named.base_content = Some(target);
         named.pending = None;
         write(&self.path, &record_bytes(&completed)?).map_err(CopyError::Io)?;
         self.record = completed;
@@ -561,7 +654,11 @@ impl WorkingCopy {
     /// Explicitly discard only this local record. Keep its stable lock file so
     /// another process cannot acquire a different lock inode during close.
     pub fn discard(self) -> Result<(), CopyError> {
-        fs::remove_file(&self.path).map_err(Into::into)
+        match fs::remove_file(&self.path) {
+            Ok(()) => Ok(()),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(e.into()),
+        }
     }
 }
 

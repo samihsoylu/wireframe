@@ -153,6 +153,12 @@ impl Editor {
     pub fn mark_saved(&mut self) {
         self.saved = self.document.clone();
     }
+    /// A background write acknowledges its captured document, even if current
+    /// edits have advanced. History and selection remain unchanged.
+    pub fn mark_saved_snapshot(&mut self, snapshot: &Project) {
+        self.saved = snapshot.clone();
+    }
+
     pub fn undo_name(&self) -> Option<&str> {
         self.cursor
             .checked_sub(1)

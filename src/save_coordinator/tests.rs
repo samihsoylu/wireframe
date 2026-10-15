@@ -320,3 +320,22 @@ fn an_expired_debounce_does_not_start_another_write_after_terminal_failure() {
     finish(&mut c, t, 100);
     assert!(c.is_clean());
 }
+
+#[test]
+fn ended_manual_request_cannot_restart_after_later_local_checkpoint() {
+    let mut c = SaveCoordinator::new(false);
+    edit(&mut c, 0);
+    c.request_flush();
+    let t = write(&mut c, 0);
+    c.complete(t, Err("first".into()), sec(0)).unwrap();
+    let t = write(&mut c, 1);
+    c.complete(t, Err("second".into()), sec(1)).unwrap();
+    c.cancel_flush_request();
+    edit(&mut c, 2);
+    assert!(c.poll(sec(100)).unwrap().is_none());
+    assert!(!c.is_clean());
+    c.request_flush();
+    let t = write(&mut c, 100);
+    finish(&mut c, t, 100);
+    assert!(c.is_clean());
+}

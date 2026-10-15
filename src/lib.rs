@@ -18,6 +18,7 @@ pub mod list;
 pub mod menu;
 pub mod model;
 pub mod navigation;
+pub mod project_session;
 pub mod rich_text;
 pub mod save_coordinator;
 pub mod scene;

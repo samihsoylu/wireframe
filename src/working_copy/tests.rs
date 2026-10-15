@@ -425,3 +425,103 @@ fn an_identifier_collision_cannot_replace_live_or_released_unnamed_work() {
     assert_eq!(fs::read(&path).unwrap(), original);
     assert_eq!(copies.resume(id).unwrap().project(), &project("Original"));
 }
+
+#[test]
+fn save_as_reserves_new_destination_and_keeps_source_until_success() {
+    let (dir, copies, _) = fixture();
+    let source = copies.create_unnamed(&project("Source")).unwrap();
+    let destination = dir.path().join("new.wireframe");
+    let mut reserved = copies
+        .prepare_save_as(&destination, source.project())
+        .unwrap();
+    assert!(!destination.exists());
+    assert!(source.local_path().exists());
+    assert!(matches!(
+        copies.prepare_save_as(&destination, &project("Other")),
+        Err(CopyError::Busy)
+    ));
+    reserved.save_named(source.project()).unwrap();
+    assert_eq!(ProjectStore.load(&destination).unwrap(), project("Source"));
+    assert!(source.local_path().exists());
+    assert!(!reserved.has_local_changes().unwrap());
+    source.discard().unwrap();
+    assert_eq!(reserved.project(), &project("Source"));
+}
+#[test]
+fn save_as_preserves_previous_local_work_and_checks_destination_after_reservation() {
+    let (_dir, copies, named) = fixture();
+    let mut old = copies.open_named(&named).unwrap();
+    old.checkpoint(&project("Previous local edits")).unwrap();
+    let original = fs::read(old.local_path()).unwrap();
+    drop(old);
+    let mut reserved = copies
+        .prepare_save_as(&named, &project("Replacement"))
+        .unwrap();
+    assert_eq!(
+        fs::read(reserved.preserved_copy().unwrap()).unwrap(),
+        original
+    );
+    assert_eq!(ProjectStore.load(&named).unwrap(), project("Saved"));
+    ProjectStore
+        .save(&named, &project("External after selection"))
+        .unwrap();
+    assert_eq!(
+        reserved.save_named(&project("Replacement")),
+        Err(CopyError::NamedChanged)
+    );
+    assert_eq!(
+        ProjectStore.load(&named).unwrap(),
+        project("External after selection")
+    );
+    assert_eq!(reserved.project(), &project("Replacement"));
+}
+#[test]
+fn new_destination_created_by_someone_else_is_not_overwritten() {
+    let (dir, copies, _) = fixture();
+    let destination = dir.path().join("new.wireframe");
+    let mut copy = copies
+        .prepare_save_as(&destination, &project("Mine"))
+        .unwrap();
+    ProjectStore.save(&destination, &project("Theirs")).unwrap();
+    assert_eq!(
+        copy.save_named(&project("Mine")),
+        Err(CopyError::NamedChanged)
+    );
+    assert_eq!(ProjectStore.load(&destination).unwrap(), project("Theirs"));
+}
+#[test]
+fn save_as_can_explicitly_replace_unreadable_named_bytes_but_not_future_local_metadata() {
+    let (_dir, copies, named) = fixture();
+    fs::write(&named, b"invalid selected file").unwrap();
+    let mut copy = copies
+        .prepare_save_as(&named, &project("Replacement"))
+        .unwrap();
+    copy.save_named(&project("Replacement")).unwrap();
+    let local = copy.local_path().to_owned();
+    drop(copy);
+    fs::write(&local, br#"{"version":99}"#).unwrap();
+    assert!(matches!(
+        copies.prepare_save_as(&named, &project("Another")),
+        Err(CopyError::UnsupportedVersion(99))
+    ));
+    assert_eq!(ProjectStore.load(&named).unwrap(), project("Replacement"));
+}
+
+#[test]
+fn missing_fingerprint_fields_are_not_treated_as_new_file_reservations() {
+    let (_dir, copies, named) = fixture();
+    let copy = copies.open_named(&named).unwrap();
+    let path = copy.local_path().to_owned();
+    let id = copy.id().to_owned();
+    let original: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    drop(copy);
+    for field in ["base", "base_content", "pending"] {
+        let mut value = original.clone();
+        value["named"].as_object_mut().unwrap().remove(field);
+        fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
+        assert!(
+            matches!(copies.resume(&id), Err(CopyError::Invalid(_))),
+            "Missing {field} must be rejected"
+        );
+    }
+}

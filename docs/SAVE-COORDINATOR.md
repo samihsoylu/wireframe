@@ -14,6 +14,8 @@ Automatic saving is on by default. Turning it off cancels future automatic work,
 
 The clock uses monotonic elapsed durations supplied by the caller. `next_deadline` permits event-driven scheduling; completion or checkpoint events also require a poll. No background thread, filesystem dependency, wall clock, project parser or user-interface code lives in the coordinator. The storage boundary remains responsible for atomic writes and error reporting. Never acknowledge a failed local write or a failed named write as durable.
 
-Sixteen controlled tests cover scheduling, immutable revision acknowledgements, flush requests, retries, mode changes, duplicate and foreign completions, invalid checkpoint ordering and counter limits. Two disk tests use the actual project codec and atomic writer to verify older named writes cannot erase newer local snapshots, and a failed destination retains local data before a successful retry.
+Seventeen controlled tests cover scheduling, immutable revision acknowledgements, flush requests, retries, mode changes, duplicate and foreign completions, invalid checkpoint ordering and counter limits. Two disk tests use the actual project codec and atomic writer to verify older named writes cannot erase newer local snapshots, and a failed destination retains local data before a successful retry.
 
 Pending integration includes per-project path identity and locks, checkpoint retention, persisted automatic-save preferences, external modifications and fallback, UI status/errors, process restart and close/quit acceptance on all three platforms. These tests do not establish crash or power-loss guarantees, native automatic-save behavior, or product completion.
+
+A caller can end a failed explicit flush request without cancelling an issued write. The background session uses this after reporting failure so later manual edits cannot revive that request. See docs/PROJECT-SESSION.md for the worker integration.

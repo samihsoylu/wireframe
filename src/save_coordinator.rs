@@ -167,6 +167,11 @@ impl SaveCoordinator {
         self.failure = None;
         revision
     }
+    /// End a failed or cancelled explicit request without cancelling an already
+    /// issued write. Future manual edits must not silently resurrect that Save.
+    pub fn cancel_flush_request(&mut self) {
+        self.requested = None;
+    }
     pub fn set_automatic(&mut self, enabled: bool, now: Duration) {
         if enabled == self.automatic {
             return;

@@ -278,6 +278,85 @@ fn clock_stays_per_control_until_its_contents_relayout() {
     );
 }
 #[test]
+fn screen_borders_stay_crisp_and_straight_around_a_transparent_opening() {
+    let mut e = Editor::with_clock(document::Project::default(), frozen);
+    e.add(Kind::FieldSet, 0., 0.);
+    let back = *e.selection.iter().next().unwrap();
+    set(&mut e, back, "text", Value::Text(String::new()));
+    set(&mut e, back, "fill", Value::Color([30, 170, 80, 255]));
+    e.selected_mut(|c| c.bounds = Bounds::new(0., 0., 1000., 1000.));
+    e.add(Kind::Tablet, 0., 0.);
+    let id = *e.selection.iter().next().unwrap();
+    set(&mut e, id, "status_bar", Value::Bool(false));
+    set(&mut e, id, "transparent_background", Value::Bool(true));
+    for stretch in [false, true] {
+        set(
+            &mut e,
+            id,
+            "device_resizing",
+            Value::Choice(if stretch { "stretch" } else { "fit" }.into()),
+        );
+        for landscape in [false, true] {
+            set(
+                &mut e,
+                id,
+                "orientation",
+                Value::Choice(if landscape { "landscape" } else { "portrait" }.into()),
+            );
+            e.selected_mut(|c| {
+                c.bounds = if landscape {
+                    Bounds::new(0., 0., 916., 616.)
+                } else {
+                    Bounds::new(0., 0., 616., 916.)
+                }
+            });
+            for sketch in [false, true] {
+                e.document.settings.sketch = sketch;
+                let image =
+                    image::load_from_memory(&e.rendered_scene(e.page).unwrap().png().unwrap())
+                        .unwrap()
+                        .to_rgba8();
+                let pixel = |x: u32, y: u32| {
+                    // Full fitted artwork and stretched frame sections rotate
+                    // in opposite directions; detail placement is independent.
+                    let (x, y) = match (landscape, stretch) {
+                        (true, true) => (y, 615 - x),
+                        (true, false) => (915 - y, x),
+                        (false, _) => (x, y),
+                    };
+                    image.get_pixel(24 + x, 24 + y).0
+                };
+                for y in [200, 400, 700] {
+                    for x in 0..40 {
+                        assert_eq!(
+                            pixel(x, y),
+                            pixel(x, 150),
+                            "wavy edge: {stretch} {landscape} {sketch}"
+                        );
+                    }
+                }
+                assert_eq!(pixel(40, 95), [30, 170, 80, 255]);
+                let (edge, ink) = if sketch {
+                    (30, [0, 0, 0, 255])
+                } else {
+                    (34, [102, 103, 102, 255])
+                };
+                assert_eq!(pixel(edge, 400), ink, "border should retain full contrast");
+                if sketch && !landscape {
+                    for y in [39, 843] {
+                        if stretch {
+                            assert_eq!(pixel(308, y), [69, 69, 69, 255]);
+                        } else {
+                            assert!(pixel(308, y)[0] < 30, "fitted camera/home anchor");
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn transparent_frame_has_no_seams_and_tiny_geometry_stays_finite() {
     let mut e = Editor::with_clock(document::Project::default(), frozen);
     e.add(Kind::FieldSet, 0., 0.);

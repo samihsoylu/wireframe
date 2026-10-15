@@ -50,10 +50,17 @@ impl Scene {
                 p[1] * layout.zoom
             };
             if options.landscape {
-                [
-                    b.x + layout.frame.x + layout.frame.w - y,
-                    b.y + layout.frame.y + x,
-                ]
+                if options.stretch {
+                    [
+                        b.x + layout.frame.x + y,
+                        b.y + layout.frame.y + layout.frame.h - x,
+                    ]
+                } else {
+                    [
+                        b.x + layout.frame.x + layout.frame.w - y,
+                        b.y + layout.frame.y + x,
+                    ]
+                }
             } else {
                 [b.x + layout.frame.x + x, b.y + layout.frame.y + y]
             }
@@ -63,37 +70,47 @@ impl Scene {
         let authored = |r: Bounds, radius: f32| {
             let mut points = contour(r, radius, radius, false)
                 .into_iter()
-                .enumerate()
-                .map(|(i, mut p)| {
-                    if sketch {
-                        p[0] += (i as f32 * 0.31).sin() * 0.7;
-                        p[1] += (i as f32 * 0.19).sin() * 0.7;
-                    }
-                    transform(p)
-                })
+                .map(transform)
                 .collect::<Vec<_>>();
             let first = points[0];
             *points.last_mut().unwrap() = first;
             points
         };
-        let outer = authored(Bounds::new(3., 3., 610., 910.), 12.);
-        let inner = authored(Bounds::new(33., 93., 550., 730.), 1.);
-        let n = outer.len() as u32;
+        let (outer_bounds, border_bounds, opening) = if sketch {
+            (
+                Bounds::new(4.5, 5.5, 607., 906.),
+                Bounds::new(28., 90., 557., 737.),
+                Bounds::new(33., 94., 547., 728.),
+            )
+        } else {
+            (
+                Bounds::new(2.5, 2.5, 611., 911.),
+                Bounds::new(34., 93., 549., 731.),
+                Bounds::new(35., 94., 547., 729.),
+            )
+        };
+        let outer = authored(outer_bounds, 10.5);
+        let inner = authored(opening, 0.);
         let body = if sketch { [69; 3] } else { [222, 221, 221] };
         let ink = if sketch { [0; 3] } else { [102, 103, 102] };
-        let weight = if sketch { 4.5 } else { 1. } * if options.stretch { 1. } else { layout.zoom };
-        self.primitive(
+        let scale = if options.stretch { 1. } else { layout.zoom };
+        let weight = if sketch { 5. } else { 1. } * scale;
+        let ring = |outside: &[[f32; 2]], inside: &[[f32; 2]], fill| {
+            let n = outside.len() as u32;
+            debug_assert_eq!(outside.len(), inside.len());
             Primitive::Mesh {
-                points: outer.iter().chain(&inner).copied().collect(),
+                points: outside.iter().chain(inside).copied().collect(),
                 indices: (0..n - 1)
                     .flat_map(|i| [i, i + 1, n + i + 1, i, n + i + 1, n + i])
                     .collect(),
-                fill: body,
-            },
-            clip,
-        );
-        self.phone_line(outer, ink, weight * if sketch { 1.1 } else { 3. }, clip);
-        self.phone_line(inner, ink, weight * if sketch { 1.1 } else { 0.75 }, clip);
+                fill,
+            }
+        };
+        self.primitive(ring(&outer, &inner, body), clip);
+        self.phone_line(outer, ink, if sketch { 5. } else { 3. } * scale, clip);
+        // A rectangular ring preserves crisp square corners and the distinct
+        // top/side border widths without covering transparent screen content.
+        self.primitive(ring(&authored(border_bounds, 0.), &inner, ink), clip);
         let clock = layer
             .clock
             .unwrap_or_else(crate::tablet::Clock::now)
@@ -144,19 +161,24 @@ impl Scene {
         }
         for detail in layout.details {
             let r = offset(detail.bounds);
-            let inset = weight / 2.;
+            let inset = if sketch { weight / 2. + scale } else { scale };
             let outline = Bounds::new(
                 r.x + inset,
                 r.y + inset,
-                (r.w - weight).max(0.),
-                (r.h - weight).max(0.),
+                (r.w - 2. * inset).max(0.),
+                (r.h - 2. * inset).max(0.),
             );
             let points = circle(outline);
             if detail.kind == DetailKind::Camera {
                 if sketch {
                     self.primitive(
                         Primitive::Polygon {
-                            points: circle(r),
+                            points: circle(Bounds::new(
+                                r.x + scale / 2.,
+                                r.y + scale / 2.,
+                                (r.w - scale).max(0.),
+                                (r.h - scale).max(0.),
+                            )),
                             fill: ink,
                         },
                         clip,
@@ -173,11 +195,12 @@ impl Scene {
                     clip,
                 );
                 self.phone_line(points, ink, weight, clip);
+                let side = 16. * scale;
                 self.phone_line(
                     contour(
-                        Bounds::new(r.x + r.w * 0.335, r.y + r.h * 0.335, r.w * 0.33, r.h * 0.33),
-                        r.w * 0.05,
-                        r.h * 0.05,
+                        Bounds::new(r.x + (r.w - side) / 2., r.y + (r.h - side) / 2., side, side),
+                        2. * scale,
+                        2. * scale,
                         false,
                     ),
                     ink,

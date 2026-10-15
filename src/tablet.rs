@@ -177,11 +177,14 @@ impl Options {
             // together. Stretched details retain their absolute dimensions.
             if !self.stretch {
                 let x = (616. - size) / 2.;
-                let y = if kind == DetailKind::Home {
+                let mut y = if kind == DetailKind::Home {
                     (916. + 730. + size) / 2. - 6.
                 } else {
                     (94. - size) / 2. - 1.
                 };
+                if sketch {
+                    y -= if kind == DetailKind::Home { 4. } else { 2.5 };
+                }
                 let r = if self.landscape {
                     Bounds::new(
                         frame.x + (916. - y - size) * zoom,

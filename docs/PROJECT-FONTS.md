@@ -23,3 +23,9 @@ The original Comic Neue sources and their license remain in `assets/fonts/comic-
 Use an isolated Python environment with `scripts/font-requirements.txt`, then run `python scripts/build_fonts.py --check` to verify every generated file byte for byte. Omit `--check` to regenerate the family. This optional asset build is separate from the normal Rust build, which embeds the committed font files.
 
 The builder preserves accented base-letter outlines through shared components, gives detached bold marks clearance and keeps attached marks in place. Four distinct faces retain the source character coverage. Font metadata, clipping bounds, canonical accent shaping and constrained wrapping are checked during acceptance. Native Windows/Linux text rendering remains a separate acceptance requirement.
+
+## Canvas pixel alignment
+
+Positioned glyphs are rasterized at canvas zoom times display pixels per point. The texture origin is rounded to a physical-pixel boundary, matching the GUI text convention and preventing a second smoothing pass from fractional texture placement. The resulting display adjustment is at most half a physical pixel per axis. Font shaping, control layout, caret/hit geometry, raster density and export positions are unchanged. Panning reuses the cached raster; no new glyph shaping is introduced.
+
+Headless paint tests cover five display densities and six zoom factors, including fractional scales, with one texel per output pixel, bounded translation and cache reuse. Hardware verification remains separate from this simulated scale matrix. Other font/capture differences are not ruled out by fixing texture placement.

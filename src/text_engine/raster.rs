@@ -3,6 +3,7 @@
 //! Rasterize the same positioned ink used by SVG exports, at the canvas scale.
 use super::ShapedText;
 use eframe::egui;
+use egui::emath::GuiRounding as _;
 use std::{collections::VecDeque, sync::Arc};
 
 pub struct Raster {
@@ -131,9 +132,14 @@ pub fn paint(
         });
         (texture, bounds)
     };
+    // The glyph texture is already antialiased at the physical display scale.
+    // Align its origin so linear sampling does not blur it a second time.
+    // Keep layout positions and export geometry unchanged.
+    let origin =
+        (baseline + bounds.min.to_vec2() * zoom).round_to_pixels(painter.ctx().pixels_per_point());
     painter.image(
         texture.id(),
-        egui::Rect::from_min_size(baseline + bounds.min.to_vec2() * zoom, bounds.size() * zoom),
+        egui::Rect::from_min_size(origin, bounds.size() * zoom),
         egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1., 1.)),
         egui::Color32::WHITE,
     );

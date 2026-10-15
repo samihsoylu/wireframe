@@ -99,7 +99,7 @@ impl Default for Context {
             font_size: 13.,
             ink: [0, 0, 0, 255],
             fill: [255; 4],
-            link_color: [0, 102, 204, 255],
+            link_color: [8, 83, 148, 255],
         }
     }
 }

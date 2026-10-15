@@ -836,7 +836,7 @@ fn alignment(p: &Properties) -> Alignment {
 }
 fn paint_options(p: &Properties) -> PaintOptions {
     let color = rgb(p, "text_color", [0, 0, 0]);
-    let link = rgb(p, "link_color", [0, 102, 204]);
+    let link = rgb(p, "link_color", [8, 83, 148]);
     PaintOptions {
         ink: if matches!(p.get("state"),Some(Value::Choice(s))if s.contains("disabled")) {
             Color32::from_rgb(128, 128, 139)

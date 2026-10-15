@@ -22,7 +22,7 @@ impl Default for PaintOptions {
     fn default() -> Self {
         Self {
             ink: Color32::BLACK,
-            link: Color32::from_rgb(0, 102, 204),
+            link: Color32::from_rgb(8, 83, 148),
             underline: false,
             disabled_ink: Color32::from_gray(153),
         }

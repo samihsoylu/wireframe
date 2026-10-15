@@ -915,7 +915,13 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
     );
     ink.default = if matches!(
         c.id,
-        "horizontal_brace" | "vertical_brace" | "heading" | "subtitle" | "tag_cloud"
+        "horizontal_brace"
+            | "vertical_brace"
+            | "heading"
+            | "subtitle"
+            | "tag_cloud"
+            | "label"
+            | "paragraph"
     ) {
         DefaultValue::FormInk
     } else if c.id == "link" {

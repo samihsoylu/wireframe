@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
+mod support;
 use wireframe::{
     catalog,
     document::{self, Project},
@@ -24,7 +25,7 @@ fn video_defaults_and_static_inspector() {
     assert!(e.rendered_scene(e.page).unwrap().links.is_empty());
 }
 #[test]
-fn sizing_preserves_tiny_files_and_history() {
+fn resize_minimum_preserves_history_and_storage() {
     let mut e = Editor::new(Project::default());
     e.add(Kind::Video, 20., 30.);
     let id = *e.selection.iter().next().unwrap();
@@ -41,7 +42,7 @@ fn sizing_preserves_tiny_files_and_history() {
     reopened.select(id, false);
     assert_eq!(
         reopened.selected_views()[0].bounds,
-        Bounds::new(20., 30., 1., 1.)
+        Bounds::new(20., 30., 10., 10.)
     );
     assert_eq!(reopened.document.encode().unwrap(), bytes);
     e.undo();
@@ -96,10 +97,7 @@ fn convex_art_and_clipping_are_shared_by_canvas_and_exports() {
             let mut e = Editor::new(Project::default());
             e.document.settings.sketch = sketch;
             e.add(Kind::Video, 20., 30.);
-            e.selected_mut(|c| {
-                c.bounds.w = w;
-                c.bounds.h = h;
-            });
+            support::stored_size(&mut e, w, h);
             let scene = e.rendered_scene(e.page).unwrap();
             assert!(!scene.items.is_empty());
             for item in &scene.items {

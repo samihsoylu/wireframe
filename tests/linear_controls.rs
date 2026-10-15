@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
+mod support;
 use wireframe::{
     document::{self, Project, Value},
     linear_controls::{self, Axis},
@@ -28,10 +29,7 @@ fn library_defaults_fixed_thickness_and_small_saved_lengths_round_trip() {
                 (100., axis.thickness)
             }
         );
-        e.selected_mut(|c| {
-            c.bounds.w = 1.;
-            c.bounds.h = 1.;
-        });
+        support::stored_size(&mut e, 1., 1.);
         let b = e.selected_views()[0].bounds;
         assert_eq!(
             (b.w, b.h),
@@ -130,10 +128,7 @@ fn rendering_clips_small_geometry_and_exports_both_styles() {
             let mut e = Editor::new(Project::default());
             e.document.settings.sketch = sketch;
             e.add(kind, 20., 30.);
-            e.selected_mut(|c| {
-                c.bounds.w = 1.;
-                c.bounds.h = 1.;
-            });
+            support::stored_size(&mut e, 1., 1.);
             let b = e.selected_views()[0].bounds;
             let s = e.rendered_scene(e.page).unwrap();
             assert!(!s.items.is_empty());

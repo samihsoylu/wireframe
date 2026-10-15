@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
+mod support;
 use wireframe::{
     document::{Properties, Value},
     layout::TextMetrics,
@@ -336,7 +337,7 @@ fn every_model_renders_finite_clipped_geometry_at_small_and_extreme_sizes() {
             for orientation in ["portrait", "landscape"] {
                 set(&mut e, id, "orientation", Value::Choice(orientation.into()));
                 for (w, h) in [(1., 1.), (20., 1000.), (1000., 20.), (300., 500.)] {
-                    e.selected_mut(|c| c.bounds = Bounds::new(20., 30., w, h));
+                    support::stored_size(&mut e, w, h);
                     for sketch in [false, true] {
                         e.document.settings.sketch = sketch;
                         let s = e.rendered_scene(e.page).unwrap();

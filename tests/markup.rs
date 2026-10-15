@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
+mod support;
 use wireframe::{
     catalog,
     document::{self, Dimension, Value},
@@ -141,7 +142,7 @@ fn both_axes_history_components_and_storage() {
             let after = e.document.clone();
             assert_eq!(e.document.definitions, defs);
             let actual = e.selected_views()[0].bounds;
-            assert!((actual.w - w).abs() < 0.001 && (actual.h - h).abs() < 0.001);
+            assert!((actual.w - w.max(10.)).abs() < 0.001 && (actual.h - h.max(10.)).abs() < 0.001);
             e.undo();
             assert_eq!(e.document, before);
             e.redo();
@@ -252,10 +253,7 @@ fn static_marks_colors_opacity_and_clipping() {
                     .unwrap();
             }
             for (w, h) in [(1., 1.), (10., 10.), (300., 60.), (60., 300.)] {
-                e.selected_mut(|c| {
-                    c.bounds.w = w;
-                    c.bounds.h = h;
-                });
+                support::stored_size(&mut e, w, h);
                 let s = e.rendered_scene(e.page).unwrap();
                 assert!(s.links.is_empty());
                 for item in &s.items {
@@ -306,10 +304,7 @@ fn tiny_braces_omit_text_and_keep_saved_bounds() {
     for k in [Kind::HorizontalBrace, Kind::VerticalBrace] {
         let (mut e, _) = fixture(k);
         for (w, h) in [(1., 1.), (20., 20.), (20., 80.), (80., 20.)] {
-            e.selected_mut(|c| {
-                c.bounds.w = w;
-                c.bounds.h = h;
-            });
+            support::stored_size(&mut e, w, h);
             let before = e.document.clone();
             let s = e.rendered_scene(e.page).unwrap();
             assert_eq!(e.document, before);

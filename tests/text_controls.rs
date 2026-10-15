@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
+mod support;
 use wireframe::{
     catalog,
     document::{self, Dimension, NodeContent, Value},
@@ -158,10 +159,7 @@ fn placeholder_rows_obey_strict_height_and_project_font_without_mutating_nodes()
         assert!(e.auto_size_control(id).is_err());
         for sketch in [false, true] {
             e.document.settings.sketch = sketch;
-            e.selected_mut(|c| {
-                c.bounds.w = 1.;
-                c.bounds.h = 80.;
-            });
+            support::stored_size(&mut e, 1., 80.);
             let s = e.rendered_scene(e.page).unwrap();
             assert!(
                 s.items

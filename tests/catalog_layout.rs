@@ -181,7 +181,7 @@ fn resize_axes_are_independent_of_persisted_dimensions() {
         catalog::get("button")
             .unwrap()
             .resized((50., 20.), (f32::NAN, -10.)),
-        (50., 1.)
+        (50., 10.)
     );
 }
 fn with_fonts(test: impl FnOnce(&layout::EguiMeasurer<'_>)) {
@@ -392,4 +392,21 @@ fn structured_grid_and_formatted_text_drive_automatic_layout() {
             Value::Text("Title, Count\nA, 42\nB, [x]".into())
         );
     });
+}
+
+#[test]
+fn resizing_clamps_scalable_axes_but_keeps_fixed_axes_and_arrow_precision() {
+    for (kind, expected) in [
+        ("rectangle", (10., 10.)),
+        ("label", (10., 7.)),
+        ("vertical_slider", (6., 10.)),
+        ("icon", (6., 7.)),
+        ("arrow", (1., 1.)),
+    ] {
+        assert_eq!(
+            catalog::get(kind).unwrap().resized((6., 7.), (0.5, 0.5)),
+            expected,
+            "{kind}"
+        );
+    }
 }

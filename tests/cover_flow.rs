@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 use std::io::Cursor;
+mod support;
 use wireframe::{
     cover_flow,
     document::*,
@@ -138,10 +139,7 @@ fn image_and_frame_share_clipping_and_exports_in_both_styles() {
             e.import_image(id, image(), ImportChoice::KeepBoth).unwrap();
             e.set_control_property(id, "vertical_scrollbar", Value::Bool(true))
                 .unwrap();
-            e.selected_mut(|c| {
-                c.bounds.w = w;
-                c.bounds.h = h;
-            });
+            support::stored_size(&mut e, w, h);
             let scene = e.rendered_scene(e.page).unwrap();
             assert!(scene.links.is_empty());
             for item in &scene.items {

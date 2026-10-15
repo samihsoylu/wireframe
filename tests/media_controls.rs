@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
+mod support;
 use wireframe::{
     catalog,
     document::{self, Dimension, NodeContent, Project, Value},
@@ -32,10 +33,7 @@ fn sizing_and_legacy_properties_survive_save_without_changing_rendering() {
         let mut e = Editor::new(Project::default());
         e.add(kind, 20., 30.);
         let id = *e.selection.iter().next().unwrap();
-        e.selected_mut(|c| {
-            c.bounds.w = 1.;
-            c.bounds.h = 1.;
-        });
+        support::stored_size(&mut e, 1., 1.);
         let expected = match kind {
             Kind::VolumeSlider => (1., 16.),
             Kind::Playback => (110., 36.),
@@ -115,10 +113,7 @@ fn renderers_clip_tiny_controls_and_export_both_styles() {
             let mut e = Editor::new(Project::default());
             e.document.settings.sketch = sketch;
             e.add(kind, 20., 30.);
-            e.selected_mut(|c| {
-                c.bounds.w = 1.;
-                c.bounds.h = 1.;
-            });
+            support::stored_size(&mut e, 1., 1.);
             let b = e.selected_views()[0].bounds;
             let scene = e.rendered_scene(e.page).unwrap();
             assert!(!scene.items.is_empty());

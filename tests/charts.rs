@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
+mod support;
 use wireframe::{
     catalog,
     charts::{self, Family},
@@ -41,7 +42,7 @@ fn chart_defaults_static_fields_and_no_content() {
     }
 }
 #[test]
-fn independently_resized_and_tiny_charts_survive_history_and_storage() {
+fn resize_minimums_survive_history_and_storage() {
     for k in KINDS {
         let mut e = Editor::default();
         e.add(k, 20., 30.);
@@ -63,7 +64,7 @@ fn independently_resized_and_tiny_charts_survive_history_and_storage() {
             reopened.select(id, false);
             let actual = reopened.selected_views()[0].bounds;
             assert_eq!((actual.x, actual.y), (20., 30.));
-            assert!((actual.w - w).abs() < 0.001 && (actual.h - h).abs() < 0.001);
+            assert!((actual.w - w.max(10.)).abs() < 0.001 && (actual.h - h.max(10.)).abs() < 0.001);
             assert_eq!(reopened.document.encode().unwrap(), bytes);
             assert!(
                 !reopened
@@ -163,10 +164,7 @@ fn all_chart_art_is_finite_convex_or_mesh_and_clipped() {
                 let mut e = Editor::default();
                 e.document.settings.sketch = sketch;
                 e.add(k, 20., 30.);
-                e.selected_mut(|c| {
-                    c.bounds.w = w;
-                    c.bounds.h = h;
-                });
+                support::stored_size(&mut e, w, h);
                 let s = e.rendered_scene(e.page).unwrap();
                 for item in &s.items {
                     assert_eq!(item.clip, Some(Bounds::new(20., 30., w, h)));

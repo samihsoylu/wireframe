@@ -404,10 +404,14 @@ impl ControlSpec {
         }
         Ok(())
     }
+    pub fn minimum_resize_dimension(&self) -> f32 {
+        if self.id == "arrow" { 1. } else { 10. }
+    }
     pub fn resized(&self, original: (f32, f32), proposed: (f32, f32)) -> (f32, f32) {
+        let minimum = self.minimum_resize_dimension();
         let valid = |v: f32, fallback: f32| {
             if v.is_finite() {
-                v.clamp(1., 100_000.)
+                v.clamp(minimum, 100_000.)
             } else {
                 fallback
             }

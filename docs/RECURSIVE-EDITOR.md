@@ -42,3 +42,11 @@ The initial region is the existing crop or a rounded 80% of the group's full bou
 **Remove crop** expands from the visible top-left, clamped to the parent workspace's nonnegative origin; child geometry and descendant crop masks remain unchanged. This differs from Ungroup, which reveals the children at their stored positions. Crop and content translation are one history operation. Editing inside a component writes local overrides; removing an inherited crop writes an explicit clear, while **Reset crop to source** restores the inherited mask and keeps the current visible top-left fixed. It adjusts the stored origin to compensate for the mask offset, without resizing children or changing unrelated local patches. Reset is one reversible operation; repeating it without a crop override makes no change. The source and sibling instances remain unchanged.
 
 Focused checks cover nested crop geometry, relative paint order, isolated previews, component clear/reset, locks, empty containers, atomic history and save/reopen. Pointer tests cover frame movement at 50%, 100% and 200%, minimum size, content movement, Apply, cancellation and command blocking. Native platform acceptance is tracked in SESSION-SPEC.md.
+
+## Resize minimums and locks
+
+Resizing an unlocked group or component transforms all descendants, including children whose direct position/content editing is locked. Their lock flags remain set. Scalable control dimensions stop at 10 units; arrows retain a 1-unit minimum. Fixed and computed dimensions retain their size. Moving a parent without resizing preserves existing smaller stored geometry.
+
+A cropped parent's frame follows the actual union after child size limits apply. Its resulting size can exceed the requested size, and the normalized crop offset can shift the visible corner. The crop mask remains unchanged. Component resizing writes local geometry overrides and preserves its source and other instances. Undo/Redo restore exact document snapshots. Fractional coordinate quantization and broader nested fixed-axis combinations remain acceptance work.
+
+The inspector and drag handles use the catalog minimum. Selecting an existing subminimum value does not clamp it. Generic drag handles preserve the opposite edge when a minimum is reached, including aspect-preserving resizing.

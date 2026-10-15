@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
+mod support;
 use wireframe::{
     catalog,
     document::{self, Dimension, Link, NodeContent, Value},
@@ -273,7 +274,8 @@ fn solid_rule_mesh_has_no_folded_triangles_at_short_or_tall_sizes() {
     let (mut e, _) = fixture(Kind::VerticalRule);
     e.document.settings.sketch = true;
     for h in [1., 10., 17., 67., 100., 240.] {
-        e.selected_mut(|c| c.bounds.h = h);
+        let width = e.selected_views()[0].bounds.w;
+        support::stored_size(&mut e, width, h);
         let s = e.rendered_scene(e.page).unwrap();
         let Drawing::Primitive(Primitive::Mesh {
             points, indices, ..

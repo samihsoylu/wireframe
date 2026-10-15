@@ -386,6 +386,59 @@ fn notched_frame_has_rounded_neck_and_an_open_screen_in_both_orientations() {
 }
 
 #[test]
+fn notched_side_switches_remain_distinct_when_rotated_and_clean_switches_are_open() {
+    let (mut e, id) = fixture();
+    set(&mut e, id, "status_bar", Value::Bool(false));
+    for mode in ["fit", "stretch"] {
+        set(&mut e, id, "device_resizing", Value::Choice(mode.into()));
+        for landscape in [false, true] {
+            set(
+                &mut e,
+                id,
+                "orientation",
+                Value::Choice(if landscape { "landscape" } else { "portrait" }.into()),
+            );
+            e.selected_mut(|c| {
+                c.bounds = if landscape {
+                    Bounds::new(0., 0., 867., 436.)
+                } else {
+                    Bounds::new(0., 0., 436., 867.)
+                }
+            });
+            for sketch in [false, true] {
+                e.document.settings.sketch = sketch;
+                let image =
+                    image::load_from_memory(&e.rendered_scene(e.page).unwrap().png().unwrap())
+                        .unwrap()
+                        .to_rgba8();
+                let shade = |x: u32, y: u32| {
+                    let (x, y) = if landscape { (y, 435 - x) } else { (x, y) };
+                    image.get_pixel(24 + x, 24 + y).0[0]
+                };
+                for y in [130, 185, 280] {
+                    assert!(
+                        shade(1, y) < 160,
+                        "missing switch: {mode} {landscape} {sketch} {y}"
+                    );
+                }
+                for y in [165, 250, 335] {
+                    assert!(
+                        shade(1, y) > 220,
+                        "joined switches: {mode} {landscape} {sketch} {y}"
+                    );
+                }
+                if !sketch {
+                    assert!(
+                        shade(2, 130) > 220,
+                        "Clean switch should have an open center"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn every_model_renders_finite_clipped_geometry_at_small_and_extreme_sizes() {
     let (mut e, id) = fixture();
     for model in ["classic", "tall", "wide", "notched"] {

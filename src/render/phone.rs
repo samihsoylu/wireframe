@@ -252,9 +252,17 @@ impl Scene {
         let (insets, radius, inner_radius) = match options.model {
             Model::Classic | Model::Tall => ([24., 24., 83., 80.], 36., 2.),
             Model::Wide => ([29., 29., 90., 95.], 44., 1.),
-            Model::Notched => ([24., 24., 22., 22.], 58., 36.),
+            Model::Notched => ([26., 26., 22., if sketch { 23.5 } else { 21. }], 58., 36.),
         };
-        let outer = Bounds::new(4., 2., native_w - 8., native_h - 4.);
+        let outer = if options.model == Model::Notched {
+            if sketch {
+                Bounds::new(5., 2.5, native_w - 10., native_h - 5.)
+            } else {
+                Bounds::new(4., 1., native_w - 8., native_h - 3.)
+            }
+        } else {
+            Bounds::new(4., 2., native_w - 8., native_h - 4.)
+        };
         let inner = Bounds::new(
             insets[0],
             insets[2],
@@ -282,7 +290,12 @@ impl Scene {
         let inner_points = authored(inner, inner_radius, options.model == Model::Notched);
         let body = if sketch { [193, 192, 192] } else { [255; 3] };
         let ink = if sketch { [0; 3] } else { [102; 3] };
-        let weight = if sketch { 4. } else { 1.5 };
+        let weight = match (options.model, sketch) {
+            (Model::Notched, true) => 5.,
+            (Model::Notched, false) => 2.,
+            (_, true) => 4.,
+            (_, false) => 1.5,
+        };
         let scale = if options.stretch { 1. } else { layout.zoom };
         let n = outer_points.len() as u32;
         let points = outer_points.iter().chain(&inner_points).copied().collect();
@@ -298,14 +311,42 @@ impl Scene {
             clip,
         );
         self.phone_line(outer_points, ink, weight * scale, clip);
-        self.phone_line(inner_points, ink, weight * scale, clip);
+        let inner_weight = if options.model == Model::Notched && sketch {
+            5.5
+        } else {
+            weight
+        };
+        self.phone_line(inner_points, ink, inner_weight * scale, clip);
         // Small side switches are authored with the silhouette and share its map.
-        for (x, y, w, h) in [
-            (1., native_h * 0.13, 4., native_h * 0.035),
-            (1., native_h * 0.22, 4., native_h * 0.06),
-            (1., native_h * 0.31, 4., native_h * 0.06),
-            (native_w - 5., native_h * 0.26, 4., native_h * 0.075),
-        ] {
+        let switches = if options.model == Model::Notched {
+            [
+                (0., 114., 6., 37.),
+                (0., 177., 6., 65.),
+                (0., 256., 6., 65.),
+                (native_w - 6., 197., 6., 65.),
+            ]
+        } else {
+            [
+                (1., native_h * 0.13, 4., native_h * 0.035),
+                (1., native_h * 0.22, 4., native_h * 0.06),
+                (1., native_h * 0.31, 4., native_h * 0.06),
+                (native_w - 5., native_h * 0.26, 4., native_h * 0.075),
+            ]
+        };
+        for (x, y, w, h) in switches {
+            if options.model == Model::Notched && !sketch {
+                let edge = if x == 0. { 1. } else { 2. };
+                self.phone_line(
+                    contour(Bounds::new(x + edge, y + 2., w - 3., h - 4.), 1., 1., false)
+                        .into_iter()
+                        .map(transform)
+                        .collect(),
+                    ink,
+                    2. * scale,
+                    clip,
+                );
+                continue;
+            }
             self.primitive(
                 Primitive::Polygon {
                     points: contour(Bounds::new(x, y, w, h), 1., 1., false)
@@ -324,6 +365,7 @@ impl Scene {
                     offset(detail.visible_bounds()),
                     options.landscape,
                     options.model,
+                    sketch,
                     ink,
                     body,
                     weight,
@@ -358,6 +400,7 @@ impl Scene {
                     detail.bounds,
                     false,
                     options.model,
+                    sketch,
                     ink,
                     body,
                     weight,
@@ -408,6 +451,7 @@ impl Scene {
         b: Bounds,
         landscape: bool,
         model: Model,
+        sketch: bool,
         ink: [u8; 3],
         body: [u8; 3],
         width: f32,
@@ -449,19 +493,55 @@ impl Scene {
                     clip,
                 );
             }
+        } else if model == Model::Notched {
+            let (w, h) = if landscape { (b.h, b.w) } else { (b.w, b.h) };
+            let (slot, camera) = if sketch {
+                (
+                    Bounds::new(0.02, 0.38, 0.62, 0.38),
+                    Bounds::new(0.81, 0.09, 0.16, 0.82),
+                )
+            } else {
+                (
+                    Bounds::new(0.02, 0.26, 0.64, 0.4),
+                    Bounds::new(0.82, 0.0625, 0.16, 0.8125),
+                )
+            };
+            // Construct a capsule in device units before rotating it, keeping
+            // rounded ends circular rather than stretching a normalized corner.
+            let slot = Bounds::new(slot.x * w, slot.y * h, slot.w * w, slot.h * h);
+            let radius = slot.h / 2.;
+            let points = contour(slot, radius, radius, false)
+                .into_iter()
+                .map(|p| map(p[0] / w, p[1] / h))
+                .collect();
+            let stroke = if sketch { 4. } else { 2. };
+            self.phone_line(points, ink, stroke, clip);
+            let center = camera.x + camera.w / 2.;
+            let middle = camera.y + camera.h / 2.;
+            let points = circle(camera)
+                .into_iter()
+                .map(|mut p| {
+                    if sketch && p[1] < middle {
+                        p[0] = center
+                            + (p[0] - center) * (1. - 0.25 * (middle - p[1]) / (camera.h / 2.));
+                    }
+                    map(p[0], p[1])
+                })
+                .collect();
+            self.phone_line(points, ink, stroke, clip);
         } else {
-            let slot = if model == Model::Notched {
-                Bounds::new(0., 0.15, 0.64, 0.5)
-            } else {
-                Bounds::new(0.25, 0.5, 0.65, 0.3)
-            };
-            self.phone_line(local(slot, false), ink, width * 0.75, clip);
-            let camera = if model == Model::Notched {
-                Bounds::new(0.83, 0., 0.13, 0.65)
-            } else {
-                Bounds::new(0.03, 0.1, 0.12, 0.3)
-            };
-            self.phone_line(local(camera, true), ink, width * 0.75, clip);
+            self.phone_line(
+                local(Bounds::new(0.25, 0.5, 0.65, 0.3), false),
+                ink,
+                width * 0.75,
+                clip,
+            );
+            self.phone_line(
+                local(Bounds::new(0.03, 0.1, 0.12, 0.3), true),
+                ink,
+                width * 0.75,
+                clip,
+            );
         }
     }
     pub(super) fn phone_status_icon(

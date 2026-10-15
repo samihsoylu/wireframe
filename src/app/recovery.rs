@@ -8,6 +8,9 @@ use std::{
 
 impl WireframeApp {
     pub(super) fn clear_recovery(&mut self) {
+        if self.recovery_offer.is_some() {
+            return;
+        }
         if let Some(path) = &self.recovery
             && let Err(error) = std::fs::remove_file(path)
             && error.kind() != ErrorKind::NotFound
@@ -21,7 +24,11 @@ impl WireframeApp {
     /// Reconcile the recovery snapshot with the current document, including Undo.
     /// Shutdown bypasses the write interval but respects an explicit discard.
     pub(super) fn sync_recovery(&mut self, shutdown: bool) {
-        if self.recovery.is_none() || self.recovery_offer.is_some() || self.quit_allowed {
+        if self.persistence.is_some()
+            || self.recovery.is_none()
+            || self.recovery_offer.is_some()
+            || self.quit_allowed
+        {
             return;
         }
         if !self.editor.dirty() {

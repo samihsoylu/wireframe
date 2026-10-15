@@ -132,7 +132,7 @@ fn save_as_keeps_source_when_busy_and_transfers_ownership_after_success() {
     assert_eq!(ProjectStore.load(&named).unwrap(), project("New contents"));
 }
 #[test]
-fn save_as_to_current_destination_is_a_guarded_flush_without_relocking() {
+fn save_as_to_current_destination_keeps_ownership_without_relocking() {
     let (_dir, copies, named, mut session) = fixture(false);
     let id = session
         .save_as(named.clone(), &project("Same location"))
@@ -212,4 +212,22 @@ fn enabling_automatic_mode_flushes_pending_local_edits_without_waiting_five_seco
     assert!(started.elapsed() < Duration::from_secs(4));
     session.finish().unwrap();
     assert_eq!(ProjectStore.load(&named).unwrap(), project("Enabled"));
+}
+
+#[test]
+fn clean_flush_checks_external_file_and_save_as_can_replace_current_path() {
+    let (_dir, _copies, named, mut session) = fixture(false);
+    ProjectStore.save(&named, &project("External")).unwrap();
+    let flush = session.flush(&project("Original")).unwrap();
+    assert!(request(&session, flush).unwrap_err().contains("changed"));
+    assert_eq!(ProjectStore.load(&named).unwrap(), project("External"));
+    let save = session
+        .save_as(named.clone(), &project("Chosen replacement"))
+        .unwrap();
+    request(&session, save).unwrap();
+    assert_eq!(
+        ProjectStore.load(&named).unwrap(),
+        project("Chosen replacement")
+    );
+    session.finish().unwrap();
 }

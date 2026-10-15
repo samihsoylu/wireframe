@@ -324,6 +324,15 @@ impl Actor {
                 return Err("Choose a saved-file location first".into());
             }
             self.checkpoint()?;
+            // A clean in-memory revision does not prove the file still exists
+            // or still belongs to this session's acknowledged baseline.
+            if self.coordinator.is_clean() {
+                self.copy
+                    .as_mut()
+                    .unwrap()
+                    .save_named(&self.latest)
+                    .map_err(|e| e.to_string())?;
+            }
             let target = self.coordinator.request_flush();
             self.requests.push((request, target));
             self.complete_requests();
@@ -344,36 +353,46 @@ impl Actor {
             });
             return;
         }
-        if self
-            .copy
-            .as_ref()
-            .unwrap()
-            .owns_destination(&path)
-            .unwrap_or(false)
-        {
-            self.flush(request);
-            return;
-        }
         let result = (|| {
             self.checkpoint()?;
             let snapshot = self.latest.clone();
-            let mut destination = self
-                .copies
-                .prepare_save_as(&path, &snapshot)
+            let same = self
+                .copy
+                .as_ref()
+                .unwrap()
+                .owns_destination(&path)
                 .map_err(|e| e.to_string())?;
-            if destination.save_named(&snapshot).is_err() {
-                thread::sleep(Duration::from_secs(1));
-                destination.save_named(&snapshot).map_err(|e| {
-                    format!(
-                        "{e}. A local copy is retained at {}",
-                        destination.local_path().display()
-                    )
-                })?;
-            }
-            let source = self.copy.replace(destination).unwrap();
-            let warning = source.discard().err().map(|e| {
-                format!("The new file is saved. The previous local copy could not be removed: {e}")
-            });
+            let warning =
+                if same {
+                    let destination = self.copy.as_mut().unwrap();
+                    destination
+                        .prepare_current_save_as()
+                        .map_err(|e| e.to_string())?;
+                    if destination.save_named(&snapshot).is_err() {
+                        thread::sleep(Duration::from_secs(1));
+                        destination
+                            .save_named(&snapshot)
+                            .map_err(|e| e.to_string())?;
+                    }
+                    None
+                } else {
+                    let mut destination = self
+                        .copies
+                        .prepare_save_as(&path, &snapshot)
+                        .map_err(|e| e.to_string())?;
+                    if destination.save_named(&snapshot).is_err() {
+                        thread::sleep(Duration::from_secs(1));
+                        destination.save_named(&snapshot).map_err(|e| {
+                            format!(
+                                "{e}. A local copy is retained at {}",
+                                destination.local_path().display()
+                            )
+                        })?;
+                    }
+                    let source = self.copy.replace(destination).unwrap();
+                    source.discard().err().map(|e| format!(
+                    "The new file is saved. The previous local copy could not be removed: {e}"))
+                };
             self.coordinator = SaveCoordinator::new(self.automatic);
             self.retained = None;
             self.checkpoint_due = None;

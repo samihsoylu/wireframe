@@ -42,6 +42,7 @@ pub struct Editor {
     pub context: NodePath,
     pub selection: HashSet<Id>,
     saved: Project,
+    unsaved: bool,
     history: Vec<Change>,
     cursor: usize,
     pending: Option<(String, Snapshot)>,
@@ -68,6 +69,7 @@ impl Editor {
             page: document.pages[0].id,
             definition: None,
             saved: document.clone(),
+            unsaved: false,
             document,
             context: vec![],
             selection: HashSet::new(),
@@ -148,15 +150,22 @@ impl Editor {
         self.selection.retain(|id| ids.contains(id));
     }
     pub fn dirty(&self) -> bool {
-        self.document != self.saved
+        self.unsaved || self.document != self.saved
     }
     pub fn mark_saved(&mut self) {
         self.saved = self.document.clone();
+        self.unsaved = false;
     }
     /// A background write acknowledges its captured document, even if current
     /// edits have advanced. History and selection remain unchanged.
     pub fn mark_saved_snapshot(&mut self, snapshot: &Project) {
         self.saved = snapshot.clone();
+        self.unsaved = false;
+    }
+
+    /// Restored unnamed documents need a chosen destination even when empty.
+    pub fn mark_unsaved(&mut self) {
+        self.unsaved = true;
     }
 
     pub fn undo_name(&self) -> Option<&str> {

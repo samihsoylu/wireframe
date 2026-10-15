@@ -192,7 +192,7 @@ fn local_changes(record: &Record) -> Result<bool, CopyError> {
 fn write_record(path: &Path, record: &Record) -> Result<(), CopyError> {
     write_atomic(path, &record_bytes(record)?).map_err(CopyError::Io)
 }
-fn read_record(path: &Path, id: &str) -> Result<Record, CopyError> {
+fn decode_record(path: &Path) -> Result<Record, CopyError> {
     if !fs::symlink_metadata(path)?.is_file() {
         return Err(CopyError::Invalid(
             "Working copy is not a regular file".into(),
@@ -219,6 +219,10 @@ fn read_record(path: &Path, id: &str) -> Result<Record, CopyError> {
     let record: Record =
         serde_json::from_slice(&bytes).map_err(|e| CopyError::Invalid(e.to_string()))?;
     record.project.encode().map_err(CopyError::Invalid)?;
+    Ok(record)
+}
+fn read_record(path: &Path, id: &str) -> Result<Record, CopyError> {
+    let record = decode_record(path)?;
     match &record.named {
         Some(n) if n.path.key() == id => {
             if n.path.restore().is_ok_and(|p| !p.is_absolute()) {
@@ -246,6 +250,14 @@ fn valid_id(id: &str) -> bool {
     id.strip_prefix("untitled-").is_some_and(|s| {
         !s.is_empty() && s.len() <= 64 && s.bytes().all(|b| b.is_ascii_alphanumeric())
     })
+}
+fn archive_name(name: &str) -> bool {
+    (name.starts_with("previous-working-") || name.starts_with("unreadable-working-"))
+        && name.ends_with(".json")
+        && name
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_' || b == b'.')
+        && !name.contains("..")
 }
 fn normalize_named(path: &Path) -> Result<PathBuf, CopyError> {
     match fs::canonicalize(path) {
@@ -479,6 +491,39 @@ impl WorkingCopies {
             preserved,
         })
     }
+    /// Archives are immutable recovery sources. Restore creates a fresh unnamed
+    /// owner and keeps the archive, never trusts its old saved-file association.
+    pub fn restore_archive(&self, name: &str) -> Result<WorkingCopy, CopyError> {
+        if !archive_name(name) {
+            return Err(CopyError::Invalid("Invalid recovery archive name".into()));
+        }
+        let record = decode_record(&self.root.join(name))?;
+        self.create_unnamed(&record.project)
+    }
+    pub fn list_archives(&self) -> Result<Vec<CopyEntry>, CopyError> {
+        let mut entries = vec![];
+        for item in fs::read_dir(&self.root)? {
+            let item = item?;
+            let Some(name) = item
+                .file_name()
+                .to_str()
+                .map(str::to_owned)
+                .filter(|n| archive_name(n))
+            else {
+                continue;
+            };
+            let id = format!("archive:{name}");
+            let summary = decode_record(&item.path()).map(|r| CopySummary {
+                id: id.clone(),
+                title: format!("{} (previous copy)", r.project.title),
+                named_path: None,
+                has_local_changes: true,
+            });
+            entries.push(CopyEntry { id, summary });
+        }
+        entries.sort_by(|a, b| a.id.cmp(&b.id));
+        Ok(entries)
+    }
     pub fn resume(&self, id: &str) -> Result<WorkingCopy, CopyError> {
         let (path, lock) = self.acquire(id)?;
         let record = read_record(&path, id)?;
@@ -553,6 +598,50 @@ impl WorkingCopy {
     }
     pub fn has_local_changes(&self) -> Result<bool, CopyError> {
         local_changes(&self.record)
+    }
+    /// Explicit Save As consent refreshes the destination baseline once. A
+    /// retry must reuse this captured baseline, never recapture outside changes.
+    pub fn prepare_current_save_as(&mut self) -> Result<(), CopyError> {
+        let path = self.named_path()?.ok_or(CopyError::NotNamed)?;
+        let original = match read_bounded(&path, document::MAX_FILE_BYTES) {
+            Ok(bytes) => Some(bytes),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => None,
+            Err(e) => return Err(e.into()),
+        };
+        let mut record = self.record.clone();
+        let named = record.named.as_mut().unwrap();
+        named.base = original.as_ref().map(|b| fingerprint(b));
+        named.base_content = original
+            .as_ref()
+            .and_then(|b| document::decode(b).ok())
+            .and_then(|p| p.encode().ok())
+            .map(|b| fingerprint(&b));
+        named.pending = None;
+        write_record(&self.path, &record)?;
+        self.record = record;
+        Ok(())
+    }
+
+    /// Open the current named file after retaining any different local document
+    /// as an ordinary recoverable unnamed copy. Read before changing either.
+    pub fn reload_named(&mut self, copies: &WorkingCopies) -> Result<(), CopyError> {
+        let path = self.named_path()?.ok_or(CopyError::NotNamed)?;
+        let bytes = read_bounded(&path, document::MAX_FILE_BYTES)?;
+        let project = document::decode(&bytes).map_err(CopyError::Invalid)?;
+        let content = fingerprint(&project.encode().map_err(CopyError::Invalid)?);
+        let mut record = self.record.clone();
+        if self.has_local_changes()? && self.project() != &project {
+            let retained = copies.create_unnamed(self.project())?;
+            self.preserved = Some(retained.local_path().to_owned());
+        }
+        record.project = project;
+        let named = record.named.as_mut().unwrap();
+        named.base = Some(fingerprint(&bytes));
+        named.base_content = Some(content);
+        named.pending = None;
+        write_record(&self.path, &record)?;
+        self.record = record;
+        Ok(())
     }
     pub fn checkpoint(&mut self, project: &Project) -> Result<(), CopyError> {
         let mut record = self.record.clone();

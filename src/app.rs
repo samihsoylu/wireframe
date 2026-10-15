@@ -7,6 +7,7 @@ mod fonts;
 mod icon_picker;
 mod images;
 mod library_drag;
+mod persistence;
 mod previews;
 mod properties;
 mod recovery;
@@ -39,6 +40,7 @@ enum Pending {
     Open(PathBuf),
     Quit,
     Example,
+    Restore(String),
 }
 enum Drag {
     Move {
@@ -69,6 +71,7 @@ pub struct WireframeApp {
     installed_font: Option<std::sync::Arc<wireframe::fonts::ProjectFont>>,
     font_import: Option<fonts::FontImport>,
     store: Box<dyn ProjectRepository>,
+    persistence: Option<persistence::Persistence>,
     file: Option<PathBuf>,
     quick: String,
     quick_index: usize,
@@ -176,6 +179,7 @@ impl WireframeApp {
             installed_font: None,
             font_import: None,
             store: Box::new(ProjectStore),
+            persistence: None,
             file: None,
             quick: String::new(),
             quick_index: 0,
@@ -219,6 +223,10 @@ impl WireframeApp {
     }
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let mut app = Self::workspace(&cc.egui_ctx, storage::recovery_path());
+        if let Some(path) = storage::recovery_path().and_then(|p| p.parent().map(|p| p.to_owned()))
+        {
+            app.enable_persistence(&cc.egui_ctx, path);
+        }
         let args: Vec<_> = std::env::args().skip(1).collect();
         if args.iter().any(|a| a == "--demo") {
             app.editor = Editor::new(Project::try_from(example_document()).expect("valid example"));
@@ -228,6 +236,9 @@ impl WireframeApp {
         app
     }
     fn load(&mut self, path: PathBuf) -> bool {
+        if self.persistence.is_some() {
+            return self.load_persistent(path);
+        }
         match self.store.load(&path) {
             Ok(doc) => {
                 let candidate = Editor::new(doc);
@@ -251,6 +262,9 @@ impl WireframeApp {
         }
     }
     fn save(&mut self, choose: bool) -> bool {
+        if self.save_busy() {
+            return false;
+        }
         self.editor.commit();
         let path = if choose || self.file.is_none() {
             rfd::FileDialog::new()
@@ -272,6 +286,10 @@ impl WireframeApp {
         if path.extension().is_none() {
             path.set_extension("wireframe");
         }
+        if self.persistence.is_some() {
+            self.queue_save(path, choose);
+            return false; // Completion arrives from the worker, never this frame.
+        }
         match self.store.save(&path, &self.editor.document) {
             Ok(()) => {
                 self.file = Some(path);
@@ -287,16 +305,26 @@ impl WireframeApp {
         }
     }
     fn request(&mut self, pending: Pending, ctx: &egui::Context) {
+        if self.save_busy() {
+            return;
+        }
         self.editor.commit();
-        if self.editor.dirty() {
+        if self.automatic_named() {
+            self.pending = Some(pending);
+            self.queue_save(self.file.clone().unwrap(), false);
+        } else if self.editor.dirty() {
             self.pending = Some(pending);
         } else {
             self.perform(pending, ctx);
         }
     }
     fn perform(&mut self, pending: Pending, ctx: &egui::Context) {
+        if self.persistence.is_some() && !self.finish_session(false) {
+            return;
+        }
         match pending {
             Pending::New => {
+                self.reset_session_identity();
                 self.editor = Editor::default();
                 self.file = None;
                 self.pan = Vec2::ZERO;
@@ -313,7 +341,11 @@ impl WireframeApp {
                 self.clear_recovery();
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
+            Pending::Restore(id) => {
+                self.restore_copy(id);
+            }
             Pending::Example => {
+                self.reset_session_identity();
                 self.clear_recovery();
                 self.editor =
                     Editor::new(Project::try_from(example_document()).expect("valid example"));
@@ -511,6 +543,7 @@ impl WireframeApp {
                             ui.close();
                         }
                         ui.separator();
+                        self.persistence_menu(ui);
                         if ui.button("Export page as PNG…").clicked() {
                             self.export(true);
                             ui.close();
@@ -1474,6 +1507,8 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                 // Native automation and fast mice can deliver a complete drag between
                 // paints. Preserve the press origin even after egui releases its state.
                 let instant_drag = if ui.input(|i| i.focused && !i.key_pressed(Key::Escape))
+                    && !self.save_busy()
+                    && !self.recovery_chooser_open()
                     && self.pending.is_none()
                     && self.text_edit.is_none()
                     && self.error.is_none()
@@ -2066,7 +2101,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
         if self.pending.is_some() {
             egui::Modal::new(egui::Id::new("unsaved")).show(ctx, |ui| {
                 ui.heading("Save your changes?");
-                ui.label("This project has changes that haven't been saved.");
+                ui.label("Save this project before continuing, or discard its local changes.");
                 ui.horizontal(|ui| {
                     if ui.button("Save").clicked()
                         && self.save(false)
@@ -2077,7 +2112,10 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     if ui.button("Discard changes").clicked()
                         && let Some(p) = self.pending.take()
                     {
-                        self.perform(p, ctx);
+                        self.discard_then(p, ctx);
+                    }
+                    if self.persistence.is_some() && ui.button("Save as…").clicked() {
+                        self.save(true);
                     }
                     if ui.button("Cancel").clicked() {
                         self.pending = None;
@@ -2091,13 +2129,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                 ui.label("Restore the last local recovery copy as a new project.");
                 ui.horizontal(|ui| {
                     if ui.button("Restore").clicked() {
-                        let doc = self.recovery_offer.take().unwrap();
-                        self.editor = Editor::default();
-                        self.editor.edit("Restore recovery", |e| {
-                            e.page = doc.pages[0].id;
-                            e.document = doc;
-                        });
-                        self.file = None;
+                        self.restore_legacy();
                     }
                     if ui.button("Start fresh").clicked() {
                         self.recovery_offer = None;
@@ -2106,6 +2138,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                 });
             });
         }
+        self.persistence_dialogs(ctx);
         if let Some(error) = self.error.clone() {
             egui::Modal::new(egui::Id::new("error")).show(ctx, |ui| {
                 ui.heading("Couldn't complete that action");
@@ -2129,21 +2162,27 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
 }
 impl eframe::App for WireframeApp {
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
-        self.sync_recovery(true);
+        self.shutdown_persistence();
     }
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.image_import_dialog(ui.ctx());
         let ctx = ui.ctx().clone();
+        self.poll_saves(&ctx);
         if ctx.input(|i| i.viewport().close_requested()) && !self.quit_allowed {
             self.editor.commit();
-            if self.editor.dirty() {
+            if self.persistence.is_some() {
+                ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+                self.request(Pending::Quit, &ctx);
+            } else if self.editor.dirty() {
                 ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
                 self.pending = Some(Pending::Quit);
             } else if self.recovery_offer.is_none() {
                 self.clear_recovery();
             }
         }
-        if self.pending.is_none()
+        if !self.save_busy()
+            && !self.recovery_chooser_open()
+            && self.pending.is_none()
             && self.text_edit.is_none()
             && self.recovery_offer.is_none()
             && self.image_crop.is_none()
@@ -2177,6 +2216,9 @@ impl eframe::App for WireframeApp {
                 }
             }
         }
+        if self.save_busy() || self.recovery_chooser_open() {
+            ui.disable();
+        }
         self.shortcuts(&ctx);
         let cropping = self.image_crop.is_some();
         self.toolbar(ui);
@@ -2206,6 +2248,7 @@ impl eframe::App for WireframeApp {
             self.error = Some(error);
         }
         self.dialogs(&ctx);
+        self.observe_project();
         self.sync_recovery(false);
         ctx.request_repaint_after(Duration::from_secs(2));
     }

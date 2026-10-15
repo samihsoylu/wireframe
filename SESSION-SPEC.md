@@ -14,7 +14,7 @@ Each absolute resize preview restarts from its transaction-start snapshot. This 
 
 Five added regressions cover nested coordinate boundaries, half ties, persisted fractions, zero crop layout/UI and multi-frame resize behavior. All 554 tests pass in the final full run; all-target Clippy, formatting, diff and packaging checks pass. Native macOS verifies nested numeric geometry, rounded minimum crop bounds, zero crop removal and exact history on the interim build. The final build refresh verifies pointer width200→213, unchanged source/sibling, exact Undo/Redo and byte-identical save after process restart. Final bundle UUID E3D0023B-D1DD-3EF6-9315-3AC709828229; canonical executable identity and signature verify. Self-review only; no independent review.
 
-The app is running a saved Geometry rounding fixture, Sketch 100%, Library hidden, first instance selected at(100,100,213,90). Numeric native checks before the final pointer fix retain their earlier build identity. No build or test jobs remain. Source/exclusion and first-commit license checks pass. Group crop reset/gestures, library insertion previews and save/decision gesture boundaries remain in place. Native held smoothness/onset/autoscroll and broader nested edge cases remain open. Next substantial work is PDF/export behavior and implementation; the overall goal remains active.
+The app is running a saved Geometry rounding fixture, Sketch 100%, Library hidden, first instance selected at(100,100,213,90). Numeric native checks before the final pointer fix retain their earlier build identity. No build or test jobs remain. Source/exclusion and first-commit license checks pass. Group crop reset/gestures, library insertion previews and save/decision gesture boundaries remain in place. Native held smoothness/onset/autoscroll and broader nested edge cases remain open. The PDF page-layout and annotation contract is now specified in docs/PDF-EXPORT.md. A primary-font backend probe preserves positioned text and real links; general fallback-font identity, scene conversion and integrated export UI remain outstanding. Next implement that export path with rendered-file acceptance; the overall goal remains active.
 
 ## Existing capabilities and limits
 
@@ -38,6 +38,7 @@ Save, Save As, automatic/manual named saving, New/Open/close and local recovery 
 - docs/DOCUMENT-FORMAT.md and docs/RECURSIVE-EDITOR.md: recursive data and live editing/storage boundaries.
 - docs/CATALOG-AND-LAYOUT.md and control-family documents: rendering and property requirements.
 - docs/RICH-TEXT.md, docs/PROJECT-FONTS.md and docs/TEXT-ENTRY.md: text and fonts.
+- docs/PDF-EXPORT.md: page selection, sizing, notes, text/link fidelity, architecture boundaries and pending integrated acceptance.
 - docs/IMAGES.md and docs/COMPONENTS.md: image and component behavior and remaining gaps.
 
 Keep product-only fixtures/evidence local unless selected for distribution. Update this checkpoint and commit completed product work. No unattended supervision beyond active goal execution is implied. The overall goal remains active.

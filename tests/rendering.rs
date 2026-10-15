@@ -210,7 +210,7 @@ fn taller_tables_keep_text_rows_fixed_and_fill_empty_rows() {
     assert_eq!(symbols.len(), 2);
     assert_eq!(symbols[0].0, "square-check-regular");
     assert_eq!(symbols[1].0, "square-regular");
-    assert!(symbols.iter().all(|(_, b)| b.w == 12. && b.h == 12.));
+    assert!(symbols.iter().all(|(_, b)| b.w == 16. && b.h == 16.));
     assert_eq!(symbols, choices(&tall));
 }
 

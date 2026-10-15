@@ -35,6 +35,7 @@ impl Scene {
         );
         let selected = number(p, "selected_index", -1.) as i32;
         let rule_ink = if sketch { [0; 3] } else { [51; 3] };
+        let rule_width = if sketch { 2. } else { 1. };
         let disabled = matches!(p.get("state"), Some(Value::Choice(s)) if s.contains("disabled"));
         let mut y = b.y + metrics.top;
         let mut row_index = 0usize;
@@ -62,11 +63,12 @@ impl Scene {
                 clip,
             );
             if boolean(p, "horizontal_lines") && row_index > 0 {
+                let rule_y = y + if sketch { -1. } else { 0.5 };
                 self.primitive(
                     Primitive::Line {
-                        points: vec![[b.x, y], [b.x + b.w, y]],
+                        points: vec![[b.x, rule_y], [b.x + b.w, rule_y]],
                         color: rule_ink,
-                        width: 1.,
+                        width: rule_width,
                     },
                     clip,
                 );
@@ -132,13 +134,30 @@ impl Scene {
                                 fonts,
                                 options,
                             )?,
-                            CellContent::Choice(choice) => self.choice(
-                                *choice,
-                                x + align.offset(available, 12.),
-                                y + (height - 12.) / 2.,
-                                cell_clip,
-                                options.ink,
-                            ),
+                            CellContent::Choice(choice) => {
+                                let inset = if matches!(align, Alignment::Right) {
+                                    2.
+                                } else {
+                                    0.
+                                };
+                                let local_x = x - b.x + align.offset(available, 12.) - inset;
+                                let size = if matches!(choice, Choice::RadioOff | Choice::RadioOn) {
+                                    13.
+                                } else {
+                                    16.
+                                };
+                                self.choice(
+                                    *choice,
+                                    Bounds::new(
+                                        b.x + local_x.round(),
+                                        y + super::choice::center_offset(height, size),
+                                        size,
+                                        size,
+                                    ),
+                                    cell_clip,
+                                    options.ink,
+                                );
+                            }
                         }
                     }
                     x += width;
@@ -160,32 +179,21 @@ impl Scene {
                 x += width;
                 self.primitive(
                     Primitive::Line {
-                        points: vec![[x - 1., b.y], [x - 1., b.y + b.h]],
+                        points: vec![
+                            [x - 1. - rule_width / 2., b.y],
+                            [x - 1. - rule_width / 2., b.y + b.h],
+                        ],
                         color: rule_ink,
-                        width: 1.,
+                        width: rule_width,
                     },
                     clip,
                 );
             }
         }
-        for points in [
-            vec![[b.x, b.y], [b.x + b.w, b.y]],
-            vec![[b.x + b.w, b.y], [b.x + b.w, b.y + b.h]],
-            vec![[b.x + b.w, b.y + b.h], [b.x, b.y + b.h]],
-            vec![[b.x, b.y + b.h], [b.x, b.y]],
-        ] {
-            self.primitive(
-                Primitive::Line {
-                    points,
-                    color: rule_ink,
-                    width: 1.,
-                },
-                layer.clip,
-            );
-        }
+        self.rectangle_frame(b, rule_ink, rule_width, layer.clip);
         Ok(())
     }
-    fn choice(&mut self, choice: Choice, x: f32, y: f32, clip: Option<Bounds>, color: Color32) {
+    fn choice(&mut self, choice: Choice, bounds: Bounds, clip: Option<Bounds>, color: Color32) {
         use super::choice::Mark;
         let radio = matches!(choice, Choice::RadioOff | Choice::RadioOn);
         let mark = match choice {
@@ -193,26 +201,24 @@ impl Scene {
             Choice::Indeterminate => Mark::Mixed,
             _ => Mark::Empty,
         };
-        self.choice_symbol(Bounds::new(x, y, 12., 12.), radio, mark, clip, color);
+        self.choice_symbol(bounds, radio, mark, clip, color);
     }
     fn sort_icon(&mut self, x: f32, y: f32, sort: Sort, clip: Option<Bounds>, color: Color32) {
         let color = [color.r(), color.g(), color.b()];
         if matches!(sort, Sort::Ascending | Sort::Both) {
             self.primitive(
-                Primitive::Line {
-                    points: vec![[x + 3., y + 6.], [x + 7., y + 2.], [x + 11., y + 6.]],
-                    color,
-                    width: 1.,
+                Primitive::Polygon {
+                    points: vec![[x + 2.5, y + 6.5], [x + 7.5, y + 1.], [x + 12.5, y + 6.5]],
+                    fill: color,
                 },
                 clip,
             );
         }
         if matches!(sort, Sort::Descending | Sort::Both) {
             self.primitive(
-                Primitive::Line {
-                    points: vec![[x + 3., y + 9.], [x + 7., y + 13.], [x + 11., y + 9.]],
-                    color,
-                    width: 1.,
+                Primitive::Polygon {
+                    points: vec![[x + 2.5, y + 8.5], [x + 12.5, y + 8.5], [x + 7.5, y + 14.]],
+                    fill: color,
                 },
                 clip,
             );

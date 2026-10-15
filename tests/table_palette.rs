@@ -116,7 +116,7 @@ fn every_row_resolves_text_links_sort_and_choices_at_the_contrast_boundary() {
         assert_eq!(icons[0].1, dark);
         assert_eq!(icons[1].1, [255; 4]);
         assert_eq!(icons[2].1, dark);
-        assert!(s.items.iter().any(|i| matches!(&i.drawing,Drawing::Primitive(Primitive::Line{color,points,..}) if *color==[255;3] && points.len()==3)));
+        assert!(s.items.iter().any(|i| matches!(&i.drawing,Drawing::Primitive(Primitive::Polygon{fill,points}) if *fill==[255;3] && points.len()==3)));
         let png = image::load_from_memory(&s.png().unwrap())
             .unwrap()
             .into_rgba8();

@@ -139,6 +139,7 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
         | Kind::VolumeSlider
         | Kind::Playback
         | Kind::Webcam
+        | Kind::Video
         | Kind::Alert
         | Kind::AppBar
         | Kind::FieldSet

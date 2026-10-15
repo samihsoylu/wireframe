@@ -38,6 +38,7 @@ mod table;
 mod tablet;
 mod tabs;
 mod tree;
+mod video;
 mod window;
 use crate::{
     document::{Properties, Value},
@@ -376,6 +377,10 @@ impl Scene {
                 | Kind::VerticalSplitter
         ) {
             self.linear_control(layer, sketch);
+            return Ok(());
+        }
+        if c.kind == Kind::Video {
+            self.video(layer, sketch);
             return Ok(());
         }
         if matches!(c.kind, Kind::VolumeSlider | Kind::Playback | Kind::Webcam) {

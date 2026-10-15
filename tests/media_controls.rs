@@ -89,7 +89,7 @@ fn webcam_minimum_resize_preserves_anchor_and_shift_aspect() {
     let b = Bounds::new(20., 30., 177., 146.);
     for handle in [(-1, -1), (1, 1), (-1, 0), (0, -1), (1, 0), (0, 1)] {
         for aspect in [false, true] {
-            let r = media_controls::resize_webcam(
+            let r = media_controls::resize_placeholder(
                 b,
                 handle,
                 (-1000. * handle.0 as f32, -1000. * handle.1 as f32),

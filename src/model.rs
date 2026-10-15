@@ -140,6 +140,7 @@ pub enum Kind {
     VolumeSlider,
     Playback,
     Webcam,
+    Video,
     Panel,
     FieldSet,
     List,
@@ -151,7 +152,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 60] = [
+    pub const ALL: [Kind; 61] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -203,6 +204,7 @@ impl Kind {
         Self::VolumeSlider,
         Self::Playback,
         Self::Webcam,
+        Self::Video,
         Self::Panel,
         Self::FieldSet,
         Self::List,
@@ -266,6 +268,7 @@ impl Kind {
             Self::VolumeSlider => "Volume slider",
             Self::Playback => "Playback controls",
             Self::Webcam => "Webcam",
+            Self::Video => "Video player",
             Self::Panel => "Window",
             Self::FieldSet => "Field set",
             Self::List => "List",
@@ -286,7 +289,7 @@ impl Kind {
             | Self::Breadcrumbs
             | Self::LinkBar => "Text",
             Self::Icon | Self::IconLabel => "Icons",
-            Self::VolumeSlider | Self::Playback | Self::Webcam => "Media",
+            Self::VolumeSlider | Self::Playback | Self::Webcam | Self::Video => "Media",
             Self::Button
             | Self::CircleButton
             | Self::PointedButton
@@ -354,6 +357,7 @@ impl Kind {
             Self::VolumeSlider => (72., 16.),
             Self::Playback => (110., 36.),
             Self::Webcam => (177., 146.),
+            Self::Video => (300., 200.),
             Self::Panel => (450., 400.),
             Self::FieldSet => (200., 170.),
             Self::List | Self::Table => (300., 180.),
@@ -393,7 +397,8 @@ impl Kind {
             | Self::VerticalSplitter
             | Self::VolumeSlider
             | Self::Playback
-            | Self::Webcam => "",
+            | Self::Webcam
+            | Self::Video => "",
             Self::DateChooser => crate::date_controls::CHOOSER_DEFAULT,
             Self::Menu => crate::menu::MENU,
             Self::MenuBar => crate::menu::BAR,

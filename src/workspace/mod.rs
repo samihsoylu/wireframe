@@ -310,6 +310,7 @@ impl Editor {
                     | Kind::VolumeSlider
                     | Kind::Playback
                     | Kind::Webcam
+                    | Kind::Video
                     | Kind::DateChooser
                     | Kind::FieldSet
                     | Kind::Button
@@ -363,6 +364,7 @@ impl Editor {
                     Kind::VolumeSlider => "volume_slider",
                     Kind::Playback => "playback",
                     Kind::Webcam => "webcam",
+                    Kind::Video => "video",
                     Kind::Button => "button",
                     Kind::TextInput => "text_input",
                     Kind::TextArea => "text_area",

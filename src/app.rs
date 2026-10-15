@@ -483,7 +483,10 @@ impl WireframeApp {
             && let Some(c) = self.editor.selected_views().first()
             && !self.editor.enter(c.id)
             && c.group.is_none()
-            && !matches!(c.kind, Kind::VolumeSlider | Kind::Playback | Kind::Webcam)
+            && !matches!(
+                c.kind,
+                Kind::VolumeSlider | Kind::Playback | Kind::Webcam | Kind::Video
+            )
         {
             self.text_edit = Some((c.id, c.text.clone()));
         }
@@ -927,6 +930,7 @@ impl WireframeApp {
                                             | Kind::VolumeSlider
                                             | Kind::Playback
                                             | Kind::Webcam
+                                            | Kind::Video
                                     ),
                                     cat => kind.category() == cat,
                                 })
@@ -1159,14 +1163,14 @@ if r.lost_focus(){self.editor.commit();}
                 }
                 ui.heading(if selected.len()==1{self.editor.selection_label(selected[0].id)}else{format!("{} controls",selected.len())});
                 if selected.len()==1 {let mut c=selected[0].clone();let original=c.clone();let fixed_axis=wireframe::linear_controls::Axis::for_kind(c.kind);
-                    ui.add_space(10.);ui.label("Position & size");egui::Grid::new("geometry").num_columns(4).spacing([7.,8.]).show(ui,|ui|{ui.label("X");ui.add(egui::DragValue::new(&mut c.bounds.x).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.label("Y");ui.add(egui::DragValue::new(&mut c.bounds.y).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.end_row();ui.label("W");ui.add_enabled(!matches!(c.kind,Kind::Icon|Kind::Breadcrumbs|Kind::LinkBar|Kind::Playback) && !fixed_axis.is_some_and(|a| a.vertical) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id),egui::DragValue::new(&mut c.bounds.w).update_while_editing(false).speed(1.).clamp_existing_to_range(fixed_axis.is_none() && c.kind != Kind::Webcam).range((if fixed_axis.is_some() || c.kind == Kind::Webcam {10.0}else if matches!(c.kind,Kind::Breadcrumbs|Kind::LinkBar){1.0}else{8.0})..=10_000.0));ui.label("H");ui.add_enabled(!matches!(c.kind,Kind::Icon|Kind::IconLabel|Kind::PointedButton|Kind::Breadcrumbs|Kind::LinkBar|Kind::Playback) && !fixed_axis.is_some_and(|a| !a.vertical) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id),egui::DragValue::new(&mut c.bounds.h).update_while_editing(false).speed(1.).clamp_existing_to_range(fixed_axis.is_none() && c.kind != Kind::Webcam).range((if fixed_axis.is_some() || c.kind == Kind::Webcam {10.0}else{8.0})..=10_000.0));ui.end_row();});
+                    ui.add_space(10.);ui.label("Position & size");egui::Grid::new("geometry").num_columns(4).spacing([7.,8.]).show(ui,|ui|{ui.label("X");ui.add(egui::DragValue::new(&mut c.bounds.x).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.label("Y");ui.add(egui::DragValue::new(&mut c.bounds.y).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.end_row();ui.label("W");ui.add_enabled(!matches!(c.kind,Kind::Icon|Kind::Breadcrumbs|Kind::LinkBar|Kind::Playback) && !fixed_axis.is_some_and(|a| a.vertical) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id),egui::DragValue::new(&mut c.bounds.w).update_while_editing(false).speed(1.).clamp_existing_to_range(fixed_axis.is_none() && !matches!(c.kind, Kind::Webcam | Kind::Video)).range((if fixed_axis.is_some() || matches!(c.kind, Kind::Webcam | Kind::Video) {10.0}else if matches!(c.kind,Kind::Breadcrumbs|Kind::LinkBar){1.0}else{8.0})..=10_000.0));ui.label("H");ui.add_enabled(!matches!(c.kind,Kind::Icon|Kind::IconLabel|Kind::PointedButton|Kind::Breadcrumbs|Kind::LinkBar|Kind::Playback) && !fixed_axis.is_some_and(|a| !a.vertical) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id),egui::DragValue::new(&mut c.bounds.h).update_while_editing(false).speed(1.).clamp_existing_to_range(fixed_axis.is_none() && !matches!(c.kind, Kind::Webcam | Kind::Video)).range((if fixed_axis.is_some() || matches!(c.kind, Kind::Webcam | Kind::Video) {10.0}else{8.0})..=10_000.0));ui.end_row();});
                     if c.group.is_none() && !self.typed_properties(ui, c.id) {ui.add_space(10.);ui.label("Text");wireframe::text_entry::multiline(ui, &mut c.text, 4, false);if c.kind==Kind::Table {ui.small("Separate columns with commas and rows with new lines.");}
 if c.kind==Kind::Tabs {ui.small("Separate tabs with commas.");}
                     ui.horizontal(|ui|{ui.label("Size");ui.add(egui::DragValue::new(&mut c.font_size).range(6.0..=120.0));ui.checkbox(&mut c.bold,"Bold");});
                     ui.horizontal(|ui|{ui.label("Fill");ui.color_edit_button_srgb(&mut c.fill);});if matches!(c.kind,Kind::Checkbox|Kind::Radio|Kind::Toggle){ui.checkbox(&mut c.checked,"Selected state");}
                     }
                     if !self.editor.editing_instance() {ui.checkbox(&mut c.locked,"Lock position and content");}
-                    if c.group.is_none() && fixed_axis.is_none() && !matches!(c.kind, Kind::ButtonBar | Kind::Breadcrumbs | Kind::LinkBar | Kind::Tabs | Kind::VerticalTabs | Kind::CheckboxGroup | Kind::RadioGroup | Kind::Menu | Kind::MenuBar | Kind::Tree | Kind::Accordion | Kind::Alert | Kind::AppBar | Kind::Playback | Kind::Webcam) {
+                    if c.group.is_none() && fixed_axis.is_none() && !matches!(c.kind, Kind::ButtonBar | Kind::Breadcrumbs | Kind::LinkBar | Kind::Tabs | Kind::VerticalTabs | Kind::CheckboxGroup | Kind::RadioGroup | Kind::Menu | Kind::MenuBar | Kind::Tree | Kind::Accordion | Kind::Alert | Kind::AppBar | Kind::Playback | Kind::Webcam | Kind::Video) {
                     let link_caption=c.link.and_then(|id|self.editor.document.pages.iter().find(|p|p.id==id).map(|p|p.name.clone())).unwrap_or("No page link".into());
                     ui_text::combo_box(ui,"page-link",&link_caption,|ui|{if ui_text::selectable_value(ui,&mut c.link,None,"No page link").clicked(){ui.close();}for p in &self.editor.document.pages {if ui_text::selectable_value(ui,&mut c.link,Some(p.id),&p.name).clicked(){ui.close();}}});
                     } else if self.editor.is_group(c.id) && ui.button("Edit group contents").clicked(){self.editor.enter(c.id);}
@@ -1774,9 +1778,9 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                             let axis = (selected.len() == 1 && original.len() == 1)
                                 .then(|| selected[0].kind)
                                 .and_then(wireframe::linear_controls::Axis::for_kind);
-                            let webcam = selected.len() == 1
+                            let scalable_media = selected.len() == 1
                                 && original.len() == 1
-                                && selected[0].kind == Kind::Webcam;
+                                && matches!(selected[0].kind, Kind::Webcam | Kind::Video);
                             let aspect = modifiers.shift && axis.is_none();
                             let mut resized = if let Some(axis) = axis {
                                 axis.resize(
@@ -1784,8 +1788,8 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                                     if axis.vertical { handle.1 } else { handle.0 },
                                     if axis.vertical { delta.y } else { delta.x },
                                 )
-                            } else if webcam {
-                                wireframe::media_controls::resize_webcam(
+                            } else if scalable_media {
+                                wireframe::media_controls::resize_placeholder(
                                     bounds,
                                     handle,
                                     (delta.x, delta.y),
@@ -1801,7 +1805,8 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                                     handle,
                                     aspect.then_some(bounds.w / bounds.h),
                                 );
-                                if (!webcam || (result.bounds.w >= 10. && result.bounds.h >= 10.))
+                                if (!scalable_media
+                                    || (result.bounds.w >= 10. && result.bounds.h >= 10.))
                                     && result.bounds.w >= 1.
                                     && result.bounds.h >= 1.
                                     && axis.is_none_or(|a| {
@@ -1912,7 +1917,10 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     && !c.locked
                     && !self.editor.enter(c.id)
                     && c.group.is_none()
-                    && !matches!(c.kind, Kind::VolumeSlider | Kind::Playback | Kind::Webcam)
+                    && !matches!(
+                        c.kind,
+                        Kind::VolumeSlider | Kind::Playback | Kind::Webcam | Kind::Video
+                    )
                 {
                     self.text_edit = Some((c.id, c.text.clone()));
                 }
@@ -2035,7 +2043,10 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                             ui.close();
                         }
                         let text_editable = self.editor.selected_views().first().is_some_and(|c| {
-                            !matches!(c.kind, Kind::VolumeSlider | Kind::Playback | Kind::Webcam)
+                            !matches!(
+                                c.kind,
+                                Kind::VolumeSlider | Kind::Playback | Kind::Webcam | Kind::Video
+                            )
                         });
                         if ui
                             .add_enabled(text_editable, egui::Button::new("Edit text"))
@@ -2653,6 +2664,7 @@ mod tests {
             Kind::VerticalSplitter,
             Kind::VolumeSlider,
             Kind::Webcam,
+            Kind::Video,
         ] {
             let ctx = egui::Context::default();
             let mut app = WireframeApp::workspace(&ctx, None);
@@ -2668,10 +2680,13 @@ mod tests {
     }
     #[test]
     fn webcam_pointer_resize_clamps_both_axes_and_playback_has_no_handles() {
-        for corner in [(-1, -1), (1, 1)] {
+        for (kind, corner) in [Kind::Webcam, Kind::Video]
+            .into_iter()
+            .flat_map(|k| [(-1, -1), (1, 1)].map(|c| (k, c)))
+        {
             let ctx = egui::Context::default();
             let mut app = WireframeApp::workspace(&ctx, None);
-            app.editor.add(Kind::Webcam, 200., 200.);
+            app.editor.add(kind, 200., 200.);
             frame(&ctx, &mut app, vec![]);
             let before = app.editor.current().controls[0].bounds;
             let start = app
@@ -2723,7 +2738,12 @@ mod tests {
     }
     #[test]
     fn static_media_controls_do_not_offer_keyboard_text_editing() {
-        for kind in [Kind::VolumeSlider, Kind::Playback, Kind::Webcam] {
+        for kind in [
+            Kind::VolumeSlider,
+            Kind::Playback,
+            Kind::Webcam,
+            Kind::Video,
+        ] {
             let ctx = egui::Context::default();
             let mut app = WireframeApp::workspace(&ctx, None);
             app.editor.add(kind, 100., 100.);

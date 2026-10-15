@@ -3,11 +3,11 @@
 //! Original vector drawings for media placeholders.
 use super::*;
 use std::f32::consts::{PI, TAU};
-struct Art<'a> {
-    scene: &'a mut Scene,
-    origin: [f32; 2],
-    scale: [f32; 2],
-    clip: Option<Bounds>,
+pub(super) struct Art<'a> {
+    pub(super) scene: &'a mut Scene,
+    pub(super) origin: [f32; 2],
+    pub(super) scale: [f32; 2],
+    pub(super) clip: Option<Bounds>,
 }
 impl Art<'_> {
     fn point(&self, p: [f32; 2]) -> [f32; 2] {
@@ -16,13 +16,13 @@ impl Art<'_> {
             self.origin[1] + p[1] * self.scale[1],
         ]
     }
-    fn polygon(&mut self, p: Vec<[f32; 2]>, fill: [u8; 3]) {
+    pub(super) fn polygon(&mut self, p: Vec<[f32; 2]>, fill: [u8; 3]) {
         let points = p.into_iter().map(|p| self.point(p)).collect();
         self.scene
             .primitive(Primitive::Polygon { points, fill }, self.clip);
     }
     // Stroke each segment as a filled quad before the independent-axis transform.
-    fn line(&mut self, p: Vec<[f32; 2]>, color: [u8; 3], width: f32) {
+    pub(super) fn line(&mut self, p: Vec<[f32; 2]>, color: [u8; 3], width: f32) {
         for edge in p.windows(2) {
             let [a, b] = [edge[0], edge[1]];
             let d = [b[0] - a[0], b[1] - a[1]];
@@ -42,7 +42,7 @@ impl Art<'_> {
             );
         }
     }
-    fn ellipse(&mut self, b: Bounds, fill: [u8; 3], stroke: Option<([u8; 3], f32)>) {
+    pub(super) fn ellipse(&mut self, b: Bounds, fill: [u8; 3], stroke: Option<([u8; 3], f32)>) {
         let points = |inset: f32| {
             (0..64)
                 .map(|i| {

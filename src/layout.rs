@@ -359,8 +359,13 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(w, 16.)?;
             return Ok((w, 16.));
         }
-        if matches!(kind, "calendar" | "date_picker" | "time_picker" | "webcam") {
-            let default = if kind == "webcam" {
+        if matches!(
+            kind,
+            "calendar" | "date_picker" | "time_picker" | "webcam" | "video"
+        ) {
+            let default = if kind == "video" {
+                (300., 200.)
+            } else if kind == "webcam" {
                 (177., 146.)
             } else if kind == "calendar" {
                 (96., 96.)

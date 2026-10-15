@@ -58,7 +58,7 @@ pub fn layout(kind: Kind, width: f32, height: f32, sketch: bool) -> Layout {
 }
 /// Preserve the opposite edge (or center for a side handle), with a ten-unit UI minimum.
 /// The stored dimensions are not clamped on load or when merely selecting a control.
-pub fn resize_webcam(b: Bounds, handle: (i8, i8), delta: (f32, f32), aspect: bool) -> Bounds {
+pub fn resize_placeholder(b: Bounds, handle: (i8, i8), delta: (f32, f32), aspect: bool) -> Bounds {
     let proposed = b.resized(handle, delta, aspect);
     let (mut w, mut h) = (proposed.w, proposed.h);
     if aspect {

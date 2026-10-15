@@ -265,6 +265,7 @@ impl WireframeApp {
                 | "volume_slider"
                 | "playback"
                 | "webcam"
+                | "video"
                 | "date_chooser"
                 | "checkbox"
                 | "radio"

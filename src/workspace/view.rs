@@ -355,6 +355,7 @@ pub(super) fn control(node: &LayoutNode) -> Control {
         "volume_slider" => Kind::VolumeSlider,
         "playback" => Kind::Playback,
         "webcam" => Kind::Webcam,
+        "video" => Kind::Video,
 
         "panel" | "window" => Kind::Panel,
         "field_set" => Kind::FieldSet,

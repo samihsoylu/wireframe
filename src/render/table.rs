@@ -14,13 +14,23 @@ impl Scene {
         let p = &layer.properties;
         let grid = Grid::parse(&c.text);
         let header = boolean(p, "header");
+        let bordered = !matches!(p.get("border"), Some(Value::Choice(v)) if v == "none");
+        let scrollbar = boolean(p, "vertical_scrollbar");
+        let reserved = if scrollbar { 14. } else { 0. };
         let row_height = number(p, "row_height", 30.).clamp(16., 80.);
         let style = TextStyle {
             size: c.font_size,
             bold: c.bold,
             italic: boolean(p, "italic"),
         };
-        let metrics = grid.table_layout(fonts, style, Some(b.w), row_height, header, sketch)?;
+        let metrics = grid.table_layout(
+            fonts,
+            style,
+            Some((b.w - reserved).max(1.)),
+            row_height,
+            header,
+            sketch,
+        )?;
         let clip = clip_with(layer.clip, b);
         let fill = rgb(p, "fill", [255, 255, 255]);
         let alternate = rgb(p, "alternate_fill", [238, 238, 238]);
@@ -37,7 +47,8 @@ impl Scene {
         let rule_ink = if sketch { [0; 3] } else { [51; 3] };
         let rule_width = if sketch { 2. } else { 1. };
         let disabled = matches!(p.get("state"), Some(Value::Choice(s)) if s.contains("disabled"));
-        let mut y = b.y + metrics.top;
+        let top = if bordered { metrics.top } else { 0. };
+        let mut y = b.y + top;
         let mut row_index = 0usize;
         while y < b.y + b.h {
             let height = metrics.rows.get(row_index).copied().unwrap_or(row_height);
@@ -106,6 +117,9 @@ impl Scene {
                                 Align::Right => Alignment::Right,
                             });
                     if let Some(sort) = cell.sort {
+                        if header && row_index == 0 && i + 1 == metrics.columns.len() {
+                            available += reserved;
+                        }
                         self.sort_icon(
                             x + available - 17.,
                             y + (height - 15.) / 2.,
@@ -190,7 +204,30 @@ impl Scene {
                 );
             }
         }
-        self.rectangle_frame(b, rule_ink, rule_width, layer.clip);
+        if scrollbar {
+            let inset = if bordered && sketch { 2. } else { 0. };
+            let start = top
+                + if header {
+                    metrics.rows.first().copied().unwrap_or(row_height)
+                } else {
+                    0.
+                };
+            self.vertical_scrollbar(
+                Bounds::new(
+                    b.x + b.w - 16. - inset,
+                    b.y + start,
+                    16.,
+                    b.h - start - inset,
+                ),
+                number(p, "value", 0.),
+                false,
+                sketch,
+                clip,
+            );
+        }
+        if bordered {
+            self.rectangle_frame(b, rule_ink, rule_width, layer.clip);
+        }
         Ok(())
     }
     fn choice(&mut self, choice: Choice, bounds: Bounds, clip: Option<Bounds>, color: Color32) {

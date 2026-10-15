@@ -878,8 +878,9 @@ impl<M: TextMeasurer> Engine<'_, M> {
         }
         if kind == "table" {
             let grid = crate::rich_text::structured::Grid::parse(text);
+            let scrollbar = boolean(props, "vertical_scrollbar");
             let available = match width {
-                Dimension::Fixed(w) => Some(w),
+                Dimension::Fixed(w) => Some((w - if scrollbar { 14. } else { 0. }).max(1.)),
                 Dimension::Auto => None,
             };
             let measured = grid.table_layout(
@@ -892,7 +893,9 @@ impl<M: TextMeasurer> Engine<'_, M> {
             )?;
             let w = match width {
                 Dimension::Fixed(w) => w,
-                Dimension::Auto => measured.natural_width.max(1.),
+                Dimension::Auto => {
+                    (measured.natural_width + if scrollbar { 16. } else { 0. }).max(1.)
+                }
             };
             let h = match height {
                 Dimension::Fixed(h) => h,

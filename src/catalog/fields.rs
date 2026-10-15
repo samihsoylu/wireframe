@@ -243,6 +243,7 @@ pub(super) fn visible(id: &str, key: &str) -> bool {
             "underline",
             "value",
             "vertical_lines",
+            "vertical_scrollbar",
         ],
         "date_chooser" => &[
             "bold",

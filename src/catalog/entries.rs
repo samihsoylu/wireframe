@@ -1047,6 +1047,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "dropdown"
             | "text_area"
             | "list"
+            | "table"
             | "tabs"
             | "vertical_tabs"
             | "tree"
@@ -1562,6 +1563,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             text.default = DefaultValue::FormInk;
         }
         c.properties.extend([
+            choice("border", "Border", &["solid", "none"], "solid"),
             boolean("header", "Header row", true),
             boolean("vertical_lines", "Vertical lines", true),
             boolean("horizontal_lines", "Horizontal lines", false),

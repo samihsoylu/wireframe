@@ -123,6 +123,7 @@ fn supported(kind: &str, key: &str) -> bool {
             "dropdown"
                 | "text_area"
                 | "list"
+                | "table"
                 | "tabs"
                 | "vertical_tabs"
                 | "tree"
@@ -152,6 +153,7 @@ fn supported(kind: &str, key: &str) -> bool {
                 | "tree"
                 | "text_input"
                 | "list"
+                | "table"
                 | "icon"
                 | "icon_label"
                 | "circle_button"
@@ -687,7 +689,7 @@ mod tests {
         }
     }
     #[test]
-    fn annotation_inspector_fields_have_renderer_support() {
+    fn specialized_inspector_fields_have_renderer_support() {
         for (kind, fields) in [
             (
                 "popover",
@@ -703,6 +705,7 @@ mod tests {
             ("horizontal_brace", vec!["direction", "text", "text_color"]),
             ("vertical_brace", vec!["direction", "text", "text_color"]),
             ("scratch_out", vec!["fill", "background_opacity"]),
+            ("table", vec!["border", "vertical_scrollbar", "value"]),
         ] {
             for key in fields {
                 assert!(supported(kind, key));
@@ -722,6 +725,7 @@ mod tests {
             (Kind::FieldSet, "background_opacity"),
             (Kind::Callout, "background_opacity"),
             (Kind::Browser, "value"),
+            (Kind::Table, "value"),
         ] {
             for blur in [false, true] {
                 let mut f = SliderFixture::new(kind);

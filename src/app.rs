@@ -10,6 +10,9 @@ mod library_drag;
 mod previews;
 mod properties;
 mod recovery;
+#[cfg(test)]
+mod shortcut_tests;
+mod shortcuts;
 
 use eframe::egui::{
     self, Align2, Color32, FontId, Key, Modifiers, Pos2, Rect, Sense, Stroke, StrokeKind, Vec2,
@@ -363,132 +366,6 @@ impl WireframeApp {
                     self.error = Some("Clipboard contains invalid controls".into());
                 }
             }
-        }
-    }
-    fn shortcuts(&mut self, ctx: &egui::Context) {
-        // A held library control is transient. Escape must not leave a group or
-        // clear the existing selection, and shortcuts must not edit underneath it.
-        if self.library_drag.is_some() || self.library_press.is_some() {
-            if ctx.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape)) {
-                self.library_drag = None;
-                self.library_press = None;
-            }
-            return;
-        }
-        if self.pending.is_some()
-            || self.text_edit.is_some()
-            || self.recovery_offer.is_some()
-            || self.image_crop.is_some()
-        {
-            return;
-        }
-        let take = |m, k| ctx.input_mut(|i| i.consume_key(m, k));
-        if self.present {
-            if take(Modifiers::NONE, Key::Escape) {
-                self.present = false;
-            }
-            return;
-        }
-        if take(Modifiers::COMMAND, Key::S) {
-            self.save(false);
-        }
-        if take(Modifiers::COMMAND, Key::O) {
-            self.open(ctx);
-        }
-        if take(Modifiers::COMMAND, Key::N) {
-            self.request(Pending::New, ctx);
-        }
-        if take(Modifiers::COMMAND | Modifiers::SHIFT, Key::N) {
-            self.editor.add_page();
-        }
-        if take(Modifiers::COMMAND, Key::J) {
-            self.show_navigator = !self.show_navigator;
-        }
-        if take(Modifiers::COMMAND, Key::L) {
-            self.show_library = !self.show_library;
-        }
-        if take(Modifiers::COMMAND, Key::Semicolon) {
-            self.show_inspector = !self.show_inspector;
-        }
-        if take(Modifiers::COMMAND, Key::Num0) {
-            self.fit();
-        }
-        if take(Modifiers::COMMAND, Key::Num1) {
-            self.zoom = 1.;
-        }
-        if take(Modifiers::COMMAND | Modifiers::SHIFT, Key::F) {
-            self.editor.commit();
-            self.presentation_history.clear();
-            self.present = true;
-        }
-        if wireframe::text_entry::is_focused(ctx) || ctx.text_edit_focused() || ctx.any_popup_open()
-        {
-            return;
-        }
-        if take(Modifiers::NONE, Key::Slash) || take(Modifiers::NONE, Key::Plus) {
-            self.quick_focus = true;
-        }
-        if take(Modifiers::COMMAND | Modifiers::SHIFT, Key::Z) || take(Modifiers::COMMAND, Key::Y) {
-            self.editor.redo();
-        } else if take(Modifiers::COMMAND, Key::Z) {
-            self.editor.undo();
-        }
-        if take(Modifiers::COMMAND, Key::A) {
-            self.editor.select_all();
-        }
-        if take(Modifiers::COMMAND, Key::D) {
-            self.editor.duplicate();
-        }
-        if take(Modifiers::COMMAND | Modifiers::SHIFT, Key::G) {
-            self.editor.ungroup();
-        } else if take(Modifiers::COMMAND, Key::G) {
-            self.editor.group();
-        }
-        if take(Modifiers::NONE, Key::Delete) || take(Modifiers::NONE, Key::Backspace) {
-            self.editor.delete();
-        }
-        for (k, dx, dy) in [
-            (Key::ArrowLeft, -1., 0.),
-            (Key::ArrowRight, 1., 0.),
-            (Key::ArrowUp, 0., -1.),
-            (Key::ArrowDown, 0., 1.),
-        ] {
-            if take(Modifiers::SHIFT, k) {
-                self.editor.move_by(dx * 10., dy * 10.);
-            } else if take(Modifiers::NONE, k) {
-                self.editor.move_by(dx, dy);
-            }
-        }
-        for event in ctx.input(|i| i.events.clone()) {
-            match event {
-                egui::Event::Copy => self.copy(ctx),
-                egui::Event::Cut => {
-                    self.copy(ctx);
-                    self.editor.delete();
-                }
-                egui::Event::Paste(s) => self.pasted(&s),
-                _ => {}
-            }
-        }
-        if take(Modifiers::NONE, Key::Escape) {
-            self.present = false;
-            self.editor.cancel();
-            self.drag = None;
-            self.alignment_guides.clear();
-            if !self.editor.leave() {
-                self.editor.selection.clear();
-            }
-        }
-        if take(Modifiers::NONE, Key::Enter)
-            && let Some(c) = self.editor.selected_views().first()
-            && !self.editor.enter(c.id)
-            && c.group.is_none()
-            && !matches!(
-                c.kind,
-                Kind::VolumeSlider | Kind::Playback | Kind::Webcam | Kind::Video
-            )
-        {
-            self.text_edit = Some((c.id, c.text.clone()));
         }
     }
     fn navigate_page(&mut self, id: Id) {

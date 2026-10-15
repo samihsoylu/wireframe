@@ -8,11 +8,21 @@ Work directly as Engineer. Preserve user files and explicit deferrals. Use synth
 
 ## Current checkpoint — 2026-10-15
 
+Document keyboard commands now run once per event in input order. This fixes Undo→Save writing the previous state and repeated Undo presses collapsing within a frame. Save→Undo retains its intentionally earlier saved snapshot and marks the editor dirty. Modal/text/library-drag boundaries remain intact, and Command/Ctrl+Shift+N now adds a page before the less-specific New Project shortcut can consume it. See docs/KEYBOARD-COMMANDS.md.
+
+All 44 app tests pass, including seven new tests using real temporary files. Two regressions failed before the fix; the reversed Save/Undo case already passed. Existing text-local Undo, Quick Add, library preview and canvas interaction coverage passes. Final all-target Clippy, formatting and diff checks pass. The unchanged library/rendering tests retain the previous 390-test run; no full-suite rerun is claimed for this app-only change. Native macOS confirms rapid Undo/Save, Redo/Save, reversed Save/Undo, repeated Undo, New Page and full process restart/resave. Native saved documents match their expected states, with restart resave byte-identical. Self-review only.
+
+Bundle UUID DC08EB93-9E74-3BDB-BC4E-F940F65189CF; signature and canonical identity verify. The app runs the saved Command history fixture in Clean style at 100%, one control/no selection, Library hidden. No build/test sessions remain. This closes the observed document-command ordering finding. It does not claim comprehensive ordering of pending text-widget edits and global commands.
+
+Implemented families remain 61, with 25 remaining. Continue targeted research before the next family. Exact artwork/fonts, broader minimum/group resizing, native component editing, nested clipping/snapping, clocks, held-library-drag onset/cadence/autoscroll, native Windows/Linux, recovery and release acceptance remain open. The overall goal is active.
+
+Previous Video checkpoint:
+
 Video is implemented through the shared catalog, library, canvas and PNG/SVG renderer, bringing the implemented library to 61 families with 25 remaining. Original artwork uses style-specific fixed edge regions, proportional compression and collapsed-center overlaps. New controls start at 300 × 200; independent size edits enforce a 10-unit minimum while smaller saved dimensions survive selection. Video exposes no text, value, media source or page-link controls. See docs/VIDEO.md and examples/render_video.rs.
 
 All 390 tests pass, including six Video tests and expanded pointer, tiny-selection and keyboard interaction cases. The final 37 app tests also pass after correcting the typed-inspector route found during native inspection. Final all-target Clippy, formatting and diff checks pass. External comparison matches 728 cases, 728 frames/backgrounds, 6,188 region boxes and 1,456 palette checks within 0.001 units. Native macOS verifies Quick Add, default sizes, independent resizing, minimums and Undo/Redo; the final bundle verifies the corrected inspector, no Enter text dialog, one-unit width/height selection, full-process restart/resave and four byte-identical native/shared-renderer PNG/SVG exports. The gallery resaves identically after its style is restored. Exact contours remain different; these checks do not prove exact visual identity. Self-review only.
 
-The signed development bundle has UUID D067D21D-8A45-387E-8699-49AE8E8A22D8; canonical executable identity verifies. It runs the saved Video layouts gallery in Clean style at 50%, 22 controls/no selection, Library hidden. Build/test processes have finished. Next audit rapid command ordering: sending Undo and Save immediately together once saved the pre-Undo style while the UI showed the restored style; another Save after observing the UI preserved exact expected bytes. The cause is not traced. Keep this alongside broader editing/recovery acceptance rather than claiming the issue resolved.
+The signed development bundle has UUID D067D21D-8A45-387E-8699-49AE8E8A22D8; canonical executable identity verifies. It runs the saved Video layouts gallery in Clean style at 50%, 22 controls/no selection, Library hidden. Build/test processes have finished. The rapid document-command ordering finding from this checkpoint is resolved above.
 
 Exact artwork/fonts, broader minimum/group resizing, native components, nested clipping/snapping, clocks, held-library-drag onset/cadence/autoscroll, Windows/Linux and release acceptance remain open. The overall goal stays active.
 

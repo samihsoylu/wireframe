@@ -8,6 +8,16 @@ Work directly as Engineer. Preserve user files and explicit deferrals. Use synth
 
 ## Current checkpoint — 2026-10-15
 
+The original revision-aware save coordinator is implemented as a library component. It separates current, locally durable and named-file revisions, schedules five-second automatic saves, retains immutable in-flight revisions, retries once after one second and waits for explicit flush targets. Session-bound tickets reject foreign or stale completions. A future debounce for a newer edit survives failure of an older write; expired work does not start an unlimited retry cycle. See docs/SAVE-COORDINATOR.md.
+
+The initial full suite passed 474 tests. A subsequently added retry-edge regression reproduced a missing-deadline bug; the correction passes all 16 coordinator tests and both real-disk integration tests, representing 476 current tests across runs. The disk checks verify immutable snapshots across overlapping saves and preservation/retry when the named destination is obstructed. All-target Clippy, formatting and diff checks pass. Self-review only; no crash, power-loss or native automatic-save claim.
+
+This component is not yet wired into the desktop UI. The running signed bundle remains the preceding recovery build, UUID 6855AA2A-31F4-30C9-9D1B-461EB55154A8, and is not represented as running this source change. No packaging refresh was needed for the unwired library checkpoint. Next integrate durable per-project working copies, immutable snapshot retention, persisted automatic/manual settings, external-change protection, fallback and UI save status. Preserve local edits on manual application quit; window close has a separate decision flow. Verify recovery migration and restart before enabling background named-file writes.
+
+The full goal remains active. Held native library-drag cadence/autoscroll, broad shared editing fidelity, PDF/export options, native Windows/Linux and release acceptance remain open. The 86-entry catalog is not overall completion.
+
+Previous recovery checkpoint:
+
 Unreadable recovery preservation is accepted. Startup now discloses a failed load and preserves the unreadable original under a unique sibling name before new checkpoints use the normal path. If preservation fails, the original remains unchanged and automatic recovery is disabled for that session with a manual-save notice. Missing snapshots are normal; the exclusive lock remains in force. See docs/RECOVERY.md.
 
 All 458 tests pass, including 53 app tests and seven recovery tests. The new regression initially failed on silent startup handling, then passed after the correction. Final all-target Clippy, formatting, diff, signature and canonical executable checks pass. Native macOS confirms original-byte preservation, a separate new checkpoint, quit/restart/Restore and byte-identical manual save. The active checkpoint clears after Save; the generated unreadable test file was retained outside application support after verification. Failed preservation and repeated archives have automated coverage. No file repair, power-loss or native Windows/Linux claim; self-review only.

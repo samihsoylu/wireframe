@@ -19,6 +19,7 @@ pub mod menu;
 pub mod model;
 pub mod navigation;
 pub mod rich_text;
+pub mod save_coordinator;
 pub mod scene;
 pub mod small_forms;
 pub mod snapping;

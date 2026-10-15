@@ -60,23 +60,60 @@ impl WireframeApp {
                     .unwrap_or(Vec2::ZERO);
             }
         }
-        if response.drag_started_by(egui::PointerButton::Primary)
-            && self.library_press.is_some_and(|(source, _)| source == kind)
-        {
-            self.library_drag = Some(kind);
-        }
     }
 
     // Resolve after viewport layout and before painting, so release has no
     // empty frame between the transient preview and the committed control.
     pub(super) fn library_drag_update(&mut self, ctx: &egui::Context) {
-        let (focused, escape, held, released, pointer) = ctx.input(|i| {
+        let (focused, escape, held, released, pointer, crossed_threshold) = ctx.input(|i| {
+            // Consider only motion belonging to this press, ending at its release.
+            // The GUI framework also starts drags after a stationary long hold.
+            let first = i
+                .events
+                .iter()
+                .rposition(|e| {
+                    matches!(
+                        e,
+                        egui::Event::PointerButton {
+                            button: egui::PointerButton::Primary,
+                            pressed: true,
+                            ..
+                        }
+                    )
+                })
+                .map_or(0, |n| n + 1);
+            let release = i.events[first..]
+                .iter()
+                .position(|e| {
+                    matches!(
+                        e,
+                        egui::Event::PointerButton {
+                            button: egui::PointerButton::Primary,
+                            pressed: false,
+                            ..
+                        }
+                    )
+                })
+                .map(|n| first + n);
+            let pointer = release
+                .and_then(|n| match i.events[n] {
+                    egui::Event::PointerButton { pos, .. } => Some(pos),
+                    _ => None,
+                })
+                .or_else(|| i.pointer.latest_pos());
+            let crossed_threshold = self.library_press.is_some_and(|(_, start)| {
+                pointer.is_some_and(|pos| pos.distance(start) > 6.)
+                    || i.events[first..release.unwrap_or(i.events.len())].iter().any(|e| {
+                        matches!(e, egui::Event::PointerMoved(pos) if pos.distance(start) > 6.)
+                    })
+            });
             (
                 i.focused,
                 i.key_pressed(Key::Escape),
                 i.pointer.primary_down(),
                 i.pointer.button_released(egui::PointerButton::Primary),
-                i.pointer.latest_pos(),
+                pointer,
+                crossed_threshold,
             )
         });
         if !focused
@@ -93,14 +130,14 @@ impl WireframeApp {
             self.library_press = None;
             return;
         }
+        if (held || released)
+            && crossed_threshold
+            && self.library_drag.is_none()
+            && let Some((kind, _)) = self.library_press
+        {
+            self.library_drag = Some(kind);
+        }
         if released || !held {
-            if released
-                && self.library_drag.is_none()
-                && let Some((kind, start)) = self.library_press
-                && pointer.is_some_and(|pos| pos.distance(start) > 6.)
-            {
-                self.library_drag = Some(kind);
-            }
             self.library_press = None;
             let Some(kind) = self.library_drag.take() else {
                 return;
@@ -158,6 +195,15 @@ mod tests {
         events: Vec<egui::Event>,
         focused: bool,
     ) -> (Rect, Rect) {
+        frame_at(ctx, app, events, focused, None)
+    }
+    fn frame_at(
+        ctx: &egui::Context,
+        app: &mut WireframeApp,
+        events: Vec<egui::Event>,
+        focused: bool,
+        time: Option<f64>,
+    ) -> (Rect, Rect) {
         let mut source = Rect::NOTHING;
         let mut preview = Rect::NOTHING;
         let mut output = ctx.run_ui(
@@ -165,6 +211,7 @@ mod tests {
                 screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(1000., 700.))),
                 focused,
                 events,
+                time,
                 ..Default::default()
             },
             |ui| {
@@ -205,6 +252,90 @@ mod tests {
             true,
         );
         start
+    }
+    #[test]
+    fn holding_library_tile_still_does_not_start_drag_but_later_motion_does() {
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        let before = app.editor.document.clone();
+        let start = begin(&ctx, &mut app);
+        let (_, bounds) = frame_at(&ctx, &mut app, vec![], true, Some(2.));
+        assert!(
+            app.library_drag.is_none(),
+            "elapsed time alone must not start a drag"
+        );
+        assert!(!bounds.is_positive());
+        let (_, bounds) = frame_at(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(start + Vec2::new(6., 0.))],
+            true,
+            Some(2.1),
+        );
+        assert!(
+            app.library_drag.is_none(),
+            "movement at the threshold stays pending"
+        );
+        assert!(!bounds.is_positive());
+        let (_, bounds) = frame_at(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(start + Vec2::new(7., 0.))],
+            true,
+            Some(2.2),
+        );
+        assert_eq!(app.library_drag, Some(Kind::CircleButton));
+        assert!(bounds.is_positive());
+        assert_eq!(app.editor.document, before);
+        let target = app.canvas_rect.center();
+        frame_at(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(target), pointer(target, false)],
+            true,
+            Some(2.3),
+        );
+        assert_eq!(app.editor.current().controls.len(), 1);
+        app.editor.undo();
+        assert_eq!(app.editor.document, before);
+    }
+    #[test]
+    fn library_motion_uses_press_to_release_path_and_ignores_later_hover() {
+        for excursion in [false, true] {
+            let ctx = egui::Context::default();
+            let mut app = WireframeApp::workspace(&ctx, None);
+            frame(&ctx, &mut app, vec![], true);
+            let (source, _) = frame(&ctx, &mut app, vec![], true);
+            let start = source.min + Vec2::new(34., 23.);
+            let mut events = vec![
+                egui::Event::PointerMoved(Pos2::new(900., 600.)),
+                egui::Event::PointerMoved(start),
+                pointer(start, true),
+            ];
+            if excursion {
+                events.push(egui::Event::PointerMoved(start + Vec2::new(8., 0.)));
+                events.push(egui::Event::PointerMoved(start));
+            }
+            frame(&ctx, &mut app, events, true);
+            assert_eq!(app.library_drag.is_some(), excursion);
+            let target = app.canvas_rect.center();
+            let expected = app.world(target - Vec2::splat(24.));
+            frame(
+                &ctx,
+                &mut app,
+                vec![
+                    egui::Event::PointerMoved(target),
+                    pointer(target, false),
+                    egui::Event::PointerMoved(Pos2::new(-100., -100.)),
+                ],
+                true,
+            );
+            assert_eq!(app.editor.current().controls.len(), 1);
+            let b = app.editor.current().controls[0].bounds;
+            assert_eq!((b.x, b.y), (expected.x, expected.y));
+            app.editor.undo();
+            assert!(app.editor.current().controls.is_empty());
+        }
     }
     #[test]
     fn held_preview_follows_pointer_without_editing_then_drops_once_at_zoomed_position() {

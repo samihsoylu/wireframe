@@ -141,6 +141,10 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
         | Kind::Webcam
         | Kind::Video
         | Kind::CoverFlow
+        | Kind::ColumnChart
+        | Kind::BarChart
+        | Kind::LineChart
+        | Kind::PieChart
         | Kind::Callout
         | Kind::StickyNote
         | Kind::Tooltip

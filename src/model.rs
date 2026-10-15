@@ -142,6 +142,10 @@ pub enum Kind {
     Webcam,
     Video,
     CoverFlow,
+    ColumnChart,
+    BarChart,
+    LineChart,
+    PieChart,
     Callout,
     StickyNote,
     Tooltip,
@@ -156,7 +160,7 @@ pub enum Kind {
     Link,
 }
 impl Kind {
-    pub const ALL: [Kind; 65] = [
+    pub const ALL: [Kind; 69] = [
         Self::Button,
         Self::Label,
         Self::Heading,
@@ -210,6 +214,10 @@ impl Kind {
         Self::Webcam,
         Self::Video,
         Self::CoverFlow,
+        Self::ColumnChart,
+        Self::BarChart,
+        Self::LineChart,
+        Self::PieChart,
         Self::Callout,
         Self::StickyNote,
         Self::Tooltip,
@@ -278,6 +286,10 @@ impl Kind {
             Self::Webcam => "Webcam",
             Self::Video => "Video player",
             Self::CoverFlow => "Cover flow",
+            Self::ColumnChart => "Column chart",
+            Self::BarChart => "Bar chart",
+            Self::LineChart => "Line chart",
+            Self::PieChart => "Pie chart",
             Self::Callout => "Callout",
             Self::StickyNote => "Sticky note",
             Self::Tooltip => "Tooltip",
@@ -295,6 +307,7 @@ impl Kind {
     pub fn category(self) -> &'static str {
         match self {
             Self::Callout | Self::StickyNote | Self::Tooltip => "Markup",
+            Self::ColumnChart | Self::BarChart | Self::LineChart | Self::PieChart => "Charts",
             Self::Label
             | Self::Heading
             | Self::Paragraph
@@ -374,6 +387,8 @@ impl Kind {
             Self::Webcam => (177., 146.),
             Self::Video => (300., 200.),
             Self::CoverFlow => (493., 198.),
+            Self::ColumnChart | Self::BarChart | Self::LineChart => (187., 175.),
+            Self::PieChart => (180., 180.),
             Self::Callout => (39., 39.),
             Self::StickyNote => (109., 123.),
             Self::Tooltip => (87., 33.),
@@ -386,6 +401,20 @@ impl Kind {
             Self::Toggle => (54., 28.),
             _ => (180., 120.),
         }
+    }
+    pub fn text_editable(self) -> bool {
+        !matches!(
+            self,
+            Self::VolumeSlider
+                | Self::Playback
+                | Self::Webcam
+                | Self::Video
+                | Self::CoverFlow
+                | Self::ColumnChart
+                | Self::BarChart
+                | Self::LineChart
+                | Self::PieChart
+        )
     }
     pub fn initial_text(self) -> &'static str {
         match self {

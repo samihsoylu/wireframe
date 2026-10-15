@@ -376,9 +376,19 @@ impl<M: TextMeasurer> Engine<'_, M> {
         }
         if matches!(
             kind,
-            "calendar" | "date_picker" | "time_picker" | "webcam" | "video"
+            "calendar"
+                | "date_picker"
+                | "time_picker"
+                | "webcam"
+                | "video"
+                | "column_chart"
+                | "bar_chart"
+                | "line_chart"
+                | "pie_chart"
         ) {
-            let default = if kind == "video" {
+            let default = if let Some(f) = crate::charts::Family::for_id(kind) {
+                f.default_size()
+            } else if kind == "video" {
                 (300., 200.)
             } else if kind == "webcam" {
                 (177., 146.)

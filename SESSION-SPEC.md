@@ -8,6 +8,16 @@ Work directly as Engineer. Preserve user files and explicit deferrals. Use synth
 
 ## Current checkpoint — 2026-10-15
 
+Column, bar, line and pie charts now use the Charts library, Quick Add, typed inspector and shared canvas/PNG/SVG renderer. The available library has 69 entries, with 17 remaining. Charts have static sample graphics, independent dimensions, a ten-unit editing minimum and no text or data editor. Smaller saved geometry remains intact. See docs/CHARTS.md.
+
+All 421 tests pass, including seven chart tests and 47 app tests. Final all-target Clippy, formatting and diff checks pass. Correcting an ineffective keyboard-test harness first reproduced the chart Enter-editing defect; one shared editing rule now covers keyboard, double-click and context-menu entry. Controlled geometry comparison matches 1,224 cases within 0.000021 units, and 120 sampled interior colors match exactly. Full-image comparison retains differences in original contours and antialiasing; this is not exact visual identity.
+
+Native macOS verifies all four insertions, default dimensions, minimums, Undo and no Enter text editor. Full-process restart/reopen/resave preserves the four-chart project byte-for-byte. The 24-control gallery also resaves identically after its style is restored. Four native PNG/SVG exports match generated renders byte-for-byte. Automated checks cover component-local dimensions, history, storage, clipping and tiny loaded selection. Self-review only; native component editing and Windows/Linux were not performed.
+
+Signed development bundle UUID B67FEB7A-2132-387D-9CD3-2F2752AE599A; signature and canonical executable identity verify. The app runs the saved Charts gallery in Clean style at 36% fit, 24 controls/no selection, Library hidden. No build/test sessions remain. Continue targeted investigation before implementing remaining controls. Exact contours, typography, legacy shape/rule coverage, held-library-drag cadence/autoscroll, broader group/component/clipping/snapping/clock behavior, native Windows/Linux, recovery and release acceptance remain open. The whole goal remains active.
+
+Previous annotation checkpoint:
+
 Callouts, sticky notes and tooltips now use the shared library, inspector, canvas and PNG/SVG renderer. This brings the implemented library to 65 families, with 21 remaining. The controls cover automatic/fixed sizing, fill contrast/opacity, note alignment, four tooltip pointers, rich text/links and page-name expansion. Original artwork is independently implemented. See docs/ANNOTATIONS.md.
 
 A full run passed 413 tests; the final nine annotation tests and 47 app tests pass after the tape-rounding, narrow-text and readable-pointer-caption corrections (414 current tests across runs). Final all-target Clippy, formatting and diff checks pass. Numeric comparison matches all 1,248 cases exactly for the scoped layout/contrast contract. Native macOS confirms insertion, text edits, dimensions, both-axis minimums, Auto-size, alignment/pointers, Undo/Redo, both styles and full-process restart with byte-identical resave. Four native PNG/SVG exports match the shared renderer byte-for-byte; the 27-control gallery also resaves identically. Component-local edits and tiny loaded geometry have automated coverage. Self-review only.

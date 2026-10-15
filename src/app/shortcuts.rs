@@ -105,14 +105,7 @@ impl WireframeApp {
                 if let Some(c) = self.editor.selected_views().first()
                     && !self.editor.enter(c.id)
                     && c.group.is_none()
-                    && !matches!(
-                        c.kind,
-                        Kind::VolumeSlider
-                            | Kind::Playback
-                            | Kind::Webcam
-                            | Kind::Video
-                            | Kind::CoverFlow
-                    )
+                    && c.kind.text_editable()
                 {
                     self.text_edit = Some((c.id, c.text.clone()));
                 }

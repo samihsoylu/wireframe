@@ -312,6 +312,10 @@ impl Editor {
                     | Kind::Webcam
                     | Kind::Video
                     | Kind::CoverFlow
+                    | Kind::ColumnChart
+                    | Kind::BarChart
+                    | Kind::LineChart
+                    | Kind::PieChart
                     | Kind::Callout
                     | Kind::StickyNote
                     | Kind::Tooltip
@@ -370,6 +374,10 @@ impl Editor {
                     Kind::Webcam => "webcam",
                     Kind::Video => "video",
                     Kind::CoverFlow => "cover_flow",
+                    Kind::ColumnChart => "column_chart",
+                    Kind::BarChart => "bar_chart",
+                    Kind::LineChart => "line_chart",
+                    Kind::PieChart => "pie_chart",
                     Kind::Callout => "callout",
                     Kind::StickyNote => "sticky_note",
                     Kind::Tooltip => "tooltip",

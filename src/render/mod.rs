@@ -7,6 +7,7 @@ mod annotations;
 mod app_bar;
 mod browser;
 mod button_bar;
+mod charts;
 mod choice;
 mod choice_group;
 mod circle_button;
@@ -383,6 +384,10 @@ impl Scene {
         }
         if matches!(c.kind, Kind::Callout | Kind::StickyNote | Kind::Tooltip) {
             return self.annotation(layer, sketch, fonts);
+        }
+        if let Some(family) = crate::charts::Family::for_kind(c.kind) {
+            self.chart(layer, family, sketch);
+            return Ok(());
         }
         if c.kind == Kind::CoverFlow {
             self.cover_flow(layer, sketch, rasters);

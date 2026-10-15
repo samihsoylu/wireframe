@@ -58,3 +58,5 @@ pub mod cover_flow;
 pub mod video;
 
 pub mod annotations;
+
+pub mod charts;

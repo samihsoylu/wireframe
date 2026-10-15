@@ -4,7 +4,7 @@ A local desktop workspace for turning rough ideas into clear wireframes. Built i
 
 ## Features
 
-- 65 controls for forms, text, shapes, navigation, devices, media and layout.
+- 69 controls for forms, text, shapes, navigation, devices, media, charts and layout.
 - Pages, notes, searchable library and layers.
 - Move, resize, align, nest groups, duplicate and lock controls.
 - Text-defined menus and menu bars with shortcuts, selection, row links and optional bar icons.
@@ -22,8 +22,9 @@ A local desktop workspace for turning rough ideas into clear wireframes. Built i
 - Embedded PNG/JPEG/GIF images, shared sources and replacement with Undo.
 - Canvas image cropping and quarter-turn rotation, including local component edits.
 - Image carousels with embedded images, quarter-turn rotation, sketch filtering and an optional scroll indicator.
-
 - Callouts, sticky notes and tooltips with rich text, inline links and configurable pointers.
+
+- Static column, bar, line and pie charts with independent resizing and shared canvas/export rendering.
 
 ## Run from source
 

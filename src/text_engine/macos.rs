@@ -109,6 +109,7 @@ pub(super) fn shape(bytes: &[u8], text: &str, size: f64) -> Result<ShapedText, S
         );
     }
     let line = CTLine::new_with_attributed_string(attributed.as_concrete_TypeRef());
+    let mut sources = super::font_source::Sources::new(font.clone(), bytes);
     let width = line.get_typographic_bounds().width;
     if !width.is_finite() || width < 0. {
         return Err("Invalid text advance".into());
@@ -208,6 +209,7 @@ pub(super) fn shape(bytes: &[u8], text: &str, size: f64) -> Result<ShapedText, S
         runs.push(Run {
             source,
             font_name,
+            font_source: sources.get(&font, &glyphs),
             font_size: font.pt_size(),
             right_to_left,
             glyphs,

@@ -10,6 +10,8 @@ mod cache;
 mod raster;
 pub use raster::{Raster, paint};
 #[cfg(target_os = "macos")]
+mod font_source;
+#[cfg(target_os = "macos")]
 mod macos;
 pub use cache::shape_cached;
 use std::{ops::Range, sync::Arc};
@@ -37,9 +39,86 @@ pub struct Glyph {
 pub struct Run {
     pub source: Range<usize>,
     pub font_name: String,
+    /// Exact face behind these glyph IDs. Never substitute the primary face.
+    pub font_source: FontSource,
     pub font_size: f64,
     pub right_to_left: bool,
     pub glyphs: Vec<Glyph>,
+}
+#[derive(Clone, Debug)]
+pub enum FontSource {
+    Embedded(Arc<FontFace>),
+    /// Preserve the already shaped ink when a portable face is unavailable.
+    InkOnly(String),
+}
+#[derive(Debug)]
+pub struct FontFace {
+    pub(crate) data: FontData,
+    /// Native collection members are materialized as standalone faces at index 0.
+    pub index: u32,
+    /// OpenType axis tags and design-space coordinates, not normalized values.
+    pub variations: Vec<([u8; 4], f32)>,
+}
+/// Font tables are retained during shaping, but serialization is deferred until
+/// an exporter requests bytes. Canvas editing never computes whole-font checksums.
+// Only the macOS adapter constructs positioned font sources at present.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+#[derive(Debug)]
+pub(crate) enum FontData {
+    Bytes(Arc<[u8]>),
+    #[cfg(target_os = "macos")]
+    Tables {
+        tables: Vec<(u32, Vec<u8>)>,
+        size: usize,
+        packed: std::sync::OnceLock<Result<Arc<[u8]>, String>>,
+    },
+}
+impl FontFace {
+    pub fn data(&self) -> Result<&[u8], &str> {
+        match &self.data {
+            FontData::Bytes(bytes) => Ok(bytes),
+            #[cfg(target_os = "macos")]
+            FontData::Tables {
+                tables,
+                size,
+                packed,
+            } => packed
+                .get_or_init(|| {
+                    let bytes = font_source::pack(tables.clone(), *size)?;
+                    skrifa::FontRef::new(&bytes)
+                        .map_err(|_| "Invalid detached font face".to_string())?;
+                    Ok(Arc::from(bytes))
+                })
+                .as_deref()
+                .map_err(String::as_str),
+        }
+    }
+    fn storage_bytes(&self) -> usize {
+        match &self.data {
+            FontData::Bytes(bytes) => bytes.len(),
+            #[cfg(target_os = "macos")]
+            // Reserve both the retained tables and eventual serialized copy so
+            // lazy export cannot grow a cache beyond its accounted byte budget.
+            FontData::Tables { size, tables, .. } => {
+                size + tables
+                    .iter()
+                    .map(|(_, data)| std::mem::size_of::<(u32, Vec<u8>)>() + data.len())
+                    .sum::<usize>()
+            }
+        }
+    }
+}
+impl FontSource {
+    fn storage_bytes(&self) -> usize {
+        match self {
+            Self::Embedded(face) => {
+                std::mem::size_of::<FontFace>()
+                    + face.storage_bytes()
+                    + face.variations.len() * std::mem::size_of::<([u8; 4], f32)>()
+            }
+            Self::InkOnly(reason) => reason.len(),
+        }
+    }
 }
 #[derive(Clone, Debug)]
 pub struct ShapedText {
@@ -58,6 +137,7 @@ impl ShapedText {
                 .map(|run| {
                     std::mem::size_of::<Run>()
                         + run.font_name.len()
+                        + run.font_source.storage_bytes()
                         + run
                             .glyphs
                             .iter()

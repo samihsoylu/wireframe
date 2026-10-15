@@ -111,6 +111,72 @@ fn positioned_ink_exports_without_fonts_or_a_second_text_shaper() {
 
 #[cfg(target_os = "macos")]
 #[test]
+fn shaped_runs_retain_primary_and_actual_fallback_faces() {
+    use text_engine::FontSource;
+    let source = "Office e\u{301} שלום مرحبا 你好 👩‍💻";
+    let shaped = text_engine::shape(fonts::REGULAR, source, 24.).unwrap();
+    let mut primary = 0;
+    let mut fallback = 0;
+    let mut bitmap = 0;
+    for run in &shaped.runs {
+        match &run.font_source {
+            FontSource::Embedded(face) => {
+                let parsed = skrifa::FontRef::from_index(face.data().unwrap(), face.index).unwrap();
+                use skrifa::MetadataProvider;
+                let count = parsed
+                    .metrics(
+                        skrifa::instance::Size::unscaled(),
+                        skrifa::instance::LocationRef::default(),
+                    )
+                    .glyph_count;
+                assert!(run.glyphs.iter().all(|g| g.id < count));
+                if run.font_name == "ComicNeue-Regular" {
+                    primary += 1;
+                    assert_eq!(face.data().unwrap(), fonts::REGULAR);
+                } else {
+                    fallback += 1;
+                    assert_ne!(face.data().unwrap(), fonts::REGULAR);
+                }
+                let native = core_text::font::new_from_buffer(face.data().unwrap()).unwrap();
+                assert_eq!(native.postscript_name(), run.font_name);
+            }
+            FontSource::InkOnly(reason) => {
+                assert!(
+                    run.glyphs
+                        .iter()
+                        .any(|g| matches!(&*g.ink, text_engine::Ink::Bitmap { .. })),
+                    "Unexpected unavailable vector face {}: {reason}",
+                    run.font_name
+                );
+                bitmap += 1;
+            }
+        }
+    }
+    assert!(primary > 0 && fallback >= 3 && bitmap > 0);
+    // Several labels must share a live fallback face, not each retain a full
+    // multi-megabyte copy of the same system font.
+    let second = text_engine::shape(fonts::REGULAR, "世界 שלום مرحبا", 24.).unwrap();
+    for run in &second.runs {
+        if run.font_name == "ComicNeue-Regular" {
+            continue;
+        }
+        let FontSource::Embedded(face) = &run.font_source else {
+            panic!("Expected vector face")
+        };
+        let first = shaped
+            .runs
+            .iter()
+            .find(|r| r.font_name == run.font_name)
+            .unwrap();
+        let FontSource::Embedded(original) = &first.font_source else {
+            panic!()
+        };
+        assert!(std::sync::Arc::ptr_eq(face, original));
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[test]
 fn positioned_text_cache_survives_reuse_but_invalidates_replaced_fonts() {
     use eframe::egui;
     use std::sync::Arc;

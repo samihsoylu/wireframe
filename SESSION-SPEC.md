@@ -8,15 +8,13 @@ Work directly as Engineer. Preserve user files and explicit deferrals. Use synth
 
 ## Current checkpoint — 2026-10-15
 
-Group and component crop editing is available through Crop selection. The full-content preview preserves descendant masks and paint order. Drag inside to move the frame, outside to move content behind a fixed frame, and use handles to resize. Apply records one Undo step; Cancel discards the preview. Remove crop expands from the visible top-left. Component-local removal and crop-only reset preserve source data and unrelated overrides. See docs/RECURSIVE-EDITOR.md.
+Reset crop to source now keeps a nested component group's visible top-left fixed. The editor restores the inherited mask and compensates the stored origin without resizing descendants or changing unrelated overrides, the definition or other instances. Reset is one Undo step. A strengthened regression first reproduced a 31.25×25 position shift; the correction and two additional tests cover moved targets, cropped/uncropped sources, descendant edits, storage/rendering round trips, no-op reset and locks.
 
-Native testing exposed a missed drag when press/move and move/release arrived in two frames. A regression reproduced the failure; the editor now retains the initial press immediately. The same gesture handling serves image cropping. Background rendering omits the target during preview, preventing a stale image at the original position.
+The full 546-test suite passes. All-target Clippy with warnings denied, formatting, diff checks and self-review pass. Native macOS verifies crop removal/reset at (205,160), movement to (225,160), reset to 90×60 without a corner shift, exact Undo/Redo document snapshots, unchanged definition/second instance, and byte-identical save after process restart. No independent review is claimed.
 
-Six group tests, five crop UI tests and all 76 app tests pass; affected image/component/ungroup checks also pass. The current inventory is 544 tests across runs, not a new full 544-test run. All-target Clippy with warnings denied, formatting, diff checks and self-review pass. Native macOS verifies frame movement, content movement, resize preview, cancellation, visible-position-preserving removal, Undo/Redo and byte-identical save after process restart. Component crop overrides are covered by tests; broader native combinations remain open. No independent review is claimed.
+Final signed development bundle UUID 32973B41-BB46-3133-8864-FF7FEE464068. Canonical executable identity and signature verify. The app runs the saved Component crop reset fixture, Sketch at 100%, Library hidden, editing the first instance with its nested group selected at (225,160,90,60). No background builds or tests remain. Completed history remains in Git and the specifications. The overall goal remains active.
 
-Final signed development bundle UUID B198B288-B58E-3ECE-8362-8BFA0E073C9E. Canonical executable identity and signature verify. The app runs the saved Crop editing fixture, Sketch at 100%, Library hidden, one group selected with visible rectangle (195,155,100,100). No background builds or tests remain. Completed history remains in Git and the specifications. The overall goal remains active.
-
-Library activation, full-size transient previews, save/decision gesture boundaries and cropped Ungroup remain in place. Native held smoothness, exact onset and library autoscroll still require stronger observation. Broader group/component crop, resize and lock combinations and export completion are next.
+Group crop preview/gestures, library activation, full-size transient insertion previews, save/decision gesture boundaries and cropped Ungroup remain in place. Native held smoothness, exact onset and library autoscroll still require stronger observation. Cropped resize and locked-descendant transformation combinations are the next targeted checks, followed by remaining export and platform acceptance.
 
 ## Existing capabilities and limits
 

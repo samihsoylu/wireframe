@@ -120,25 +120,7 @@ fn apply_moves_artwork_and_changes_mask_atomically_without_resizing_children() {
 }
 #[test]
 fn local_crop_clear_and_reset_preserve_source_and_unrelated_overrides() {
-    let mut p = fixture();
-    let group = p.pages[0].content.nodes.remove(0);
-    p.definitions.push(Definition {
-        id: 20,
-        name: "Card".into(),
-        content: Content {
-            nodes: vec![group],
-            paint_order: vec![],
-        },
-    });
-    let mut instance = Node::group(21, Point::new(30., 40.), vec![]);
-    instance.content = NodeContent::Instance {
-        definition: 20,
-        overrides: vec![],
-    };
-    p.pages[0].content = Content {
-        nodes: vec![instance],
-        paint_order: vec![],
-    };
+    let p = component_fixture();
     let mut e = Editor::new(p);
     let source = e.document.definitions.clone();
     e.crop_group(21, Some(region()), Point::default()).unwrap();
@@ -155,8 +137,7 @@ fn local_crop_clear_and_reset_preserve_source_and_unrelated_overrides() {
     };
     let patch = overrides.iter().find(|o| o.path == [2]).unwrap();
     assert_eq!(patch.patch.crop, Some(CropOverride::Clear));
-    let origin = patch.patch.origin;
-    assert!(origin.is_some());
+    assert!(patch.patch.origin.is_some());
     e.reset_local_crop(2).unwrap();
     assert!(!e.has_local_crop(2));
     assert_eq!(e.group_crop_geometry(2).unwrap().2, Some(region()));
@@ -164,7 +145,8 @@ fn local_crop_clear_and_reset_preserve_source_and_unrelated_overrides() {
     else {
         panic!()
     };
-    assert_eq!(overrides[0].patch.origin, origin);
+    assert_eq!(e.group_crop_geometry(2).unwrap().1, visible);
+    assert!(overrides.iter().all(|o| o.path != [2]));
     assert_eq!(e.document.definitions, source);
     e.undo();
     assert_eq!(e.group_crop_geometry(2).unwrap().2, None);
@@ -235,4 +217,96 @@ fn crop_background_omits_only_the_target_and_keeps_the_normal_scene_cache() {
     let background = e.crop_background(3).unwrap();
     assert_ne!(background.png().unwrap(), original);
     assert_eq!(e.rendered_scene(1).unwrap().png().unwrap(), original);
+}
+
+fn component_fixture() -> Project {
+    let mut p = fixture();
+    let group = p.pages[0].content.nodes.remove(0);
+    p.definitions.push(Definition {
+        id: 20,
+        name: "Card".into(),
+        content: Content {
+            nodes: vec![group],
+            paint_order: vec![],
+        },
+    });
+    let mut instance = Node::group(21, Point::new(30., 40.), vec![]);
+    instance.content = NodeContent::Instance {
+        definition: 20,
+        overrides: vec![],
+    };
+    p.pages[0].content = Content {
+        nodes: vec![instance],
+        paint_order: vec![],
+    };
+    p
+}
+
+#[test]
+fn crop_reset_preserves_moved_corner_other_patches_and_round_trips() {
+    for source_crop in [None, Some(region())] {
+        let mut p = component_fixture();
+        p.definitions[0].content.nodes[0].crop = source_crop;
+        let mut e = Editor::new(p);
+        e.enter(21);
+        e.crop_group(
+            2,
+            Some(Crop {
+                x: 0.1,
+                y: 0.1,
+                width: 0.8,
+                height: 0.8,
+            }),
+            Point::new(7., 9.),
+        )
+        .unwrap();
+        e.select(2, false);
+        e.move_by(20., 10.);
+        e.enter(2);
+        e.select(6, false);
+        e.move_by(3., 4.);
+        e.leave();
+        let source = e.document.definitions.clone();
+        let children = e.nodes()[0].content.clone();
+        let before = e.document.clone();
+        let (_, visible, _) = e.group_crop_geometry(2).unwrap();
+        e.reset_local_crop(2).unwrap();
+        let (_, reset, crop) = e.group_crop_geometry(2).unwrap();
+        assert!((reset.x - visible.x).abs() < 0.001);
+        assert!((reset.y - visible.y).abs() < 0.001);
+        assert_eq!(crop, source_crop);
+        assert!(!e.has_local_crop(2));
+        assert_eq!(e.nodes()[0].content, children);
+        assert_eq!(e.document.definitions, source);
+        let after = e.document.clone();
+        let png = e.rendered_scene(1).unwrap().png().unwrap();
+        assert_eq!(e.undo_name(), Some("Reset crop to source"));
+        e.undo();
+        assert_eq!(e.document, before);
+        e.redo();
+        assert_eq!(e.document, after);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("reset.wireframe");
+        ProjectStore.save(&path, &after).unwrap();
+        let reopened = Editor::new(ProjectStore.load(&path).unwrap());
+        assert_eq!(reopened.document, after);
+        assert_eq!(reopened.rendered_scene(1).unwrap().png().unwrap(), png);
+    }
+}
+
+#[test]
+fn crop_reset_without_override_is_noop_and_locked_targets_are_unchanged() {
+    let mut e = Editor::new(component_fixture());
+    e.enter(21);
+    let before = e.document.clone();
+    e.reset_local_crop(2).unwrap();
+    assert_eq!(e.document, before);
+    assert!(e.undo_name().is_none());
+    e.crop_group(2, None, Point::default()).unwrap();
+    e.document.definitions[0].content.nodes[0].locked = true;
+    let before = e.document.clone();
+    let history = e.undo_name().map(str::to_owned);
+    assert!(e.reset_local_crop(2).is_err());
+    assert_eq!(e.document, before);
+    assert_eq!(e.undo_name(), history.as_deref());
 }

@@ -209,9 +209,27 @@ impl Editor {
             if overrides.iter().any(|o| o.path == path && o.patch.crop.is_some()))
     }
     pub fn reset_local_crop(&mut self, id: Id) -> Result<(), String> {
-        let (root, path, _) = self.local_target(id)?;
+        let (root, path, inherited) = self.local_target(id)?;
+        if !self.has_local_crop(id) {
+            return Ok(());
+        }
+        let (_, visible, _) = self.group_crop_geometry(id)?;
         self.component_change("Reset crop to source", |e| {
-            e.change_patch(&root, &path, |p| p.crop = None)
+            e.change_patch(&root, &path, |p| p.crop = None)?;
+            let (_, restored, _) = e.group_crop_geometry(id)?;
+            let origin = e
+                .nodes()
+                .iter()
+                .find(|n| n.id == id)
+                .ok_or("Group no longer exists")?
+                .origin
+                .translated(Point::new(visible.x - restored.x, visible.y - restored.y));
+            // Crop changes alter the visible corner without changing child geometry.
+            e.change_patch(&root, &path, |p| {
+                p.origin = (origin != inherited.origin).then_some(origin);
+            })?;
+            e.layout_page(e.surface_id())?;
+            Ok(())
         })
     }
     pub fn reset_local_changes(&mut self, id: Id) -> Result<(), String> {

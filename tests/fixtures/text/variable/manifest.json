@@ -1,0 +1,179 @@
+{
+  "generator": "FontTools varLib and instancer 4.67.0",
+  "cases": [
+    {
+      "name": "default",
+      "pinned_axes": {},
+      "remaining_defaults": {
+        "wght": 400,
+        "wdth": 100,
+        "opsz": 14
+      },
+      "variable_tables": [
+        "GlyphOrder",
+        "HVAR",
+        "OS/2",
+        "STAT",
+        "cmap",
+        "fvar",
+        "glyf",
+        "gvar",
+        "head",
+        "hhea",
+        "hmtx",
+        "loca",
+        "maxp",
+        "name",
+        "post"
+      ],
+      "static_tables": [
+        "GlyphOrder",
+        "OS/2",
+        "STAT",
+        "cmap",
+        "glyf",
+        "head",
+        "hhea",
+        "hmtx",
+        "loca",
+        "maxp",
+        "name",
+        "post"
+      ]
+    },
+    {
+      "name": "heavy",
+      "pinned_axes": {
+        "wght": 700
+      },
+      "remaining_defaults": {
+        "wdth": 100,
+        "opsz": 14
+      },
+      "variable_tables": [
+        "GlyphOrder",
+        "HVAR",
+        "OS/2",
+        "STAT",
+        "cmap",
+        "fvar",
+        "glyf",
+        "gvar",
+        "head",
+        "hhea",
+        "hmtx",
+        "loca",
+        "maxp",
+        "name",
+        "post"
+      ],
+      "static_tables": [
+        "GlyphOrder",
+        "OS/2",
+        "STAT",
+        "cmap",
+        "glyf",
+        "head",
+        "hhea",
+        "hmtx",
+        "loca",
+        "maxp",
+        "name",
+        "post"
+      ]
+    },
+    {
+      "name": "condensed",
+      "pinned_axes": {
+        "wdth": 80
+      },
+      "remaining_defaults": {
+        "wght": 400,
+        "opsz": 14
+      },
+      "variable_tables": [
+        "GlyphOrder",
+        "HVAR",
+        "OS/2",
+        "STAT",
+        "cmap",
+        "fvar",
+        "glyf",
+        "gvar",
+        "head",
+        "hhea",
+        "hmtx",
+        "loca",
+        "maxp",
+        "name",
+        "post"
+      ],
+      "static_tables": [
+        "GlyphOrder",
+        "OS/2",
+        "STAT",
+        "cmap",
+        "glyf",
+        "head",
+        "hhea",
+        "hmtx",
+        "loca",
+        "maxp",
+        "name",
+        "post"
+      ]
+    },
+    {
+      "name": "display",
+      "pinned_axes": {
+        "opsz": 60
+      },
+      "remaining_defaults": {
+        "wght": 400,
+        "wdth": 100
+      },
+      "variable_tables": [
+        "GlyphOrder",
+        "HVAR",
+        "OS/2",
+        "STAT",
+        "cmap",
+        "fvar",
+        "glyf",
+        "gvar",
+        "head",
+        "hhea",
+        "hmtx",
+        "loca",
+        "maxp",
+        "name",
+        "post"
+      ],
+      "static_tables": [
+        "GlyphOrder",
+        "OS/2",
+        "STAT",
+        "cmap",
+        "glyf",
+        "head",
+        "hhea",
+        "hmtx",
+        "loca",
+        "maxp",
+        "name",
+        "post"
+      ]
+    }
+  ],
+  "sha256": {
+    "condensed-static.ttf": "eedfe6bd989fc97ad20c88416edfdabcbc065ef3e630097114736ab2b8c0489e",
+    "condensed-variable.ttf": "afd6f9c17a330226ea314d27787637371e5026b81e6adee9029c1a2c2f4623d9",
+    "default-static.ttf": "5ddb9a05e8894098640d6d9ab063982884e818da682dddfd016391ac4101816d",
+    "default-variable.ttf": "84504da00ba600f732ab58ae6b8a7b450e838f63c51a683d9b930fa5035af38f",
+    "display-static.ttf": "2931ff8502a1a2c8339b0d8170a05411ef4d81b660ef28ffc405625c0eae69e3",
+    "display-variable.ttf": "502a1b1ff07abfef91d11e3387a7193aa9598ceab301c9325a0cd0aa00775875",
+    "heavy-static.ttf": "9641b0b31938e95694f627a5ed602424e31cd4218876f73a7c2620efcd1d4b56",
+    "heavy-variable.ttf": "f3a9805dd65eef16ebcd046f73ec874aba4593813a9f55ef2605f35bcb113949",
+    "variable.ttf": "84504da00ba600f732ab58ae6b8a7b450e838f63c51a683d9b930fa5035af38f"
+  }
+}

@@ -14,7 +14,7 @@ Fonts are embedded in the `.wireframe` file as base64 data. Opening the project 
 
 The document holds an immutable validated resource, shared by history snapshots and cached scenes. Both the canvas parser and export parser validate each face on import or document decoding. Measurement and the desktop atlas use the same face assignments. SVG embeds the four faces with an internal family alias, and PNG registers those explicit roles independently of font metadata. This supports user-assigned roles even when a file's internal weight/style differs. The resource survives saving, recovery, reopening and undo/redo.
 
-Glyphs absent from the selected face use the existing bundled canvas fallback fonts. SVG viewers may use their own fallback fonts for missing glyphs; exact fallback, emoji, complex-script shaping and arbitrary-font parity are not yet accepted. Imported glyph coverage and the four selected styles are the portability scope of this feature. Native Windows/Linux verification remains pending.
+Glyphs absent from the selected face use the selected platform backend's installed fallback fonts. Positioned outlines and bitmap ink are retained in SVG/PNG, so those exports do not ask a viewer to select a fallback font again. Documents retain their four selected primary faces; system fallback availability can still differ across machines. See TEXT-BACKENDS.md for architecture and limits. Arbitrary-font parity and native Windows/Linux acceptance remain open.
 
 ## Rebuilding the bundled drawing font
 

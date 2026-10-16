@@ -4,3 +4,7 @@ fixtures/
 .DS_Store
 target/
 dist/
+
+!tests/fixtures/
+!tests/fixtures/text/
+!tests/fixtures/text/**

@@ -12,12 +12,13 @@ use krilla::{
     num::NormalizedF32,
     paint::Fill,
     surface::Surface,
-    tagging::{ContentTag, SpanTag},
+    tagging::{Artifact, ContentTag},
     text::{Font, GlyphId, KrillaGlyph, Tag},
 };
 use std::{collections::HashMap, sync::Arc};
 #[derive(Default)]
 pub(super) struct Fonts {
+    semantic: super::semantic::Fonts,
     // Retain the Arc alongside its pointer key so addresses cannot be reused.
     native: HashMap<usize, (Arc<FontFace>, Font)>,
     // Page snapshots retain their project fonts for the entire encode call.
@@ -25,6 +26,30 @@ pub(super) struct Fonts {
     legacy_options: HashMap<usize, resvg::usvg::Options<'static>>,
 }
 impl Fonts {
+    fn resolve(&mut self, source: &FontSource) -> Option<Font> {
+        if let FontSource::Embedded(face) = source {
+            let key = Arc::as_ptr(face) as usize;
+            if let Some((_, font)) = self.native.get(&key) {
+                Some(font.clone())
+            } else if let Ok(data) = face.data() {
+                let coords: Vec<_> = face
+                    .variations
+                    .iter()
+                    .map(|(t, v)| (Tag::new(t), *v))
+                    .collect();
+                let font = Font::new_variable(Arc::new(data.to_vec()).into(), face.index, &coords);
+                if let Some(font) = &font {
+                    self.native.insert(key, (face.clone(), font.clone()));
+                }
+                font
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
     pub(super) fn legacy(
         &mut self,
         surface: &mut Surface<'_>,
@@ -82,109 +107,142 @@ impl Fonts {
             ..Default::default()
         }));
         if let Some(shaped) = &g.positioned {
-            for run in &shaped.runs {
-                let embedded = if let FontSource::Embedded(face) = &run.font_source {
-                    let key = Arc::as_ptr(face) as usize;
-                    if let Some((_, font)) = self.native.get(&key) {
-                        Some(font.clone())
-                    } else if let Ok(data) = face.data() {
-                        let coords: Vec<_> = face
-                            .variations
-                            .iter()
-                            .map(|(t, v)| (Tag::new(t), *v))
-                            .collect();
-                        let font =
-                            Font::new_variable(Arc::new(data.to_vec()).into(), face.index, &coords);
-                        if let Some(font) = &font {
-                            self.native.insert(key, (face.clone(), font.clone()));
-                        }
-                        font
-                    } else {
-                        None
-                    }
-                } else {
-                    None
+            let resolved: Vec<_> = shaped
+                .runs
+                .iter()
+                .map(|run| self.resolve(&run.font_source))
+                .collect();
+            let clusters = super::semantic::clusters(
+                shaped,
+                &resolved.iter().map(Option::is_none).collect::<Vec<_>>(),
+            );
+            let mut pending = vec![];
+            let mut emitted = std::collections::HashSet::new();
+            for (run, embedded) in shaped.runs.iter().zip(resolved) {
+                let cluster_for = |glyph: &crate::text_engine::Glyph| {
+                    super::semantic::index(&clusters, &glyph.source)
                 };
-                if let Some(font) = embedded {
-                    let size = run.font_size;
-                    let mut pen = [0., 0.];
-                    let glyphs: Vec<_> = run
-                        .glyphs
-                        .iter()
-                        .map(|glyph| {
-                            let out = KrillaGlyph {
-                                glyph_id: GlyphId::new(u32::from(glyph.id)),
-                                text_range: glyph.source.clone(),
-                                x_advance: (glyph.advance[0] / size) as f32,
-                                y_advance: (glyph.advance[1] / size) as f32,
-                                x_offset: ((glyph.position[0] - pen[0]) / size) as f32,
-                                y_offset: ((glyph.position[1] - pen[1]) / size) as f32,
-                                location: None,
-                            };
-                            pen[0] += glyph.advance[0];
-                            pen[1] += glyph.advance[1];
-                            out
-                        })
-                        .collect();
-                    surface.draw_glyphs(
-                        Point::from_xy(g.x, g.baseline),
-                        &glyphs,
-                        font,
-                        &shaped.source,
-                        size as f32,
-                        false,
-                    );
-                } else {
-                    surface.start_tagged(ContentTag::Span(
-                        SpanTag::empty().with_actual_text(Some(&shaped.source[run.source.clone()])),
-                    ));
-                    let result = (|| {
-                        for glyph in &run.glyphs {
-                            let x = g.x + glyph.position[0] as f32;
-                            let y = g.baseline + glyph.position[1] as f32;
-                            match &*glyph.ink {
-                                Ink::Outline(path) => {
-                                    surface.push_transform(&Transform::from_translate(x, y));
-                                    let result = super::vectors::markup(
-                                        surface,
-                                        &format!(
-                                            "<path d=\"{}\" fill=\"{}\" fill-opacity=\"{}\"/>",
-                                            crate::scene::escape(path),
-                                            crate::scene::color([
-                                                g.color[0], g.color[1], g.color[2]
-                                            ]),
-                                            1.0
-                                        ),
-                                    );
-                                    surface.pop();
-                                    result?;
-                                }
-                                Ink::Bitmap {
-                                    png,
-                                    bounds: [left, top, w, h],
-                                } => {
-                                    surface.push_opacity(NormalizedF32::new(1.0).unwrap());
-                                    let result = super::vectors::image(
-                                        surface,
-                                        Bounds::new(
-                                            x + *left as f32,
-                                            y + *top as f32,
-                                            *w as f32,
-                                            *h as f32,
-                                        ),
+                for chunk in run
+                    .glyphs
+                    .chunk_by(|a, b| cluster_for(a).is_some() == cluster_for(b).is_some())
+                {
+                    let semantic = cluster_for(&chunk[0]).is_some();
+                    surface.set_fill(Some(Fill {
+                        paint: rgb::Color::new(g.color[0], g.color[1], g.color[2]).into(),
+                        opacity: NormalizedF32::ONE,
+                        ..Default::default()
+                    }));
+                    if let Some(font) = embedded.clone().filter(|_| !semantic) {
+                        if !pending.is_empty() {
+                            self.semantic.draw(
+                                surface,
+                                &shaped.source,
+                                &clusters,
+                                &pending,
+                                g.x,
+                                g.baseline,
+                            )?;
+                            pending.clear();
+                            surface.set_fill(Some(Fill {
+                                paint: rgb::Color::new(g.color[0], g.color[1], g.color[2]).into(),
+                                opacity: NormalizedF32::ONE,
+                                ..Default::default()
+                            }));
+                        }
+                        let size = run.font_size;
+                        let mut pen = [0., 0.];
+                        let glyphs: Vec<_> = chunk
+                            .iter()
+                            .map(|glyph| {
+                                let out = KrillaGlyph {
+                                    glyph_id: GlyphId::new(u32::from(glyph.id)),
+                                    text_range: glyph.source.clone(),
+                                    x_advance: (glyph.advance[0] / size) as f32,
+                                    y_advance: (glyph.advance[1] / size) as f32,
+                                    x_offset: ((glyph.position[0] - pen[0]) / size) as f32,
+                                    y_offset: ((glyph.position[1] - pen[1]) / size) as f32,
+                                    location: None,
+                                };
+                                pen[0] += glyph.advance[0];
+                                pen[1] += glyph.advance[1];
+                                out
+                            })
+                            .collect();
+                        surface.draw_glyphs(
+                            Point::from_xy(g.x, g.baseline),
+                            &glyphs,
+                            font,
+                            &shaped.source,
+                            size as f32,
+                            false,
+                        );
+                    } else {
+                        surface.start_tagged(ContentTag::Artifact(Artifact::default()));
+                        let result = (|| {
+                            for glyph in chunk {
+                                let x = g.x + glyph.position[0] as f32;
+                                let y = g.baseline + glyph.position[1] as f32;
+                                match &*glyph.ink {
+                                    Ink::Outline(path) => {
+                                        surface.push_transform(&Transform::from_translate(x, y));
+                                        let result = super::vectors::markup(
+                                            surface,
+                                            &format!(
+                                                "<path d=\"{}\" fill=\"{}\" fill-opacity=\"{}\"/>",
+                                                crate::scene::escape(path),
+                                                crate::scene::color([
+                                                    g.color[0], g.color[1], g.color[2]
+                                                ]),
+                                                1.0
+                                            ),
+                                        );
+                                        surface.pop();
+                                        result?;
+                                    }
+                                    Ink::Bitmap {
                                         png,
-                                    );
-                                    surface.pop();
-                                    result?;
+                                        bounds: [left, top, w, h],
+                                    } => {
+                                        surface.push_opacity(NormalizedF32::new(1.0).unwrap());
+                                        let result = super::vectors::image(
+                                            surface,
+                                            Bounds::new(
+                                                x + *left as f32,
+                                                y + *top as f32,
+                                                *w as f32,
+                                                *h as f32,
+                                            ),
+                                            png,
+                                        );
+                                        surface.pop();
+                                        result?;
+                                    }
+                                    Ink::Empty => {}
                                 }
-                                Ink::Empty => {}
+                            }
+                            Ok::<_, String>(())
+                        })();
+                        surface.end_tagged();
+                        result?;
+                        for glyph in chunk {
+                            if let Some(index) = cluster_for(glyph)
+                                && emitted.insert(index)
+                            {
+                                pending.push(index);
                             }
                         }
-                        Ok::<_, String>(())
-                    })();
-                    surface.end_tagged();
-                    result?;
+                    }
                 }
+            }
+            if !pending.is_empty() {
+                self.semantic.draw(
+                    surface,
+                    &shaped.source,
+                    &clusters,
+                    &pending,
+                    g.x,
+                    g.baseline,
+                )?;
             }
         } else {
             let primary = g.face.starts_with("canvas-");

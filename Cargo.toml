@@ -7,12 +7,14 @@ description = "A local desktop wireframing workspace"
 license = "GPL-3.0-only"
 
 [dependencies]
+flate2 = "=1.1.10"
 chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 eframe = { version = "0.36.2", default-features = false, features = ["accesskit", "default_fonts", "glow", "wayland", "x11"] }
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1"
 base64 = "0.23.1"
 skrifa = "0.44.0"
+unicode-script = "=0.5.8"
 unicode-segmentation = "1.13.3"
 cosmic-text = "=0.19.0"
 rfd = "0.17.2"

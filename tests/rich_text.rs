@@ -356,18 +356,13 @@ fn wrap_uses_the_selected_engine_and_link_targets_can_share_a_style() {
             true,
         );
         assert!(painted.error.is_none(), "{:?}", painted.error);
-        if cfg!(target_os = "macos") {
+        {
             for (runs, row) in painted.runs.iter().zip(&painted.rows) {
                 let total: f64 = runs
                     .iter()
                     .map(|r| r.positioned.as_ref().unwrap().width)
                     .sum();
                 assert_eq!(total.ceil() as f32, row.width);
-            }
-        } else {
-            assert_eq!(painted.rows.len(), painted.galley.rows.len());
-            for (source, actual) in painted.galley.rows.iter().zip(&painted.rows) {
-                assert_eq!(source.size.x.ceil(), actual.width);
             }
         }
         assert!(painted.links.iter().any(|l| l.target == "page:2"));
@@ -473,7 +468,6 @@ fn formatting_boundaries_survive_equal_styles_and_trailing_spaces() {
     );
 }
 
-#[cfg(target_os = "macos")]
 #[test]
 fn positioned_rich_runs_share_measurement_truncation_and_bidi_link_bounds() {
     let ctx = egui::Context::default();
@@ -530,7 +524,6 @@ fn positioned_rich_runs_share_measurement_truncation_and_bidi_link_bounds() {
     .drop_without_applying_deltas();
 }
 
-#[cfg(target_os = "macos")]
 #[test]
 fn positioned_layout_reports_limits_without_legacy_fallback() {
     let ctx = egui::Context::default();

@@ -4245,6 +4245,7 @@ dependencies = [
  "cosmic-text",
  "directories",
  "eframe",
+ "flate2",
  "image",
  "krilla",
  "png",
@@ -4255,6 +4256,7 @@ dependencies = [
  "sha2",
  "skrifa 0.44.0",
  "tempfile",
+ "unicode-script",
  "unicode-segmentation",
 ]
 

@@ -271,19 +271,15 @@ fn shaped_runs_preserve_original_unicode_and_styles_after_joined_text() {
         runs.iter()
             .any(|g| g.text == "After" && g.color == [255, 0, 0, 255])
     );
-    if cfg!(target_os = "macos") {
-        assert!(
-            runs.iter()
-                .filter_map(|g| g.positioned.as_ref())
-                .flat_map(|s| &s.runs)
-                .flat_map(|r| &r.glyphs)
-                .any(|g| matches!(&*g.ink, wireframe::text_engine::Ink::Bitmap { .. }))
-        );
-        assert!(scene.svg().contains("data:image/png;base64,"));
-        assert!(!scene.svg().contains("<text "));
-    } else {
-        assert!(scene.svg().contains(">👩\u{200d}💻</text>"));
-    }
+    assert!(
+        runs.iter()
+            .filter_map(|g| g.positioned.as_ref())
+            .flat_map(|s| &s.runs)
+            .flat_map(|r| &r.glyphs)
+            .any(|g| matches!(&*g.ink, wireframe::text_engine::Ink::Bitmap { .. }))
+    );
+    assert!(scene.svg().contains("data:image/png;base64,"));
+    assert!(!scene.svg().contains("<text "));
     let linked = runs.iter().find(|g| g.text == "שלום").unwrap();
     assert_eq!(scene.links.len(), 1);
     assert_eq!(scene.links[0].target, "page:2");
@@ -294,55 +290,6 @@ fn shaped_runs_preserve_original_unicode_and_styles_after_joined_text() {
     assert_eq!(editor.document.encode().unwrap(), bytes);
 }
 
-#[cfg(not(target_os = "macos"))]
-#[test]
-fn fallback_exports_keep_the_canvas_face_scale_and_original_clusters() {
-    use eframe::egui;
-    use std::sync::Arc;
-    use wireframe::fonts::ProjectFont;
-    for (source, face, scale) in [
-        ("Ελληνικά", "Ubuntu-Light", 1.),
-        ("👩\u{200d}💻", "NotoEmoji-Regular", 0.81),
-    ] {
-        let scene = Editor::new(specimen("label", source, 240., 80.))
-            .rendered_scene(1)
-            .unwrap();
-        let runs = glyphs(&scene);
-        assert_eq!(runs.len(), 1);
-        assert_eq!(runs[0].text, source);
-        assert_eq!(runs[0].face, face);
-        assert_eq!(runs[0].face_scale, scale);
-        let svg = scene.svg();
-        assert!(svg.contains(&format!("font-family=\"Wireframe {face}\"")));
-        assert_eq!(svg.matches("@font-face").count(), 5);
-        assert!(svg.contains("Bundled fallback fonts"));
-        assert!(!svg.contains("lengthAdjust"));
-        // Compare the selected fallback against that exact font assigned directly
-        // as the primary face, at its effective size, in the same drawing geometry.
-        let data = egui::FontDefinitions::default().font_data[face]
-            .font
-            .to_vec();
-        let mut explicit = scene.clone();
-        explicit.font = Some(Arc::new(
-            ProjectFont::new(
-                "Explicit test face".into(),
-                std::array::from_fn(|_| data.clone()),
-                String::new(),
-            )
-            .unwrap(),
-        ));
-        for item in &mut explicit.items {
-            if let Drawing::Glyph(g) = &mut item.drawing {
-                g.face = "canvas-regular".into();
-                g.size *= g.face_scale;
-                g.face_scale = 1.;
-            }
-        }
-        assert_eq!(scene.png().unwrap(), explicit.png().unwrap());
-    }
-}
-
-#[cfg(target_os = "macos")]
 #[test]
 fn positioned_fallback_exports_are_independent_of_available_fonts() {
     for source in ["Ελληνικά", "👩\u{200d}💻", "ABC שלום 123", "你好世界"] {

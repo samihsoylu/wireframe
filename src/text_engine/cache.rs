@@ -35,29 +35,35 @@ impl Cache {
         self.entries.push_back(entry);
         Some(result)
     }
+    fn recount(&mut self) {
+        let mut faces = Default::default();
+        self.bytes = self
+            .entries
+            .iter()
+            .map(|entry| entry.bytes + entry.text.font_storage_bytes(&mut faces))
+            .sum();
+    }
     fn insert(&mut self, entry: Entry) {
-        if entry.bytes > MAX_BYTES {
+        if entry.bytes + entry.text.font_storage_bytes(&mut Default::default()) > MAX_BYTES {
             return;
         }
-        self.bytes += entry.bytes;
         self.entries.push_back(entry);
+        self.recount();
         while self.entries.len() > MAX_ENTRIES || self.bytes > MAX_BYTES {
             if let Some(old) = self.entries.pop_front() {
-                self.bytes -= old.bytes;
+                drop(old);
+                self.recount();
             }
         }
     }
 }
-/// Returns None for a family without an installed canvas face, or an unsupported
-/// platform. Errors from an available backend remain errors, not silent fallback.
+/// Returns None for a family without an installed canvas face.
+/// Backend errors remain errors rather than silently changing the renderer.
 pub fn shape_cached(
     ctx: &egui::Context,
     font_id: &egui::FontId,
     text: &str,
 ) -> Result<Option<Arc<ShapedText>>, String> {
-    if !cfg!(target_os = "macos") {
-        return Ok(None);
-    }
     let name = font_id.family.to_string();
     if !name.starts_with("canvas-") {
         return Ok(None);
@@ -75,7 +81,7 @@ pub fn shape_cached(
     // Do not hold an egui font or data lock while invoking the platform engine.
     let shaped = Arc::new(super::shape(&font.font, text, f64::from(font_id.size))?);
     // Count repeated ink conservatively: an SVG consumer may duplicate that ink.
-    let bytes = font.font.len() + shaped.storage_bytes();
+    let bytes = font.font.len() + shaped.local_storage_bytes();
     ctx.data_mut(|d| {
         d.get_temp_mut_or_default::<Cache>(key).insert(Entry {
             font,
@@ -118,5 +124,42 @@ mod tests {
         assert_eq!(cache.entries.len(), MAX_ENTRIES);
         assert_eq!(cache.bytes, MAX_ENTRIES);
         assert!(cache.get(&font, "0", 24.).is_none());
+    }
+    #[test]
+    fn shared_large_faces_survive_multiple_entries_and_distinct_faces_evict() {
+        use super::super::{FontData, FontFace, storage_tests};
+        let font = Arc::new(egui::FontData::from_static(crate::fonts::REGULAR));
+        let face = || {
+            Arc::new(FontFace {
+                data: FontData::Bytes(Arc::from(vec![0; 20 * 1024 * 1024])),
+                index: 0,
+                variations: vec![],
+            })
+        };
+        let shared = face();
+        let mut cache = Cache::default();
+        for i in 0..8 {
+            let text = Arc::new(storage_tests::text(&i.to_string(), shared.clone()));
+            let bytes = text.local_storage_bytes() + font.font.len();
+            cache.insert(Entry {
+                font: font.clone(),
+                size: 17.,
+                text,
+                bytes,
+            });
+        }
+        assert_eq!(cache.entries.len(), 8);
+        assert!(cache.bytes < MAX_BYTES);
+        assert!(cache.get(&font, "0", 17.).is_some());
+        let text = Arc::new(storage_tests::text("other", face()));
+        cache.insert(Entry {
+            font: font.clone(),
+            size: 17.,
+            bytes: text.local_storage_bytes() + font.font.len(),
+            text,
+        });
+        assert_eq!(cache.entries.len(), 1);
+        assert!(cache.bytes < MAX_BYTES);
+        assert!(cache.get(&font, "0", 17.).is_none());
     }
 }

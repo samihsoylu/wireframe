@@ -175,8 +175,7 @@ impl EguiMeasurer<'_> {
                 links.push((start..job.text.len(), target.clone()));
             }
         }
-        let native =
-            cfg!(target_os = "macos") && self.regular == crate::fonts::family(false, false);
+        let positioned = self.regular == crate::fonts::family(false, false);
         let failed = |error: String| PaintedText {
             galley: self
                 .context
@@ -187,13 +186,13 @@ impl EguiMeasurer<'_> {
             size: egui::vec2(f32::NAN, f32::NAN),
             error: Some(error),
         };
-        if native
+        if positioned
             && (job.text.len() > crate::text_engine::MAX_TEXT_BYTES || job.sections.len() > 4096)
         {
             return failed("Text exceeds the layout limit (64 KB or 4096 spans)".into());
         }
         let galley = self.context.fonts_mut(|f| f.layout_job(job));
-        if native {
+        if positioned {
             return match super::positioned::layout(self.context, galley.clone(), base, &links) {
                 Ok(painted) => painted,
                 Err(problem) => failed(problem),

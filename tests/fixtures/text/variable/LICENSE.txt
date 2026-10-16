@@ -1,0 +1,1 @@
+Original diagnostic font outlines. Copyright 2026 Wireframe contributors. SPDX-License-Identifier: GPL-3.0-only

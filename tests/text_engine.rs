@@ -19,9 +19,8 @@ fn text_engine_rejects_unbounded_or_invalid_inputs() {
     assert!(text_engine::shape(b"invalid font", "text", 24.).is_err());
 }
 
-#[cfg(target_os = "macos")]
 #[test]
-fn native_text_keeps_utf8_clusters_bidi_and_color_emoji_ink() {
+fn positioned_text_keeps_utf8_clusters_bidi_and_color_emoji_ink() {
     use text_engine::Ink;
     fn portable<T: Send + Sync>() {}
     portable::<text_engine::ShapedText>();
@@ -87,7 +86,6 @@ fn native_text_keeps_utf8_clusters_bidi_and_color_emoji_ink() {
     );
 }
 
-#[cfg(target_os = "macos")]
 #[test]
 fn positioned_ink_exports_without_fonts_or_a_second_text_shaper() {
     let shaped = text_engine::shape(fonts::REGULAR, "ABC שלום 123 👩‍💻", 24.).unwrap();
@@ -109,7 +107,6 @@ fn positioned_ink_exports_without_fonts_or_a_second_text_shaper() {
     assert!(pixmap.data().as_chunks::<4>().0.iter().any(|p| p[3] > 0));
 }
 
-#[cfg(target_os = "macos")]
 #[test]
 fn shaped_runs_retain_primary_and_actual_fallback_faces() {
     use text_engine::FontSource;
@@ -137,8 +134,15 @@ fn shaped_runs_retain_primary_and_actual_fallback_faces() {
                     fallback += 1;
                     assert_ne!(face.data().unwrap(), fonts::REGULAR);
                 }
-                let native = core_text::font::new_from_buffer(face.data().unwrap()).unwrap();
-                assert_eq!(native.postscript_name(), run.font_name);
+                let mut db = resvg::usvg::fontdb::Database::new();
+                db.load_font_data(face.data().unwrap().to_vec());
+                assert_eq!(
+                    db.faces()
+                        .nth(face.index as usize)
+                        .unwrap()
+                        .post_script_name,
+                    run.font_name
+                );
             }
             FontSource::InkOnly(reason) => {
                 assert!(
@@ -175,7 +179,6 @@ fn shaped_runs_retain_primary_and_actual_fallback_faces() {
     }
 }
 
-#[cfg(target_os = "macos")]
 #[test]
 fn positioned_text_cache_survives_reuse_but_invalidates_replaced_fonts() {
     use eframe::egui;
@@ -221,7 +224,6 @@ fn positioned_text_cache_survives_reuse_but_invalidates_replaced_fonts() {
     .drop_without_applying_deltas();
 }
 
-#[cfg(target_os = "macos")]
 #[test]
 fn canvas_raster_matches_positioned_svg_at_multiple_scales() {
     let text = text_engine::shape(fonts::REGULAR, "ABC שלום 123 👩‍💻", 24.).unwrap();

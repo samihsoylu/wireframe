@@ -3,6 +3,7 @@
 //! PDF encoding of an already positioned document snapshot. No UI or file writes.
 mod export;
 mod plan;
+mod semantic;
 mod text;
 pub use export::ExportJob;
 pub use plan::{Entry, Options, Orientation, Paper, Selection, entries, plan};

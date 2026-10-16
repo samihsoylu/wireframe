@@ -71,9 +71,19 @@ struct Entry {
     scale: f32,
     texture: egui::TextureHandle,
     bounds: egui::Rect,
+    local_bytes: usize,
 }
 #[derive(Clone, Default)]
 struct Textures(VecDeque<Entry>);
+impl Textures {
+    fn storage_bytes(&self) -> usize {
+        let mut faces = Default::default();
+        self.0
+            .iter()
+            .map(|entry| entry.local_bytes + entry.text.font_storage_bytes(&mut faces))
+            .sum()
+    }
+}
 /// Returns errors to the caller; no fallback reshaping occurs after positioning.
 pub fn paint(
     painter: &egui::Painter,
@@ -113,20 +123,14 @@ pub fn paint(
         painter.ctx().data_mut(|d| {
             let cache = d.get_temp_mut_or_default::<Textures>(key);
             cache.0.push_back(Entry {
+                local_bytes: texture.size()[0] * texture.size()[1] * 4 + text.local_storage_bytes(),
                 text: text.clone(),
                 color,
                 scale,
                 texture: texture.clone(),
                 bounds,
             });
-            while cache.0.len() > 128
-                || cache
-                    .0
-                    .iter()
-                    .map(|e| e.texture.size()[0] * e.texture.size()[1] * 4 + e.text.storage_bytes())
-                    .sum::<usize>()
-                    > 32 * 1024 * 1024
-            {
+            while cache.0.len() > 128 || cache.storage_bytes() > 32 * 1024 * 1024 {
                 cache.0.pop_front();
             }
         });
@@ -144,4 +148,55 @@ pub fn paint(
         egui::Color32::WHITE,
     );
     Ok(())
+}
+
+#[cfg(test)]
+mod storage_tests {
+    use super::super::{FontData, FontFace, storage_tests::text};
+    use super::*;
+    #[test]
+    fn texture_cache_shares_large_faces_and_evicts_distinct_faces() {
+        let ctx = egui::Context::default();
+        let face = || {
+            Arc::new(FontFace {
+                data: FontData::Bytes(Arc::from(vec![0; 20 * 1024 * 1024])),
+                index: 0,
+                variations: vec![],
+            })
+        };
+        let shared = face();
+        ctx.run_ui(Default::default(), |_| {
+            let painter = ctx.layer_painter(egui::LayerId::background());
+            for i in 0..8 {
+                paint(
+                    &painter,
+                    &Arc::new(text(&i.to_string(), shared.clone())),
+                    [0, 0, 0, 255],
+                    egui::pos2(0., 20.),
+                    1.,
+                )
+                .unwrap();
+            }
+            let key = egui::Id::new("wireframe-positioned-text-textures");
+            ctx.data_mut(|d| {
+                let cache = d.get_temp_mut_or_default::<Textures>(key);
+                assert_eq!(cache.0.len(), 8);
+                assert!(cache.storage_bytes() < 32 * 1024 * 1024);
+            });
+            paint(
+                &painter,
+                &Arc::new(text("distinct", face())),
+                [0, 0, 0, 255],
+                egui::pos2(0., 20.),
+                1.,
+            )
+            .unwrap();
+            ctx.data_mut(|d| {
+                let cache = d.get_temp_mut_or_default::<Textures>(key);
+                assert_eq!(cache.0.len(), 1);
+                assert!(cache.storage_bytes() < 32 * 1024 * 1024);
+            });
+        })
+        .drop_without_applying_deltas();
+    }
 }

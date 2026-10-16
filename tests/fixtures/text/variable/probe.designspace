@@ -1,0 +1,62 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<designspace format="5.0">
+  <axes>
+    <axis tag="wght" name="Weight" minimum="100" maximum="900" default="400"/>
+    <axis tag="wdth" name="Width" minimum="75" maximum="125" default="100"/>
+    <axis tag="opsz" name="Optical" minimum="8" maximum="72" default="14"/>
+  </axes>
+  <sources>
+    <source filename="masters/master0.ttf" name="master0" familyname="Variable Probe" stylename="Regular">
+      <lib copy="1"/>
+      <features copy="1"/>
+      <info copy="1"/>
+      <location>
+        <dimension name="Weight" xvalue="400"/>
+        <dimension name="Width" xvalue="100"/>
+        <dimension name="Optical" xvalue="14"/>
+      </location>
+    </source>
+    <source filename="masters/master1.ttf" name="master1" familyname="Variable Probe" stylename="Regular">
+      <location>
+        <dimension name="Weight" xvalue="100"/>
+        <dimension name="Width" xvalue="100"/>
+        <dimension name="Optical" xvalue="14"/>
+      </location>
+    </source>
+    <source filename="masters/master2.ttf" name="master2" familyname="Variable Probe" stylename="Regular">
+      <location>
+        <dimension name="Weight" xvalue="900"/>
+        <dimension name="Width" xvalue="100"/>
+        <dimension name="Optical" xvalue="14"/>
+      </location>
+    </source>
+    <source filename="masters/master3.ttf" name="master3" familyname="Variable Probe" stylename="Regular">
+      <location>
+        <dimension name="Weight" xvalue="400"/>
+        <dimension name="Width" xvalue="75"/>
+        <dimension name="Optical" xvalue="14"/>
+      </location>
+    </source>
+    <source filename="masters/master4.ttf" name="master4" familyname="Variable Probe" stylename="Regular">
+      <location>
+        <dimension name="Weight" xvalue="400"/>
+        <dimension name="Width" xvalue="125"/>
+        <dimension name="Optical" xvalue="14"/>
+      </location>
+    </source>
+    <source filename="masters/master5.ttf" name="master5" familyname="Variable Probe" stylename="Regular">
+      <location>
+        <dimension name="Weight" xvalue="400"/>
+        <dimension name="Width" xvalue="100"/>
+        <dimension name="Optical" xvalue="8"/>
+      </location>
+    </source>
+    <source filename="masters/master6.ttf" name="master6" familyname="Variable Probe" stylename="Regular">
+      <location>
+        <dimension name="Weight" xvalue="400"/>
+        <dimension name="Width" xvalue="100"/>
+        <dimension name="Optical" xvalue="72"/>
+      </location>
+    </source>
+  </sources>
+</designspace>

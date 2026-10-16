@@ -152,10 +152,25 @@ fn draw_scene(
     scene: &Scene,
     fonts: &mut text::Fonts,
 ) -> Result<(), String> {
-    let mut masks = 0;
+    let mut scopes = Vec::new();
     let result = (|| {
         for item in &scene.items {
             match &item.drawing {
+                Drawing::BeginOpacity(opacity) => {
+                    surface.push_opacity(
+                        NormalizedF32::new(*opacity).ok_or("Invalid control opacity")?,
+                    );
+                    scopes.push(false);
+                    continue;
+                }
+                Drawing::EndOpacity => {
+                    if scopes.last() != Some(&false) {
+                        return Err("Unbalanced PDF opacity".into());
+                    }
+                    surface.pop();
+                    scopes.pop();
+                    continue;
+                }
                 Drawing::BeginMask(mask) => {
                     let points = mask.polygon();
                     if points.iter().flatten().any(|v| !v.is_finite()) {
@@ -173,15 +188,15 @@ fn draw_scene(
                         &path.finish().ok_or("Invalid PDF mask")?,
                         &FillRule::NonZero,
                     );
-                    masks += 1;
+                    scopes.push(true);
                     continue;
                 }
                 Drawing::EndMask => {
-                    if masks == 0 {
+                    if scopes.last() != Some(&true) {
                         return Err("Unbalanced PDF mask".into());
                     }
                     surface.pop();
-                    masks -= 1;
+                    scopes.pop();
                     continue;
                 }
                 _ => {}
@@ -212,15 +227,14 @@ fn draw_scene(
             }
             result?;
         }
-        if masks != 0 {
+        if !scopes.is_empty() {
             Err("Unbalanced PDF mask".into())
         } else {
             Ok(())
         }
     })();
-    while masks > 0 {
+    while scopes.pop().is_some() {
         surface.pop();
-        masks -= 1;
     }
     result
 }
@@ -285,6 +299,9 @@ fn draw_item(
         }
         Drawing::Image { bounds, data } => vectors::image(surface, *bounds, &data.png),
         Drawing::Glyph(g) => fonts.draw(surface, g, scene.font.as_deref()),
-        Drawing::BeginMask(_) | Drawing::EndMask => unreachable!(),
+        Drawing::BeginMask(_)
+        | Drawing::EndMask
+        | Drawing::BeginOpacity(_)
+        | Drawing::EndOpacity => unreachable!(),
     }
 }

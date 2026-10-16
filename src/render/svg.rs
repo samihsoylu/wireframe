@@ -66,6 +66,14 @@ impl Scene {
         }
         for (i, item) in self.items.iter().enumerate() {
             match &item.drawing {
+                Drawing::BeginOpacity(opacity) => {
+                    out.push_str(&format!("<g opacity=\"{opacity}\">"));
+                    continue;
+                }
+                Drawing::EndOpacity => {
+                    out.push_str("</g>");
+                    continue;
+                }
                 Drawing::BeginMask(mask) => {
                     let points = mask
                         .polygon()
@@ -89,7 +97,7 @@ impl Scene {
                 out.push_str(&format!("<g opacity=\"{}\">", item.opacity));
             }
             match &item.drawing {
-    Drawing::BeginMask(_) | Drawing::EndMask => unreachable!(),
+    Drawing::BeginMask(_) | Drawing::EndMask | Drawing::BeginOpacity(_) | Drawing::EndOpacity => unreachable!(),
     Drawing::Icon { bounds, id, color, turns } => {
         out.push_str(&format!("<g transform=\"rotate({} {} {})\">",-90*i32::from(*turns),bounds.x+bounds.w/2.,bounds.y+bounds.h/2.));
         if let Some(icon) = crate::icons::get(id) {out.push_str(&icon.svg(*bounds,*color));}

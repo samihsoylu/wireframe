@@ -59,7 +59,7 @@ fn editing_emphasis_tracks_distance_from_each_unrelated_branch() {
                 );
             }
             let scene = e.editing_scene().unwrap();
-            assert!(scene.items.iter().any(|i| i.opacity == expected[3]));
+            assert!(scene.items.iter().any(|i| matches!(i.drawing, wireframe::render::Drawing::BeginOpacity(o) if o == expected[3])));
             scenes.push(scene.svg());
             assert_eq!(e.rendered_scene(e.page).unwrap().svg(), canonical);
         }
@@ -228,7 +228,12 @@ fn editing_scene_reveals_masks_by_level_while_exports_and_links_remain_cropped()
         layers.iter().find(|l| l.control.id == 7).unwrap().opacity,
         0.2
     );
-    assert!(inner.items.iter().any(|i| i.opacity == 0.2));
+    assert!(
+        inner
+            .items
+            .iter()
+            .any(|i| matches!(i.drawing, wireframe::render::Drawing::BeginOpacity(0.2)))
+    );
     assert_eq!(e.rendered_scene(e.page).unwrap().svg(), canonical.svg());
     assert_eq!(e.rendered_scene(e.page).unwrap().hit_link(20., 120.), None);
     assert_eq!(e.editing_scene().unwrap().svg(), inner.svg());

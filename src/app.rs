@@ -70,6 +70,7 @@ enum Drag {
     },
 }
 pub struct WireframeApp {
+    compositor: Option<std::sync::Arc<wireframe::render::compositor::Compositor>>,
     editor: Editor,
     installed_font: Option<std::sync::Arc<wireframe::fonts::ProjectFont>>,
     font_import: Option<fonts::FontImport>,
@@ -204,6 +205,7 @@ impl WireframeApp {
             }
         }
         Self {
+            compositor: None,
             editor: Editor::default(),
             installed_font: None,
             font_import: None,
@@ -258,6 +260,16 @@ impl WireframeApp {
     }
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let mut app = Self::workspace(&cc.egui_ctx, storage::recovery_path());
+        if let Some(gl) = cc.gl.as_deref() {
+            match wireframe::render::compositor::Compositor::install(&cc.egui_ctx, gl) {
+                Ok(compositor) => app.compositor = Some(compositor),
+                Err(error) => {
+                    app.error = Some(format!(
+                        "Control fading is reduced on this graphics device. Editing and saving remain available.\n\n{error}"
+                    ))
+                }
+            }
+        }
         if let Some(path) = storage::recovery_path().and_then(|p| p.parent().map(|p| p.to_owned()))
         {
             app.load_palette_defaults(&path);
@@ -1229,8 +1241,23 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
         scale: f32,
     ) {
         let mut masks = Vec::new();
+        let mut opacity_scopes = Vec::new();
         for item in &drawing.items {
             match &item.drawing {
+                wireframe::render::Drawing::BeginOpacity(opacity) => {
+                    let start = painter.ctx().graphics(|g| {
+                        g.get(painter.layer_id())
+                            .map_or(0, |list| list.next_idx().0)
+                    });
+                    opacity_scopes.push((start, *opacity));
+                    continue;
+                }
+                wireframe::render::Drawing::EndOpacity => {
+                    if let Some((start, opacity)) = opacity_scopes.pop() {
+                        wireframe::render::compositor::Compositor::finish(painter, start, opacity);
+                    }
+                    continue;
+                }
                 wireframe::render::Drawing::BeginMask(mask) => {
                     let start = painter.ctx().graphics(|g| {
                         g.get(painter.layer_id())
@@ -1264,7 +1291,10 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                 continue;
             }
             match &item.drawing {
-                wireframe::render::Drawing::BeginMask(_) | wireframe::render::Drawing::EndMask => {
+                wireframe::render::Drawing::BeginMask(_)
+                | wireframe::render::Drawing::EndMask
+                | wireframe::render::Drawing::BeginOpacity(_)
+                | wireframe::render::Drawing::EndOpacity => {
                     unreachable!()
                 }
                 wireframe::render::Drawing::Icon {
@@ -2252,7 +2282,10 @@ impl eframe::App for WireframeApp {
         self.order_text_input(ctx, raw);
     }
 
-    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+    fn on_exit(&mut self, gl: Option<&eframe::glow::Context>) {
+        if let (Some(compositor), Some(gl)) = (self.compositor.take(), gl) {
+            compositor.destroy(gl);
+        }
         if let Some(job) = self.pdf_job.take() {
             let _ = job.finish();
         }

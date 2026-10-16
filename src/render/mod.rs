@@ -11,6 +11,7 @@ mod charts;
 mod choice;
 mod choice_group;
 mod circle_button;
+pub mod compositor;
 mod control_icons;
 mod cover_flow;
 mod date_controls;
@@ -75,6 +76,9 @@ pub struct Glyph {
 }
 #[derive(Clone, Debug)]
 pub enum Drawing {
+    /// Isolate all enclosed parts before applying opacity once.
+    BeginOpacity(f32),
+    EndOpacity,
     BeginMask(mask::BottomMask),
     EndMask,
     Primitive(Primitive),
@@ -183,7 +187,13 @@ impl Scene {
                     .collect();
             }
             let own_links_start = scene.links.len();
-            let own_items_start = scene.items.len();
+            if layer.opacity != 1. {
+                scene.items.push(Item {
+                    opacity: 1.,
+                    drawing: Drawing::BeginOpacity(layer.opacity),
+                    clip: None,
+                });
+            }
             let image = if layer.control.kind == Kind::Image && layer.control.group.is_none() {
                 if let Some(Value::Asset(id)) = layer.properties.get("image") {
                     let turns = crate::images::quarter_turns(&layer.properties);
@@ -275,8 +285,12 @@ impl Scene {
                     target: target.target(),
                 });
             }
-            for item in &mut scene.items[own_items_start..] {
-                item.opacity *= layer.opacity;
+            if layer.opacity != 1. {
+                scene.items.push(Item {
+                    opacity: 1.,
+                    drawing: Drawing::EndOpacity,
+                    clip: None,
+                });
             }
             if scene.items.len() + scene.links.len() > 1_000_000 {
                 return Err("This page exceeds the drawing complexity limit".into());

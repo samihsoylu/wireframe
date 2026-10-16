@@ -2,6 +2,106 @@
 // Copyright 2026 Wireframe contributors
 use wireframe::{document::*, workspace::Editor};
 
+#[test]
+fn editing_emphasis_tracks_distance_from_each_unrelated_branch() {
+    for instance in [false, true] {
+        let button = |id, y| Node::control(id, "button", Point::new(0., y), Size::fixed(100., 40.));
+        let inner = Node::group(3, Point::default(), vec![button(4, 0.)]);
+        let middle = Node::group(2, Point::default(), vec![inner, button(5, 70.)]);
+        let mut root = Node::group(1, Point::default(), vec![middle, button(6, 140.)]);
+        let mut project = Project::default();
+        if instance {
+            project.definitions.push(Definition {
+                id: 30,
+                name: "Nested actions".into(),
+                content: Content {
+                    nodes: vec![root],
+                    paint_order: vec![],
+                },
+            });
+            root = Node::group(9, Point::default(), vec![]);
+            root.content = NodeContent::Instance {
+                definition: 30,
+                overrides: vec![],
+            };
+        }
+        project.pages[0].content.nodes = vec![root, button(7, 210.)];
+        let mut e = Editor::new(project);
+        let before = e.document.clone();
+        let canonical = e.rendered_scene(e.page).unwrap().svg();
+        let mut scenes = vec![e.editing_scene().unwrap().svg()];
+        let contexts: Vec<(Id, [f32; 4])> = if instance {
+            vec![
+                (9, [1., 1., 1., 0.4]),
+                (1, [1., 1., 1., 0.2]),
+                (2, [1., 1., 0.4, 0.4 / 3.]),
+                (3, [1., 0.4, 0.2, 0.1]),
+            ]
+        } else {
+            vec![
+                (1, [1., 1., 1., 0.4]),
+                (2, [1., 1., 0.4, 0.2]),
+                (3, [1., 0.4, 0.2, 0.4 / 3.]),
+            ]
+        };
+        for (id, expected) in contexts {
+            assert!(e.enter(id));
+            let layers = e.editing_layers().unwrap();
+            for (leaf, opacity) in (4..=7).zip(expected) {
+                assert_eq!(
+                    layers
+                        .iter()
+                        .find(|l| l.control.id == leaf)
+                        .unwrap()
+                        .opacity,
+                    opacity,
+                    "instance={instance}, context={id}, leaf={leaf}"
+                );
+            }
+            let scene = e.editing_scene().unwrap();
+            assert!(scene.items.iter().any(|i| i.opacity == expected[3]));
+            scenes.push(scene.svg());
+            assert_eq!(e.rendered_scene(e.page).unwrap().svg(), canonical);
+        }
+        scenes.pop();
+        while let Some(scene) = scenes.pop() {
+            assert!(e.leave());
+            assert_eq!(e.editing_scene().unwrap().svg(), scene);
+        }
+        assert_eq!(e.document, before);
+        assert!(!e.dirty());
+        assert!(e.undo_name().is_none());
+    }
+}
+
+#[test]
+fn distant_unrelated_branches_keep_the_minimum_editing_emphasis() {
+    let button = |id| Node::control(id, "button", Point::default(), Size::fixed(100., 40.));
+    let mut active = button(100);
+    let mut other = button(200);
+    for id in (10..16).rev() {
+        active = Node::group(id, Point::default(), vec![active]);
+        other = Node::group(id + 20, Point::new(200., 0.), vec![other]);
+    }
+    let mut project = Project::default();
+    project.pages[0].content.nodes = vec![active, other, button(300)];
+    let mut e = Editor::new(project);
+    for (id, page_opacity) in (10..16).zip([0.4, 0.2, 0.4 / 3., 0.1, 0.1, 0.1]) {
+        assert!(e.enter(id));
+        let layers = e.editing_layers().unwrap();
+        for (leaf, opacity) in [(100, 1.), (200, 0.1), (300, page_opacity)] {
+            assert_eq!(
+                layers
+                    .iter()
+                    .find(|l| l.control.id == leaf)
+                    .unwrap()
+                    .opacity,
+                opacity
+            );
+        }
+    }
+}
+
 fn fixture(instance: bool) -> (Editor, Id) {
     let mut contact = Node::control(4, "button", Point::default(), Size::fixed(100., 40.));
     contact

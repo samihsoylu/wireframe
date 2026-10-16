@@ -293,7 +293,13 @@ impl Editor {
                 {
                     1.
                 } else {
-                    (0.4 / context.len().max(node.path.len().saturating_sub(1)) as f32).max(0.1)
+                    let parent_depth = node.path.len().saturating_sub(1);
+                    let distance = context
+                        .len()
+                        .checked_sub(parent_depth)
+                        .filter(|distance| *distance > 0)
+                        .unwrap_or(parent_depth);
+                    (0.4 / distance as f32).max(0.1)
                 },
                 group_links: vec![],
                 path: node.path.clone(),

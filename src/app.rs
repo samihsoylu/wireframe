@@ -1166,8 +1166,8 @@ if r.lost_focus(){self.editor.commit();}
                     ui.add_space(14.);if ui.add_enabled(self.editor.document.pages.len()>1,egui::Button::new("Delete this page")).clicked(){self.editor.delete_page();}ui.separator();ui.small("Select a control on the canvas to change its content and appearance. Double-click it to edit text.");return;
                 }
                 ui.heading(if selected.len()==1{self.editor.selection_label(selected[0].id)}else{format!("{} controls",selected.len())});
-                if selected.len()==1 {let mut c=selected[0].clone();let original=c.clone();let fixed_axis=wireframe::linear_controls::Axis::for_kind(c.kind);let minimum=self.editor.control_properties(c.id).map_or(10., |(spec,_)| spec.minimum_resize_dimension());
-                    ui.add_space(10.);ui.label("Position & size");egui::Grid::new("geometry").num_columns(4).spacing([7.,8.]).show(ui,|ui|{ui.label("X");ui.add(egui::DragValue::new(&mut c.bounds.x).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.label("Y");ui.add(egui::DragValue::new(&mut c.bounds.y).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.end_row();ui.label("W");ui.add_enabled(!matches!(c.kind,Kind::SiteMap|Kind::ColorPicker|Kind::HelpButton|Kind::Icon|Kind::Breadcrumbs|Kind::LinkBar|Kind::Playback) && !fixed_axis.is_some_and(|a| a.vertical) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id) && c.bounds.w>0.,egui::DragValue::new(&mut c.bounds.w).update_while_editing(false).speed(1.).clamp_existing_to_range(false).range(minimum..=10_000.0));ui.label("H");ui.add_enabled(!matches!(c.kind,Kind::SiteMap|Kind::ColorPicker|Kind::HelpButton|Kind::Icon|Kind::IconLabel|Kind::PointedButton|Kind::Heading|Kind::Subtitle|Kind::NumericStepper|Kind::Breadcrumbs|Kind::LinkBar|Kind::Playback) && !fixed_axis.is_some_and(|a| !a.vertical) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id) && c.bounds.h>0.,egui::DragValue::new(&mut c.bounds.h).update_while_editing(false).speed(1.).clamp_existing_to_range(false).range(minimum..=10_000.0));ui.end_row();});
+                if selected.len()==1 {let mut c=selected[0].clone();let original=c.clone();let fixed_axis=wireframe::linear_controls::Axis::for_kind(c.kind);let minimum=self.editor.resize_minimum(&[c.id]);
+                    ui.add_space(10.);ui.label("Position & size");egui::Grid::new("geometry").num_columns(4).spacing([7.,8.]).show(ui,|ui|{ui.label("X");ui.add(egui::DragValue::new(&mut c.bounds.x).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.label("Y");ui.add(egui::DragValue::new(&mut c.bounds.y).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.end_row();ui.label("W");ui.add_enabled(!matches!(c.kind,Kind::SiteMap|Kind::ColorPicker|Kind::HelpButton|Kind::Icon|Kind::Breadcrumbs|Kind::LinkBar|Kind::Playback) && !fixed_axis.is_some_and(|a| a.vertical) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id) && c.bounds.w>0.,egui::DragValue::new(&mut c.bounds.w).update_while_editing(false).speed(1.).clamp_existing_to_range(false).range(minimum.0..=10_000_f32.max(minimum.0)));ui.label("H");ui.add_enabled(!matches!(c.kind,Kind::SiteMap|Kind::ColorPicker|Kind::HelpButton|Kind::Icon|Kind::IconLabel|Kind::PointedButton|Kind::Heading|Kind::Subtitle|Kind::NumericStepper|Kind::Breadcrumbs|Kind::LinkBar|Kind::Playback) && !fixed_axis.is_some_and(|a| !a.vertical) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id) && c.bounds.h>0.,egui::DragValue::new(&mut c.bounds.h).update_while_editing(false).speed(1.).clamp_existing_to_range(false).range(minimum.1..=10_000_f32.max(minimum.1)));ui.end_row();});
                     if c.group.is_none() && !self.typed_properties(ui, c.id) {ui.add_space(10.);ui.label("Text");wireframe::text_entry::multiline(ui, &mut c.text, 4, false);if c.kind==Kind::Table {ui.small("Separate columns with commas and rows with new lines.");}
 if c.kind==Kind::Tabs {ui.small("Separate tabs with commas.");}
                     ui.horizontal(|ui|{ui.label("Size");ui.add(egui::DragValue::new(&mut c.font_size).range(6.0..=120.0));ui.checkbox(&mut c.bold,"Bold");});
@@ -1804,13 +1804,9 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                                 delta.y = (delta.y / 10.).round() * 10.;
                             }
                             let selected = self.editor.selected_views();
-                            let minimum = if selected.len() == 1 {
-                                self.editor
-                                    .control_properties(selected[0].id)
-                                    .map_or(10., |(spec, _)| spec.minimum_resize_dimension())
-                            } else {
-                                10.
-                            };
+                            let minimum = self.editor.resize_minimum(
+                                &original.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
+                            );
                             let axis = (selected.len() == 1 && original.len() == 1)
                                 .then(|| selected[0].kind)
                                 .and_then(wireframe::linear_controls::Axis::for_kind);
@@ -1863,7 +1859,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                                     aspect,
                                 )
                             } else {
-                                bounds.resized_with_minimum(
+                                bounds.resized_with_minimum_size(
                                     handle,
                                     (delta.x, delta.y),
                                     aspect,
@@ -1879,8 +1875,8 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                                 );
                                 if (!scalable_media
                                     || (result.bounds.w >= 10. && result.bounds.h >= 10.))
-                                    && (handle.0 == 0 || result.bounds.w >= minimum)
-                                    && (handle.1 == 0 || result.bounds.h >= minimum)
+                                    && (handle.0 == 0 || result.bounds.w >= minimum.0)
+                                    && (handle.1 == 0 || result.bounds.h >= minimum.1)
                                     && axis.is_none_or(|a| {
                                         if a.vertical {
                                             result.bounds.h >= 10.
@@ -2729,6 +2725,107 @@ mod tests {
         app.editor.undo();
         assert_eq!(app.editor.current().controls[0].bounds, before);
     }
+    #[test]
+    fn cropped_group_pointer_minimum_includes_fixed_height_descendants() {
+        use wireframe::document::{
+            Content, Crop, Definition, Node, NodeContent, Point, Project, Size,
+        };
+        for instance in [false, true] {
+            for top in [false, true] {
+                let ctx = egui::Context::default();
+                let mut app = WireframeApp::workspace(&ctx, None);
+                let mut label =
+                    Node::control(4, "label", Point::new(0., 130.), Size::fixed(100., 20.));
+                label.locked = true;
+                let mut inner = Node::group(
+                    3,
+                    Point::default(),
+                    vec![
+                        Node::control(5, "rectangle", Point::default(), Size::fixed(200., 200.)),
+                        label,
+                    ],
+                );
+                inner.crop = Some(Crop {
+                    x: 0.25,
+                    y: 0.25,
+                    width: 0.5,
+                    height: 0.5,
+                });
+                let mut root = Node::group(6, Point::new(100., 100.), vec![inner]);
+                let mut project = Project {
+                    next_id: 100,
+                    ..Project::default()
+                };
+                if instance {
+                    root.origin = Point::default();
+                    project.definitions.push(Definition {
+                        id: 20,
+                        name: "Panel".into(),
+                        content: Content {
+                            nodes: vec![root],
+                            paint_order: vec![],
+                        },
+                    });
+                    root = Node::group(21, Point::new(100., 100.), vec![]);
+                    root.content = NodeContent::Instance {
+                        definition: 20,
+                        overrides: vec![],
+                    };
+                }
+                let id = root.id;
+                project.pages[0].content.nodes = vec![root];
+                app.editor = Editor::new(project);
+                app.editor.select(id, false);
+                frame(&ctx, &mut app, vec![]);
+                let before = app.editor.document.clone();
+                let bounds = app.editor.current().controls[0].bounds;
+                let handle = (0, if top { -1 } else { 1 });
+                let start = app
+                    .resize_handles(bounds)
+                    .into_iter()
+                    .find(|(h, _)| *h == handle)
+                    .unwrap()
+                    .1;
+                let end = start + Vec2::new(0., if top { 90. } else { -90. });
+                alignment_frame(
+                    &ctx,
+                    &mut app,
+                    vec![egui::Event::PointerMoved(start), pointer(start, true)],
+                    Modifiers::COMMAND,
+                    true,
+                );
+                alignment_frame(
+                    &ctx,
+                    &mut app,
+                    vec![egui::Event::PointerMoved(end)],
+                    Modifiers::COMMAND,
+                    true,
+                );
+                alignment_frame(
+                    &ctx,
+                    &mut app,
+                    vec![pointer(end, false)],
+                    Modifiers::COMMAND,
+                    true,
+                );
+                let after = app.editor.current().controls[0].bounds;
+                assert_eq!(after.h, 20., "instance={instance}, top={top}");
+                assert_eq!(after.w, bounds.w);
+                assert_eq!(
+                    after.y,
+                    if top {
+                        bounds.y + bounds.h - 20.
+                    } else {
+                        bounds.y
+                    }
+                );
+                assert_eq!(app.editor.document.definitions, before.definitions);
+                app.editor.undo();
+                assert_eq!(app.editor.document, before);
+            }
+        }
+    }
+
     #[test]
     fn linear_resize_handles_preserve_thickness_minimum_anchor_and_history() {
         for kind in [

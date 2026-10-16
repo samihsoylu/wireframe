@@ -52,16 +52,25 @@ impl Bounds {
         aspect: bool,
         minimum: f32,
     ) -> Self {
+        self.resized_with_minimum_size(handle, delta, aspect, (minimum, minimum))
+    }
+    pub fn resized_with_minimum_size(
+        self,
+        handle: (i8, i8),
+        delta: (f32, f32),
+        aspect: bool,
+        minimum: (f32, f32),
+    ) -> Self {
         let (hx, hy) = handle;
         let mut w = if hx == 0 {
             self.w
         } else {
-            (self.w + delta.0 * hx as f32).clamp(minimum, 10_000.)
+            (self.w + delta.0 * hx as f32).clamp(minimum.0, 10_000_f32.max(minimum.0))
         };
         let mut h = if hy == 0 {
             self.h
         } else {
-            (self.h + delta.1 * hy as f32).clamp(minimum, 10_000.)
+            (self.h + delta.1 * hy as f32).clamp(minimum.1, 10_000_f32.max(minimum.1))
         };
         if aspect {
             let sx = w / self.w;
@@ -73,7 +82,7 @@ impl Bounds {
             } else {
                 sy
             };
-            let scale = scale.max(minimum / self.w).max(minimum / self.h);
+            let scale = scale.max(minimum.0 / self.w).max(minimum.1 / self.h);
             w = self.w * scale;
             h = self.h * scale;
         }

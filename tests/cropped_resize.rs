@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
-use wireframe::{document::*, workspace::Editor};
+use wireframe::{document::*, model::Bounds, workspace::Editor};
 fn fixture(instance: bool) -> Editor {
     let a = Node::control(3, "rectangle", Point::default(), Size::fixed(100., 40.));
     let mut b = Node::control(4, "rectangle", Point::new(170., 0.), Size::fixed(10., 40.));
@@ -214,6 +214,89 @@ fn cropped_frame_controls_fixed_height_anchoring_through_nested_groups_and_insta
                 assert_eq!(e.document, after);
                 assert_eq!(decode(&after.encode().unwrap()).unwrap(), after);
             }
+        }
+    }
+}
+
+#[test]
+fn offset_crop_resize_keeps_fixed_label_at_visible_bottom_and_clips_its_left_half() {
+    for instance in [false, true] {
+        for height in [20., 200.] {
+            let mut label = Node::control(4, "label", Point::new(0., 130.), Size::fixed(100., 20.));
+            label.locked = true;
+            label
+                .properties
+                .insert("font_size".into(), Value::Number(12.));
+            let mut inner = Node::group(
+                3,
+                Point::default(),
+                vec![
+                    Node::control(5, "rectangle", Point::default(), Size::fixed(200., 200.)),
+                    label,
+                ],
+            );
+            inner.crop = Some(Crop {
+                x: 0.25,
+                y: 0.25,
+                width: 0.5,
+                height: 0.5,
+            });
+            let mut root = Node::group(6, Point::new(50., 50.), vec![inner]);
+            let mut p = Project {
+                next_id: 100,
+                ..Project::default()
+            };
+            if instance {
+                root.origin = Point::default();
+                p.definitions.push(Definition {
+                    id: 20,
+                    name: "Offset panel".into(),
+                    content: Content {
+                        nodes: vec![root],
+                        paint_order: vec![],
+                    },
+                });
+                root = Node::group(21, Point::new(50., 50.), vec![]);
+                root.content = NodeContent::Instance {
+                    definition: 20,
+                    overrides: vec![],
+                };
+            }
+            let mut e = Editor::new(p);
+            e.document.pages[0].content.nodes = vec![root];
+            let before = e.document.clone();
+            let mut control = e.current().controls[0].clone();
+            assert_eq!(control.bounds, Bounds::new(100., 100., 100., 100.));
+            assert_eq!(e.resize_minimum(&[control.id]), (10., 20.));
+            control.bounds.h = height;
+            e.begin("Resize offset crop");
+            e.update_control(control);
+            e.commit();
+            let layout = e.layout_page(e.page).unwrap();
+            let leaves = layout.leaves();
+            let (label, clipped) = leaves
+                .iter()
+                .find(|(n, _)| n.path.last() == Some(&4))
+                .unwrap();
+            assert_eq!(label.bounds.y, 100. + height - 20.);
+            assert_eq!(label.bounds.height, 20.);
+            assert_eq!(
+                (clipped.x, clipped.y, clipped.width, clipped.height),
+                (100., 100. + height - 20., 50., 20.)
+            );
+            assert_eq!(
+                e.current().controls[0].bounds,
+                Bounds::new(100., 100., 100., height)
+            );
+            assert_eq!(e.document.definitions, before.definitions);
+            let after = e.document.clone();
+            let svg = e.rendered_scene(e.page).unwrap().svg();
+            e.undo();
+            assert_eq!(e.document, before);
+            e.redo();
+            assert_eq!(e.document, after);
+            let reopened = Editor::new(decode(&after.encode().unwrap()).unwrap());
+            assert_eq!(reopened.rendered_scene(reopened.page).unwrap().svg(), svg);
         }
     }
 }

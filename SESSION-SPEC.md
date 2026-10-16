@@ -6,13 +6,15 @@ Build a complete, usable offline Rust wireframing product for macOS, Windows and
 
 Work directly as Engineer. Preserve user files and explicit deferrals. Use synthetic fixtures for native experiments. Keep reference-specific names, extracted implementation/assets and investigation narratives outside this repository and its Git history. Original code is GPL-3.0-only from first commit 87f11c1; preserve dependency notices. Existing-format import remains deferred.
 
-## Current checkpoint — cropped group resize anchoring
+## Current checkpoint — descendant-aware resize limits
 
-Fixed-height descendants now anchor to each group's visible crop frame during recursive resizing. Previously, a hidden label near the bottom of the full artwork could move too far when the selected crop was enlarged. The shared transformation applies to ordinary groups and component instances while preserving fixed dimensions, crop masks and source definitions.
+Group and selection resizing now derives separate width/height limits from resolved descendants, including locked children, fixed-axis controls and component overrides. Numeric inspector input, pointer resize, aspect preservation and alignment-target acceptance share those limits. Previously, a cropped group containing a fixed-height20 label could shrink to height13; it now stops at20. Existing saved geometry is not rewritten merely by selection.
 
-The macOS suite passes 636 tests, with one intentionally ignored subprocess helper; all-target Clippy is clean. The focused recursive suite passes 33 tests, including an eight-case regression covering direct/nested groups, ordinary/component content and locked/unlocked labels. Native macOS resized a nested component from 100×50 to 100×100: its fixed-height label moved from local Y80 to Y160, keeping height20. Its source and sibling instance remained unchanged. Undo, Redo and save/quit/reopen preserved exact file bytes at the corresponding states.
+The full macOS suite passes 640 tests, with one intentionally ignored subprocess helper; all-target Clippy is clean. New checks cover four top/bottom group/component pointer cases, four offset-crop grow/shrink cases, resolved selection limits and asymmetric limits across all handles/aspect settings. Offset crop geometry and clipped label bounds match the established specification.
 
-All 82 pre-existing profile files are unchanged. Candidate closed, installed app unchanged, task VM remains stopped. Native Windows/Linux verification of this change remains open. Engineer self-review only; the full goal remains active. Continue nested crop offsets, fixed-axis resize and clipping combinations; preserve broader canvas softness, held drag cadence, typography/PDF and platform/release gaps.
+Native macOS enlarged the nested component to height200, then entered10 and verified the resulting height20 at X100,Y100,W100. Source, sibling and normalized crop remained unchanged; Undo/Redo and save/quit/reopen retained exact corresponding file bytes. All 84 pre-existing profile files are unchanged; two synthetic records were added. Candidate closed, installed app unchanged, task VM remains stopped. Native Windows/Linux verification remains open. Engineer self-review only; the full goal remains active.
+
+Next broaden nested clipping and selection/link hit behavior using an integrated scenario. Preserve remaining canvas softness, held drag cadence, typography/PDF, large-document performance and platform/release gaps.
 
 ## Existing capabilities and limits
 

@@ -9,6 +9,7 @@ mod components;
 mod crop;
 mod overrides;
 mod properties;
+mod resize;
 mod text_controls;
 mod view;
 use crate::{

@@ -287,7 +287,12 @@ impl Editor {
                     c
                 },
                 clip: path_clip(&layout.nodes, &node.path, context).map(bounds),
-                opacity: if context.is_empty()
+                opacity: if node.path == context && node.kind.is_none() && node.children.is_empty()
+                {
+                    // The placeholder represents a container from outside it;
+                    // its own empty editing workspace stays blank.
+                    0.
+                } else if context.is_empty()
                     || node.path.starts_with(context)
                     || context.starts_with(&node.path)
                 {

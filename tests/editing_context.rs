@@ -286,3 +286,95 @@ fn revealed_component_edits_invalidate_the_view_without_changing_source_or_crop(
         None
     );
 }
+
+#[test]
+fn entering_empty_containers_hides_only_the_active_placeholder() {
+    let empty = |id, x| Node::group(id, Point::new(x, 50.), vec![]);
+    let mut project = Project {
+        next_id: 100,
+        ..Project::default()
+    };
+    project.definitions.push(Definition {
+        id: 20,
+        name: "Empty source".into(),
+        content: Content::default(),
+    });
+    let mut instance = empty(30, 700.);
+    instance.content = NodeContent::Instance {
+        definition: 20,
+        overrides: vec![],
+    };
+    project.pages[0].content.nodes = vec![
+        empty(2, 50.),
+        Node::group(3, Point::new(300., 0.), vec![empty(4, 0.)]),
+        instance,
+    ];
+    let mut editor = Editor::new(project);
+    let before = editor.document.clone();
+    let canonical = editor.rendered_scene(editor.page).unwrap().svg();
+    for path in [vec![2], vec![3, 4], vec![30]] {
+        for id in &path {
+            assert!(editor.enter(*id));
+        }
+        assert!(editor.current().controls.is_empty());
+        let layers = editor.editing_layers().unwrap();
+        let active = layers.iter().find(|l| l.path == path).unwrap();
+        assert_eq!(active.opacity, 0.);
+        assert!(
+            layers
+                .iter()
+                .filter(|l| l.path != path)
+                .all(|l| l.opacity > 0.)
+        );
+        let scene = editor.editing_scene().unwrap();
+        let active_bounds = active.control.bounds;
+        let image = image::load_from_memory(&scene.png().unwrap())
+            .unwrap()
+            .into_rgba8();
+        let x = (active_bounds.x - scene.bounds.x + 24. + 4.).round() as u32;
+        let y = (active_bounds.y - scene.bounds.y + 24. + 4.).round() as u32;
+        assert_eq!(image.get_pixel(x, y).0, [255; 4]);
+        assert_eq!(editor.rendered_scene(editor.page).unwrap().svg(), canonical);
+        while !editor.context.is_empty() {
+            assert!(editor.leave());
+        }
+        assert_eq!(editor.editing_scene().unwrap().svg(), canonical);
+        assert_eq!(editor.document, before);
+        assert!(editor.undo_name().is_none());
+    }
+}
+
+#[test]
+fn empty_context_visibility_tracks_insert_delete_undo_and_redo() {
+    let mut project = Project {
+        next_id: 100,
+        ..Project::default()
+    };
+    project.pages[0].content.nodes = vec![Node::group(2, Point::new(80., 90.), vec![])];
+    let mut editor = Editor::new(project);
+    assert!(editor.enter(2));
+    let hidden = editor.editing_scene().unwrap().svg();
+    assert_eq!(editor.editing_layers().unwrap()[0].opacity, 0.);
+    editor.add(wireframe::model::Kind::Button, 0., 0.);
+    let visible = editor.editing_scene().unwrap().svg();
+    assert_ne!(visible, hidden);
+    assert_eq!(editor.editing_layers().unwrap()[0].opacity, 1.);
+    editor.undo();
+    assert_eq!(editor.editing_scene().unwrap().svg(), hidden);
+    editor.redo();
+    assert_eq!(editor.editing_scene().unwrap().svg(), visible);
+    editor.select_all();
+    editor.delete();
+    assert_eq!(editor.editing_scene().unwrap().svg(), hidden);
+    editor.undo();
+    assert_eq!(editor.editing_scene().unwrap().svg(), visible);
+    editor.redo();
+    assert_eq!(editor.editing_scene().unwrap().svg(), hidden);
+    assert!(editor.leave());
+    assert_eq!(editor.editing_layers().unwrap()[0].opacity, 1.);
+    let reopened = Editor::new(decode(&editor.document.encode().unwrap()).unwrap());
+    assert_eq!(
+        reopened.editing_scene().unwrap().svg(),
+        editor.editing_scene().unwrap().svg()
+    );
+}

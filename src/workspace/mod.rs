@@ -1207,11 +1207,13 @@ fn transform(
                     .iter()
                     .find(|l| l.path.last() == Some(&child.id))
                 {
+                    // Fixed-axis descendants anchor to the selected crop frame,
+                    // including when their artwork lies outside that frame.
                     let group_from = Bounds::new(
-                        layout.uncropped.x,
-                        layout.uncropped.y,
-                        layout.uncropped.width,
-                        layout.uncropped.height,
+                        layout.bounds.x,
+                        layout.bounds.y,
+                        layout.bounds.width,
+                        layout.bounds.height,
                     );
                     let group_to = Bounds::new(
                         to.x + (group_from.x - from.x) * sx,

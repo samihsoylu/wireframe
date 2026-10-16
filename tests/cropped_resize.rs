@@ -136,3 +136,84 @@ fn children(n: &Node) -> &[Node] {
         _ => panic!("Expected group"),
     }
 }
+
+#[test]
+fn cropped_frame_controls_fixed_height_anchoring_through_nested_groups_and_instances() {
+    for nested in [false, true] {
+        for instance in [false, true] {
+            for locked in [false, true] {
+                let panel =
+                    Node::control(3, "rectangle", Point::default(), Size::fixed(100., 100.));
+                let mut label =
+                    Node::control(4, "label", Point::new(0., 80.), Size::fixed(100., 20.));
+                label
+                    .properties
+                    .insert("text".into(), Value::Text("Bottom label".into()));
+                label
+                    .properties
+                    .insert("font_size".into(), Value::Number(12.));
+                label.locked = locked;
+                let mut group = Node::group(2, Point::default(), vec![panel, label]);
+                group.crop = Some(Crop {
+                    x: 0.,
+                    y: 0.,
+                    width: 1.,
+                    height: 0.5,
+                });
+                let mut root = if nested {
+                    Node::group(5, Point::default(), vec![group])
+                } else {
+                    group
+                };
+                let mut p = Project {
+                    next_id: 100,
+                    ..Project::default()
+                };
+                if instance {
+                    p.definitions.push(Definition {
+                        id: 20,
+                        name: "Cropped panel".into(),
+                        content: Content {
+                            nodes: vec![root],
+                            paint_order: vec![],
+                        },
+                    });
+                    root = Node::group(21, Point::default(), vec![]);
+                    root.content = NodeContent::Instance {
+                        definition: 20,
+                        overrides: vec![],
+                    };
+                }
+                root.origin = Point::new(100., 100.);
+                let id = root.id;
+                p.pages[0].content.nodes = vec![root];
+                let mut e = Editor::new(p);
+                let before = e.document.clone();
+                let mut control = e.current().controls[0].clone();
+                assert_eq!(control.bounds.h, 50.);
+                control.bounds.h = 100.;
+                e.begin("Resize cropped panel");
+                e.update_control(control);
+                e.commit();
+                assert!(e.error.is_none(), "{:?}", e.error);
+                let layout = e.layers(e.page).unwrap();
+                let label = layout.iter().find(|l| l.control.id == 4).unwrap();
+                assert_eq!(
+                    label.control.bounds.y, 260.,
+                    "nested={nested}, instance={instance}, locked={locked}"
+                );
+                assert_eq!(label.control.bounds.h, 20.);
+                assert_eq!(label.control.locked, locked);
+                assert_eq!(e.current().controls[0].bounds.h, 100.);
+                assert_eq!(e.document.definitions, before.definitions);
+                assert_eq!(e.current().controls[0].id, id);
+                let after = e.document.clone();
+                e.undo();
+                assert_eq!(e.document, before);
+                e.redo();
+                assert_eq!(e.document, after);
+                assert_eq!(decode(&after.encode().unwrap()).unwrap(), after);
+            }
+        }
+    }
+}

@@ -61,3 +61,9 @@ Stored fractional geometry remains valid and survives loading, selection and mov
 A very small group crop can resolve to zero width or height. Its content stays intact and selectable through Layers or Select All. Zero-size axes have no resize handle or editable size field; Remove crop restores the content at the visible corner, with exact Undo/Redo. Dragging the remaining nonzero axis uses finite scale factors.
 
 Resize previews derive each frame from the transaction-start snapshot. Rounded descendants must not accumulate error as pointer samples arrive; direct and multi-frame movement to the same endpoint produce identical geometry. Release records one history entry, returning to the start records none, and focus loss cancels the preview.
+
+## Fixed axes inside cropped groups
+
+Recursive resizing anchors fixed dimensions against each group's visible crop frame, including descendants outside that frame. For example, enlarging a 100×50 crop of 100×100 artwork to height100 moves a fixed-height label from local Y80 to Y160 and keeps its height20. Using the full artwork as the anchor would incorrectly move it to Y180. Normalized crops remain unchanged, and ordinary groups and component instances use the same rule.
+
+The regression covers direct/nested groups, ordinary/component content and locked/unlocked labels, with exact history and storage round trips. Native macOS additionally verified a nested component with a locked label, unchanged source/sibling, exact Undo/Redo and save/quit/reopen. Nonzero crop offsets, other fixed-axis controls and broader nested clipping combinations remain acceptance work. This is scoped macOS verification, not native Windows/Linux acceptance.

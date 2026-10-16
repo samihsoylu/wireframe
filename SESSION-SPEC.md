@@ -6,13 +6,13 @@ Build a complete, usable offline Rust wireframing product for macOS, Windows and
 
 Work directly as Engineer. Preserve user files and explicit deferrals. Use synthetic fixtures for native experiments. Keep reference-specific names, extracted implementation/assets and investigation narratives outside this repository and its Git history. Original code is GPL-3.0-only from first commit 87f11c1; preserve dependency notices. Existing-format import remains deferred.
 
-## Current checkpoint — Save As interruption and archive recovery
+## Current checkpoint — cropped group resize anchoring
 
-The macOS working-copy suite passes26 tests, including24 Save As process-termination combinations across named/unnamed sources, new/existing destinations and six handoff boundaries. The prior eight interruption cases remain covered; one child helper is intentionally ignored outside its parent tests. Source work survives until the destination is acknowledged; named source files stay unchanged; previous destination edits remain recoverable from immutable archives. Nine background-session integration tests and all-target Clippy also pass. Production saving behavior is unchanged.
+Fixed-height descendants now anchor to each group's visible crop frame during recursive resizing. Previously, a hidden label near the bottom of the full artwork could move too far when the selected crop was enlarged. The shared transformation applies to ordinary groups and component instances while preserving fixed dimensions, crop masks and source definitions.
 
-Native macOS Save As replaced a disposable destination with retained local edits, archiving its prior working record byte-for-byte. Recover work displayed the previous copy; Restore opened unnamed work, and saving it separately preserved both the archive and the destination. All75 pre-existing profile files and the automatic-save preference are unchanged;7 synthetic files were added. Candidate closed, installed app unchanged, task VM remains stopped.
+The macOS suite passes 636 tests, with one intentionally ignored subprocess helper; all-target Clippy is clean. The focused recursive suite passes 33 tests, including an eight-case regression covering direct/nested groups, ordinary/component content and locked/unlocked labels. Native macOS resized a nested component from 100×50 to 100×100: its fixed-height label moved from local Y80 to Y160, keeping height20. Its source and sibling instance remained unchanged. Undo, Redo and save/quit/reopen preserved exact file bytes at the corresponding states.
 
-The interruption tests drive storage APIs in the session's handoff order; they do not pause every possible worker interleaving or kill inside atomic writes/archive renames. Power loss and native Windows/Linux crash behavior remain open. Scoped recovery acceptance is recorded in docs/RECOVERY.md. Next return to nested group/component crop, lock and resize fidelity. Broader canvas softness, held drag cadence, typography/PDF, platform/runtime and release gaps remain open. Engineer self-review only; the full goal remains active.
+All 82 pre-existing profile files are unchanged. Candidate closed, installed app unchanged, task VM remains stopped. Native Windows/Linux verification of this change remains open. Engineer self-review only; the full goal remains active. Continue nested crop offsets, fixed-axis resize and clipping combinations; preserve broader canvas softness, held drag cadence, typography/PDF and platform/release gaps.
 
 ## Existing capabilities and limits
 

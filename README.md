@@ -33,7 +33,7 @@ A local desktop workspace for turning rough ideas into clear wireframes. Built i
 
 Requires Rust 1.95 or newer and platform build dependencies. Run `cargo run --release`. Use `cargo test` for behavioral and persistence checks.
 
-On Linux, install a C toolchain, pkg-config, and the development packages for X11, Wayland and OpenGL. File dialogs use the desktop portal.
+On Linux, install a C toolchain, pkg-config, and the development packages for X11, Wayland and OpenGL. File dialogs use the desktop portal. At runtime, X11 sessions also need XKB support (including `libxkbcommon-x11-0` on Debian/Ubuntu), an OpenGL driver, and a running desktop portal with a matching backend. See [packaging checks](docs/PACKAGING.md) for the tested environment and limits.
 
 ## Project files
 
@@ -41,7 +41,7 @@ Editable documents use the versioned `.wireframe` JSON format. Files are validat
 
 ## Development status
 
-The first native build runs on macOS. Windows/Linux verification and packaging are in progress. See [current state](SESSION-SPEC.md) for actual checks and remaining work. The desktop editor supports nested groups and version-2 project saving. Double-click a group to edit its children; use Escape or Exit group to return. Basic rich text and table formatting appear on canvas, thumbnails and PNG/SVG exports. The text/table inspector includes styles, Reset, Auto-size and six checkbox/radio states. Create a reusable component from a selected control or group in the inspector. The Components sidebar inserts instances and opens the shared source; Detach component makes an independent group. Double-click an instance to edit its children locally; Reset resumes the source value. Deleting a component source retains missing-instance placeholders and can be undone in the current session. Empty sources and groups remain visible and editable; adding children populates them again. Image controls import embedded PNG/JPEG/GIF files and share their sources; instances can resize without changing their source. Final typography, full control coverage and asset editing remain under development.
+Native builds run on macOS and in a Linux X11 test environment. Windows verification and release packaging are in progress. See [current state](SESSION-SPEC.md) for actual checks and remaining work. The desktop editor supports nested groups and version-2 project saving. Double-click a group to edit its children; use Escape or Exit group to return. Basic rich text and table formatting appear on canvas, thumbnails and PNG/SVG exports. The text/table inspector includes styles, Reset, Auto-size and six checkbox/radio states. Create a reusable component from a selected control or group in the inspector. The Components sidebar inserts instances and opens the shared source; Detach component makes an independent group. Double-click an instance to edit its children locally; Reset resumes the source value. Deleting a component source retains missing-instance placeholders and can be undone in the current session. Empty sources and groups remain visible and editable; adding children populates them again. Image controls import embedded PNG/JPEG/GIF files and share their sources; instances can resize without changing their source. Final typography, full control coverage and asset editing remain under development.
 
 ## License
 

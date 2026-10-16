@@ -39,7 +39,7 @@ def main():
     out.mkdir(exist_ok=True)
     name = f'Wireframe-{version}-{system}-{machine}'
     if args.debug: name += '-debug'
-    binary = ROOT / 'target' / profile / ('wireframe.exe' if system == 'windows' else 'wireframe')
+    binary = Path(metadata['target_directory']) / profile / ('wireframe.exe' if system == 'windows' else 'wireframe')
     if system == 'darwin':
         bundle = out / 'Wireframe.app'
         executable = bundle / 'Contents' / 'MacOS' / 'wireframe'

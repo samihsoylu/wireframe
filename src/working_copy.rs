@@ -752,4 +752,6 @@ impl WorkingCopy {
 }
 
 #[cfg(test)]
+mod crash_tests;
+#[cfg(test)]
 mod tests;

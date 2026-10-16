@@ -26,20 +26,30 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--debug', action='store_true', help='Build a development app')
     parser.add_argument('--no-archive', action='store_true', help='Refresh only the local bundle')
+    parser.add_argument('--target', choices=('x86_64-pc-windows-gnu', 'x86_64-pc-windows-msvc', 'aarch64-pc-windows-msvc'),
+        help='Build a Windows package with an installed target toolchain')
     args = parser.parse_args()
+    if os.environ.get('CARGO_BUILD_TARGET') and not args.target:
+        parser.error('Use --target explicitly instead of CARGO_BUILD_TARGET when packaging')
     profile = 'debug' if args.debug else 'release'
     build = ['cargo', 'build', '--locked']
+    if args.target: build.extend(['--target', args.target])
     if not args.debug: build.append('--release')
     run(*build)
     metadata = json.loads(subprocess.check_output(['cargo','metadata','--no-deps','--format-version','1'], cwd=ROOT))
     version = metadata['packages'][0]['version']
     system = platform.system().lower()
     machine = platform.machine().lower()
+    if args.target:
+        system = 'windows'
+        machine = args.target.split('-')[0]
     out = ROOT / 'dist'
     out.mkdir(exist_ok=True)
     name = f'Wireframe-{version}-{system}-{machine}'
     if args.debug: name += '-debug'
-    binary = Path(metadata['target_directory']) / profile / ('wireframe.exe' if system == 'windows' else 'wireframe')
+    target_dir = Path(metadata['target_directory'])
+    if args.target: target_dir /= args.target
+    binary = target_dir / profile / ('wireframe.exe' if system == 'windows' else 'wireframe')
     if system == 'darwin':
         bundle = out / 'Wireframe.app'
         executable = bundle / 'Contents' / 'MacOS' / 'wireframe'
@@ -93,7 +103,8 @@ def main():
             tar.add(staging, arcname=name)
     else:
         archive = out / (name + '.zip')
-        with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        # Cargo source archives can carry epoch timestamps, outside ZIP's date range.
+        with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, strict_timestamps=False) as zip_file:
             for path in sorted(staging.rglob('*')):
                 if path.is_file(): zip_file.write(path, Path(name) / path.relative_to(staging))
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()

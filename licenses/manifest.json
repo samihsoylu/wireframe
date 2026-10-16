@@ -3080,6 +3080,46 @@
     ]
   },
   {
+    "name": "windows_aarch64_msvc",
+    "version": "0.52.6",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/microsoft/windows-rs",
+    "files": [
+      "windows_aarch64_msvc-0.52.6/license-apache-2.0",
+      "windows_aarch64_msvc-0.52.6/license-mit"
+    ]
+  },
+  {
+    "name": "windows_aarch64_msvc",
+    "version": "0.53.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/microsoft/windows-rs",
+    "files": [
+      "windows_aarch64_msvc-0.53.1/license-apache-2.0",
+      "windows_aarch64_msvc-0.53.1/license-mit"
+    ]
+  },
+  {
+    "name": "windows_x86_64_gnu",
+    "version": "0.52.6",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/microsoft/windows-rs",
+    "files": [
+      "windows_x86_64_gnu-0.52.6/license-apache-2.0",
+      "windows_x86_64_gnu-0.52.6/license-mit"
+    ]
+  },
+  {
+    "name": "windows_x86_64_gnu",
+    "version": "0.53.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/microsoft/windows-rs",
+    "files": [
+      "windows_x86_64_gnu-0.53.1/license-apache-2.0",
+      "windows_x86_64_gnu-0.53.1/license-mit"
+    ]
+  },
+  {
     "name": "windows_x86_64_msvc",
     "version": "0.52.6",
     "license": "MIT OR Apache-2.0",

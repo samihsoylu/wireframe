@@ -11,7 +11,8 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 DEST = ROOT / 'licenses'
-TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-pc-windows-msvc', 'x86_64-unknown-linux-gnu')
+TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-pc-windows-msvc',
+    'x86_64-pc-windows-gnu', 'aarch64-pc-windows-msvc', 'x86_64-unknown-linux-gnu')
 
 def cargo(*args):
     return subprocess.check_output(['cargo', *args], cwd=ROOT, text=True)

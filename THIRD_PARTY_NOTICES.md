@@ -318,6 +318,10 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | windows-targets-0.52.6 | MIT OR Apache-2.0 | [files](licenses/windows-targets-0.52.6/) |
 | windows-targets-0.53.5 | MIT OR Apache-2.0 | [files](licenses/windows-targets-0.53.5/) |
 | windows-threading-0.2.1 | MIT OR Apache-2.0 | [files](licenses/windows-threading-0.2.1/) |
+| windows_aarch64_msvc-0.52.6 | MIT OR Apache-2.0 | [files](licenses/windows_aarch64_msvc-0.52.6/) |
+| windows_aarch64_msvc-0.53.1 | MIT OR Apache-2.0 | [files](licenses/windows_aarch64_msvc-0.53.1/) |
+| windows_x86_64_gnu-0.52.6 | MIT OR Apache-2.0 | [files](licenses/windows_x86_64_gnu-0.52.6/) |
+| windows_x86_64_gnu-0.53.1 | MIT OR Apache-2.0 | [files](licenses/windows_x86_64_gnu-0.53.1/) |
 | windows_x86_64_msvc-0.52.6 | MIT OR Apache-2.0 | [files](licenses/windows_x86_64_msvc-0.52.6/) |
 | windows_x86_64_msvc-0.53.1 | MIT OR Apache-2.0 | [files](licenses/windows_x86_64_msvc-0.53.1/) |
 | winit-0.30.13 | Apache-2.0 | [files](licenses/winit-0.30.13/) |

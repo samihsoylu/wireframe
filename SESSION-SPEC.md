@@ -6,15 +6,15 @@ Build a complete, usable offline Rust wireframing product for macOS, Windows and
 
 Work directly as Engineer. Preserve user files and explicit deferrals. Use synthetic fixtures for native experiments. Keep reference-specific names, extracted implementation/assets and investigation narratives outside this repository and its Git history. Original code is GPL-3.0-only from first commit 87f11c1; preserve dependency notices. Existing-format import remains deferred.
 
-## Current checkpoint — descendant-aware resize limits
+## Current checkpoint — nested editing visibility
 
-Group and selection resizing now derives separate width/height limits from resolved descendants, including locked children, fixed-axis controls and component overrides. Numeric inspector input, pointer resize, aspect preservation and alignment-target acceptance share those limits. Previously, a cropped group containing a fixed-height20 label could shrink to height13; it now stops at20. Existing saved geometry is not rewritten merely by selection.
+Entering a cropped group now reveals its mask and ancestor masks while preserving deeper masks. The editor dims unrelated content by nesting depth and uses the same revealed regions for selection. Canonical page thumbnails, exports and presentation retain the original crops and opacity. A context-keyed scene cache updates after content edits and context changes without altering saved geometry.
 
-The full macOS suite passes 640 tests, with one intentionally ignored subprocess helper; all-target Clippy is clean. New checks cover four top/bottom group/component pointer cases, four offset-crop grow/shrink cases, resolved selection limits and asymmetric limits across all handles/aspect settings. Offset crop geometry and clipped label bounds match the established specification.
+The full macOS suite passes 643 tests, with one intentionally ignored subprocess helper; all-target Clippy is clean. Three new regressions cover nested ordinary/component selection, masks and dimming by level, canonical clipped links, cache invalidation, source/crop preservation and exact history/storage round trips. The prior implementation failed the revealed-button hit test before this correction.
 
-Native macOS enlarged the nested component to height200, then entered10 and verified the resulting height20 at X100,Y100,W100. Source, sibling and normalized crop remained unchanged; Undo/Redo and save/quit/reopen retained exact corresponding file bytes. All 84 pre-existing profile files are unchanged; two synthetic records were added. Candidate closed, installed app unchanged, task VM remains stopped. Native Windows/Linux verification remains open. Engineer self-review only; the full goal remains active.
+Native macOS verified outer/inner entry, selection through a formerly hidden button region, restored masks on exit and the presentation boundary. In presentation the hidden Contact button remained inactive while the visible Order button navigated to its page. Save after navigation/context changes retained exact baseline file bytes. All 86 pre-existing profile files are unchanged; two synthetic records were added. Candidate closed, installed app unchanged, task VM remains stopped. Native Windows/Linux verification remains open. Engineer self-review only; the full goal remains active.
 
-Next broaden nested clipping and selection/link hit behavior using an integrated scenario. Preserve remaining canvas softness, held drag cadence, typography/PDF, large-document performance and platform/release gaps.
+Next investigate whole-group link precedence and remaining nested hit behavior. Empty active-group visibility is a separate unresolved edge case. Preserve remaining canvas softness, held drag cadence, typography/PDF, large-document performance and platform/release gaps.
 
 ## Existing capabilities and limits
 

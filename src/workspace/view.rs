@@ -11,8 +11,14 @@ pub(super) struct Cache {
     project: Option<Project>,
     pages: HashMap<Id, Result<Layout, String>>,
     scenes: HashMap<Id, Result<crate::render::Scene, String>>,
+    editing_scene: Option<EditingScene>,
     clocks: HashMap<(Id, NodePath), (ClockLayout, crate::tablet::Clock)>,
     dates: HashMap<(Id, NodePath), (ClockLayout, crate::date_controls::Date)>,
+}
+struct EditingScene {
+    surface: Id,
+    context: NodePath,
+    scene: Result<crate::render::Scene, String>,
 }
 #[derive(Clone, PartialEq)]
 struct ClockLayout {
@@ -55,6 +61,8 @@ pub struct Layer {
     /// This control's visible frame before its ancestors clip it.
     pub frame: Bounds,
     pub clip: Option<Bounds>,
+    /// Transient editing emphasis; stored/exported layers remain fully opaque.
+    pub opacity: f32,
     pub path: NodePath,
     pub properties: Properties,
     pub clock: Option<crate::tablet::Clock>,
@@ -73,6 +81,7 @@ impl Editor {
                 .retain(|(surface, _), _| self.surface(*surface).is_some());
             cache.pages.clear();
             cache.scenes.clear();
+            cache.editing_scene = None;
             cache
                 .clocks
                 .retain(|(surface, _), _| self.surface(*surface).is_some());
@@ -100,20 +109,46 @@ impl Editor {
         result
     }
     pub fn rendered_scene(&self, id: Id) -> Result<crate::render::Scene, String> {
-        self.rendered_scene_excluding(id, None)
+        self.scene_view(id, None, false)
+    }
+    /// Reveal only the active group and its ancestor masks, without changing
+    /// document geometry or the canonical export/presentation scene.
+    pub fn editing_scene(&self) -> Result<crate::render::Scene, String> {
+        self.scene_view(self.surface_id(), None, !self.context.is_empty())
     }
     pub(super) fn rendered_scene_excluding(
         &self,
         id: Id,
         excluded: Option<&[Id]>,
     ) -> Result<crate::render::Scene, String> {
+        self.scene_view(
+            id,
+            excluded,
+            id == self.surface_id() && !self.context.is_empty(),
+        )
+    }
+    fn scene_view(
+        &self,
+        id: Id,
+        excluded: Option<&[Id]>,
+        editing: bool,
+    ) -> Result<crate::render::Scene, String> {
         self.layout_page(id)?;
-        if excluded.is_none()
+        if editing
+            && excluded.is_none()
+            && let Some(cached) = &self.cache.borrow().editing_scene
+            && cached.surface == id
+            && cached.context == self.context
+        {
+            return cached.scene.clone();
+        }
+        if !editing
+            && excluded.is_none()
             && let Some(scene) = self.cache.borrow().scenes.get(&id)
         {
             return scene.clone();
         }
-        let mut layers = self.layers(id)?;
+        let mut layers = self.layers_in_context(id, if editing { &self.context } else { &[] })?;
         if let Some(path) = excluded {
             layers.retain(|l| !l.path.starts_with(path));
         }
@@ -188,7 +223,15 @@ impl Editor {
             scene.font = self.document.font.clone();
         }
         if excluded.is_none() {
-            self.cache.borrow_mut().scenes.insert(id, result.clone());
+            if editing {
+                self.cache.borrow_mut().editing_scene = Some(EditingScene {
+                    surface: id,
+                    context: self.context.clone(),
+                    scene: result.clone(),
+                });
+            } else {
+                self.cache.borrow_mut().scenes.insert(id, result.clone());
+            }
         }
         result
     }
@@ -221,6 +264,12 @@ impl Editor {
         }
     }
     pub fn layers(&self, id: Id) -> Result<Vec<Layer>, String> {
+        self.layers_in_context(id, &[])
+    }
+    pub fn editing_layers(&self) -> Result<Vec<Layer>, String> {
+        self.layers_in_context(self.surface_id(), &self.context)
+    }
+    fn layers_in_context(&self, id: Id, context: &[Id]) -> Result<Vec<Layer>, String> {
         let layout = self.layout_page(id)?;
         Ok(layout
             .leaves()
@@ -235,7 +284,15 @@ impl Editor {
                     }
                     c
                 },
-                clip: path_clip(&layout.nodes, &node.path).map(bounds),
+                clip: path_clip(&layout.nodes, &node.path, context).map(bounds),
+                opacity: if context.is_empty()
+                    || node.path.starts_with(context)
+                    || context.starts_with(&node.path)
+                {
+                    1.
+                } else {
+                    (0.4 / context.len().max(node.path.len().saturating_sub(1)) as f32).max(0.1)
+                },
                 path: node.path.clone(),
                 properties: node.properties.clone(),
                 clock: None,
@@ -260,7 +317,7 @@ impl Editor {
     }
     pub fn hit(&self, x: f32, y: f32) -> Option<Control> {
         let controls = self.current().controls;
-        if let Ok(layers) = self.layers(self.surface_id()) {
+        if let Ok(layers) = self.editing_layers() {
             for layer in layers.into_iter().rev() {
                 if layer.path.starts_with(&self.context)
                     && layer.control.bounds.contains(x, y)
@@ -302,14 +359,19 @@ pub(super) fn find_layout<'a>(nodes: &'a [LayoutNode], path: &[Id]) -> Option<&'
         find_layout(&node.children, &path[1..])
     }
 }
-fn path_clip(nodes: &[LayoutNode], path: &[Id]) -> Option<layout::Rect> {
+fn path_clip(nodes: &[LayoutNode], path: &[Id], revealed: &[Id]) -> Option<layout::Rect> {
     let node = nodes.iter().find(|n| n.path.last() == path.first())?;
     let next = if path.len() > 1 {
-        path_clip(&node.children, &path[1..])
+        path_clip(&node.children, &path[1..], revealed)
     } else {
         None
     };
-    match (node.clip, next) {
+    let own = if revealed.starts_with(&node.path) {
+        None
+    } else {
+        node.clip
+    };
+    match (own, next) {
         (Some(a), Some(b)) => Some(a.intersect(b)),
         (Some(a), None) | (None, Some(a)) => Some(a),
         (None, None) => None,

@@ -2013,7 +2013,12 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                         }
                     }
                 }
-                match self.editor.rendered_scene(self.editor.surface_id()) {
+                let drawing = if self.present {
+                    self.editor.rendered_scene(self.editor.surface_id())
+                } else {
+                    self.editor.editing_scene()
+                };
+                match drawing {
                     Ok(drawing) => Self::paint_scene(
                         &painter,
                         &drawing,

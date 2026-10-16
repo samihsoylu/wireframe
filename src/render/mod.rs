@@ -183,6 +183,7 @@ impl Scene {
                     .collect();
             }
             let own_links_start = scene.links.len();
+            let own_items_start = scene.items.len();
             let image = if layer.control.kind == Kind::Image && layer.control.group.is_none() {
                 if let Some(Value::Asset(id)) = layer.properties.get("image") {
                     let turns = crate::images::quarter_turns(&layer.properties);
@@ -253,6 +254,9 @@ impl Scene {
                             }),
                     );
                 scene.links.extend(own_links);
+            }
+            for item in &mut scene.items[own_items_start..] {
+                item.opacity *= layer.opacity;
             }
             if scene.items.len() + scene.links.len() > 1_000_000 {
                 return Err("This page exceeds the drawing complexity limit".into());

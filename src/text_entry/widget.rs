@@ -21,6 +21,7 @@ struct Composition {
 #[derive(Clone)]
 struct State {
     draft: Draft,
+    initialized: bool,
     layout: Option<Layout>,
     layout_key: (f32, f32, f32, bool),
     texture: Option<TextureHandle>,
@@ -35,6 +36,7 @@ impl Default for State {
     fn default() -> Self {
         Self {
             draft: Draft::new(String::new()),
+            initialized: false,
             layout: None,
             layout_key: (0., 0., 0., true),
             texture: None,
@@ -108,6 +110,8 @@ pub struct TextInput<'a> {
     multiline: bool,
     rows: usize,
     autofocus: bool,
+    select_all_on_open: bool,
+    submit_on_command_enter: bool,
     width: Option<f32>,
     id: Option<Id>,
     hint: &'a str,
@@ -119,6 +123,8 @@ impl<'a> TextInput<'a> {
             multiline: false,
             rows: 1,
             autofocus: false,
+            select_all_on_open: false,
+            submit_on_command_enter: false,
             width: None,
             id: None,
             hint: "",
@@ -141,6 +147,16 @@ impl<'a> TextInput<'a> {
     }
     pub fn autofocus(mut self, autofocus: bool) -> Self {
         self.autofocus = autofocus;
+        self
+    }
+    /// Select existing content on the first interactive frame only.
+    pub fn select_all_on_open(mut self, select: bool) -> Self {
+        self.select_all_on_open = select;
+        self
+    }
+    /// Leave the command-Enter event for the enclosing form to submit.
+    pub fn submit_on_command_enter(mut self, submit: bool) -> Self {
+        self.submit_on_command_enter = submit;
         self
     }
     pub fn id_salt(mut self, salt: impl std::hash::Hash + std::fmt::Debug) -> Self {
@@ -256,6 +272,8 @@ fn input(ui: &mut Ui, options: TextInput<'_>) -> Response {
         multiline,
         rows,
         autofocus,
+        select_all_on_open,
+        submit_on_command_enter,
         width,
         id,
         hint,
@@ -278,11 +296,20 @@ fn input(ui: &mut Ui, options: TextInput<'_>) -> Response {
     if state.draft.text() != value {
         state = State {
             draft: Draft::new(value.clone()),
+            initialized: state.initialized,
             ..Default::default()
         };
     }
-    if fresh && autofocus && ui.is_enabled() {
-        response.request_focus();
+    // Modal sizing can create widget state while interaction is disabled.
+    // Defer initial focus and selection until the field can receive input.
+    if !state.initialized && ui.is_enabled() {
+        if autofocus {
+            response.request_focus();
+        }
+        if select_all_on_open {
+            state.draft.select_all();
+        }
+        state.initialized = true;
     }
     let engine = super::layout::shared_engine(ui.ctx());
     let mut engine = engine.lock().unwrap_or_else(|e| e.into_inner());
@@ -294,7 +321,12 @@ fn input(ui: &mut Ui, options: TextInput<'_>) -> Response {
     let old_value = value.clone();
     let mut reveal = fresh;
     let mut interrupt_ime = false;
-    if response.clicked() || response.drag_started() {
+    if response.clicked() {
+        response.request_focus();
+    }
+    // Keyboard activation also counts as clicked(); only pointer clicks should
+    // reposition the caret or interrupt an active IME composition.
+    if response.clicked_by(egui::PointerButton::Primary) || response.drag_started() {
         response.request_focus();
         interrupt_ime = state.composition.take().is_some();
         error = state
@@ -417,14 +449,17 @@ fn input(ui: &mut Ui, options: TextInput<'_>) -> Response {
                     if key == Key::Escape && state.composition.is_none() {
                         response.surrender_focus();
                     }
-                    if !multiline && key == Key::Enter && state.composition.is_none() {
+                    let submit = key == Key::Enter
+                        && (!multiline || (submit_on_command_enter && modifiers.command));
+                    if submit && state.composition.is_none() {
                         response.surrender_focus();
                     }
                     let composing_form_key = state.composition.is_some()
                         && matches!(key, Key::Enter | Key::ArrowUp | Key::ArrowDown);
                     let handled = composing_form_key
-                        || ((multiline
-                            || !matches!(key, Key::Enter | Key::ArrowUp | Key::ArrowDown))
+                        || (!submit
+                            && (multiline
+                                || !matches!(key, Key::Enter | Key::ArrowUp | Key::ArrowDown))
                             && key_event(&mut state, key, modifiers));
                     if handled {
                         consumed_keys.push(event_index);

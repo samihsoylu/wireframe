@@ -3,10 +3,13 @@
 
 mod canvas_scroll;
 mod components;
+#[cfg(test)]
+mod creation_tests;
 mod crop;
 mod fonts;
 mod icon_picker;
 mod images;
+mod insertion;
 mod library_drag;
 mod palette;
 mod pdf_export;
@@ -445,10 +448,8 @@ impl WireframeApp {
         }
     }
     fn add(&mut self, kind: Kind) {
-        let n = self.editor.current().controls.len();
-        let x = 50. + (n % 8) as f32 * 20.;
-        let y = 50. + (n % 8) as f32 * 24.;
-        self.editor.add(kind, x, y);
+        let point = self.default_insertion(kind);
+        self.editor.add(kind, point.x, point.y);
         self.status = format!("Added {}", kind.name());
     }
     fn copy(&mut self, ctx: &egui::Context) {
@@ -801,12 +802,14 @@ impl WireframeApp {
         if response.changed() {
             self.quick_index = 0;
         }
-        let query = self.quick.to_lowercase();
-        let mut matches: Vec<_> = Kind::ALL
+        let matches: Vec<_> = wireframe::catalog::search(&self.quick)
             .into_iter()
-            .filter(|k| k.name().to_lowercase().contains(&query))
+            .filter_map(|spec| {
+                Kind::ALL
+                    .into_iter()
+                    .find(|kind| kind.catalog_id() == spec.id)
+            })
             .collect();
-        matches.sort_by_key(|k| (k.name().to_lowercase() != query, k.name()));
         if response.has_focus() && ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::ArrowDown))
         {
             self.quick_index = (self.quick_index + 1).min(matches.len().saturating_sub(1));
@@ -2184,12 +2187,35 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
     fn dialogs(&mut self, ctx: &egui::Context) {
         if let Some((id, mut value)) = self.text_edit.take() {
             let mut keep = true;
+            let multiline = self
+                .editor
+                .current()
+                .controls
+                .iter()
+                .find(|control| control.id == id)
+                .is_none_or(|control| control.kind.multiline_text());
             egui::Modal::new(egui::Id::new("edit-text")).show(ctx, |ui| {
                 ui.set_width(400.);
                 ui.heading("Edit text");
-                let r = wireframe::text_entry::multiline(ui, &mut value, 7, true);
+                let field = if multiline {
+                    TextInput::multiline(&mut value).desired_rows(7)
+                } else {
+                    TextInput::singleline(&mut value)
+                };
+                let r = ui.add(
+                    field
+                        .desired_width(f32::INFINITY)
+                        .autofocus(true)
+                        .select_all_on_open(true)
+                        .submit_on_command_enter(true),
+                );
+                let submit = (r.has_focus() || r.lost_focus())
+                    && ui.input_mut(|i| {
+                        i.consume_key(Modifiers::COMMAND, Key::Enter)
+                            || (!multiline && i.consume_key(Modifiers::NONE, Key::Enter))
+                    });
                 ui.horizontal(|ui| {
-                    if ui.button("Apply").clicked() {
+                    if ui.button("Apply").clicked() || submit {
                         self.editor.edit("Edit text", |e| {
                             if let Some(mut c) = e
                                 .current()
@@ -2584,12 +2610,7 @@ mod tests {
         }
         assert_eq!(app.editor.current().controls.len(), 1);
         assert!(app.quick.is_empty());
-        let mut matches: Vec<_> = Kind::ALL
-            .into_iter()
-            .filter(|k| k.name().to_lowercase().contains("button"))
-            .collect();
-        matches.sort_by_key(|k| (k.name().to_lowercase() != "button", k.name()));
-        assert_eq!(app.editor.current().controls[0].kind, matches[1]);
+        assert_eq!(app.editor.current().controls[0].kind, Kind::ButtonBar);
     }
 
     #[test]

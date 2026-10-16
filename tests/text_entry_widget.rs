@@ -8,6 +8,43 @@ use std::sync::Mutex;
 use unicode_segmentation::UnicodeSegmentation;
 static SERIAL: Mutex<()> = Mutex::new(());
 
+#[test]
+fn accessibility_click_focuses_a_field_without_a_pointer() {
+    let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+    let ctx = egui::Context::default();
+    ctx.enable_accesskit();
+    let mut value = "Title".to_owned();
+    let mut id = egui::Id::NULL;
+    let mut run = |events| {
+        let mut output = ctx.run_ui(
+            egui::RawInput {
+                events,
+                ..Default::default()
+            },
+            |ui| {
+                id = ui
+                    .add(wireframe::text_entry::TextInput::singleline(&mut value))
+                    .id;
+            },
+        );
+        output.textures_delta.clear();
+        id
+    };
+    let field = run(vec![]);
+    run(vec![Event::AccessKitActionRequest(ActionRequest {
+        action: Action::Click,
+        target_tree: TreeId::ROOT,
+        target_node: field.accesskit_id(),
+        data: None,
+    })]);
+    assert!(wireframe::text_entry::is_focused(&ctx));
+    run(vec![
+        key(Key::A, Modifiers::COMMAND),
+        Event::Paste("Heading".into()),
+    ]);
+    assert_eq!(value, "Heading");
+}
+
 fn frame(
     ctx: &egui::Context,
     value: &mut String,

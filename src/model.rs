@@ -203,6 +203,134 @@ pub enum Kind {
     Link,
 }
 impl Kind {
+    /// Whether Enter belongs to the control's editable text rather than form submission.
+    pub fn multiline_text(self) -> bool {
+        matches!(
+            self,
+            Self::Accordion
+                | Self::Alert
+                | Self::Browser
+                | Self::Callout
+                | Self::CheckboxGroup
+                | Self::RadioGroup
+                | Self::Dropdown
+                | Self::HorizontalBrace
+                | Self::VerticalBrace
+                | Self::Table
+                | Self::MobileMenu
+                | Self::MobilePicker
+                | Self::List
+                | Self::Menu
+                | Self::Paragraph
+                | Self::Popover
+                | Self::Rectangle
+                | Self::Ellipse
+                | Self::SiteMap
+                | Self::StickyNote
+                | Self::TagCloud
+                | Self::TextArea
+                | Self::Tooltip
+                | Self::Tree
+                | Self::VerticalTabs
+                | Self::MultilineButton
+        )
+    }
+    /// Stable document/catalog identifier, independent of the display label.
+    pub fn catalog_id(self) -> &'static str {
+        match self {
+            Self::Button => "button",
+            Self::Label => "label",
+            Self::Heading => "heading",
+            Self::Subtitle => "subtitle",
+            Self::Popover => "popover",
+            Self::SiteMap => "site_map",
+            Self::FormattingToolbar => "formatting_toolbar",
+            Self::StreetMap => "map",
+            Self::ModalOverlay => "modal_overlay",
+            Self::VerticalRule => "vertical_rule",
+            Self::NumericStepper => "numeric_stepper",
+            Self::ColorPicker => "color_picker",
+            Self::HelpButton => "help_button",
+
+            Self::TextBlock => "text_block",
+            Self::TextLine => "text_line",
+            Self::TagCloud => "tag_cloud",
+
+            Self::Paragraph => "paragraph",
+            Self::TextInput => "text_input",
+            Self::TextArea => "text_area",
+            Self::Checkbox => "checkbox",
+            Self::Radio => "radio",
+            Self::CheckboxGroup => "checkbox_group",
+            Self::RadioGroup => "radio_group",
+            Self::Menu => "menu",
+            Self::MenuBar => "menu_bar",
+            Self::Tree => "tree",
+            Self::Accordion => "accordion",
+            Self::Alert => "alert",
+            Self::AppBar => "app_bar",
+            Self::Dropdown => "dropdown",
+            Self::Search => "search",
+            Self::Rectangle => "rectangle",
+            Self::Ellipse => "ellipse",
+            Self::Line => "line",
+            Self::Arrow => "arrow",
+            Self::Image => "image",
+            Self::Icon => "icon",
+            Self::IconLabel => "icon_label",
+            Self::CircleButton => "circle_button",
+            Self::PointedButton => "pointed_button",
+            Self::MultilineButton => "multiline_button",
+            Self::ButtonBar => "button_bar",
+            Self::Breadcrumbs => "breadcrumbs",
+            Self::LinkBar => "link_bar",
+            Self::Browser => "browser",
+            Self::Phone => "phone",
+            Self::Tablet => "tablet",
+            Self::Smartphone => "smartphone",
+            Self::MobileKeyboard => "mobile_keyboard",
+            Self::MobileMenu => "mobile_menu",
+            Self::MobilePicker => "mobile_picker",
+            Self::Calendar => "calendar",
+            Self::DateChooser => "date_chooser",
+            Self::DatePicker => "date_picker",
+            Self::TimePicker => "time_picker",
+            Self::HorizontalSlider => "horizontal_slider",
+            Self::VerticalSlider => "vertical_slider",
+            Self::HorizontalScrollbar => "horizontal_scrollbar",
+            Self::VerticalScrollbar => "vertical_scrollbar",
+            Self::HorizontalSplitter => "horizontal_splitter",
+            Self::VerticalSplitter => "vertical_splitter",
+            Self::VolumeSlider => "volume_slider",
+            Self::Playback => "playback",
+            Self::Webcam => "webcam",
+            Self::Video => "video",
+            Self::CoverFlow => "cover_flow",
+            Self::ColumnChart => "column_chart",
+            Self::BarChart => "bar_chart",
+            Self::LineChart => "line_chart",
+            Self::PieChart => "pie_chart",
+            Self::HorizontalBrace => "horizontal_brace",
+            Self::VerticalBrace => "vertical_brace",
+            Self::RedCross => "red_cross",
+            Self::ScratchOut => "scratch_out",
+
+            Self::Callout => "callout",
+            Self::StickyNote => "sticky_note",
+            Self::Tooltip => "tooltip",
+
+            Self::Panel => "panel",
+            Self::FieldSet => "field_set",
+            Self::List => "list",
+            Self::Table => "table",
+            Self::Tabs => "tabs",
+            Self::VerticalTabs => "vertical_tabs",
+            Self::Progress => "progress",
+            Self::Toggle => "toggle",
+            Self::Link => "link",
+        }
+    }
+
     pub const ALL: [Kind; 86] = [
         Self::Button,
         Self::Label,

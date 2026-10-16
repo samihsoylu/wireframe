@@ -1,5 +1,9 @@
 # Adding controls from the library
 
+Quick Add searches catalog names and aliases, so searching for “Title” finds Heading. Exact matches precede partial matches. Arrow keys select a suggestion and Enter inserts it; Shift+Enter keeps explicit pointer placement.
+
+Default insertion starts 50 screen points from the canvas's upper-left corner, accounting for zoom and pan. If that origin is occupied in the current editing context, it scans down in 50-point steps, then starts another column after the viewport's bottom. This avoids identical origins rather than all overlapping rectangles. The new control's measured size stays within the 10,000-unit canvas boundary; a repeated clamped position ends the search. Group insertion uses the same visible coordinates and remains one Undo step.
+
 Drag a control onto the canvas to see it before releasing. A drag starts after movement exceeds six screen points; holding still does not start one, even after a long pause. The library uses compact 68×68 tiles, centered thumbnails in a 68×46 image area, and one-line labels with ellipses where needed. Hovering shows the full name.
 
 The grab point is sampled when movement starts the drag inside the thumbnail image area, then stays attached to the floating control. Grab offsets include the padding around a fitted thumbnail. The floating preview uses full-size project artwork and retains its screen size across canvas zoom levels; placement converts its origin through the current zoom and pan. At the top or left canvas edge, the insertion origin is kept inside the viewport. The tile stays highlighted while held.

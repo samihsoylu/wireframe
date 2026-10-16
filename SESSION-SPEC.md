@@ -6,13 +6,13 @@ Build a complete, usable offline Rust wireframing product for macOS, Windows and
 
 Work directly as Engineer. Preserve user files and explicit deferrals. Use synthetic fixtures for native experiments. Keep reference-specific names, extracted implementation/assets and investigation narratives outside this repository and its Git history. Original code is GPL-3.0-only from first commit 87f11c1; preserve dependency notices. Existing-format import remains deferred.
 
-## Current checkpoint — Linux desktop and debug package
+## Current checkpoint — input focus and Save ordering
 
-The integrated portable text build runs from an extracted debug archive on Debian 12 aarch64, X11/Openbox and Mesa llvmpipe. Packaging now respects Cargo’s configured target directory. Runtime installation needed libxkbcommon-x11-0 in addition to the desktop portal and graphics support; see docs/PACKAGING.md.
+Rapid typing is preserved when a pointer action changes focus, including fields drawn in either order. Incoming events are split before focus-changing actions, Tab traversal and Save; earlier field edits reach the document before the action/snapshot. Later typing and local Undo remain after Save. Busy saves retain the input owner and queued/new field events until the worker finishes. Idle frames retain IME preedit. See docs/TEXT-ENTRY.md and docs/SAVING.md.
 
-The four-page sample renders. Held library insertion shows a moving preview without changing the saved document until release. Insertion, paced editing, undo/redo, page switching, portal Save As, normal close and reopen have scoped Linux acceptance. Rapid typing followed immediately by a focus change demonstrably drops trailing characters. Investigate and fix this input defect next; also check Save snapshot ordering against pending field input. No general input reliability or release readiness claim.
+Final focused macOS and Linux checks each pass119 tests across the application and three text-entry harnesses. Both platforms pass all-target Clippy; the Linux binary builds. Native Linux X11 replays retain full text after immediate canvas clicks, Ctrl+S and toolbar Save. Manual-mode continued typing keeps the saved prefix separate from the unsaved suffix, then explicitly saves the complete text. These are bounded interaction checks, not full input or release acceptance.
 
-The previous positioned-text integration retains its macOS/Linux tests and unchanged sampled macOS scenario exports. The installed macOS app remains unchanged. Windows, physical GPU/Wayland and release-package checks remain open. Native optical-size adjustment differs from the portable default-axis behavior; broad font parity and PDF reader extraction remain open. Preserve accepted device artwork, canvas alignment and embedded fonts. General canvas softness, held drag cadence, failure/performance and the broader release requirements remain unresolved. Engineer self-review only; the full goal remains active.
+The Linux debug packaging correction and prior positioned-text integration remain intact. Installed macOS app unchanged; native macOS input replay and Windows remain open. Physical GPU/Wayland, optical-size/font parity, PDF reader semantics, broader canvas softness, held drag cadence, failures/recovery/performance and complete release acceptance remain unresolved. Preserve accepted device artwork, canvas alignment and embedded fonts. Engineer self-review only; the full goal remains active.
 
 ## Existing capabilities and limits
 

@@ -2,6 +2,85 @@
 // Copyright 2026 Wireframe contributors
 use super::*;
 impl WireframeApp {
+    /// A field applies input during UI construction, after document shortcuts.
+    /// Split at Save and pointer actions so earlier text reaches its model first.
+    /// Events after Save wait for its snapshot, preserving text-local Undo order.
+    /// This must run before egui derives pointer/focus state from the events.
+    pub(super) fn order_text_input(&mut self, ctx: &egui::Context, raw: &mut egui::RawInput) {
+        let text_focus = wireframe::text_entry::is_focused(ctx) || ctx.text_edit_focused();
+        if self.save_busy()
+            && (text_focus
+                || self.deferred_text_focus.is_some()
+                || !self.deferred_text_input.is_empty())
+        {
+            // Disabled fields surrender focus. Keep their owner and input,
+            // including new typing arriving while the worker is still busy.
+            if self.deferred_text_focus.is_none() && text_focus {
+                self.deferred_text_focus = ctx.memory(|m| m.focused());
+            }
+            self.deferred_text_input.append(&mut raw.events);
+            if !self.deferred_text_input.is_empty() {
+                ctx.request_repaint_after(Duration::from_millis(16));
+            }
+            return;
+        }
+        if let Some(id) = self.deferred_text_focus.take() {
+            wireframe::text_entry::restore_focus(ctx, id);
+        }
+        if !self.deferred_text_input.is_empty() {
+            self.deferred_text_input.append(&mut raw.events);
+            raw.events = std::mem::take(&mut self.deferred_text_input);
+        }
+        if !wireframe::text_entry::is_focused(ctx) && !ctx.text_edit_focused() {
+            return;
+        }
+        let boundary = raw
+            .events
+            .iter()
+            .enumerate()
+            .find_map(|(index, event)| match event {
+                egui::Event::Key {
+                    key: Key::S,
+                    modifiers,
+                    pressed: true,
+                    ..
+                } if modifiers.matches_logically(Modifiers::COMMAND) => {
+                    Some(if index == 0 { 1 } else { index })
+                }
+                // Toolbar/sidebar actions can remove a field or capture its model
+                // before that field is drawn. Deliver preceding edits first.
+                egui::Event::PointerButton { pressed: true, .. }
+                    if index > 0
+                        && raw.events[..index].iter().any(|event| {
+                            matches!(
+                                event,
+                                egui::Event::Text(_)
+                                    | egui::Event::Paste(_)
+                                    | egui::Event::Cut
+                                    | egui::Event::Ime(_)
+                                    | egui::Event::Key { pressed: true, .. }
+                            )
+                        }) =>
+                {
+                    Some(index)
+                }
+                // Tab may wrap focus at the end of the UI pass. Deliver following
+                // input only after the destination field has acquired that focus.
+                egui::Event::Key {
+                    key: Key::Tab,
+                    pressed: true,
+                    ..
+                } => Some(index + 1),
+                _ => None,
+            });
+        if let Some(boundary) = boundary {
+            self.deferred_text_input = raw.events.split_off(boundary);
+            if !self.deferred_text_input.is_empty() {
+                ctx.request_repaint();
+            }
+        }
+    }
+
     pub(super) fn shortcuts(&mut self, ctx: &egui::Context) {
         // A held library control is transient; no document command may run underneath it.
         if self.library_drag.is_some() || self.library_press.is_some() {

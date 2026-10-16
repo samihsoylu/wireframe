@@ -80,6 +80,8 @@ pub struct WireframeApp {
     store: Box<dyn ProjectRepository>,
     persistence: Option<persistence::Persistence>,
     file: Option<PathBuf>,
+    deferred_text_input: Vec<egui::Event>,
+    deferred_text_focus: Option<egui::Id>,
     quick: String,
     quick_index: usize,
     quick_focus: bool,
@@ -212,6 +214,8 @@ impl WireframeApp {
             store: Box::new(ProjectStore),
             persistence: None,
             file: None,
+            deferred_text_input: Vec::new(),
+            deferred_text_focus: None,
             quick: String::new(),
             quick_index: 0,
             quick_focus: false,
@@ -2242,6 +2246,10 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
     }
 }
 impl eframe::App for WireframeApp {
+    fn raw_input_hook(&mut self, ctx: &egui::Context, raw: &mut egui::RawInput) {
+        self.order_text_input(ctx, raw);
+    }
+
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
         if let Some(job) = self.pdf_job.take() {
             let _ = job.finish();

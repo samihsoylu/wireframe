@@ -223,6 +223,10 @@ fn ime_preview_is_transient_and_commit_is_one_undo_step() {
     );
     assert_eq!(value, "Hello ");
     assert!(preview.platform_output.ime.is_some());
+    // An idle frame must not cancel active composition or admit raw text.
+    frame(&ctx, &mut value, vec![]);
+    frame(&ctx, &mut value, vec![Event::Text("ignored".into())]);
+    assert_eq!(value, "Hello ");
     frame(
         &ctx,
         &mut value,
@@ -413,4 +417,57 @@ fn composition_keys_do_not_submit_a_singleline_form() {
     }
     assert!(value.is_empty());
     assert!(wireframe::text_entry::is_focused(&ctx));
+}
+
+#[test]
+fn typing_before_clicking_another_field_stays_with_the_original_field() {
+    let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+    for reverse in [false, true] {
+        let ctx = egui::Context::default();
+        let mut values = [String::new(), String::new()];
+        let mut rects = [Rect::NOTHING; 2];
+        let mut run = |events| {
+            let mut out = ctx.run_ui(
+                egui::RawInput {
+                    events,
+                    ..Default::default()
+                },
+                |ui| {
+                    for index in if reverse { [1, 0] } else { [0, 1] } {
+                        let response = ui.add(
+                            wireframe::text_entry::TextInput::singleline(&mut values[index])
+                                .id_salt(index)
+                                .autofocus(index == 0),
+                        );
+                        rects[index] = response.rect;
+                    }
+                },
+            );
+            out.textures_delta.clear();
+            rects
+        };
+        let rects = run(vec![]);
+        let pos = rects[1].center();
+        let events = vec![
+            Event::Text("before".into()),
+            key(Key::Backspace, Modifiers::NONE),
+            Event::PointerMoved(pos),
+            Event::PointerButton {
+                pos,
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                modifiers: Modifiers::NONE,
+            },
+            Event::PointerButton {
+                pos,
+                button: egui::PointerButton::Primary,
+                pressed: false,
+                modifiers: Modifiers::NONE,
+            },
+            Event::Text("after".into()),
+            key(Key::Backspace, Modifiers::NONE),
+        ];
+        run(events);
+        assert_eq!(values, ["befor", "afte"], "reverse={reverse}");
+    }
 }

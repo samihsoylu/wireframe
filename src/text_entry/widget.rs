@@ -171,6 +171,20 @@ pub fn is_focused(ctx: &egui::Context) -> bool {
         .is_some_and(|r| ctx.cumulative_frame_nr().saturating_sub(r.0) <= 1)
 }
 
+/// Restore an input owner after a temporarily disabled UI. Refresh its source
+/// editor registration before document shortcuts are dispatched again.
+pub fn restore_focus(ctx: &egui::Context, id: Id) {
+    ctx.memory_mut(|m| m.request_focus(id));
+    let frame = ctx.cumulative_frame_nr();
+    ctx.data_mut(|d| {
+        if d.get_temp::<InputFrame>(id.with("source-input-frame"))
+            .is_some()
+        {
+            d.insert_temp(id.with("source-input-frame"), InputFrame(frame));
+        }
+    });
+}
+
 pub fn multiline(ui: &mut Ui, value: &mut String, rows: usize, autofocus: bool) -> Response {
     ui.add(
         TextInput::multiline(value)
@@ -178,6 +192,62 @@ pub fn multiline(ui: &mut Ui, value: &mut String, rows: usize, autofocus: bool) 
             .desired_width(f32::INFINITY)
             .autofocus(autofocus),
     )
+}
+
+// Interaction updates focus for the whole frame before fields read keyboard
+// events. Route the text on either side of a pointer/Tab boundary separately,
+// so the old field keeps its final characters and the new field gets only the
+// input following the focus change. This also works in either widget order.
+fn editing_events(ui: &Ui, response: &Response) -> Vec<(usize, Event)> {
+    let had_focus = ui.memory(|m| m.had_focus_last_frame(response.id));
+    let has_focus = response.has_focus();
+    if !ui.is_enabled() || !ui.input(|i| i.focused) || (!had_focus && !has_focus) {
+        return vec![];
+    }
+    let events = ui.input(|i| i.events.clone());
+    let boundary = events.iter().any(|event| {
+        matches!(
+            event,
+            Event::PointerButton {
+                pressed: true,
+                button: egui::PointerButton::Primary,
+                ..
+            } | Event::Key {
+                key: Key::Tab,
+                pressed: true,
+                ..
+            }
+        )
+    });
+    let mut active = had_focus || (has_focus && !boundary);
+    events
+        .into_iter()
+        .enumerate()
+        .filter(|(_, event)| match event {
+            Event::PointerButton {
+                pos,
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                ..
+            } => {
+                active = has_focus && response.rect.contains(*pos);
+                false
+            }
+            Event::Key {
+                key: Key::Tab,
+                pressed: true,
+                ..
+            } => {
+                active = has_focus && !had_focus;
+                false
+            }
+            Event::WindowFocused(false) => {
+                active = false;
+                false
+            }
+            _ => active,
+        })
+        .collect()
 }
 
 fn input(ui: &mut Ui, options: TextInput<'_>) -> Response {
@@ -287,6 +357,7 @@ fn input(ui: &mut Ui, options: TextInput<'_>) -> Response {
             state.scroll.x -= delta.x + delta.y;
         }
     }
+    let events = editing_events(ui, &response);
     if response.has_focus() && ui.is_enabled() {
         ui.memory_mut(|m| {
             m.set_focus_lock_filter(
@@ -299,8 +370,10 @@ fn input(ui: &mut Ui, options: TextInput<'_>) -> Response {
                 },
             )
         });
-        let events = ui.input(|i| i.events.clone());
-        for event in events {
+    }
+    let mut consumed_keys = Vec::new();
+    if !events.is_empty() {
+        for (event_index, event) in events {
             let vertical = matches!(
                 &event,
                 Event::Key {
@@ -354,7 +427,7 @@ fn input(ui: &mut Ui, options: TextInput<'_>) -> Response {
                             || !matches!(key, Key::Enter | Key::ArrowUp | Key::ArrowDown))
                             && key_event(&mut state, key, modifiers));
                     if handled {
-                        ui.input_mut(|i| i.consume_key(modifiers, key));
+                        consumed_keys.push(event_index);
                     }
                     handled
                 }
@@ -373,7 +446,16 @@ fn input(ui: &mut Ui, options: TextInput<'_>) -> Response {
                     .err();
             }
         }
-    } else if state.composition.take().is_some() {
+    }
+    ui.input_mut(|i| {
+        let mut index = 0;
+        i.events.retain(|_| {
+            let keep = !consumed_keys.contains(&index);
+            index += 1;
+            keep
+        });
+    });
+    if !response.has_focus() && state.composition.take().is_some() {
         interrupt_ime = true;
         error = state
             .layout(&mut engine, size, inner.width(), scale, multiline)

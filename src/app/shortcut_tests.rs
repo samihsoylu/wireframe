@@ -187,3 +187,164 @@ fn pdf_options_block_document_shortcuts_until_the_dialog_is_closed() {
     dispatch(&ctx, &mut app, vec![key(Key::Z, false)]);
     assert_ne!(app.editor.document, before);
 }
+
+#[test]
+fn save_between_field_edits_preserves_the_snapshot_and_later_input_order() {
+    for (later, asynchronous, late) in [
+        (egui::Event::Text("after".into()), false, false),
+        (key(Key::Z, false), false, false),
+        (egui::Event::Text("after".into()), true, false),
+        (key(Key::Z, false), true, false),
+        (egui::Event::Text("after".into()), true, true),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        app.file = Some(dir.path().join("test.wireframe"));
+        app.editor.document.title.clear();
+        if asynchronous {
+            ProjectStore
+                .save(app.file.as_ref().unwrap(), &app.editor.document)
+                .unwrap();
+            app.enable_persistence(&ctx, dir.path().join("local"));
+        }
+        let mut run = |events| {
+            let mut raw = egui::RawInput {
+                events,
+                ..Default::default()
+            };
+            app.order_text_input(&ctx, &mut raw);
+            let mut output = ctx.run_ui(raw, |ui| {
+                // Exercise a disabled busy frame even if this small test save
+                // has already finished on the worker before we poll it.
+                if app.save_busy() {
+                    ui.disable();
+                }
+                app.poll_saves(ui.ctx());
+                app.shortcuts(ui.ctx());
+                ui.add(TextInput::singleline(&mut app.editor.document.title).autofocus(true));
+            });
+            output.textures_delta.clear();
+        };
+        run(vec![]);
+        if late {
+            run(vec![egui::Event::Text("before".into()), key(Key::S, false)]);
+            run(vec![]); // Dispatch Save with no later input queued yet.
+            run(vec![later.clone()]); // New input arrives during the busy frame.
+        } else {
+            run(vec![
+                egui::Event::Text("before".into()),
+                key(Key::S, false),
+                later.clone(),
+            ]);
+        }
+        for _ in 0..50 {
+            run(vec![]);
+            if asynchronous {
+                std::thread::sleep(Duration::from_millis(5));
+            }
+        }
+        assert_eq!(
+            ProjectStore.load(app.file.as_ref().unwrap()).unwrap().title,
+            "before"
+        );
+        assert_eq!(
+            app.editor.document.title,
+            if matches!(later, egui::Event::Text(_)) {
+                "beforeafter"
+            } else {
+                ""
+            }
+        );
+        assert!(app.deferred_text_input.is_empty());
+    }
+}
+
+#[test]
+fn text_after_tab_reaches_the_next_field_even_when_focus_wraps() {
+    for reverse in [false, true] {
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        let mut values = [String::new(), String::new()];
+        let mut run = |events| {
+            let mut raw = egui::RawInput {
+                events,
+                ..Default::default()
+            };
+            app.order_text_input(&ctx, &mut raw);
+            let mut output = ctx.run_ui(raw, |ui| {
+                for index in if reverse { [1, 0] } else { [0, 1] } {
+                    ui.add(
+                        TextInput::singleline(&mut values[index])
+                            .id_salt(index)
+                            .autofocus(index == 0),
+                    );
+                }
+            });
+            output.textures_delta.clear();
+        };
+        run(vec![]);
+        run(vec![
+            egui::Event::Text("before".into()),
+            egui::Event::Key {
+                key: Key::Tab,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: Modifiers::NONE,
+            },
+            egui::Event::Text("after".into()),
+        ]);
+        run(vec![]);
+        assert_eq!(values, ["before", "after"], "reverse={reverse}");
+    }
+}
+
+#[test]
+fn clicking_save_after_typing_captures_the_updated_field() {
+    let dir = tempfile::tempdir().unwrap();
+    let ctx = egui::Context::default();
+    let mut app = WireframeApp::workspace(&ctx, None);
+    app.file = Some(dir.path().join("test.wireframe"));
+    app.editor.document.title.clear();
+    let mut run = |events| {
+        let mut raw = egui::RawInput {
+            events,
+            ..Default::default()
+        };
+        app.order_text_input(&ctx, &mut raw);
+        let mut rect = Rect::NOTHING;
+        let mut output = ctx.run_ui(raw, |ui| {
+            let response = ui.button("Save");
+            rect = response.rect;
+            if response.clicked() {
+                app.save(false);
+            }
+            ui.add(TextInput::singleline(&mut app.editor.document.title).autofocus(true));
+        });
+        output.textures_delta.clear();
+        rect
+    };
+    let pos = run(vec![]).center();
+    run(vec![
+        egui::Event::Text("complete".into()),
+        egui::Event::PointerMoved(pos),
+        egui::Event::PointerButton {
+            pos,
+            button: egui::PointerButton::Primary,
+            pressed: true,
+            modifiers: Modifiers::NONE,
+        },
+        egui::Event::PointerButton {
+            pos,
+            button: egui::PointerButton::Primary,
+            pressed: false,
+            modifiers: Modifiers::NONE,
+        },
+    ]);
+    run(vec![]);
+    assert_eq!(
+        ProjectStore.load(app.file.as_ref().unwrap()).unwrap().title,
+        "complete"
+    );
+}

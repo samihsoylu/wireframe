@@ -80,4 +80,12 @@ Entering a group or component reveals its own crop and all ancestor crops. Desce
 
 The main editor uses a transient context-keyed scene. Page thumbnails, export and presentation use the canonical fully cropped scene, even when presentation starts inside a group. Hidden links remain inactive in presentation. Content changes invalidate both scene variants; changing context cannot reuse a scene from another depth or surface. The cached transient scene is bounded to one context.
 
-Regression checks cover ordinary groups and nested components, source and crop preservation, cache changes after local edits, Undo/Redo and serialization. Native macOS verified two nested masks, selecting a revealed button, returning to page scope, and clipped versus visible presentation links with exact saved-file preservation. Whole-group link precedence, empty active containers, broader overlapping masks and native Windows/Linux remain unresolved.
+Regression checks cover ordinary groups and nested components, source and crop preservation, cache changes after local edits, Undo/Redo and serialization. Native macOS verified two nested masks, selecting a revealed button, returning to page scope, and clipped versus visible presentation links with exact saved-file preservation. Whole-group links are described below. Empty active containers, broader overlapping masks and native Windows/Linux remain unresolved.
+
+## Group page links
+
+An unlocked group or component can link to a page through its inspector. Its visible rectangular bounds, including empty interior space, own that target. Parent links take precedence over links on descendants; clearing the parent link restores child navigation. Ancestor crop masks restrict the target, and later controls obscure covered regions. The shared scene supplies the same regions to presentation and exports without adding visible artwork.
+
+Nested component edits write local property overrides; the source and sibling instances stay unchanged. Reset local changes restores inherited links. Existing lock, history and storage rules apply. Group links are placed above the group's last descendant in the document's paint order; interleaved noncontiguous groups need broader native acceptance. The inspector currently assigns page targets; broader link authoring remains future work.
+
+Regression checks cover blank-space and child priority, nested masks, later-control occlusion, component overrides/reset/locks, history, serialization and zoomed presentation navigation with back history. Native macOS verified inspector assignment, both hit areas, Undo restoring the child destination, Redo and exact save/quit/reopen. Native Windows/Linux and broader presentation acceptance remain open.

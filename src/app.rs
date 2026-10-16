@@ -1174,10 +1174,11 @@ if c.kind==Kind::Tabs {ui.small("Separate tabs with commas.");}
                     ui.horizontal(|ui|{ui.label("Fill");ui.color_edit_button_srgb(&mut c.fill);});if matches!(c.kind,Kind::Checkbox|Kind::Radio|Kind::Toggle){ui.checkbox(&mut c.checked,"Selected state");}
                     }
                     if !self.editor.editing_instance() {ui.checkbox(&mut c.locked,"Lock position and content");}
-                    if c.group.is_none() && fixed_axis.is_none() && !matches!(c.kind, Kind::SiteMap | Kind::Popover | Kind::StreetMap | Kind::ModalOverlay | Kind::ColorPicker | Kind::HelpButton | Kind::ButtonBar | Kind::Breadcrumbs | Kind::LinkBar | Kind::Tabs | Kind::VerticalTabs | Kind::CheckboxGroup | Kind::RadioGroup | Kind::Menu | Kind::MenuBar | Kind::Tree | Kind::Accordion | Kind::Alert | Kind::AppBar | Kind::Playback | Kind::Webcam | Kind::Video | Kind::CoverFlow | Kind::ColumnChart | Kind::BarChart | Kind::LineChart | Kind::PieChart | Kind::HorizontalBrace | Kind::VerticalBrace | Kind::RedCross | Kind::ScratchOut | Kind::TextBlock | Kind::TextLine | Kind::TagCloud | Kind::Callout | Kind::StickyNote | Kind::Tooltip) {
+                    if c.group.is_some() || (fixed_axis.is_none() && !matches!(c.kind, Kind::SiteMap | Kind::Popover | Kind::StreetMap | Kind::ModalOverlay | Kind::ColorPicker | Kind::HelpButton | Kind::ButtonBar | Kind::Breadcrumbs | Kind::LinkBar | Kind::Tabs | Kind::VerticalTabs | Kind::CheckboxGroup | Kind::RadioGroup | Kind::Menu | Kind::MenuBar | Kind::Tree | Kind::Accordion | Kind::Alert | Kind::AppBar | Kind::Playback | Kind::Webcam | Kind::Video | Kind::CoverFlow | Kind::ColumnChart | Kind::BarChart | Kind::LineChart | Kind::PieChart | Kind::HorizontalBrace | Kind::VerticalBrace | Kind::RedCross | Kind::ScratchOut | Kind::TextBlock | Kind::TextLine | Kind::TagCloud | Kind::Callout | Kind::StickyNote | Kind::Tooltip)) {
                     let link_caption=c.link.and_then(|id|self.editor.document.pages.iter().find(|p|p.id==id).map(|p|p.name.clone())).unwrap_or("No page link".into());
                     ui_text::combo_box(ui,"page-link",&link_caption,|ui|{if ui_text::selectable_value(ui,&mut c.link,None,"No page link").clicked(){ui.close();}for p in &self.editor.document.pages {if ui_text::selectable_value(ui,&mut c.link,Some(p.id),&p.name).clicked(){ui.close();}}});
-                    } else if self.editor.is_group(c.id) && ui.button("Edit group contents").clicked(){self.editor.enter(c.id);}
+                    }
+                    if self.editor.is_group(c.id) && ui.button("Edit group contents").clicked(){self.editor.enter(c.id);}
                     if c!=original {self.editor.begin("Edit properties");if original.locked {c.bounds=original.bounds;c.text=original.text;c.font_size=original.font_size;c.bold=original.bold;c.fill=original.fill;c.checked=original.checked;c.link=original.link;}
                         self.editor.update_control(c);}
                     if !wireframe::text_entry::is_focused(ui.ctx()) && !ui.ctx().text_edit_focused()&&!ui.input(|i|i.pointer.any_down()){self.editor.commit();}
@@ -2692,6 +2693,46 @@ mod tests {
         assert_eq!(app.editor.page, first);
         app.follow_target("page:999999", &ctx);
         assert_eq!(app.editor.page, first);
+    }
+    #[test]
+    fn presentation_group_link_owns_gap_and_child_and_preserves_back_history() {
+        use wireframe::document::{Link, Node, Point, Size, Value};
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        let first = app.editor.page;
+        app.editor.add_page();
+        let contact = app.editor.page;
+        app.editor.add_page();
+        let order = app.editor.page;
+        app.editor.switch_page(first);
+        let a = Node::control(100, "button", Point::default(), Size::fixed(100., 40.));
+        let mut b = Node::control(101, "button", Point::new(100., 80.), Size::fixed(100., 40.));
+        b.properties
+            .insert("link".into(), Value::Link(Link::Page(order)));
+        let mut group = Node::group(102, Point::new(100., 100.), vec![a, b]);
+        group
+            .properties
+            .insert("link".into(), Value::Link(Link::Page(contact)));
+        app.editor.document.next_id = 103;
+        app.editor.document.pages[0].content.nodes = vec![group];
+        let saved = app.editor.document.clone();
+        app.present = true;
+        app.zoom = 1.5;
+        for point in [[150., 160.], [250., 200.]] {
+            frame(&ctx, &mut app, vec![]);
+            let pos = app.screen(point);
+            frame(
+                &ctx,
+                &mut app,
+                vec![egui::Event::PointerMoved(pos), pointer(pos, true)],
+            );
+            frame(&ctx, &mut app, vec![pointer(pos, false)]);
+            assert_eq!(app.editor.page, contact);
+            app.follow_target("back:", &ctx);
+            assert_eq!(app.editor.page, first);
+            assert!(app.presentation_history.is_empty());
+        }
+        assert_eq!(app.editor.document, saved);
     }
     #[test]
     fn actual_canvas_drag_resize_and_undo() {

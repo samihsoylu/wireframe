@@ -721,12 +721,12 @@ impl Editor {
                             .insert("state".into(), Value::Choice(state.into()));
                         node.properties.remove("checked");
                     }
-                    if c.link != old.link {
-                        node.properties.insert(
-                            "link".into(),
-                            c.link.map_or(Value::Null, |id| Value::Link(Link::Page(id))),
-                        );
-                    }
+                }
+                if c.link != old.link {
+                    node.properties.insert(
+                        "link".into(),
+                        c.link.map_or(Value::Null, |id| Value::Link(Link::Page(id))),
+                    );
                 }
             }
             if !self.editing_instance() {

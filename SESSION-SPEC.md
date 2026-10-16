@@ -6,15 +6,13 @@ Build a complete, usable offline Rust wireframing product for macOS, Windows and
 
 Work directly as Engineer. Preserve user files and explicit deferrals. Use synthetic fixtures for native experiments. Keep reference-specific names, extracted implementation/assets and investigation narratives outside this repository and its Git history. Original code is GPL-3.0-only from first commit 87f11c1; preserve dependency notices. Existing-format import remains deferred.
 
-## Current checkpoint — nested editing visibility
+## Current checkpoint — group page links
 
-Entering a cropped group now reveals its mask and ancestor masks while preserving deeper masks. The editor dims unrelated content by nesting depth and uses the same revealed regions for selection. Canonical page thumbnails, exports and presentation retain the original crops and opacity. A context-keyed scene cache updates after content edits and context changes without altering saved geometry.
+Groups and components now expose a page-link selector. Their visible bounds, including blank interior space, take priority over child links. Clearing the group link restores child targets. Crop masks and later-control occlusion constrain the shared presentation/export regions. Local component edits preserve source and sibling values; Reset local changes restores inheritance.
 
-The full macOS suite passes 643 tests, with one intentionally ignored subprocess helper; all-target Clippy is clean. Three new regressions cover nested ordinary/component selection, masks and dimming by level, canonical clipped links, cache invalidation, source/crop preservation and exact history/storage round trips. The prior implementation failed the revealed-button hit test before this correction.
+The full macOS suite passes 647 tests, with one intentionally ignored subprocess helper; all-target Clippy is clean. Four new tests cover region priority, nested crops and occlusion, component overrides/reset/locks/history/storage, and zoomed presentation clicks with back history. Native macOS verified group assignment, blank and child target priority, Undo restoring child navigation, Redo and exact save/quit/reopen. Only the group link property changed in the native file. All 88 pre-existing profile files are unchanged; two synthetic records were added. Candidate closed, installed app unchanged, task VM remains stopped. Native Windows/Linux remain open. Engineer self-review only; full goal remains active.
 
-Native macOS verified outer/inner entry, selection through a formerly hidden button region, restored masks on exit and the presentation boundary. In presentation the hidden Contact button remained inactive while the visible Order button navigated to its page. Save after navigation/context changes retained exact baseline file bytes. All 86 pre-existing profile files are unchanged; two synthetic records were added. Candidate closed, installed app unchanged, task VM remains stopped. Native Windows/Linux verification remains open. Engineer self-review only; the full goal remains active.
-
-Next investigate whole-group link precedence and remaining nested hit behavior. Empty active-group visibility is a separate unresolved edge case. Preserve remaining canvas softness, held drag cadence, typography/PDF, large-document performance and platform/release gaps.
+Next resolve deeper editing-emphasis behavior and broaden nested presentation/overlap acceptance. Interleaved group layer order and group URL/back authoring need additional work. Preserve canvas softness, held drag cadence, typography/PDF, performance and platform/release gaps.
 
 ## Existing capabilities and limits
 

@@ -255,6 +255,26 @@ impl Scene {
                     );
                 scene.links.extend(own_links);
             }
+            for (bounds, target) in &layer.group_links {
+                scene.links = scene
+                    .links
+                    .drain(..)
+                    .flat_map(|link| {
+                        subtract(link.bounds, *bounds)
+                            .into_iter()
+                            .map(move |bounds| LinkRegion {
+                                hint: link.hint,
+                                target: link.target.clone(),
+                                bounds,
+                            })
+                    })
+                    .collect();
+                scene.links.push(LinkRegion {
+                    hint: *bounds,
+                    bounds: *bounds,
+                    target: target.target(),
+                });
+            }
             for item in &mut scene.items[own_items_start..] {
                 item.opacity *= layer.opacity;
             }

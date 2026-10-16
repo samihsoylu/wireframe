@@ -63,6 +63,8 @@ pub struct Layer {
     pub clip: Option<Bounds>,
     /// Transient editing emphasis; stored/exported layers remain fully opaque.
     pub opacity: f32,
+    /// Container targets applied above their final descendant in paint order.
+    pub group_links: Vec<(Bounds, Link)>,
     pub path: NodePath,
     pub properties: Properties,
     pub clock: Option<crate::tablet::Clock>,
@@ -271,7 +273,7 @@ impl Editor {
     }
     fn layers_in_context(&self, id: Id, context: &[Id]) -> Result<Vec<Layer>, String> {
         let layout = self.layout_page(id)?;
-        Ok(layout
+        let mut layers: Vec<Layer> = layout
             .leaves()
             .into_iter()
             .map(|(node, _)| Layer {
@@ -293,12 +295,43 @@ impl Editor {
                 } else {
                     (0.4 / context.len().max(node.path.len().saturating_sub(1)) as f32).max(0.1)
                 },
+                group_links: vec![],
                 path: node.path.clone(),
                 properties: node.properties.clone(),
                 clock: None,
                 date: None,
             })
-            .collect())
+            .collect();
+        let mut last = HashMap::new();
+        for (index, layer) in layers.iter().enumerate() {
+            for depth in 1..layer.path.len() {
+                last.insert(layer.path[..depth].to_vec(), index);
+            }
+        }
+        fn attach(
+            nodes: &[LayoutNode],
+            layout: &Layout,
+            last: &HashMap<NodePath, usize>,
+            layers: &mut [Layer],
+            context: &[Id],
+        ) {
+            for node in nodes {
+                attach(&node.children, layout, last, layers, context);
+                if let Some(Value::Link(link)) = node.properties.get("link")
+                    && let Some(&index) = last.get(&node.path)
+                {
+                    let frame = path_clip(&layout.nodes, &node.path, context)
+                        .map_or(node.bounds, |clip| node.bounds.intersect(clip));
+                    if frame.width > 0. && frame.height > 0. {
+                        layers[index]
+                            .group_links
+                            .push((bounds(frame), link.clone()));
+                    }
+                }
+            }
+        }
+        attach(&layout.nodes, &layout, &last, &mut layers, context);
+        Ok(layers)
     }
     pub fn rendered_page(&self, id: Id) -> Result<model::Page, String> {
         let (name, _) = self.surface(id).ok_or("Workspace no longer exists")?;

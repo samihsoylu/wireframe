@@ -12,7 +12,11 @@ macOS storage tests forcibly terminate a child writer before its new checkpoint,
 
 Native macOS checks also forcibly terminated the full app after confirming its local checkpoint. Restart offered the edited four-page project; Restore and Save produced the complete expected project. In a second run, the named file was changed while the app was stopped. Restore opened the local version as unnamed work, Save requested a destination, and saving a separate copy preserved both versions. These checks used a disposable project and restored the original automatic-save preference.
 
-These results do not guarantee recovery of edits before a completed checkpoint. They do not test power loss, filesystem/device failure, termination inside an atomic write, all Save As interruption points or native Windows/Linux crashes. Current atomic writes flush temporary-file contents before replacement; Linux also syncs the parent directory. Platform and filesystem durability remain separate from process-termination evidence.
+Save As has an additional 24-case process-termination matrix: named/unnamed source, new/existing destination, and six boundaries from the source checkpoint through destination reservation, pending journal, named replacement, acknowledgement and source removal. The tests drive the storage APIs in the session's handoff order. They retain the source until destination acknowledgement, preserve the original named source, and recover previous destination edits from immutable archives. The actual background-session integration tests separately cover ordinary Save As ownership and successful transfer.
+
+A native macOS Save As run replaced a disposable destination that had unsaved local edits. Its prior working record was archived byte-for-byte. File → Recover work displayed that previous copy; Restore opened an unnamed project and Save required a new path. Saving the recovered version preserved both the archive and the new destination contents.
+
+These results do not guarantee recovery of edits before a completed checkpoint. They do not test power loss, filesystem/device failure, termination inside an atomic write or archive rename, every background-worker interleaving, or native Windows/Linux crashes. Current atomic writes flush temporary-file contents before replacement; Linux also syncs the parent directory. Platform and filesystem durability remain separate from process-termination evidence.
 
 ## Legacy recovery and fallback
 

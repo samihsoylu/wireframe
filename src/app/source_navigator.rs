@@ -46,8 +46,8 @@ impl WireframeApp {
         self.show_navigator
             && !self.source_navigation.release_focus
             && self.editor.in_source_workspace()
-            && ctx
-                .memory(|m| m.focused())
+            && self
+                .command_navigation_focus(ctx)
                 .is_some_and(|id| self.source_navigation.focus.contains_key(&id))
     }
     pub(super) fn source_command_enabled(
@@ -131,8 +131,8 @@ impl WireframeApp {
         {
             return Some(row);
         }
-        let row = ctx
-            .memory(|m| m.focused())
+        let row = self
+            .command_navigation_focus(ctx)
             .and_then(|id| self.source_navigation.focus.get(&id).copied())?;
         // Consecutive commands can precede the next navigator frame. A freshly
         // duplicated source owns that pending focus, while library rows remain explicit.

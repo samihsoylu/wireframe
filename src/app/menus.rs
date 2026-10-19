@@ -4,6 +4,8 @@
 #[cfg(target_os = "macos")]
 mod macos;
 #[cfg(test)]
+mod navigation_tests;
+#[cfg(test)]
 mod tests;
 use super::*;
 
@@ -298,7 +300,14 @@ pub(super) struct Menus {
     in_window_items: Vec<egui::Id>,
     pending_text_command: Option<PendingTextCommand>,
     text_owner: Option<egui::Id>,
+    navigator_owner: Option<NavigatorMenuOwner>,
     pub(super) drawing_popup: bool,
+}
+struct NavigatorMenuOwner {
+    id: egui::Id,
+    session: String,
+    page: Id,
+    surface: Option<source_navigator::ResourceRow>,
 }
 struct PendingTextCommand {
     owner: egui::Id,
@@ -389,6 +398,37 @@ impl Menus {
     }
 }
 impl WireframeApp {
+    pub(super) fn begin_in_window_menus(&mut self, ctx: &egui::Context) {
+        if !self.menus.in_window_open(ctx) {
+            // The popup takes widget focus; retain its original resource owner
+            // without letting that owner survive a project or workspace change.
+            self.menus.navigator_owner = (self.show_navigator
+                && (self.source_navigation_focused(ctx)
+                    || (!self.editor.in_source_workspace() && self.navigator.focused(ctx))))
+            .then(|| ctx.memory(|m| m.focused()))
+            .flatten()
+            .map(|id| NavigatorMenuOwner {
+                id,
+                session: self.editor.clipboard_session().into(),
+                page: self.editor.page,
+                surface: self.active_resource_row(),
+            });
+        }
+        self.menus.begin_in_window(ctx);
+    }
+
+    pub(super) fn command_navigation_focus(&self, ctx: &egui::Context) -> Option<egui::Id> {
+        if self.menus.drawing_popup || self.menus.in_window_open(ctx) {
+            let owner = self.menus.navigator_owner.as_ref()?;
+            return (self.show_navigator
+                && owner.session == self.editor.clipboard_session()
+                && owner.page == self.editor.page
+                && owner.surface == self.active_resource_row())
+            .then_some(owner.id);
+        }
+        ctx.memory(|m| m.focused())
+    }
+
     pub(super) fn deliver_menu_text_command(
         &mut self,
         ctx: &egui::Context,
@@ -554,7 +594,21 @@ impl WireframeApp {
             New => self.request(Pending::New, ctx),
             Open => self.open(ctx),
             Save => {
+                let owner = self.command_navigation_focus(ctx).filter(|id| {
+                    if self.editor.in_source_workspace() {
+                        self.source_navigation_focused(ctx)
+                    } else {
+                        self.navigator.focus_ids.contains(id)
+                    }
+                });
                 self.save(false);
+                if self.save_busy()
+                    && let Some(id) = owner
+                {
+                    // Capture before the closing popup and saving modal disable rows.
+                    self.save_navigator_focus = Some(id);
+                    ctx.memory_mut(|m| m.request_focus(id));
+                }
             }
             SaveAs => {
                 // Choosing a destination accepts the canvas draft even when the

@@ -3,7 +3,7 @@
 use super::*;
 
 impl WireframeApp {
-    pub(super) fn active_resource_row(&self) -> Option<ResourceRow> {
+    pub(in crate::app) fn active_resource_row(&self) -> Option<ResourceRow> {
         self.editor
             .definition
             .map(ResourceRow::Source)

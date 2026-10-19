@@ -71,6 +71,15 @@ fn save_focus_key(key: egui::Key, modifiers: egui::Modifiers) -> egui::Event {
 
 #[test]
 fn named_save_restores_navigator_focus_before_the_next_outdent_and_arrow() {
+    page_save_focus(false);
+}
+
+#[test]
+fn file_menu_save_restores_page_focus_before_the_next_outdent_and_arrow() {
+    page_save_focus(true);
+}
+
+fn page_save_focus(menu: bool) {
     for (thumbnails, key_on_completion, busy_frames) in [
         (false, false, 3),
         (true, false, 3),
@@ -158,12 +167,17 @@ fn named_save_restores_navigator_focus_before_the_next_outdent_and_arrow() {
             Some(first)
         );
         let saved = app.editor.document.clone();
-        save_focus_frame(
-            &ctx,
-            &mut app,
-            vec![save_focus_key(egui::Key::S, egui::Modifiers::COMMAND)],
-        )
-        .drop_without_applying_deltas();
+        if menu {
+            save_focus_click(&ctx, &mut app, "File");
+            save_focus_click(&ctx, &mut app, "Save                   ⌘/Ctrl S");
+        } else {
+            save_focus_frame(
+                &ctx,
+                &mut app,
+                vec![save_focus_key(egui::Key::S, egui::Modifiers::COMMAND)],
+            )
+            .drop_without_applying_deltas();
+        }
         assert!(app.save_busy());
         for _ in 0..busy_frames {
             save_focus_frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
@@ -527,6 +541,15 @@ fn clean_save_receipt_finishes_status_without_a_separate_saved_event() {
 
 #[test]
 fn named_save_restores_source_range_focus_before_the_next_arrow() {
+    source_range_save_focus(false);
+}
+
+#[test]
+fn file_menu_save_restores_source_range_focus_before_the_next_arrow() {
+    source_range_save_focus(true);
+}
+
+fn source_range_save_focus(menu: bool) {
     for busy_frames in [0, 3] {
         let (dir, ctx, mut app) = fixture();
         ctx.enable_accesskit();
@@ -608,12 +631,17 @@ fn named_save_restores_source_range_focus_before_the_next_arrow() {
         .drop_without_applying_deltas();
         assert_eq!(app.source_navigation.selected.len(), 2);
         assert_eq!(app.editor.definition, Some(first));
-        save_focus_frame(
-            &ctx,
-            &mut app,
-            vec![save_focus_key(egui::Key::S, egui::Modifiers::COMMAND)],
-        )
-        .drop_without_applying_deltas();
+        if menu {
+            save_focus_click(&ctx, &mut app, "File");
+            save_focus_click(&ctx, &mut app, "Save                   ⌘/Ctrl S");
+        } else {
+            save_focus_frame(
+                &ctx,
+                &mut app,
+                vec![save_focus_key(egui::Key::S, egui::Modifiers::COMMAND)],
+            )
+            .drop_without_applying_deltas();
+        }
         assert!(app.save_busy());
         for _ in 0..busy_frames {
             save_focus_frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
@@ -643,5 +671,38 @@ fn named_save_restores_source_range_focus_before_the_next_arrow() {
         assert_eq!(ProjectStore.load(&path).unwrap(), saved);
         assert_eq!(app.editor.undo_name(), history.as_deref());
         app.on_exit(None);
+    }
+}
+
+fn save_focus_click(ctx: &egui::Context, app: &mut WireframeApp, label: &str) {
+    let output = save_focus_frame(ctx, app, vec![]);
+    let node = output
+        .platform_output
+        .accesskit_update
+        .as_ref()
+        .unwrap()
+        .nodes
+        .iter()
+        .find(|(_, node)| node.label() == Some(label))
+        .unwrap_or_else(|| panic!("Missing {label}"));
+    assert!(!node.1.is_disabled(), "Disabled {label}");
+    let b = node.1.bounds().unwrap();
+    let point = egui::pos2(((b.x0 + b.x1) / 2.) as f32, ((b.y0 + b.y1) / 2.) as f32);
+    output.drop_without_applying_deltas();
+    for pressed in [true, false] {
+        save_focus_frame(
+            ctx,
+            app,
+            vec![
+                egui::Event::PointerMoved(point),
+                egui::Event::PointerButton {
+                    pos: point,
+                    button: egui::PointerButton::Primary,
+                    pressed,
+                    modifiers: egui::Modifiers::NONE,
+                },
+            ],
+        )
+        .drop_without_applying_deltas();
     }
 }

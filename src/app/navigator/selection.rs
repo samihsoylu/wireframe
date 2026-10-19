@@ -22,7 +22,11 @@ impl WireframeApp {
         ctx: &egui::Context,
         command: menus::Command,
     ) -> Option<bool> {
-        if self.editor.in_source_workspace() || !self.show_navigator || !self.navigator.focused(ctx)
+        if self.editor.in_source_workspace()
+            || !self.show_navigator
+            || self
+                .command_navigation_focus(ctx)
+                .is_none_or(|id| !self.navigator.focus_ids.contains(&id))
         {
             return None;
         }

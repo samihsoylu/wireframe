@@ -9,7 +9,7 @@ use icons::{Icon, button};
 
 impl WireframeApp {
     pub(super) fn toolbar(&mut self, ui: &mut egui::Ui) {
-        self.menus.begin_in_window(ui.ctx());
+        self.begin_in_window_menus(ui.ctx());
         if self.present {
             self.presentation_toolbar(ui);
             return;

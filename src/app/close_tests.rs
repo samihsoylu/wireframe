@@ -323,3 +323,88 @@ fn escape_dismisses_only_the_top_error_before_cancelling_unsaved_review() {
     assert!(!app.quit_allowed);
     assert_eq!(app.editor.document, changed);
 }
+
+#[cfg(target_os = "macos")]
+#[test]
+fn appkit_quit_routes_pending_input_and_cancellation_through_window_close() {
+    let (ctx, mut app) = setup();
+    app.native_termination = Some(native_termination::NativeTermination::simulated(&ctx));
+    app.native_termination.as_ref().unwrap().request_for_test();
+    let out = frame(
+        &mut app,
+        &ctx,
+        vec![
+            key(Key::A),
+            egui::Event::Text("Native quit draft 世界".into()),
+        ],
+        false,
+    );
+    assert!(cancelled(&out));
+    assert_eq!(
+        app.editor.current().controls[0].text,
+        "Native quit draft 世界"
+    );
+    assert!(matches!(app.pending, Some(Pending::Quit)));
+    assert!(!app.quit_allowed);
+    app.pending = None; // Cancel the save review.
+    for _ in 0..3 {
+        frame(&mut app, &ctx, vec![], false);
+    }
+    assert!(!app.native_termination.as_ref().unwrap().approved_for_test());
+    assert!(!app.window_close_pending && !app.quit_allowed);
+    // A new native request after cancellation must work, rather than stay latched.
+    app.native_termination.as_ref().unwrap().request_for_test();
+    frame(&mut app, &ctx, vec![], false);
+    assert!(matches!(app.pending, Some(Pending::Quit)));
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn appkit_clean_quit_approves_native_exit_after_the_editor_gate() {
+    let (ctx, mut app) = setup();
+    let original = app.editor.document.clone();
+    app.native_termination = Some(native_termination::NativeTermination::simulated(&ctx));
+    app.native_termination.as_ref().unwrap().request_for_test();
+    let out = frame(&mut app, &ctx, vec![], false);
+    assert!(app.quit_allowed);
+    assert!(app.native_termination.as_ref().unwrap().approved_for_test());
+    assert_eq!(app.editor.document, original);
+    assert!(
+        !out.viewport_output[&egui::ViewportId::ROOT]
+            .commands
+            .contains(&egui::ViewportCommand::Close)
+    );
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn appkit_quit_does_not_approve_a_failed_or_cancelled_save() {
+    let (ctx, mut app) = setup();
+    let directory = tempfile::tempdir().unwrap();
+    let destination = directory.path().join("blocked.wireframe");
+    std::fs::create_dir(&destination).unwrap();
+    app.file = Some(destination); // A directory cannot be a project destination.
+    app.native_termination = Some(native_termination::NativeTermination::simulated(&ctx));
+    app.native_termination.as_ref().unwrap().request_for_test();
+    frame(
+        &mut app,
+        &ctx,
+        vec![
+            key(Key::A),
+            egui::Event::Text("Keep after save failure".into()),
+        ],
+        false,
+    );
+    assert!(matches!(app.pending, Some(Pending::Quit)));
+    assert!(!app.save(false));
+    assert!(app.error.is_some());
+    app.settle_native_close();
+    assert!(!app.quit_allowed && !app.native_termination.as_ref().unwrap().approved_for_test());
+    app.pending = None;
+    app.settle_native_close();
+    assert_eq!(
+        app.editor.current().controls[0].text,
+        "Keep after save failure"
+    );
+    assert!(!app.native_termination.as_ref().unwrap().approved_for_test());
+}

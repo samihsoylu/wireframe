@@ -10,5 +10,6 @@
 - Present linked pages with optional navigation, link hints and a large pointer.
 - Export PNG, SVG and linked multi-page PDF files.
 - Save editable projects locally and recover interrupted sessions.
+- Review unsaved edits before responding to a native macOS quit request.
 
 Platform availability and remaining limitations will be listed with the release. Built-in updates are not available yet.

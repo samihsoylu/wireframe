@@ -6,6 +6,7 @@ Status: **planned, not implemented**. The app currently has no updater. Sparkle 
 
 - [ ] Integrate Sparkle 2 through a small native bridge, with a user-visible **Check for Updates…** action and a preference for automatic checks.
 - [x] Preserve framework symlinks and helper permissions through staging, ZIP extraction and DMG creation. A real-framework packaging fixture passes entry, permission and signature comparisons; this does not establish updater integration.
+- [x] Route direct macOS termination through the draft/save gate. Native cancellation, save and cold reopen pass an isolated AppKit-action check. Updater installation must require this gate to be available; actual Sparkle cancellation/resume and OS shutdown remain unverified.
 - [ ] Pin and verify the framework download for the product build and retain its license in the installed app.
 - [ ] Give Wireframe its own Ed25519 signing identity. Keep its private key in the macOS Keychain or release secret storage, outside Git; retain a recoverable backup. Never reuse another app’s key.
 - [ ] Embed the public key and HTTPS appcast URL in the bundle. Maintain increasing build versions and human-readable release versions, beginning with 0.1.0.

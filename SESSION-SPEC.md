@@ -8,7 +8,7 @@ Single Engineer, no delegation or independent review claimed. Windows native tes
 
 ## Public product and release requirements — 19 October 2026
 
-- Product history and release tooling were pushed to `git@github.com:samihsoylu/wireframe.git` on `main` through commit `883deb8`, following explicit authorization. Public documentation leads with the user’s task, installation and limitations. Technical records remain separate.
+- Product history and release tooling were pushed to `git@github.com:samihsoylu/wireframe.git` on `main` through commit `473fcf9`, following explicit authorization. Public documentation leads with the user’s task, installation and limitations. Technical records remain separate.
 - Start at version **0.1.0**. Every release must have bullet-point changes, with downloads and known limitations. See [changelog](CHANGELOG.md) and [release template](.github/RELEASE_TEMPLATE.md).
 - macOS releases need a **DMG with a visible arrow from Wireframe to Applications**, installation instructions and matching source/licenses. Follow the established SideTray installer approach. No Apple Developer ID or notarization is planned; explain first-launch behavior honestly.
 - Windows releases need a **portable EXE** plus source/license ZIP. Automatic Windows updates may come later. Native Windows testing remains held, not assumed passed.
@@ -30,6 +30,8 @@ The subsequent toolbar correction aligns panel/presentation glyphs and adds fill
 
 The updater packaging prerequisite now passes: staging preserves links, native macOS ZIPs preserve framework metadata, and DMG identity checks include entry types, targets and permissions. Eight packaging checks pass on Python 3.9/3.13; a real-framework fixture survives ZIP and DMG round trips with exact entries and valid ad-hoc signatures. The standalone DMG SDK mismatch is corrected. External `updater-packaging-current` records the failed first attempt, corrected result and cleanup. Sparkle is still not integrated; no signing key, update feed or public release was created.
 
+The native macOS termination prerequisite now routes direct AppKit quit through the existing draft/save/export gate. Eleven close checks and all-target lint pass. An isolated native-menu trigger preserves Unicode drafts through file-chooser and quit cancellation, saves exactly, reopens with empty history and exits cleanly without changing saved bytes. All 232 prior working-copy records are unchanged; both recorded test processes exited. External `updater-lifecycle-current` records the trigger-only build difference and corrected harness mistakes. This is not actual Sparkle upgrade, OS shutdown or newly verified Windows/Linux behavior. Final packages must include this change.
+
 ## Next actions and unresolved requirements
 
 1. Source publication is complete; no release tag or binary release was published. The macOS DMG wrapper is implemented and passes mounted app/source identity, signature, checksum and Finder visual inspection. Portable EXE emission passes a synthetic packaging check; this is not Windows execution. Keep Sparkle clearly planned until implemented and tested. A distinct product app icon remains a pre-release polish task; the current bundle shows the system placeholder.
@@ -43,7 +45,7 @@ The updater packaging prerequisite now passes: staging preserves links, native m
 
 ## Evidence navigation
 
-Detailed candidate identities, native screenshots, saved-state comparisons and failure logs live outside product Git. Latest checkpoints: `updater-packaging-current`, `toolbar-final-icons-current`, `review-build-20261019`, `catalog-panels-requirements-current`, `component-inspector-requirements-current`, `resource-requirements-current`, `export-destination-current`. Earlier checkpoints below retain their original scope. Historical process/window descriptions do not establish current liveness; recheck ownership before UI cleanup.
+Detailed candidate identities, native screenshots, saved-state comparisons and failure logs live outside product Git. Latest checkpoints: `updater-lifecycle-current`, `updater-packaging-current`, `toolbar-final-icons-current`, `review-build-20261019`, `catalog-panels-requirements-current`, `component-inspector-requirements-current`, `resource-requirements-current`, `export-destination-current`. Earlier checkpoints below retain their original scope. Historical process/window descriptions do not establish current liveness; recheck ownership before UI cleanup.
 
 ## Retained acceptance and evidence
 

@@ -31,6 +31,8 @@ mod library_drag;
 mod library_import;
 mod menus;
 mod more_controls;
+#[cfg(target_os = "macos")]
+mod native_termination;
 mod navigator;
 #[cfg(test)]
 mod navigator_tests;
@@ -188,6 +190,8 @@ pub struct WireframeApp {
     image_split_fraction: f32,
     quit_allowed: bool,
     window_close_pending: bool,
+    #[cfg(target_os = "macos")]
+    native_termination: Option<native_termination::NativeTermination>,
     icon_dialog: Option<icon_dialog::IconDialog>,
     text_edit: Option<(Id, String)>,
     image_source_request: Option<Id>,
@@ -364,6 +368,8 @@ impl WireframeApp {
             image_split_fraction: 0.3,
             quit_allowed: false,
             window_close_pending: false,
+            #[cfg(target_os = "macos")]
+            native_termination: None,
             icon_dialog: None,
             text_edit: None,
             image_source_request: None,
@@ -415,6 +421,10 @@ impl WireframeApp {
             app.start_startup_open(PathBuf::from(path), &cc.egui_ctx);
         }
         app.init_menus(cc);
+        #[cfg(target_os = "macos")]
+        {
+            app.native_termination = native_termination::NativeTermination::new(&cc.egui_ctx);
+        }
         app
     }
     #[cfg(test)]
@@ -580,6 +590,14 @@ impl WireframeApp {
             Pending::Quit => {
                 self.quit_allowed = true;
                 self.clear_recovery();
+                #[cfg(target_os = "macos")]
+                if self
+                    .native_termination
+                    .as_ref()
+                    .is_some_and(|gate| gate.approve())
+                {
+                    return;
+                }
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
             Pending::Restore(id) => {
@@ -2136,6 +2154,7 @@ impl eframe::App for WireframeApp {
         self.icon_dialog_ui(&ctx);
         self.dialogs(&ctx);
         self.finish_window_close(&ctx);
+        self.settle_native_close();
         self.observe_project();
         self.remember_version_view();
         self.remember_viewports(false);

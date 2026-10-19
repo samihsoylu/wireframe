@@ -4,9 +4,20 @@ use super::*;
 
 impl WireframeApp {
     pub(super) fn capture_window_close(&mut self, ctx: &egui::Context) {
-        if !self.quit_allowed && ctx.input(|i| i.viewport().close_requested()) {
+        #[cfg(target_os = "macos")]
+        let native_request = self
+            .native_termination
+            .as_ref()
+            .is_some_and(|gate| gate.take_request());
+        #[cfg(not(target_os = "macos"))]
+        let native_request = false;
+        if !self.quit_allowed && (native_request || ctx.input(|i| i.viewport().close_requested())) {
             self.window_close_pending = true;
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            if native_request {
+                ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
+                ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+            }
             // Restore a minimized window so its retained input and any unsaved
             // confirmation can run in a UI pass before the close is acknowledged.
             if ctx.input(|i| i.viewport().minimized == Some(true)) {
@@ -36,5 +47,20 @@ impl WireframeApp {
         self.commit_text_session(ctx);
         self.editor.commit();
         self.request(Pending::Quit, ctx);
+    }
+
+    pub(super) fn settle_native_close(&self) {
+        #[cfg(target_os = "macos")]
+        if !self.quit_allowed
+            && !self.window_close_pending
+            && self.startup_open.is_none()
+            && !matches!(self.pending, Some(Pending::Quit))
+            && !self.save_busy()
+            && !self.quit_after_pdf
+            && !self.image_export.quit_after
+            && let Some(gate) = &self.native_termination
+        {
+            gate.cancel();
+        }
     }
 }

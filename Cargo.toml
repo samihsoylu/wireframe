@@ -44,11 +44,12 @@ lto = "thin"
 strip = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
+block2 = "=0.6.2"
 core-text = "22.0.0"
 core-foundation = "0.10.1"
 core-graphics = "0.25.0"
 egui-winit = { version = "=0.36.2", default-features = false }
 objc2 = "=0.6.5"
 objc2-app-kit = { version = "=0.3.2", default-features = false, features = ["NSFont", "NSFontDescriptor", "objc2-core-foundation", "NSApplication", "NSMenu", "NSMenuItem", "NSEvent", "NSResponder", "NSCell", "NSView", "NSWindow", "NSColor", "NSColorSpace"] }
-objc2-foundation = { version = "=0.3.2", default-features = false, features = ["NSObject", "NSString", "NSURL", "NSArray", "NSUserDefaults"] }
+objc2-foundation = { version = "=0.3.2", default-features = false, features = ["NSObject", "NSString", "NSURL", "NSArray", "NSUserDefaults", "NSRunLoop", "block2"] }
 raw-window-handle = "0.6.2"

@@ -15,6 +15,7 @@ pub(in crate::app) enum Edge {
     Left,
     Right,
     Top,
+    Bottom,
 }
 
 // Framework drag flags can omit movement and release delivered in one redraw.
@@ -54,7 +55,7 @@ pub(in crate::app) fn prepare(
     let mut finished = false;
     let mut consumed = Vec::new();
     if !cancelled && let (Some(handle), Some(mut panel)) = (handle, panel) {
-        let axis = usize::from(matches!(edge, Edge::Top));
+        let axis = usize::from(matches!(edge, Edge::Top | Edge::Bottom));
         let threshold = ui.ctx().options(|o| o.input_options.max_click_dist);
         for (index, event) in events.into_iter().enumerate() {
             if press.is_some() && matches!(event, egui::Event::PointerMoved(_)) {
@@ -79,7 +80,7 @@ pub(in crate::app) fn prepare(
                     if (pos[axis] - start.start[axis]).abs() <= threshold {
                         continue;
                     }
-                    let from_max = matches!(edge, Edge::Right);
+                    let from_max = matches!(edge, Edge::Right | Edge::Bottom);
                     let fixed = if from_max {
                         panel.outer_rect.max[axis]
                     } else {

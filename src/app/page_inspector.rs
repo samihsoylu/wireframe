@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
+mod preferences;
 use super::*;
 use wireframe::text_entry::layout::{notes::NotesLayout, shared_engine};
 
@@ -7,7 +8,15 @@ use wireframe::text_entry::layout::{notes::NotesLayout, shared_engine};
 pub(super) struct PageInspector {
     draft: Option<Notes>,
     read: Option<ReadNotes>,
+    preferences: preferences::Preferences,
 }
+impl PageInspector {
+    pub(super) fn clear(&mut self) {
+        self.draft = None;
+        self.read = None;
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 enum NotesOwner {
     Page(Id, Option<Id>),
@@ -30,6 +39,54 @@ struct ReadNotes {
 }
 
 impl WireframeApp {
+    pub(super) fn load_panel_preferences(&mut self, root: &std::path::Path) {
+        if let Err(error) = self.page_inspector.preferences.load(root) {
+            self.error = Some(format!(
+                "Panel settings could not be read. The file is unchanged.\n{error}"
+            ));
+        }
+    }
+    fn alternate_panel(&mut self, ui: &mut egui::Ui) {
+        let key = self.version_preferences_key();
+        let height = self.page_inspector.preferences.get(key.as_deref());
+        let id = egui::Id::new(("page-alternates-panel", &key, height));
+        // Keep the existing notes editor usable in a short window. Do not
+        // persist a temporary viewport clamp as the user's preferred height.
+        let maximum = (ui.available_height() - 160.).clamp(0., 400.);
+        let range = 130_f32.min(maximum)..=maximum;
+        let fast_resize = chrome::prepare_panel_resize(
+            ui,
+            id,
+            chrome::PanelEdge::Bottom,
+            range.clone(),
+            !self.canvas_input_blocked(),
+        );
+        let panel = egui::Panel::bottom(id)
+            .default_size((height as f32).min(maximum))
+            .resizable(true)
+            .size_range(range)
+            .frame(egui::Frame::NONE.fill(chrome::PANEL))
+            .show(ui, |ui| {
+                egui::ScrollArea::vertical()
+                    .id_salt("page-alternates")
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| self.versions_panel(ui));
+            });
+        let released = ui
+            .read_response(id.with("__resize"))
+            .is_some_and(|response| response.drag_stopped());
+        if (fast_resize || released) && maximum >= 130. {
+            let height = panel.response.rect.height().round().clamp(130., 400.) as u16;
+            if let Err(error) = self
+                .page_inspector
+                .preferences
+                .remember(key.as_deref(), height)
+            {
+                self.status = format!("Panel size is retained for this session: {error}");
+            }
+        }
+    }
+
     fn notes_owner(&self) -> NotesOwner {
         if self.editor.in_source_workspace() {
             NotesOwner::Source(self.editor.surface_id())
@@ -135,7 +192,7 @@ impl WireframeApp {
                     ui_text::CaptionStyle::panel_heading(),
                 );
             });
-        let height = if self.editor.in_source_workspace() {
+        if self.editor.in_source_workspace() {
             let uses = self.editor.definition.map(|source| {
                 self.editor
                     .component_usages(source)
@@ -147,21 +204,15 @@ impl WireframeApp {
             let footer = uses.map_or(0., |count| {
                 (44. + count.max(1) as f32 * 22.).min((ui.available_height() * 0.35).max(66.))
             });
-            (ui.available_height() - footer - 8.).max(160.)
+            self.notes_region(ui, (ui.available_height() - footer - 8.).max(160.));
+            ui.separator();
+            egui::ScrollArea::vertical()
+                .id_salt("page-alternates")
+                .show(ui, |ui| self.component_usage_panel(ui));
         } else {
-            (ui.available_height() * 0.55).max(160.)
-        };
-        self.notes_region(ui, height);
-        ui.separator();
-        egui::ScrollArea::vertical()
-            .id_salt("page-alternates")
-            .show(ui, |ui| {
-                if self.editor.in_source_workspace() {
-                    self.component_usage_panel(ui);
-                } else {
-                    self.versions_panel(ui);
-                }
-            });
+            self.alternate_panel(ui);
+            self.notes_region(ui, ui.available_height());
+        }
     }
     pub(super) fn notes_region(&mut self, ui: &mut egui::Ui, height: f32) {
         let width = ui.available_width();

@@ -564,7 +564,7 @@ impl WireframeApp {
         self.image_export.draft = None;
         self.versions.rename = None;
         self.page_rename = None;
-        self.page_inspector = Default::default();
+        self.page_inspector.clear();
         self.source_navigation = Default::default();
         self.library_import = None;
         self.more_controls = None;

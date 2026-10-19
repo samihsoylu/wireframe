@@ -408,3 +408,112 @@ fn source_notes_validation_failure_keeps_draft_and_blocks_back() {
     assert_eq!(app.editor.document.surface_notes(source), "");
     assert!(app.error.is_some());
 }
+
+#[test]
+fn alternate_divider_tracks_slow_and_batched_drags_without_editing_the_project() {
+    for schedule in 0..3 {
+        let (ctx, mut app) = setup();
+        app.file = Some(std::path::PathBuf::from("divider-study.wireframe"));
+        let original = app.editor.document.clone();
+        let key = app.version_preferences_key();
+        for (drag_height, target_height) in [(250_u16, 250_u16), (500, 400), (40, 130)] {
+            for _ in 0..3 {
+                frame(&mut app, &ctx, vec![]);
+            }
+            let height = app.page_inspector.preferences.get(key.as_deref());
+            let id = egui::Id::new(("page-alternates-panel", &key, height));
+            let rect = egui::containers::panel::PanelState::load(&ctx, id)
+                .unwrap()
+                .outer_rect;
+            let start = egui::pos2(rect.center().x, rect.min.y);
+            let end = start + Vec2::new(0., height as f32 - drag_height as f32);
+            let button = |pos, pressed| egui::Event::PointerButton {
+                pos,
+                pressed,
+                button: egui::PointerButton::Primary,
+                modifiers: Modifiers::NONE,
+            };
+            frame(&mut app, &ctx, vec![egui::Event::PointerMoved(start)]);
+            if schedule == 0 {
+                frame(&mut app, &ctx, vec![button(start, true)]);
+                frame(&mut app, &ctx, vec![egui::Event::PointerMoved(end)]);
+                frame(&mut app, &ctx, vec![button(end, false)]);
+            } else if schedule == 1 {
+                frame(
+                    &mut app,
+                    &ctx,
+                    vec![
+                        button(start, true),
+                        egui::Event::PointerMoved(end),
+                        button(end, false),
+                    ],
+                );
+            } else {
+                frame(&mut app, &ctx, vec![button(start, true)]);
+                frame(
+                    &mut app,
+                    &ctx,
+                    vec![egui::Event::PointerMoved(end), button(end, false)],
+                );
+            }
+            for _ in 0..3 {
+                frame(&mut app, &ctx, vec![]);
+            }
+            assert_eq!(
+                app.page_inspector.preferences.get(key.as_deref()),
+                target_height,
+                "schedule {schedule}"
+            );
+            let id = egui::Id::new(("page-alternates-panel", &key, target_height));
+            let after = egui::containers::panel::PanelState::load(&ctx, id)
+                .unwrap()
+                .outer_rect;
+            assert!((after.height() - target_height as f32).abs() <= 1.);
+            assert_eq!(app.editor.document, original);
+            assert!(app.editor.undo_name().is_none());
+            assert!(app.editor.selection.is_empty());
+        }
+    }
+}
+
+#[test]
+fn alternate_panel_preferences_reopen_per_project_and_survive_transient_reset() {
+    let dir = tempfile::tempdir().unwrap();
+    let (_, mut app) = setup();
+    app.load_panel_preferences(dir.path());
+    assert_eq!(app.page_inspector.preferences.get(Some("new")), 200);
+    app.page_inspector
+        .preferences
+        .remember(Some("first"), 250)
+        .unwrap();
+    app.page_inspector
+        .preferences
+        .remember(Some("second"), 400)
+        .unwrap();
+    app.page_inspector.clear();
+    assert_eq!(app.page_inspector.preferences.get(Some("first")), 250);
+    let mut reopened = preferences::Preferences::default();
+    reopened.load(dir.path()).unwrap();
+    assert_eq!(reopened.get(Some("first")), 250);
+    assert_eq!(reopened.get(Some("second")), 400);
+    assert_eq!(reopened.get(Some("new")), 400);
+    assert!(reopened.remember(Some("first"), 129).is_err());
+    assert_eq!(reopened.get(Some("first")), 250);
+}
+
+#[test]
+fn invalid_panel_settings_are_preserved_while_session_sizing_remains_available() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("panel-settings.json");
+    for contents in [
+        "unreadable",
+        r#"{"default_height":200,"projects":{"first":401}}"#,
+    ] {
+        std::fs::write(&path, contents).unwrap();
+        let mut prefs = preferences::Preferences::default();
+        assert!(prefs.load(dir.path()).is_err());
+        assert!(prefs.remember(Some("first"), 300).is_err());
+        assert_eq!(prefs.get(Some("first")), 300);
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), contents);
+    }
+}

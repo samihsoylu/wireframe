@@ -95,3 +95,12 @@ The `notes-line-layout-current` correction uses host font line heights and basel
 The subsequent `notes-edges-current` comparison corrects icon-only row height, adjacent icon recognition and backslash-before-icon behavior. Formatting delimiters must close on the same physical line; typed soft-break escapes are hidden in notes read views while preserving their style. The original source remains editable. All **121 affected macOS checks**, final all-target lint and optimized build pass. Paired native samples show ordinary text-row starts within one physical pixel and icon ink starts within two after first-line alignment. Cancellation and saved Undo/Redo are byte-exact against the canonical saved baseline; presentation scrolling exposes the final lines. The review app exited and all 544 prior application-data files are unchanged.
 
 Acceptance covers these named markup and row-placement samples. Pixel-identical rasterization, absolute panel padding, broader mixed-size text/image baseline variants, wider accessibility and native Linux replay remain unverified. The portable metric test runs on macOS and is not Linux acceptance. Internal-divider dragging and persistence remain unresolved; an accessibility setter does not prove either. Windows testing remains held.
+
+
+## Notes and alternate pane sizing
+
+Drag the horizontal divider above Alternate versions to give notes or versions more space. The lower pane starts at 200 points and supports heights from 130 to 400. Sizes are kept separately for each project; projects without a saved size use the last chosen height. These are local view settings, outside drawing history and the project file. Source/library notes retain their separate usage layout.
+
+Settings use `panel-settings.json`, with bounded reading, validated heights and atomic writes. An unreadable file stays untouched while sizing works for the session. Short windows clamp the visible layout without overwriting the preferred height. Persistence is committed at gesture release.
+
+The `notes-divider-current` checkpoint has 80 distinct affected checks plus native macOS resizing, both limits, separate project values, unchanged Save bytes and cold-reopen acceptance. The first test exposed list-content shrinkage, corrected by filling the allotted pane. Exact reference drag behavior, short-window native replay, IME/accessibility and Linux replay remain unverified. No parent release gate closes from this scoped result.

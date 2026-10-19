@@ -122,6 +122,7 @@ impl WireframeApp {
     pub(super) fn enable_persistence(&mut self, ctx: &egui::Context, root: PathBuf) {
         self.load_version_preferences(&root);
         self.load_viewport_preferences(&root);
+        self.load_panel_preferences(&root);
         if let Err(error) = self.presentation_view.preferences.load(&root) {
             self.error = Some(format!(
                 "Presentation settings could not be read. The file is unchanged.\n{error}"
@@ -457,7 +458,7 @@ impl WireframeApp {
         self.presentation_history.clear();
         self.versions.rename = None;
         self.page_rename = None;
-        self.page_inspector = Default::default();
+        self.page_inspector.clear();
         self.trash = None;
         self.navigator = Default::default();
         self.thumbnails = true;

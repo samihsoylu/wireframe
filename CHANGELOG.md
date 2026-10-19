@@ -5,6 +5,7 @@
 - Create local wireframes using 86 controls in sketch or clean styles.
 - Edit, arrange, group and reuse controls with Undo and Redo.
 - Organize pages, alternate versions, notes and review comments.
+- Resize the notes and alternate-version panes, with sizes remembered for each project.
 - Format notes with styled text, colors, sizes and inline icons while keeping the original text editable.
 - Keep notes spacing consistent across mixed text sizes, icon-only rows and trailing blank lines.
 - Use consistent named palette colors and numbered shades in text, notes, comments and choice controls.

@@ -48,6 +48,9 @@ def configuration(path):
         'SUAllowsAutomaticUpdates': False,
         'SUAutomaticallyUpdate': False,
         'SUSendProfileInfo': False,
+        'SUVerifyUpdateBeforeExtraction': True,
+        'SURequireSignedFeed': True,
+        'SUSignedFeedFailureExpirationInterval': 0,
     }
 
 

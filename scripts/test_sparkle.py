@@ -31,6 +31,9 @@ class UpdaterTests(unittest.TestCase):
         self.assertEqual(info['CFBundleVersion'], '1')
         self.assertEqual(info['CFBundleIdentifier'], sparkle.BUNDLE_ID)
         self.assertTrue(info['WireframeEnableUpdater'])
+        self.assertTrue(info['SUVerifyUpdateBeforeExtraction'])
+        self.assertTrue(info['SURequireSignedFeed'])
+        self.assertEqual(info['SUSignedFeedFailureExpirationInterval'], 0)
         for key in ['SUEnableAutomaticChecks', 'SUAllowsAutomaticUpdates',
                     'SUAutomaticallyUpdate', 'SUSendProfileInfo']:
             self.assertIs(info[key], False)

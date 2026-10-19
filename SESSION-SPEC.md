@@ -8,7 +8,7 @@ Single Engineer, no delegation or independent review claimed. Windows native tes
 
 ## Public product and release requirements — 19 October 2026
 
-- Publish current product work to `git@github.com:samihsoylu/wireframe.git`; this is explicitly authorized. Public documentation leads with the user’s task, installation and limitations. Technical records remain separate.
+- Product history and release tooling were pushed to `git@github.com:samihsoylu/wireframe.git` on `main` through commit `201dbbc`, following explicit authorization. Public documentation leads with the user’s task, installation and limitations. Technical records remain separate.
 - Start at version **0.1.0**. Every release must have bullet-point changes, with downloads and known limitations. See [changelog](CHANGELOG.md) and [release template](.github/RELEASE_TEMPLATE.md).
 - macOS releases need a **DMG with a visible arrow from Wireframe to Applications**, installation instructions and matching source/licenses. Follow the established SideTray installer approach. No Apple Developer ID or notarization is planned; explain first-launch behavior honestly.
 - Windows releases need a **portable EXE** plus source/license ZIP. Automatic Windows updates may come later. Native Windows testing remains held, not assumed passed.
@@ -28,7 +28,7 @@ The latest runtime fix validates page/resource retention before committing pendi
 
 ## Next actions and unresolved requirements
 
-1. Publish the authorized product Git changes. The macOS DMG wrapper is implemented and passes mounted app/source identity, signature, checksum and Finder visual inspection. Portable EXE emission passes a synthetic packaging check; this is not Windows execution. Keep Sparkle clearly planned until implemented and tested. A distinct product app icon remains a pre-release polish task; the current bundle shows the system placeholder.
+1. Source publication is complete; no release tag or binary release was published. The macOS DMG wrapper is implemented and passes mounted app/source identity, signature, checksum and Finder visual inspection. Portable EXE emission passes a synthetic packaging check; this is not Windows execution. Keep Sparkle clearly planned until implemented and tested. A distinct product app icon remains a pre-release polish task; the current bundle shows the system placeholder.
 2. Finish cold reopen and Linux execution of the current four-page fixture; close only owned review infrastructure, preserving other app/recovery owners. Record exact results externally and refresh this checkpoint.
 3. Complete the finite comparison list: toolbar glyph clarity, ordinary/selected/disabled/narrow/multiline control variants, precise text/contours and named export/input cases. Reuse accepted smooth library-drag and icon-placement observations unless a regression occurs.
 4. Retain pending physical Option/Alt-drag, modified icon-label/source-root and offset-crop comparisons. Held cadence, edge scrolling, smart zoom and wider IME/accessibility are not proven by synthetic events.

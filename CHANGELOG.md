@@ -6,6 +6,7 @@
 - Edit, arrange, group and reuse controls with Undo and Redo.
 - Organize pages, alternate versions, notes and review comments.
 - Import images, use offline icons and add project fonts.
+- Use a compact toolbar with clear panel states and zoom controls.
 - Present linked pages with optional navigation, link hints and a large pointer.
 - Export PNG, SVG and linked multi-page PDF files.
 - Save editable projects locally and recover interrupted sessions.

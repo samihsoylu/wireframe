@@ -70,6 +70,16 @@ pub(super) fn button(
 
 fn draw(ui: &Ui, center: Pos2, icon: Icon, color: Color32, selected: bool) {
     let p = ui.painter();
+    // Panel glyphs share a twenty-point silhouette, optically aligned one
+    // point above the command frame's center. Keep zoom/history alignment separate.
+    let center = if matches!(
+        icon,
+        Icon::Pages | Icon::Library | Icon::Comments | Icon::Inspector | Icon::Present
+    ) {
+        center - Vec2::new(0., 1.)
+    } else {
+        center
+    };
     let stroke = Stroke::new(1.2, color);
     let point = |x, y| center + Vec2::new(x, y);
     let line = |a: (f32, f32), b: (f32, f32)| {
@@ -155,9 +165,9 @@ fn draw(ui: &Ui, center: Pos2, icon: Icon, color: Color32, selected: bool) {
         Icon::Pages => {
             if selected {
                 for (a, b) in [
-                    ((-9., -9.), (9., -5.)),
-                    ((-9., -3.), (-4., 9.)),
-                    ((-2., -3.), (9., 9.)),
+                    ((-10., -10.), (10., -6.)),
+                    ((-10., -5.), (-5., 10.)),
+                    ((-4., -5.), (10., 10.)),
                 ] {
                     p.rect_filled(
                         Rect::from_min_max(point(a.0, a.1), point(b.0, b.1)),
@@ -167,9 +177,14 @@ fn draw(ui: &Ui, center: Pos2, icon: Icon, color: Color32, selected: bool) {
                 }
                 return;
             }
-            rectangle((-9., -9.), (9., 9.), 0.);
-            line((-9., -4.), (9., -4.));
-            line((-3., -4.), (-3., 9.));
+            p.rect_stroke(
+                Rect::from_center_size(center, Vec2::splat(20.)),
+                0.,
+                Stroke::new(1., color),
+                StrokeKind::Inside,
+            );
+            p.line_segment([point(-9., -5.5), point(9., -5.5)], Stroke::new(1., color));
+            p.line_segment([point(-4.5, -5.), point(-4.5, 9.)], Stroke::new(1., color));
         }
         Icon::NewLibrary => {
             let rear: Vec<_> = (0..=24)
@@ -188,44 +203,91 @@ fn draw(ui: &Ui, center: Pos2, icon: Icon, color: Color32, selected: bool) {
             line((0., -9.), (0., 9.));
         }
         Icon::Library => {
-            rectangle((-9., -9.), (9., 9.), 1.);
-            rectangle((-5.5, -5.5), (-0.5, -0.5), 0.);
-            p.circle_stroke(point(4., -3.), 2.2, stroke);
-            line((-5., 5.), (4., 5.));
-            line((4., 5.), (4., 1.5));
-            line((4., 5.), (0.5, 1.5));
+            let bounds = Rect::from_center_size(center, Vec2::splat(20.));
+            let ink = if selected {
+                super::chrome::TOOLBAR
+            } else {
+                color
+            };
+            let detail = Stroke::new(1., ink);
+            if selected {
+                p.rect_filled(bounds, 1., color);
+            } else {
+                p.rect_stroke(bounds, 1., Stroke::new(1., color), StrokeKind::Inside);
+            }
+            p.rect_stroke(
+                Rect::from_min_max(point(-6.5, -6.5), point(-1., -1.)),
+                0.,
+                detail,
+                StrokeKind::Inside,
+            );
+            p.circle_stroke(point(4.5, -3.5), 2.5, detail);
+            // The curved lower stroke and open arrow remain legible at 1x.
+            p.add(egui::epaint::QuadraticBezierShape::from_points_stroke(
+                [point(-6.5, 4.5), point(0., 9.), point(6., 2.)],
+                false,
+                Color32::TRANSPARENT,
+                detail,
+            ));
+            p.add(egui::Shape::line(
+                vec![point(1., 2.5), point(6.5, 2.), point(6.5, 7.)],
+                detail,
+            ));
         }
         Icon::Comments => {
-            p.add(egui::Shape::closed_line(
-                vec![
-                    point(-9., -8.),
-                    point(9., -8.),
-                    point(9., 5.),
-                    point(-1., 5.),
-                    point(-6., 10.),
-                    point(-6., 5.),
-                    point(-9., 5.),
-                ],
-                stroke,
-            ));
+            if selected {
+                p.rect_filled(
+                    Rect::from_min_max(point(-10., -10.), point(10., 5.)),
+                    2.,
+                    color,
+                );
+                p.add(egui::Shape::convex_polygon(
+                    vec![point(-7., 4.), point(-7., 10.), point(-1., 4.)],
+                    color,
+                    Stroke::NONE,
+                ));
+            } else {
+                // The tail joins the body without a seam or a bottom border
+                // crossing through it. Quarter arcs soften the body corners.
+                let mut outline = Vec::new();
+                for (x, y, start) in [(8., -8., -90.), (8., 3., 0.)] {
+                    for i in 0..=4 {
+                        let a = (start + i as f32 * 22.5).to_radians();
+                        outline.push(point(x + 1.5 * a.cos(), y + 1.5 * a.sin()));
+                    }
+                }
+                outline.extend([point(-2., 4.5), point(-6.5, 9.), point(-6.5, 4.5)]);
+                for (x, y, start) in [(-8., 3., 90.), (-8., -8., 180.)] {
+                    for i in 0..=4 {
+                        let a = (start + i as f32 * 22.5).to_radians();
+                        outline.push(point(x + 1.5 * a.cos(), y + 1.5 * a.sin()));
+                    }
+                }
+                p.add(egui::Shape::closed_line(outline, Stroke::new(1., color)));
+            }
         }
         Icon::Inspector => {
             if selected {
-                p.circle_filled(center, 9., color);
+                p.circle_filled(center, 10., color);
                 let ink = super::chrome::TOOLBAR;
                 p.circle_filled(point(0., -4.5), 1., ink);
-                p.line_segment([point(0., -1.), point(0., 5.)], Stroke::new(1.5, ink));
+                p.line_segment([point(0., -1.), point(0., 6.)], Stroke::new(2., ink));
                 return;
             }
-            p.circle_stroke(center, 9., stroke);
+            p.circle_stroke(center, 9., Stroke::new(1., color));
             p.circle_filled(point(0., -4.5), 1., color);
-            line((0., -1.), (0., 5.));
+            p.line_segment([point(0., -1.), point(0., 6.)], Stroke::new(2., color));
         }
         Icon::Present => {
-            rectangle((-9., -9.), (9., 9.), 2.);
+            p.rect_stroke(
+                Rect::from_center_size(center, Vec2::splat(20.)),
+                2.,
+                Stroke::new(1., color),
+                StrokeKind::Inside,
+            );
             p.add(egui::Shape::closed_line(
-                vec![point(-3., -5.), point(5., 0.), point(-3., 5.)],
-                stroke,
+                vec![point(-3.5, -4.5), point(4., 0.), point(-3.5, 4.5)],
+                Stroke::new(1., color),
             ));
         }
     }

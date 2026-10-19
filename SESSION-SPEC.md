@@ -8,7 +8,7 @@ Single Engineer, no delegation or independent review claimed. Windows native tes
 
 ## Public product and release requirements — 19 October 2026
 
-- Product history and release tooling were pushed to `git@github.com:samihsoylu/wireframe.git` on `main` through commit `201dbbc`, following explicit authorization. Public documentation leads with the user’s task, installation and limitations. Technical records remain separate.
+- Product history and release tooling were pushed to `git@github.com:samihsoylu/wireframe.git` on `main` through commit `0a2723e`, following explicit authorization. Public documentation leads with the user’s task, installation and limitations. Technical records remain separate.
 - Start at version **0.1.0**. Every release must have bullet-point changes, with downloads and known limitations. See [changelog](CHANGELOG.md) and [release template](.github/RELEASE_TEMPLATE.md).
 - macOS releases need a **DMG with a visible arrow from Wireframe to Applications**, installation instructions and matching source/licenses. Follow the established SideTray installer approach. No Apple Developer ID or notarization is planned; explain first-launch behavior honestly.
 - Windows releases need a **portable EXE** plus source/license ZIP. Automatic Windows updates may come later. Native Windows testing remains held, not assumed passed.
@@ -20,17 +20,19 @@ Single Engineer, no delegation or independent review claimed. Windows native tes
 
 Runtime commit **95e5365** consolidates editing, resource and presentation work. Local macOS ARM64 and Linux ARM64 review archives are built and verified, each with 1,759 corresponding-source files and 182 valid documentation links. Source/license and dependency checks pass; the GPL text is unchanged from the first commit. The package identities and logs are retained externally in `review-build-20261019`.
 
-Current scoped checks total **737 distinct macOS** and **734 Linux** tests. All-target warnings-denied lint passes on both; macOS formatting passes. The macOS total includes completed unit suites from an interrupted broad run plus the later 83 affected integration checks. Do not call that interrupted all-target run successful. Unchanged detailed comparison evidence remains scoped to its original checks.
+The consolidated package scoped checks total **737 distinct macOS** and **734 Linux** tests. All-target warnings-denied lint passes on both; macOS formatting passes. The macOS total includes completed unit suites from an interrupted broad run plus the later 83 affected integration checks. Do not call that interrupted all-target run successful. Unchanged detailed comparison evidence remains scoped to its original checks.
 
 The extracted macOS ARM64 and Linux ARM64 review packages now pass the sampled four-page workflow: double-click full-text selection, edit cancellation, accepted editing, exact saved Undo/Redo and cold reopen with empty history. macOS includes Unicode entry; Linux uses direct key events and the viewer’s explicit Ctrl modifier after a browser shortcut did not reach the app. Both preserve saved bytes across page/Fit changes; Linux also retains its page and zoom through restart. This does not establish physical keyboard/IME, every control state or whole-platform acceptance. Exact snapshots and native reports are in external `review-build-20261019`. The disposable fixtures were restored after app exit. Current docs/installer changes postdate the frozen archives and do not change their runtime.
 
 The latest runtime fix validates page/resource retention before committing pending edits, preserving drafts and Redo on rejected or empty actions. Four regression/history tests cover rejected transitions and successful separate history steps. Default rendering covers all 86 families in both styles: 172 SVGs and 344 PNGs, no export/layout failure or document mutation. Default rendering is not full control-variant or native input acceptance.
 
+The subsequent toolbar correction aligns panel/presentation glyphs and adds filled Library/Comments active states. Nine affected checks, all-target lint, optimized macOS build and native panel/presentation routes pass. Saved four-page data and 231 prior working-copy records are unchanged. Details: [toolbar fidelity](docs/TOOLBAR-FIDELITY.md), external `toolbar-final-icons-current`. This runtime correction postdates the frozen archives and DMG; final packages must include it.
+
 ## Next actions and unresolved requirements
 
 1. Source publication is complete; no release tag or binary release was published. The macOS DMG wrapper is implemented and passes mounted app/source identity, signature, checksum and Finder visual inspection. Portable EXE emission passes a synthetic packaging check; this is not Windows execution. Keep Sparkle clearly planned until implemented and tested. A distinct product app icon remains a pre-release polish task; the current bundle shows the system placeholder.
 2. Current package workflow is complete in the scope above. Move to the finite remaining comparison list; do not repeat the same workflow unless runtime changes or a new failure warrants it. Preserve other app/recovery owners.
-3. Complete the finite comparison list: toolbar glyph clarity, ordinary/selected/disabled/narrow/multiline control variants, precise text/contours and named export/input cases. Reuse accepted smooth library-drag and icon-placement observations unless a regression occurs.
+3. Complete the finite comparison list: ordinary/selected/disabled/narrow/multiline control variants, precise text/contours and named export/input cases. Reuse accepted smooth library-drag and icon-placement observations unless a regression occurs.
 4. Retain pending physical Option/Alt-drag, modified icon-label/source-root and offset-crop comparisons. Held cadence, edge scrolling, smart zoom and wider IME/accessibility are not proven by synthetic events.
 5. Final native permanent image/library removal remains unverified; action-time permission is pending and earlier disposable page deletion permission does not cover it. Restore/history and cancellation already have scoped evidence.
 6. Online image search and local text extraction first-release scope remain unresolved. Direct image URL import does not establish either capability or authorize deferral.
@@ -39,7 +41,7 @@ The latest runtime fix validates page/resource retention before committing pendi
 
 ## Evidence navigation
 
-Detailed candidate identities, native screenshots, saved-state comparisons and failure logs live outside product Git. Latest checkpoints: `review-build-20261019`, `catalog-panels-requirements-current`, `component-inspector-requirements-current`, `resource-requirements-current`, `export-destination-current`. Earlier checkpoints below retain their original scope. Historical process/window descriptions do not establish current liveness; recheck ownership before UI cleanup.
+Detailed candidate identities, native screenshots, saved-state comparisons and failure logs live outside product Git. Latest checkpoints: `toolbar-final-icons-current`, `review-build-20261019`, `catalog-panels-requirements-current`, `component-inspector-requirements-current`, `resource-requirements-current`, `export-destination-current`. Earlier checkpoints below retain their original scope. Historical process/window descriptions do not establish current liveness; recheck ownership before UI cleanup.
 
 ## Retained acceptance and evidence
 

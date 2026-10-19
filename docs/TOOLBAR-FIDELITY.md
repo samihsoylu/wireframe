@@ -1,5 +1,13 @@
 # Toolbar fidelity
 
+## Panel and presentation glyph clarity
+
+Pages, Library, Comments, Inspector and Present now share aligned twenty-point silhouettes. Library and Comments use filled selected states with readable interior details; Pages uses narrow separators, and Comments has rounded corners with a joined tail. The glyphs remain original vectors. Magnifier/history geometry, twenty-point command frames, spacing, accessible names and routing are retained.
+
+Nine toolbar checks pass, including open/closed fill transitions, hover/pressed/disabled behavior, action routing and non-overlap across supported widths. Warnings-denied all-target lint, formatting, optimized macOS ARM64 build and strict ad-hoc signature pass. Native panel switching and presentation entry/return retain empty drawing history and byte-identical four-page saved data; 231 prior working-copy records remain unchanged. Both study apps exited.
+
+At native 2x density, all four right-hand outline glyphs now match the measured forty-pixel outer bounds and vertical alignment. Library/Comments active fills and Pages divisions match the observed state contract. Exact raster coverage and display color conversion remain bounded cosmetic differences; no screenshot-derived palette adjustment was made. Whole window widths differed, so this is a local glyph comparison, not whole-viewport pixel equivalence. No new Windows/Linux native acceptance or installed-app replacement is claimed. External checkpoint: `toolbar-final-icons-current`.
+
 ## History glyph geometry — W104
 
 Undo/Redo use original vector heads with an 8-point horizontal span and 10-point height, joined to a 7.5-point-radius, one-point arc spanning 270 degrees. This removes the old broad head/arc overlap and matches the measured endpoint. Native density 2 silhouette comparison improves consistently across three thresholds; fine raster coverage is not claimed identical. Button layout, labels/focus and actions remain unchanged.
@@ -76,9 +84,9 @@ Open: UI font face/weight fidelity, broader stroke/spacing/colors, source naviga
 
 Previous W53: moving Back/New Library into the main row removed26logical pixels of redundant captions, with236application tests and12native/storage assertions. W57 supersedes its open Trash grouping, Back styling, search glyph and source Presentation points; remaining typography/layout scope stays open.
 
-## Open user clarity comparison
+## User clarity comparison
 
-A user-provided side-by-side toolbar comparison reports softer or less distinct product glyphs. Recheck against a current native candidate at matched display density and window state: stroke coverage, pixel alignment, internal symbols, contrast and disabled/selected rendering. The screenshot alone does not identify the running product build or establish a resampling cause. Preserve this acceptance item independently from catalog-icon thumbnail sizing and canvas text clarity.
+The final panel/presentation glyph pass above resolves the measured silhouette, alignment and selected-state differences. Earlier magnifier/history checks remain applicable. Fine edge coverage and display color conversion remain scoped residuals; catalog thumbnails and canvas text clarity have separate acceptance records.
 
 
 ## Library canvas origin

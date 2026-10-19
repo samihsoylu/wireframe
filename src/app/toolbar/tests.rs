@@ -184,6 +184,45 @@ fn click(app: &mut WireframeApp, ctx: &egui::Context, label: &str) {
     }
 }
 #[test]
+fn panel_icons_fill_when_open_and_return_to_outlines_when_closed() {
+    for label in ["Pages", "Library", "Comments", "Inspector"] {
+        let (ctx, mut app) = setup();
+        app.show_navigator = false;
+        app.show_library = false;
+        app.show_inspector = false;
+        app.review.open = false;
+        let before = app.editor.document.clone();
+        for selected in [false, true, false] {
+            frame(&mut app, &ctx, 940., vec![]);
+            let bounds = frame(&mut app, &ctx, 940., vec![])[label];
+            let output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(940., 700.))),
+                    events: vec![egui::Event::PointerMoved(Pos2::new(500., 500.))],
+                    ..Default::default()
+                },
+                |ui| app.toolbar(ui),
+            );
+            let has_filled_body = output.shapes.iter().any(|shape| {
+                let (fill, body) = match &shape.shape {
+                    egui::Shape::Rect(rect) => (rect.fill, rect.rect),
+                    egui::Shape::Circle(circle) => (
+                        circle.fill,
+                        Rect::from_center_size(circle.center, Vec2::splat(circle.radius * 2.)),
+                    ),
+                    _ => return false,
+                };
+                fill == chrome::toolbar_palette().selected
+                    && bounds.contains(body.center())
+                    && body.area() > 100.
+            });
+            assert_eq!(has_filled_body, selected, "{label}: open={selected}");
+            assert_eq!(app.editor.document, before);
+            click(&mut app, &ctx, label);
+        }
+    }
+}
+#[test]
 fn toolbar_actions_do_not_overlap_at_supported_widths() {
     let (ctx, mut app) = setup();
     app.editor.trash_pages(&[1]).unwrap();

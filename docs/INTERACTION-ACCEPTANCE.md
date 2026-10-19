@@ -1,5 +1,7 @@
 # Interaction acceptance
 
+The current form-state follow-up samples a disabled-looking Text Input: native double-click selects its entire source text, and replacement followed by Escape retains the original without creating document history. The paired comparison agrees on this behavior. Twenty-four normal/focused/disabled Text Input and Text Area specimens at ordinary/narrow widths also have native captures in both styles. Narrow-input truncation and area wrapping/bottom clipping agree; wide-input glyph metrics, font weight, sketch contours and a small Clean focus-color difference remain open. External evidence: `form-states-current/report.md`. This advances the named B01/G01 cases without accepting all form variants or native input methods.
+
 Behavioral equivalence requires observing the action sequence, intermediate feedback and resulting state. Screenshots of a finished drawing and passing domain tests do not establish an equivalent editing experience. Each case records starting state, exact input, immediate UI/focus/selection, committed document result, cancellation/history behavior, evidence type and candidate identity. Existing valid evidence may be reused within its scope.
 
 | Area | Required checks | Current disposition |

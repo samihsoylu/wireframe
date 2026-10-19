@@ -10,6 +10,56 @@ use wireframe::{
 };
 
 #[test]
+fn physical_newlines_bound_formatting_but_soft_breaks_keep_the_style() {
+    for source in [
+        "*Hard\nline*",
+        "{size:20}Large\ncontinued{size}",
+        "{color:red}Hard\nline{color}",
+        "[Hard\nlabel](target)",
+    ] {
+        let parsed = RichText::parse(source, false);
+        assert_eq!(parsed.source, source);
+        assert_eq!(parsed.display_text(true), source);
+        assert!(parsed.items.iter().all(|item| match item {
+            Inline::Span { style, .. } =>
+                !style.bold && style.size.is_none() && style.color.is_none(),
+            _ => true,
+        }));
+    }
+    let parsed = RichText::parse("*Soft\\nline*", false);
+    assert_eq!(parsed.display_text(false), "Softline");
+    assert_eq!(parsed.display_text(true), "Soft\nline");
+    assert!(
+        parsed
+            .items
+            .iter()
+            .filter_map(|item| match item {
+                Inline::Span { style, .. } => Some(style.bold),
+                _ => None,
+            })
+            .all(|bold| bold)
+    );
+}
+
+#[test]
+fn newline_boundaries_keep_link_discovery_and_rewriting_in_sync() {
+    use wireframe::rich_text::{rewrite_link_targets, source_links};
+    let source = "[Broken\nlabel](page:2)\n[Good](page:2)\n[Target](page:\n2)";
+    let links = source_links(source).unwrap();
+    assert_eq!(links.len(), 2);
+    assert_eq!(&source[links[0].range.clone()], "[Good](page:2)");
+    assert_eq!(links[0].target.as_deref(), Some("page:2"));
+    assert_eq!(&source[links[1].range.clone()], "[Target]");
+    assert_eq!(links[1].target, None);
+    assert_eq!(
+        rewrite_link_targets(source, |target| (target == "page:2")
+            .then(|| "page:3".into()))
+        .unwrap(),
+        "[Broken\nlabel](page:2)\n[Good](page:3)\n[Target](page:\n2)"
+    );
+}
+
+#[test]
 fn line_boxes_follow_font_sizes_and_spacing_independently_of_font_metrics() {
     let ctx = egui::Context::default();
     wireframe::fonts::install(&ctx);

@@ -122,13 +122,28 @@ impl NotesLayout {
         let mut lines = Vec::new();
         let mut icons = Vec::new();
         for run in buffer.layout_runs() {
-            let (baseline, below) = run
+            let icons_only = !run.glyphs.is_empty()
+                && run
+                    .glyphs
+                    .iter()
+                    .all(|glyph| spans[glyph.metadata].icon.is_some());
+            let (mut baseline, mut below) = run
                 .glyphs
                 .iter()
                 .map(|glyph| span_metrics[glyph.metadata])
                 .map(|(height, baseline)| (baseline, height - baseline))
                 .reduce(|a, b| (a.0.max(b.0), a.1.max(b.1)))
                 .unwrap_or((base_metrics.1, base_metrics.0 - base_metrics.1));
+            if icons_only {
+                // Attachment-only rows occupy their image extent without a
+                // text descender. Spaces still count as ordinary text.
+                baseline = run
+                    .glyphs
+                    .iter()
+                    .map(|glyph| span_size(&spans[glyph.metadata].style, size))
+                    .fold(0., f32::max);
+                below = 0.;
+            }
             let line = LinePlacement {
                 top: height * scale,
                 baseline: (height + baseline) * scale,
@@ -144,7 +159,7 @@ impl NotesLayout {
                     let rect = Rect::from_center_size(
                         egui::pos2(
                             (glyph.x + glyph.w / 2.) / scale,
-                            line.baseline / scale - side * 0.36,
+                            line.baseline / scale - side * if icons_only { 0.5 } else { 0.36 },
                         ),
                         Vec2::splat(side),
                     );
@@ -220,11 +235,12 @@ fn spans(source: &str) -> Vec<Span> {
     for item in RichText::parse(source, false).items {
         match item {
             Inline::Span { text, style } => split_icons(&text, style, &mut result),
-            Inline::Break(_) => result.push(Span {
+            Inline::Break(crate::rich_text::Break::Hard) => result.push(Span {
                 text: "\n".into(),
                 style: Style::default(),
                 icon: None,
             }),
+            Inline::Break(crate::rich_text::Break::Soft) => {}
             Inline::Bullet => unreachable!("Notes do not parse bullet lists"),
         }
     }
@@ -240,9 +256,6 @@ fn split_icons(text: &str, style: Style, output: &mut Vec<Span>) {
         let Some(end) = text[search..].find(':').map(|i| search + i) else {
             break;
         };
-        if start > 0 && !text[..start].ends_with(char::is_whitespace) {
-            continue;
-        }
         let Some(icon) = crate::icons::get(&text[search..end]) else {
             continue;
         };

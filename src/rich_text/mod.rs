@@ -113,6 +113,11 @@ impl Parser {
     fn find(&mut self, text: &str, needle: &str, case_insensitive: bool) -> Option<usize> {
         let mut escaped = false;
         for (i, ch) in text.char_indices() {
+            // Formatting delimiters belong to one physical source line. A
+            // typed soft-break escape remains part of that line's grammar.
+            if ch == '\n' {
+                return None;
+            }
             if self.budget == 0 {
                 self.output.complexity_limited = true;
                 return None;

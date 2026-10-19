@@ -3,6 +3,52 @@
 use super::*;
 
 #[test]
+fn notes_keep_physical_line_delimiters_literal_and_hide_soft_breaks() {
+    let source = "\\*escaped bold\\* and *bold _nested_*\n\\:star-solid: :unknown-icon:\n{size:20}Large\ncontinued{size}\n*Soft\\nline*";
+    let parts = spans(source);
+    let display: String = parts.iter().map(|span| span.text.as_str()).collect();
+    assert_eq!(
+        display,
+        "*escaped bold* and bold nested\n\\\u{2003} :unknown-icon:\n{size:20}Large\ncontinued{size}\nSoftline"
+    );
+    assert_eq!(parts.iter().filter(|span| span.icon.is_some()).count(), 1);
+    assert!(
+        parts
+            .iter()
+            .any(|span| span.text == "nested" && span.style.bold && span.style.italic)
+    );
+    assert!(parts.iter().all(|span| span.style.size.is_none()));
+}
+
+#[test]
+#[cfg(target_os = "macos")]
+fn icon_only_rows_use_image_height_and_text_spaces_keep_font_height() {
+    let mut engine = Engine::default();
+    for scale in [1., 1.25, 2.] {
+        let layout = NotesLayout::new(&mut engine, "Before\n:star-solid:\nAfter\n{size:20}:star-solid:{size}\nEnd\n:star-solid: \n:star-solid::star-regular:", 13., 300., scale).unwrap();
+        assert_eq!(layout.lines.len(), 7);
+        for (line, (top, height)) in layout.lines.iter().zip([
+            (0., 16.),
+            (16., 13.),
+            (29., 16.),
+            (45., 20.),
+            (65., 16.),
+            (81., 16.),
+            (97., 13.),
+        ]) {
+            assert!((line.top / scale - top).abs() < 0.001);
+            assert!((line.height / scale - height).abs() < 0.001);
+        }
+        assert_eq!(layout.size().y, 110.);
+        for (index, top, side) in [(0, 16., 13.), (1, 45., 20.), (3, 97., 13.), (4, 97., 13.)] {
+            let rect = layout.icons[index].1;
+            assert!((rect.top() - top).abs() < 0.001);
+            assert!((rect.height() - side).abs() < 0.001);
+        }
+    }
+}
+
+#[test]
 fn formatting_keeps_literal_list_prefixes_and_unknown_icons() {
     let source = "*Bold* _Italic_ &Underlined& -Muted- ~Strike~\n- first\n* second\n:star-solid: :star-regular: :unknown-icon:";
     let parts = spans(source);

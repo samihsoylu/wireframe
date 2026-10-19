@@ -4,6 +4,7 @@
 use super::*;
 use std::collections::HashMap;
 mod drag;
+mod keyboard;
 mod selection;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -24,6 +25,8 @@ pub(super) struct SourceNavigation {
     pub(super) drag: Option<drag::SourceDrag>,
     reveal_library: Option<Id>,
     focus: HashMap<egui::Id, ResourceRow>,
+    collapse_ids: HashMap<Id, egui::Id>,
+    keyboard_focus: Option<ResourceRow>,
     pub(super) selected: HashSet<ResourceRow>,
     anchor: Option<ResourceRow>,
     visible: Vec<ResourceRow>,
@@ -123,6 +126,11 @@ impl WireframeApp {
         true
     }
     fn focused_resource_row(&self, ctx: &egui::Context) -> Option<ResourceRow> {
+        if let Some(row) = self.source_navigation.keyboard_focus
+            && self.source_navigation.surface == self.active_resource_row()
+        {
+            return Some(row);
+        }
         let row = ctx
             .memory(|m| m.focused())
             .and_then(|id| self.source_navigation.focus.get(&id).copied())?;
@@ -171,6 +179,7 @@ impl WireframeApp {
     }
     pub(super) fn source_navigator(&mut self, ui: &mut egui::Ui) {
         if self.source_navigation.release_focus {
+            self.source_navigation.keyboard_focus = None;
             if let Some(id) = ui.ctx().memory(|m| m.focused())
                 && self.source_navigation.focus.contains_key(&id)
             {
@@ -179,8 +188,8 @@ impl WireframeApp {
             self.source_navigation.release_focus = false;
         }
         self.source_navigation.focus.clear();
+        self.source_navigation.collapse_ids.clear();
         self.sync_resource_selection();
-        let mut visible = Vec::new();
         let mut drag_rows = Vec::new();
         let width = ui.available_width();
         egui::Frame::NONE
@@ -217,7 +226,6 @@ impl WireframeApp {
             .id_salt("source-navigator")
             .show(ui, |ui| {
                 for (library, name, sources) in libraries {
-                    visible.push(ResourceRow::Library(library));
                     let selected = self
                         .source_navigation
                         .selected
@@ -228,6 +236,9 @@ impl WireframeApp {
                             ui.id().with(("source-library", library)),
                             true,
                         );
+                    self.source_navigation
+                        .collapse_ids
+                        .insert(library, state.id());
                     if self.source_navigation.reveal_library == Some(library) {
                         state.set_open(true);
                         self.source_navigation.reveal_library = None;
@@ -247,6 +258,10 @@ impl WireframeApp {
                             self.source_navigation
                                 .focus
                                 .insert(response.id, ResourceRow::Library(library));
+                            self.focus_resource_keyboard_row(
+                                &response,
+                                ResourceRow::Library(library),
+                            );
                             if response.clicked() && self.finish_page_notes() {
                                 response.request_focus();
                                 self.end_pointer_gestures();
@@ -323,7 +338,6 @@ impl WireframeApp {
                         })
                         .body(|ui| {
                             for (source, name) in sources {
-                                visible.push(ResourceRow::Source(source));
                                 ui.push_id(("source-row", source), |ui| {
                                     let response = ui_text::selectable(
                                         ui,
@@ -340,6 +354,10 @@ impl WireframeApp {
                                     self.source_navigation
                                         .focus
                                         .insert(response.id, ResourceRow::Source(source));
+                                    self.focus_resource_keyboard_row(
+                                        &response,
+                                        ResourceRow::Source(source),
+                                    );
                                     if self.source_navigation.focus_to == Some(source) {
                                         response.request_focus();
                                         self.source_navigation.selected =
@@ -434,7 +452,21 @@ impl WireframeApp {
                 }
                 self.source_drag(ui, &drag_rows);
             });
-        self.source_navigation.visible = visible;
+        self.source_navigation.visible = self.visible_resource_rows(ui.ctx());
+        ui.memory_mut(|m| {
+            if let Some(id) = m.focused()
+                && self.source_navigation.focus.contains_key(&id)
+            {
+                m.set_focus_lock_filter(
+                    id,
+                    egui::EventFilter {
+                        horizontal_arrows: true,
+                        vertical_arrows: true,
+                        ..Default::default()
+                    },
+                );
+            }
+        });
     }
     pub(super) fn component_usage_panel(&mut self, ui: &mut egui::Ui) {
         let Some(source) = self.editor.definition else {

@@ -215,7 +215,9 @@ impl WireframeApp {
     pub(super) fn preserve_save_navigator_focus(&mut self, ctx: &egui::Context) {
         if self.save_busy() {
             // Disabled rows relinquish focus while the worker saves the file.
-            if self.save_navigator_focus.is_none() && self.navigator.focused(ctx) {
+            if self.save_navigator_focus.is_none()
+                && (self.navigator.focused(ctx) || self.source_navigation_focused(ctx))
+            {
                 self.save_navigator_focus = ctx.memory(|m| m.focused());
             }
         } else if let Some(id) = self.save_navigator_focus.take()
@@ -225,8 +227,14 @@ impl WireframeApp {
             // Restore before dispatching the next key. The previous save modal
             // still blocks widgets for this pass, so the row also requests focus
             // after construction, just like other navigator selection changes.
+            if self.editor.in_source_workspace() {
+                if !self.restore_source_navigator_focus(id) {
+                    return;
+                }
+            } else {
+                self.navigator.focus_to = Some(self.editor.page);
+            }
             ctx.memory_mut(|m| m.request_focus(id));
-            self.navigator.focus_to = Some(self.editor.page);
         }
     }
     pub(super) fn recovery_chooser_open(&self) -> bool {

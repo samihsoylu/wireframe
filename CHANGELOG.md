@@ -5,6 +5,7 @@
 - Create local wireframes using 86 controls in sketch or clean styles.
 - Edit, arrange, group and reuse controls with Undo and Redo.
 - Organize pages, alternate versions, notes and review comments.
+- Navigate component sources with arrow keys, extend selections with Shift, and expand or collapse libraries.
 - Import images, use offline icons and add project fonts.
 - Use a compact toolbar with clear panel states and zoom controls.
 - Access project and editing commands from desktop menus, with text selection and Undo kept in the active field.

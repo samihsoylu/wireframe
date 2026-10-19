@@ -3,7 +3,7 @@
 use super::*;
 
 impl WireframeApp {
-    fn active_resource_row(&self) -> Option<ResourceRow> {
+    pub(super) fn active_resource_row(&self) -> Option<ResourceRow> {
         self.editor
             .definition
             .map(ResourceRow::Source)
@@ -20,6 +20,7 @@ impl WireframeApp {
             .collect()
     }
     pub(in crate::app) fn collapse_resource_selection(&mut self) {
+        self.source_navigation.keyboard_focus = None;
         let active = self.active_resource_row();
         self.source_navigation.selected = active.into_iter().collect();
         self.source_navigation.anchor = active;

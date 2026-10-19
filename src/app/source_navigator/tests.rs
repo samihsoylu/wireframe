@@ -1269,3 +1269,204 @@ fn source_drag_cancel_and_stale_context_preserve_history() {
         assert!(app.source_navigation.drag.is_none());
     }
 }
+
+fn navigation_key(key: Key, modifiers: Modifiers) -> egui::Event {
+    egui::Event::Key {
+        key,
+        physical_key: Some(key),
+        pressed: true,
+        repeat: false,
+        modifiers,
+    }
+}
+
+#[test]
+fn source_keyboard_moves_extends_and_contracts_without_document_history() {
+    let (ctx, mut app, library, first) = setup();
+    let second = app
+        .editor
+        .create_empty_source(library, "Second", Default::default())
+        .unwrap();
+    app.select_source_row(first, Modifiers::NONE).unwrap();
+    focus_source(&ctx, &mut app, first);
+    let before = app.editor.document.clone();
+    let history = app.editor.undo_name().map(str::to_owned);
+    frame(
+        &ctx,
+        &mut app,
+        vec![navigation_key(Key::ArrowDown, Modifiers::SHIFT)],
+    );
+    assert_eq!(
+        app.source_navigation.selected,
+        HashSet::from([ResourceRow::Source(first), ResourceRow::Source(second)])
+    );
+    assert_eq!(
+        app.focused_resource_row(&ctx),
+        Some(ResourceRow::Source(second))
+    );
+    frame(
+        &ctx,
+        &mut app,
+        vec![navigation_key(Key::ArrowUp, Modifiers::SHIFT)],
+    );
+    assert_eq!(
+        app.source_navigation.selected,
+        HashSet::from([ResourceRow::Source(first)])
+    );
+    frame(
+        &ctx,
+        &mut app,
+        vec![navigation_key(Key::ArrowDown, Modifiers::NONE)],
+    );
+    assert_eq!(app.editor.definition, Some(second));
+    assert!(
+        app.source_navigation_focused(&ctx),
+        "focus {:?} rows {:?} pending {:?}",
+        ctx.memory(|m| m.focused()),
+        app.source_navigation.focus,
+        app.source_navigation.keyboard_focus
+    );
+    // Multiple delivered keys traverse from the preceding key's destination.
+    frame(
+        &ctx,
+        &mut app,
+        vec![
+            navigation_key(Key::ArrowUp, Modifiers::NONE),
+            navigation_key(Key::ArrowUp, Modifiers::NONE),
+        ],
+    );
+    assert_eq!(app.editor.definition, None);
+    assert_eq!(app.editor.library, Some(library));
+    assert_eq!(app.editor.document, before);
+    assert_eq!(app.editor.undo_name(), history.as_deref());
+}
+
+#[test]
+fn source_keyboard_expansion_skips_closed_children_and_preserves_source_noops() {
+    let (ctx, mut app, library, first) = setup();
+    let other = app.editor.create_library("Other").unwrap();
+    app.editor.edit_library(library).unwrap();
+    app.collapse_resource_selection();
+    frame(&ctx, &mut app, vec![]);
+    let id = *app
+        .source_navigation
+        .focus
+        .iter()
+        .find(|(_, row)| **row == ResourceRow::Library(library))
+        .unwrap()
+        .0;
+    ctx.memory_mut(|m| m.request_focus(id));
+    let before = app.editor.document.clone();
+    frame(
+        &ctx,
+        &mut app,
+        vec![
+            navigation_key(Key::ArrowLeft, Modifiers::NONE),
+            navigation_key(Key::ArrowDown, Modifiers::NONE),
+        ],
+    );
+    assert_eq!(app.editor.library, Some(other));
+    assert!(
+        !app.source_navigation
+            .visible
+            .contains(&ResourceRow::Source(first))
+    );
+    frame(
+        &ctx,
+        &mut app,
+        vec![
+            navigation_key(Key::ArrowUp, Modifiers::NONE),
+            navigation_key(Key::ArrowRight, Modifiers::NONE),
+            navigation_key(Key::ArrowDown, Modifiers::NONE),
+        ],
+    );
+    assert_eq!(app.editor.definition, Some(first));
+    frame(
+        &ctx,
+        &mut app,
+        vec![
+            navigation_key(Key::ArrowLeft, Modifiers::NONE),
+            navigation_key(Key::ArrowRight, Modifiers::NONE),
+            navigation_key(Key::Enter, Modifiers::NONE),
+        ],
+    );
+    assert_eq!(app.editor.definition, Some(first));
+    assert!(app.text_edit.is_none());
+    assert!(app.page_rename.is_none());
+    assert_eq!(app.editor.document, before);
+}
+
+#[test]
+fn source_keyboard_handoff_routes_copy_and_respects_other_input_owners() {
+    let (ctx, mut app, library, first) = setup();
+    let second = app
+        .editor
+        .create_empty_source(library, "Second", Default::default())
+        .unwrap();
+    app.select_source_row(first, Modifiers::NONE).unwrap();
+    focus_source(&ctx, &mut app, first);
+    let before = app.editor.document.clone();
+    // Clipboard routing in the same event batch uses the new row, before repaint.
+    frame(
+        &ctx,
+        &mut app,
+        vec![
+            navigation_key(Key::ArrowDown, Modifiers::NONE),
+            egui::Event::Copy,
+        ],
+    );
+    assert_eq!(app.editor.definition, Some(second));
+    assert_eq!(app.clipboard.source.as_ref().unwrap().definition, second);
+    app.error = Some("Test modal boundary".into());
+    frame(
+        &ctx,
+        &mut app,
+        vec![navigation_key(Key::ArrowUp, Modifiers::NONE)],
+    );
+    assert_eq!(app.editor.definition, Some(second));
+    app.error = None;
+    frame(&ctx, &mut app, vec![]);
+    let query = app.quick_input_id.unwrap();
+    ctx.memory_mut(|m| m.request_focus(query));
+    frame(
+        &ctx,
+        &mut app,
+        vec![navigation_key(Key::ArrowUp, Modifiers::NONE)],
+    );
+    assert_eq!(app.editor.definition, Some(second));
+    assert_eq!(app.editor.document, before);
+}
+
+#[test]
+fn source_keyboard_pending_focus_yields_to_duplicate_and_copy_in_same_batch() {
+    let (ctx, mut app, library, first) = setup();
+    let second = app
+        .editor
+        .create_empty_source(library, "Second", Default::default())
+        .unwrap();
+    app.select_source_row(first, Modifiers::NONE).unwrap();
+    focus_source(&ctx, &mut app, first);
+    frame(
+        &ctx,
+        &mut app,
+        vec![
+            navigation_key(Key::ArrowDown, Modifiers::NONE),
+            egui::Event::AppCommand(menus::Command::Duplicate as u64),
+            egui::Event::Copy,
+        ],
+    );
+    let duplicate = app.editor.definition.unwrap();
+    assert_ne!(duplicate, second);
+    assert_eq!(app.clipboard.source.as_ref().unwrap().definition, duplicate);
+    assert_eq!(
+        app.focused_resource_row(&ctx),
+        Some(ResourceRow::Source(duplicate))
+    );
+    // A subsequent arrow must override the duplicate's pending focus.
+    frame(
+        &ctx,
+        &mut app,
+        vec![navigation_key(Key::ArrowUp, Modifiers::NONE)],
+    );
+    assert_ne!(app.editor.definition, Some(duplicate));
+}

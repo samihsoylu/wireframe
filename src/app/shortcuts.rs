@@ -432,6 +432,15 @@ impl WireframeApp {
                     self.editor.selection.clear();
                 }
             } else if self.source_navigation_focused(ctx) {
+                if let egui::Event::Key {
+                    key,
+                    modifiers,
+                    pressed: true,
+                    ..
+                } = event
+                {
+                    self.source_navigation_key(ctx, *key, *modifiers);
+                }
                 match event {
                     egui::Event::Copy => self.run_command(ctx, menus::Command::Copy),
                     egui::Event::Cut => self.run_command(ctx, menus::Command::Cut),

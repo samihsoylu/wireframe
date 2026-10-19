@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 use super::*;
+use crate::app::source_navigator::ResourceRow;
 use eframe::App;
+use std::collections::HashSet;
 use std::time::{Duration, Instant};
 use wireframe::{document::Project, model::Kind};
 
@@ -28,46 +30,47 @@ fn named(app: &mut WireframeApp, ctx: &egui::Context, path: &std::path::Path) {
     assert!(!app.editor.dirty());
 }
 
+use std::sync::{Condvar, Mutex};
+struct SaveFocusGate(Arc<(Mutex<bool>, Condvar)>);
+impl SaveFocusGate {
+    fn release(&self) {
+        *self.0.0.lock().unwrap() = true;
+        self.0.1.notify_all();
+    }
+}
+impl Drop for SaveFocusGate {
+    fn drop(&mut self) {
+        self.release();
+    }
+}
+fn save_focus_frame(
+    ctx: &egui::Context,
+    app: &mut WireframeApp,
+    events: Vec<egui::Event>,
+) -> egui::FullOutput {
+    let mut input = egui::RawInput {
+        screen_rect: Some(egui::Rect::from_min_size(
+            egui::Pos2::ZERO,
+            egui::vec2(1200., 850.),
+        )),
+        events,
+        ..Default::default()
+    };
+    app.raw_input_hook(ctx, &mut input);
+    ctx.run_ui(input, |ui| app.ui(ui, &mut eframe::Frame::_new_kittest()))
+}
+fn save_focus_key(key: egui::Key, modifiers: egui::Modifiers) -> egui::Event {
+    egui::Event::Key {
+        key,
+        physical_key: Some(key),
+        pressed: true,
+        repeat: false,
+        modifiers,
+    }
+}
+
 #[test]
 fn named_save_restores_navigator_focus_before_the_next_outdent_and_arrow() {
-    use std::sync::{Condvar, Mutex};
-    struct Gate(Arc<(Mutex<bool>, Condvar)>);
-    impl Gate {
-        fn release(&self) {
-            *self.0.0.lock().unwrap() = true;
-            self.0.1.notify_all();
-        }
-    }
-    impl Drop for Gate {
-        fn drop(&mut self) {
-            self.release();
-        }
-    }
-    fn frame(
-        ctx: &egui::Context,
-        app: &mut WireframeApp,
-        events: Vec<egui::Event>,
-    ) -> egui::FullOutput {
-        let mut input = egui::RawInput {
-            screen_rect: Some(egui::Rect::from_min_size(
-                egui::Pos2::ZERO,
-                egui::vec2(1200., 850.),
-            )),
-            events,
-            ..Default::default()
-        };
-        app.raw_input_hook(ctx, &mut input);
-        ctx.run_ui(input, |ui| app.ui(ui, &mut eframe::Frame::_new_kittest()))
-    }
-    fn key(key: egui::Key, modifiers: egui::Modifiers) -> egui::Event {
-        egui::Event::Key {
-            key,
-            physical_key: Some(key),
-            pressed: true,
-            repeat: false,
-            modifiers,
-        }
-    }
     for (thumbnails, key_on_completion, busy_frames) in [
         (false, false, 3),
         (true, false, 3),
@@ -90,7 +93,7 @@ fn named_save_restores_navigator_focus_before_the_next_outdent_and_arrow() {
         ProjectStore.save(&path, &app.editor.document).unwrap();
         app.file = Some(path.clone());
         app.editor.mark_saved();
-        let gate = Gate(Arc::new((Mutex::new(false), Condvar::new())));
+        let gate = SaveFocusGate(Arc::new((Mutex::new(false), Condvar::new())));
         let wait = gate.0.clone();
         let p = app.persistence.as_mut().unwrap();
         let copy = p.copies.open_named(&path).unwrap();
@@ -112,7 +115,7 @@ fn named_save_restores_navigator_focus_before_the_next_outdent_and_arrow() {
         );
         let mut point = egui::Pos2::ZERO;
         for _ in 0..3 {
-            let out = frame(&ctx, &mut app, vec![]);
+            let out = save_focus_frame(&ctx, &mut app, vec![]);
             let node = &out
                 .platform_output
                 .accesskit_update
@@ -128,7 +131,7 @@ fn named_save_restores_navigator_focus_before_the_next_outdent_and_arrow() {
             out.drop_without_applying_deltas();
         }
         for pressed in [true, false] {
-            frame(
+            save_focus_frame(
                 &ctx,
                 &mut app,
                 vec![
@@ -144,10 +147,10 @@ fn named_save_restores_navigator_focus_before_the_next_outdent_and_arrow() {
             .drop_without_applying_deltas();
         }
         assert!(app.navigator.focused(&ctx));
-        frame(
+        save_focus_frame(
             &ctx,
             &mut app,
-            vec![key(egui::Key::Tab, egui::Modifiers::NONE)],
+            vec![save_focus_key(egui::Key::Tab, egui::Modifiers::NONE)],
         )
         .drop_without_applying_deltas();
         assert_eq!(
@@ -155,15 +158,15 @@ fn named_save_restores_navigator_focus_before_the_next_outdent_and_arrow() {
             Some(first)
         );
         let saved = app.editor.document.clone();
-        frame(
+        save_focus_frame(
             &ctx,
             &mut app,
-            vec![key(egui::Key::S, egui::Modifiers::COMMAND)],
+            vec![save_focus_key(egui::Key::S, egui::Modifiers::COMMAND)],
         )
         .drop_without_applying_deltas();
         assert!(app.save_busy());
         for _ in 0..busy_frames {
-            frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+            save_focus_frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
         }
         gate.release();
         if key_on_completion {
@@ -173,7 +176,7 @@ fn named_save_restores_navigator_focus_before_the_next_outdent_and_arrow() {
         } else {
             let deadline = Instant::now() + Duration::from_secs(12);
             while app.save_busy() {
-                frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+                save_focus_frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
                 assert!(Instant::now() < deadline, "Save timed out");
                 std::thread::sleep(Duration::from_millis(5));
             }
@@ -184,24 +187,24 @@ fn named_save_restores_navigator_focus_before_the_next_outdent_and_arrow() {
         }
         assert!(app.error.is_none(), "{:?}", app.error);
         assert_eq!(ProjectStore.load(&path).unwrap(), saved);
-        frame(
+        save_focus_frame(
             &ctx,
             &mut app,
-            vec![key(egui::Key::Tab, egui::Modifiers::SHIFT)],
+            vec![save_focus_key(egui::Key::Tab, egui::Modifiers::SHIFT)],
         )
         .drop_without_applying_deltas();
         assert_eq!(app.editor.document.live_page(second).unwrap().parent, None);
-        frame(
+        save_focus_frame(
             &ctx,
             &mut app,
-            vec![key(egui::Key::ArrowDown, egui::Modifiers::NONE)],
+            vec![save_focus_key(egui::Key::ArrowDown, egui::Modifiers::NONE)],
         )
         .drop_without_applying_deltas();
         assert_eq!(app.editor.page, third);
-        frame(
+        save_focus_frame(
             &ctx,
             &mut app,
-            vec![key(egui::Key::Z, egui::Modifiers::COMMAND)],
+            vec![save_focus_key(egui::Key::Z, egui::Modifiers::COMMAND)],
         )
         .drop_without_applying_deltas();
         assert_eq!(app.editor.document, saved);
@@ -519,5 +522,126 @@ fn clean_save_receipt_finishes_status_without_a_separate_saved_event() {
                 "Saved to your computer"
             }
         );
+    }
+}
+
+#[test]
+fn named_save_restores_source_range_focus_before_the_next_arrow() {
+    for busy_frames in [0, 3] {
+        let (dir, ctx, mut app) = fixture();
+        ctx.enable_accesskit();
+        let library = app.editor.create_library("Sources").unwrap();
+        let first = app
+            .editor
+            .create_empty_source(library, "First source", Default::default())
+            .unwrap();
+        let second = app
+            .editor
+            .create_empty_source(library, "Second source", Default::default())
+            .unwrap();
+        app.editor.edit_library_source(first).unwrap();
+        let path = dir.path().join("Sources.wireframe");
+        ProjectStore.save(&path, &app.editor.document).unwrap();
+        app.file = Some(path.clone());
+        app.editor.mark_saved();
+        let saved = app.editor.document.clone();
+        let history = app.editor.undo_name().map(str::to_owned);
+        let gate = SaveFocusGate(Arc::new((Mutex::new(false), Condvar::new())));
+        let wait = gate.0.clone();
+        let p = app.persistence.as_mut().unwrap();
+        let copy = p.copies.open_named(&path).unwrap();
+        p.id = Some(copy.id().to_owned());
+        p.session = Some(
+            ProjectSession::start(
+                p.copies.clone(),
+                copy,
+                false,
+                Arc::new(move || {
+                    let (lock, ready) = &*wait;
+                    let mut released = lock.lock().unwrap();
+                    while !*released {
+                        released = ready.wait(released).unwrap();
+                    }
+                }),
+            )
+            .unwrap(),
+        );
+        let mut point = egui::Pos2::ZERO;
+        for _ in 0..3 {
+            let out = save_focus_frame(&ctx, &mut app, vec![]);
+            let node = &out
+                .platform_output
+                .accesskit_update
+                .as_ref()
+                .unwrap()
+                .nodes
+                .iter()
+                .find(|(_, n)| n.label() == Some("First source"))
+                .unwrap()
+                .1;
+            let b = node.bounds().unwrap();
+            point = egui::pos2(((b.x0 + b.x1) / 2.) as f32, ((b.y0 + b.y1) / 2.) as f32);
+            out.drop_without_applying_deltas();
+        }
+        for pressed in [true, false] {
+            save_focus_frame(
+                &ctx,
+                &mut app,
+                vec![
+                    egui::Event::PointerMoved(point),
+                    egui::Event::PointerButton {
+                        pos: point,
+                        button: egui::PointerButton::Primary,
+                        pressed,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ],
+            )
+            .drop_without_applying_deltas();
+        }
+        assert!(app.source_navigation_focused(&ctx));
+        save_focus_frame(
+            &ctx,
+            &mut app,
+            vec![save_focus_key(egui::Key::ArrowDown, egui::Modifiers::SHIFT)],
+        )
+        .drop_without_applying_deltas();
+        assert_eq!(app.source_navigation.selected.len(), 2);
+        assert_eq!(app.editor.definition, Some(first));
+        save_focus_frame(
+            &ctx,
+            &mut app,
+            vec![save_focus_key(egui::Key::S, egui::Modifiers::COMMAND)],
+        )
+        .drop_without_applying_deltas();
+        assert!(app.save_busy());
+        for _ in 0..busy_frames {
+            save_focus_frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+        }
+        gate.release();
+        drain(&mut app, &ctx);
+        // The first post-save key contracts the range from the previously focused second row.
+        save_focus_frame(
+            &ctx,
+            &mut app,
+            vec![save_focus_key(egui::Key::ArrowUp, egui::Modifiers::SHIFT)],
+        )
+        .drop_without_applying_deltas();
+        assert!(app.source_navigation_focused(&ctx));
+        assert_eq!(
+            app.source_navigation.selected,
+            HashSet::from([ResourceRow::Source(first)])
+        );
+        save_focus_frame(
+            &ctx,
+            &mut app,
+            vec![save_focus_key(egui::Key::ArrowDown, egui::Modifiers::NONE)],
+        )
+        .drop_without_applying_deltas();
+        assert_eq!(app.editor.definition, Some(second));
+        assert_eq!(app.editor.document, saved);
+        assert_eq!(ProjectStore.load(&path).unwrap(), saved);
+        assert_eq!(app.editor.undo_name(), history.as_deref());
+        app.on_exit(None);
     }
 }

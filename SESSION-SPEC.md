@@ -8,12 +8,12 @@ Single Engineer, no delegation or independent review claimed. Windows native tes
 
 ## Public product and release requirements — 19 October 2026
 
-- Product history and release tooling were pushed to `git@github.com:samihsoylu/wireframe.git` on `main` through commit `520df88`, following explicit authorization. Public documentation leads with the user’s task, installation and limitations. Technical records remain separate.
+- Product history and release tooling are published to `git@github.com:samihsoylu/wireframe.git` on `main`, following explicit authorization. Public documentation leads with the user’s task, installation and limitations. Technical records remain separate.
 - Start at version **0.1.0**. Every release must have bullet-point changes, with downloads and known limitations. See [changelog](CHANGELOG.md) and [release template](.github/RELEASE_TEMPLATE.md).
 - macOS releases need a **DMG with a visible arrow from Wireframe to Applications**, installation instructions and matching source/licenses. Follow the established SideTray installer approach. No Apple Developer ID or notarization is planned; explain first-launch behavior honestly.
 - Windows releases need a **portable EXE** plus source/license ZIP. Automatic Windows updates may come later. Native Windows testing remains held, not assumed passed.
 - Linux releases need an architecture-labelled compiled archive and runtime requirements; initial format is TAR.GZ. Only advertise verified architectures/environments.
-- **TODO: finish Sparkle release activation**, with a separate product signing key, HTTPS feed and a real installed-upgrade check. The optional macOS bridge is implemented; ordinary builds remain offline for updates. [Updater implementation and acceptance tasks](docs/UPDATES.md).
+- **TODO: finish Sparkle release activation**: complete product signing-key verification, production HTTPS delivery and downloaded-app first-launch checks. The optional macOS bridge and isolated installed-upgrade checks are complete; ordinary builds remain offline for updates. [Updater implementation and acceptance tasks](docs/UPDATES.md).
 - Pushing source does not mean release acceptance. Do not publish a finished-release claim while material gates remain open.
 
 ## Current candidate and completed checks

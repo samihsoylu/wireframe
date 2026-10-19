@@ -120,6 +120,7 @@ def main():
     rows.extend(['', 'Wireframe Draft regular, bold, italic and bold italic are modified derivatives of Comic Neue Regular, Bold, Italic and Bold Italic, redistributed under OFL-1.1 with the original copyright retained. See [license](assets/fonts/wireframe-draft/OFL.txt), [modifications](assets/fonts/wireframe-draft/MODIFICATIONS.txt) and [reproducible build](docs/PROJECT-FONTS.md).'])
     rows.extend(['', 'Unicode emoji property data is covered by [Unicode License V3](assets/unicode/LICENSE.txt); pinned sources and regeneration instructions are in [Unicode data](assets/unicode/README.md).'])
     rows.extend(['', '## Bundled icons', '', 'Font Awesome Free 6.7.2 by Fonticons, Inc. is bundled under CC BY 4.0. SVG path data and dimensions are unchanged; metadata is compacted and free styles are selected. See [license](assets/icons/font-awesome-free/LICENSE.txt), [upstream](https://fontawesome.com), and [provenance](assets/icons/font-awesome-free/PROVENANCE.json). SVG and PNG exports containing these icons include attribution metadata.'])
+    rows.extend(['', '## Optional macOS updater', '', 'Optional macOS update builds bundle Sparkle 2.10.0. Its copyright notices and component licenses are retained in [Sparkle notices](licenses/sparkle-2.10.0/LICENSE) and in the installed app at `Contents/Resources/Sparkle-LICENSE.txt`. The pinned archive is defined in `scripts/sparkle.py`.'])
     (ROOT / 'THIRD_PARTY_NOTICES.md').write_text('\n'.join(rows) + '\n')
     print(f'Collected notices for {len(manifest)} locked dependencies.')
 

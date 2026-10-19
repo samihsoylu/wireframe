@@ -61,6 +61,8 @@ mod startup;
 mod text_session;
 mod toolbar;
 mod trash;
+#[cfg(target_os = "macos")]
+mod updates;
 mod versions;
 mod viewports;
 mod web_image;
@@ -192,6 +194,8 @@ pub struct WireframeApp {
     window_close_pending: bool,
     #[cfg(target_os = "macos")]
     native_termination: Option<native_termination::NativeTermination>,
+    #[cfg(target_os = "macos")]
+    updates: Option<updates::Updates>,
     icon_dialog: Option<icon_dialog::IconDialog>,
     text_edit: Option<(Id, String)>,
     image_source_request: Option<Id>,
@@ -370,6 +374,8 @@ impl WireframeApp {
             window_close_pending: false,
             #[cfg(target_os = "macos")]
             native_termination: None,
+            #[cfg(target_os = "macos")]
+            updates: None,
             icon_dialog: None,
             text_edit: None,
             image_source_request: None,
@@ -424,6 +430,10 @@ impl WireframeApp {
         #[cfg(target_os = "macos")]
         {
             app.native_termination = native_termination::NativeTermination::new(&cc.egui_ctx);
+            match updates::Updates::start(app.native_termination.is_some()) {
+                Ok(updates) => app.updates = updates,
+                Err(error) => app.error = Some(format!("Updates are unavailable. {error}")),
+            }
         }
         app
     }

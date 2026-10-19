@@ -13,6 +13,7 @@ import subprocess
 import tarfile
 import tempfile
 import zipfile
+import sparkle
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -52,13 +53,52 @@ def _write_archive(staging, archive, system, name):
                     raise ValueError(f'Windows packages cannot contain symlinks: {path}')
                 if path.is_file(): zip_file.write(path, Path(name) / path.relative_to(staging))
 
+def mac_bundle(binary, out, version, update_info=None):
+    # Stage completely before replacing a prior generated bundle. A download,
+    # copy or signing failure leaves the prior bundle usable.
+    destination = out / 'Wireframe.app'
+    with tempfile.TemporaryDirectory(prefix='.bundle-', dir=out) as temporary:
+        bundle = Path(temporary) / 'Wireframe.app'
+        executable = bundle / 'Contents/MacOS/wireframe'
+        executable.parent.mkdir(parents=True)
+        shutil.copy2(binary, executable)
+        info = {'CFBundleName': 'Wireframe', 'CFBundleDisplayName':'Wireframe',
+            'CFBundleIdentifier':sparkle.BUNDLE_ID, 'CFBundleExecutable':'wireframe',
+            'CFBundlePackageType':'APPL', 'CFBundleShortVersionString':version,
+            'CFBundleVersion':version, 'NSHighResolutionCapable':True,
+            'LSMinimumSystemVersion':'12.0'}
+        if update_info: info.update(update_info)
+        (bundle / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
+        resources = bundle / 'Contents/Resources'
+        resources.mkdir()
+        shutil.copyfile(ROOT / 'LICENSE', resources / 'LICENSE')
+        shutil.copytree(ROOT / 'assets', resources / 'assets')
+        if update_info: sparkle.embed(bundle, ROOT / '.tooling' / 'sparkle')
+        # Local ad-hoc signing is not Developer ID signing or notarization.
+        run('codesign', '--force', '--deep', '--sign', '-', str(bundle))
+        run('codesign', '--verify', '--deep', '--strict', str(bundle))
+        previous = Path(temporary) / 'previous.app'
+        had_previous = destination.exists() or destination.is_symlink()
+        if had_previous: destination.rename(previous)
+        try:
+            bundle.rename(destination)
+        except OSError:
+            if had_previous: previous.rename(destination)
+            raise
+    return destination
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--debug', action='store_true', help='Build a development app')
     parser.add_argument('--no-archive', action='store_true', help='Refresh only the local bundle')
+    parser.add_argument('--updater-config', type=Path,
+        help='macOS only: JSON containing public feed_url, public_key and integer build string')
     parser.add_argument('--target', choices=('x86_64-pc-windows-gnu', 'x86_64-pc-windows-msvc', 'aarch64-pc-windows-msvc'),
         help='Build a Windows package with an installed target toolchain')
     args = parser.parse_args()
+    if args.updater_config and (args.target or platform.system() != 'Darwin'):
+        parser.error('--updater-config requires a native macOS build')
+    update_info = sparkle.configuration(args.updater_config) if args.updater_config else None
     if os.environ.get('CARGO_BUILD_TARGET') and not args.target:
         parser.error('Use --target explicitly instead of CARGO_BUILD_TARGET when packaging')
     profile = 'debug' if args.debug else 'release'
@@ -83,25 +123,7 @@ def main():
     if args.target: target_dir /= args.target
     binary = target_dir / profile / ('wireframe.exe' if system == 'windows' else 'wireframe')
     if system == 'darwin':
-        bundle = out / 'Wireframe.app'
-        executable = bundle / 'Contents' / 'MacOS' / 'wireframe'
-        executable.parent.mkdir(parents=True, exist_ok=True)
-        temporary = executable.with_suffix('.new')
-        shutil.copy2(binary, temporary)
-        os.replace(temporary, executable)
-        info = {'CFBundleName': 'Wireframe', 'CFBundleDisplayName':'Wireframe',
-            'CFBundleIdentifier':'local.wireframe.desktop', 'CFBundleExecutable':'wireframe',
-            'CFBundlePackageType':'APPL', 'CFBundleShortVersionString':version,
-            'CFBundleVersion':version, 'NSHighResolutionCapable':True,
-            'LSMinimumSystemVersion':'12.0'}
-        (bundle / 'Contents' / 'Info.plist').write_bytes(plistlib.dumps(info))
-        resources = bundle / 'Contents' / 'Resources'
-        resources.mkdir(exist_ok=True)
-        shutil.copyfile(ROOT / 'LICENSE', resources / 'LICENSE')
-        shutil.copytree(ROOT / 'assets', resources / 'assets', dirs_exist_ok=True)
-        # A local ad-hoc signature; this is not Developer ID signing or notarization.
-        run('codesign', '--force', '--deep', '--sign', '-', str(bundle))
-        payload = bundle
+        payload = mac_bundle(binary, out, version, update_info)
     else:
         payload = out / name
         payload.mkdir(exist_ok=True)

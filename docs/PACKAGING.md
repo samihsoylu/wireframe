@@ -19,7 +19,7 @@ The default is an optimized native build. Add `--debug` for a development build 
 
 Every artifact gets a SHA-256 sidecar. Publish the Windows companion ZIP alongside the EXE; do not distribute the EXE alone without corresponding source and notices. Architecture labels describe the actual build target, not a promise that other architectures were tested.
 
-macOS packaging needs Xcode Command Line Tools, Python 3 and the pinned Python dependencies in `scripts/dmg-requirements.txt`, installed in the ignored `.tooling/dmg` environment. It uses `hdiutil` and writes Finder layout metadata directly; it does not automate Finder or alter user settings. The background is drawn at 2× resolution. The app is ad-hoc signed, without Developer ID signing or notarization. The output DMG is never overwritten implicitly: move an earlier local artifact aside before rebuilding the same filename.
+macOS packaging needs Xcode Command Line Tools, Python 3 and the pinned Python dependencies in `scripts/dmg-requirements.txt`, installed in the ignored `.tooling/dmg` environment. It uses `hdiutil` and writes Finder layout metadata directly; it does not automate Finder or alter user settings. The background is drawn at 2× resolution. The app is ad-hoc signed, without Developer ID signing or notarization. The output DMG is never overwritten implicitly: move an earlier local artifact aside before rebuilding the same filename. The packager checks this before replacing the app or companion ZIP. Archive creation is atomic: a failed attempt leaves an earlier archive intact. The standalone DMG wrapper explicitly selects the active compiler’s matching macOS SDK.
 
 To wrap an already verified app and its matching source package without recompiling:
 
@@ -27,9 +27,15 @@ To wrap an already verified app and its matching source package without recompil
 sh scripts/package-dmg.sh /path/Wireframe.app dist/Wireframe-0.1.0-darwin-arm64.dmg /path/Wireframe-0.1.0-darwin-arm64.zip
 ```
 
-The wrapper checks every app file against the ZIP and requires corresponding source and license entries. It preserves the app signature and keeps the source ZIP inside **Source and licenses** on the image. This identity check relies on the archive’s prior source/build verification; it does not itself prove a reproducible build. Framework symlink-preserving archives must be implemented before Sparkle is embedded; the present ZIP writer is for the current framework-free bundle.
+The wrapper checks app file bytes, entry types, link targets and permissions against the ZIP and requires corresponding source and license entries. It preserves the app signature and keeps the source ZIP inside **Source and licenses** on the image. This identity check relies on the archive’s prior source/build verification; it does not itself prove a reproducible build. Staging preserves links. macOS ZIPs use `ditto`, including framework directory aliases, helper executable permissions and resource metadata. Verification refuses broken, absolute or out-of-bundle app links. Linux TAR.GZ retains link metadata; Windows ZIPs reject links rather than silently replacing them with target contents.
 
 Windows targets accepted by the packager are `x86_64-pc-windows-gnu`, `x86_64-pc-windows-msvc` and `aarch64-pc-windows-msvc`. Install the matching Rust target and compiler/linker first. Cross-compilation does not close the held native Windows acceptance requirement.
+
+## Packaging checks
+
+Run `python3 scripts/test_packaging.py` for archive round trips, altered-entry rejection and protection of existing artifacts. Native ZIP extraction checks require macOS. These checks do not build or execute a Windows application.
+
+Eight tests pass on macOS with Python 3.9 and 3.13. A separate fixture containing Sparkle 2.10.0 preserves all 191 app entries, including nine links and six executable regular files, through native ZIP extraction and mounted DMG comparison; strict ad-hoc signature checks pass after both. The companion archive contains 1,774 exact source files from that checkpoint. This was a packaging fixture only: no updater was linked, launched or installed. The earlier framework-free review archive also passes the revised verifier. External evidence: `updater-packaging-current`.
 
 ## Release procedure
 
@@ -46,6 +52,6 @@ The consolidated runtime at commit `95e5365` has verified local macOS ARM64 and 
 
 The DMG wrapper has also passed mounted app/source identity, signature, checksum and Finder visual inspection. Its app icon is still the system placeholder; a product icon is a remaining polish task. Windows portable EXE emission has a synthetic packaging check, not native execution.
 
-Native checks on these exact packages now cover the four-page fixture, double-click text selection, cancellation, accepted edits, exact saved Undo/Redo and cold reopen with empty history. macOS includes Unicode text entry. Linux uses an isolated X11 software-rendered desktop and direct key events; the viewer’s explicit Ctrl control was needed after a browser shortcut did not reach the app. Page/Fit changes preserve saved bytes. Both disposable fixtures were restored after app exit. Later documentation/installer tooling changes do not alter the frozen application binary or retroactively change archive identity. Final distribution still needs current documentation assembly.
+Native checks on these exact packages now cover the four-page fixture, double-click text selection, cancellation, accepted edits, exact saved Undo/Redo and cold reopen with empty history. macOS includes Unicode text entry. Linux uses an isolated X11 software-rendered desktop and direct key events; the viewer’s explicit Ctrl control was needed after a browser shortcut did not reach the app. Page/Fit changes preserve saved bytes. Both disposable fixtures were restored after app exit. Later documentation/installer tooling changes do not alter the frozen application binary or retroactively change archive identity. Final distribution must include current documentation, packaging tools and the later toolbar correction.
 
 Windows native testing remains held. Intel/minimum-macOS, Gatekeeper first launch, other Linux architectures/distributions, Wayland, physical Linux GPUs, native IME and screen-reader acceptance are not established by these checks. See [current work](../SESSION-SPEC.md) for the next actions. Local package validation is not a published release.

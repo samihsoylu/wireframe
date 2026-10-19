@@ -5,7 +5,8 @@ Status: **planned, not implemented**. The app currently has no updater. Sparkle 
 ## macOS acceptance tasks
 
 - [ ] Integrate Sparkle 2 through a small native bridge, with a user-visible **Check for Updates…** action and a preference for automatic checks.
-- [ ] Pin and verify the framework download, retain its license, and preserve framework symlinks and helper permissions in packaging.
+- [x] Preserve framework symlinks and helper permissions through staging, ZIP extraction and DMG creation. A real-framework packaging fixture passes entry, permission and signature comparisons; this does not establish updater integration.
+- [ ] Pin and verify the framework download for the product build and retain its license in the installed app.
 - [ ] Give Wireframe its own Ed25519 signing identity. Keep its private key in the macOS Keychain or release secret storage, outside Git; retain a recoverable backup. Never reuse another app’s key.
 - [ ] Embed the public key and HTTPS appcast URL in the bundle. Maintain increasing build versions and human-readable release versions, beginning with 0.1.0.
 - [ ] Publish signed update archives and bullet-point release notes only after validating the exact release files. Decide the stable bundle identifier before the first public installer; current local bundles use `local.wireframe.desktop`.

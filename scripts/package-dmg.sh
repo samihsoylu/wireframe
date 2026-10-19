@@ -35,7 +35,8 @@ ln -s /Applications "$dmg_stage/Applications"
 cp docs/INSTALL.txt "$dmg_stage/Install and Open.txt"
 cp "$dmg_archive" "$dmg_stage/Source and licenses/"
 cp LICENSE THIRD_PARTY_NOTICES.md "$dmg_stage/Source and licenses/"
-xcrun swift scripts/dmg-background.swift "$dmg_stage/.background/installer.tiff"
+dmg_sdk=$(xcrun --sdk macosx --show-sdk-path)
+xcrun --sdk macosx swift -sdk "$dmg_sdk" scripts/dmg-background.swift "$dmg_stage/.background/installer.tiff"
 hdiutil create -quiet -fs HFS+ -volname "Wireframe Installer" -srcfolder "$dmg_stage" -format UDRW "$dmg_work/writable.dmg"
 hdiutil attach -quiet -nobrowse -noautoopen -mountpoint "$dmg_mount" "$dmg_work/writable.dmg"
 dmg_attached=1

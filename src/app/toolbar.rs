@@ -9,7 +9,7 @@ use icons::{Icon, button};
 
 impl WireframeApp {
     pub(super) fn toolbar(&mut self, ui: &mut egui::Ui) {
-        self.menus.begin_in_window();
+        self.menus.begin_in_window(ui.ctx());
         if self.present {
             self.presentation_toolbar(ui);
             return;
@@ -80,15 +80,9 @@ impl WireframeApp {
                 .max_rect(menu)
                 .layout(egui::Layout::right_to_left(egui::Align::Center)),
             |ui| {
-                ui.menu_button("Help", |ui| {
-                    if ui.button("Working with Wireframe").clicked() {
-                        self.help = true;
-                        ui.close();
-                    }
-                    if ui.button("License and notices").clicked() {
-                        self.about = true;
-                        ui.close();
-                    }
+                self.application_menu(ui, "Help", |app, ui| {
+                    app.menu_item(ui, menus::Command::Help);
+                    app.menu_item(ui, menus::Command::About);
                 });
                 self.view_menu(ui);
                 self.edit_menu(ui);
@@ -103,8 +97,11 @@ impl WireframeApp {
         label: &str,
         contents: impl FnOnce(&mut Self, &mut egui::Ui),
     ) {
-        let (button, popup) =
-            egui::containers::menu::MenuButton::new(label).ui(ui, |ui| contents(self, ui));
+        let (button, popup) = egui::containers::menu::MenuButton::new(label).ui(ui, |ui| {
+            self.menus.drawing_popup = true;
+            contents(self, ui);
+            self.menus.drawing_popup = false;
+        });
         self.menus
             .record_in_window(&button, popup.map(|popup| popup.response.rect));
     }
@@ -113,10 +110,12 @@ impl WireframeApp {
         use menus::Command::*;
         self.application_menu(ui, "File", |app, ui| {
             for group in [
-                &[New, Open, Save, SaveAs, RenameProject][..],
+                &[NewPage, New, Open][..],
+                &[Close, Save, SaveAs, RenameProject],
                 &[AutomaticSave, Recover],
                 &[ExportPdf, ExportImages, ExportSvg],
                 &[Example, Sketch, Font],
+                &[Quit],
             ] {
                 for &command in group {
                     app.menu_item(ui, command);
@@ -127,41 +126,37 @@ impl WireframeApp {
     }
     fn edit_menu(&mut self, ui: &mut egui::Ui) {
         use menus::Command::*;
-        ui.menu_button("Edit", |ui| {
-            for command in [
-                Copy,
-                PasteControls,
-                Duplicate,
-                SelectAll,
-                Delete,
-                Group,
-                Ungroup,
-                AutoSize,
-                TreatAsMarkup,
-                SendToBack,
-                BringToFront,
-                SendBackward,
-                BringForward,
+        self.application_menu(ui, "Edit", |app, ui| {
+            for group in [
+                &[Undo, Redo][..],
+                &[Cut, Copy, Paste, PasteControls, Delete],
+                &[Duplicate, SelectAll],
+                &[Group, Ungroup, AutoSize, TreatAsMarkup],
+                &[SendToBack, BringToFront, SendBackward, BringForward],
             ] {
-                self.menu_item(ui, command);
+                for &command in group {
+                    app.menu_item(ui, command);
+                }
+                ui.separator();
             }
             ui.menu_button("Align", |ui| {
                 for &command in menus::Command::ALIGNMENT {
-                    self.menu_item(ui, command);
+                    app.menu_item(ui, command);
                 }
             });
         });
     }
     fn view_menu(&mut self, ui: &mut egui::Ui) {
         use menus::Command::*;
-        ui.menu_button("View", |ui| {
+        self.application_menu(ui, "View", |app, ui| {
             for group in [
                 &[Pages, Library, Comments, Inspector, ShowMarkup][..],
                 &[Grid, Snap],
                 &[ZoomIn, ZoomOut, Actual, Fit, AllActual, AllFit],
+                &[Present],
             ] {
                 for &command in group {
-                    self.menu_item(ui, command);
+                    app.menu_item(ui, command);
                 }
                 ui.separator();
             }

@@ -33,6 +33,13 @@ impl TextEditView {
 }
 
 impl WireframeApp {
+    pub(super) fn canvas_text_menu_owner(&self) -> Option<egui::Id> {
+        let view = self.text_edit_view.as_ref()?;
+        (self.text_edit.is_some() && view.matches(&self.editor))
+            .then_some(view.field_id)
+            .flatten()
+    }
+
     pub(super) fn text_session_exit_key(
         &self,
         ctx: &egui::Context,
@@ -81,6 +88,7 @@ impl WireframeApp {
     }
 
     pub(super) fn begin_text_edit(&mut self, id: Id) {
+        self.menus.cancel_text_command();
         self.end_pointer_gestures();
         self.text_edit_return_to_quick = false;
         self.text_edit_view = None;
@@ -485,14 +493,112 @@ mod tests {
     }
 
     #[test]
+    fn fallback_edit_menu_keeps_text_history_local() {
+        let ctx = egui::Context::default();
+        ctx.enable_accesskit();
+        let (mut app, _, _) = setup(&ctx);
+        let original = app.editor.document.clone();
+        application_frame(
+            &ctx,
+            &mut app,
+            vec![egui::Event::Paste("Provisional".into())],
+        )
+        .drop_without_applying_deltas();
+        let click = |app: &mut WireframeApp, label: &str| {
+            let out = application_frame(&ctx, app, vec![]);
+            let node = &out
+                .platform_output
+                .accesskit_update
+                .as_ref()
+                .unwrap()
+                .nodes
+                .iter()
+                .filter(|(_, node)| node.label() == Some(label))
+                .max_by(|(_, a), (_, b)| a.bounds().unwrap().x0.total_cmp(&b.bounds().unwrap().x0))
+                .unwrap_or_else(|| panic!("Missing {label}"))
+                .1;
+            let b = node.bounds().unwrap();
+            let pos = egui::pos2(((b.x0 + b.x1) / 2.) as f32, ((b.y0 + b.y1) / 2.) as f32);
+            out.drop_without_applying_deltas();
+            for pressed in [true, false] {
+                application_frame(
+                    &ctx,
+                    app,
+                    vec![
+                        egui::Event::PointerMoved(pos),
+                        egui::Event::PointerButton {
+                            pos,
+                            button: egui::PointerButton::Primary,
+                            pressed,
+                            modifiers: Modifiers::NONE,
+                        },
+                    ],
+                )
+                .drop_without_applying_deltas();
+            }
+        };
+        click(&mut app, "Edit");
+        assert_eq!(
+            app.editor.document, original,
+            "opening Edit must not commit the canvas draft"
+        );
+        assert_eq!(app.text_edit.as_ref().unwrap().1, "Provisional");
+        click(&mut app, "Select all");
+        for _ in 0..3 {
+            application_frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+        }
+        application_frame(
+            &ctx,
+            &mut app,
+            vec![egui::Event::Paste("Replacement".into())],
+        )
+        .drop_without_applying_deltas();
+        assert_eq!(app.text_edit.as_ref().unwrap().1, "Replacement");
+        click(&mut app, "Edit");
+        click(&mut app, "Undo");
+        for _ in 0..3 {
+            application_frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+        }
+        assert_eq!(app.text_edit.as_ref().unwrap().1, "Provisional");
+        assert_eq!(
+            app.editor.document, original,
+            "menu Undo must stay in draft history"
+        );
+    }
+
+    #[test]
+    fn queued_menu_edit_cannot_reach_a_replacement_draft_or_modal() {
+        for replace in [false, true] {
+            let ctx = egui::Context::default();
+            let (mut app, _, other) = setup(&ctx);
+            let original = app.editor.document.clone();
+            app.run_command(&ctx, menus::Command::Cut);
+            if replace {
+                app.begin_text_edit(other);
+            } else {
+                app.error = Some("An intervening failure".into());
+            }
+            application_frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+            assert_eq!(app.editor.document, original);
+            assert_eq!(app.text_edit.as_ref().unwrap().1, "Button");
+        }
+    }
+
+    #[test]
     fn in_window_file_menu_keeps_the_draft_provisional_and_restores_focus() {
-        for (save, accessible, worker) in [
-            (false, false, false),
-            (true, false, false),
-            (false, true, false),
-            (true, true, false),
-            (true, false, true),
-            (true, true, true),
+        for (menu, save, accessible, worker) in [
+            ("File", false, false, false),
+            ("File", true, false, false),
+            ("File", false, true, false),
+            ("File", true, true, false),
+            ("File", true, false, true),
+            ("File", true, true, true),
+            ("Edit", false, false, false),
+            ("Edit", false, true, false),
+            ("View", false, false, false),
+            ("View", false, true, false),
+            ("Help", false, false, false),
+            ("Help", false, true, false),
         ] {
             let dir = tempfile::tempdir().unwrap();
             let ctx = egui::Context::default();
@@ -544,7 +650,7 @@ mod tests {
                 )
             };
             let out = application_frame(&ctx, &mut app, vec![]);
-            let file = point(&out, "File");
+            let file = point(&out, menu);
             out.drop_without_applying_deltas();
             let click = |app: &mut WireframeApp, (id, pos): (egui::accesskit::NodeId, Pos2)| {
                 if accessible {

@@ -9,14 +9,14 @@ fn frame(
     width: f32,
     events: Vec<egui::Event>,
 ) -> BTreeMap<String, Rect> {
-    let mut output = ctx.run_ui(
-        egui::RawInput {
-            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(width, 700.))),
-            events,
-            ..Default::default()
-        },
-        |ui| app.toolbar(ui),
-    );
+    use eframe::App;
+    let mut raw = egui::RawInput {
+        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(width, 700.))),
+        events,
+        ..Default::default()
+    };
+    app.raw_input_hook(ctx, &mut raw);
+    let mut output = ctx.run_ui(raw, |ui| app.toolbar(ui));
     let result = output
         .platform_output
         .accesskit_update
@@ -494,4 +494,53 @@ fn quick_add_search_button_focuses_the_field_and_preserves_insertion_history() {
     assert!(app.quick.is_empty());
     click(&mut app, &ctx, "Undo");
     assert_eq!(app.editor.document, before);
+}
+
+#[test]
+fn fallback_menus_expose_project_edit_and_presentation_commands() {
+    for (menu, required) in [
+        ("File", &["New page", "Close project", "Quit Wireframe"][..]),
+        (
+            "Edit",
+            &[
+                "Undo",
+                "Redo",
+                "Cut",
+                "Copy",
+                "Paste",
+                "Paste copied controls",
+            ][..],
+        ),
+        ("View", &["Present"][..]),
+    ] {
+        let (ctx, mut app) = setup();
+        click(&mut app, &ctx, menu);
+        let nodes = frame(&mut app, &ctx, 940., vec![]);
+        for label in required {
+            assert!(nodes.contains_key(*label), "{menu} lacks {label}");
+        }
+    }
+}
+
+#[test]
+fn fallback_edit_menu_select_all_targets_quick_add() {
+    let (ctx, mut app) = setup();
+    let original = app.editor.document.clone();
+    click(&mut app, &ctx, "Focus Quick Add");
+    frame(
+        &mut app,
+        &ctx,
+        940.,
+        vec![egui::Event::Text("Button".into())],
+    );
+    click(&mut app, &ctx, "Edit");
+    click(&mut app, &ctx, "Select all");
+    frame(
+        &mut app,
+        &ctx,
+        940.,
+        vec![egui::Event::Paste("Label".into())],
+    );
+    assert_eq!(app.quick, "Label");
+    assert_eq!(app.editor.document, original);
 }

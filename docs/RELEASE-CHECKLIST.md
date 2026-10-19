@@ -6,6 +6,8 @@ A gate is **open** until its required evidence applies to the release candidate.
 
 Current candidate and next actions are in [the session checkpoint](../SESSION-SPEC.md). Older candidate/window descriptions below retain their original scope.
 
+The in-window toolbar/menu audit found and corrects missing File/Edit/View actions and text-owner handoff on popup dismissal. Four new regressions and expanded menu cancellation coverage pass within89 affected application tests; all-target lint passes. Native Linux replay and current-source package refresh remain open; Windows remains held. External `fallback-menu-current` records scope. This advances G02/G03/G13/G17 without closing their remaining requirements.
+
 A further30 text/keyboard/caption requirements are now classified with exact test names and source identities (external text-requirements-current). The audit corrected three unbounded dynamic-name pickers, with failing-before bounds regressions,21 passing affected checks and scoped native macOS choice/cancellation/history/preview acceptance. Complete native accessibility and remaining subsystem requirements are not closed by this pass. Current packages require both this caption change and the preceding keyboard picker correction.
 
 The consolidated-candidate audit now also classifies23 presentation/review requirements (external final/requirements/presentation-review.csv). Twenty-two relevant source/test files match the earlier broad platform snapshot; only the two navigator files changed within that set, with current focused/full application checks. This supports scoped evidence reuse, not broad native equivalence. Remaining physical input, terms-gated comparison, keyboard-only/IME/accessibility, platform and final-assembly gaps stay open.

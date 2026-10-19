@@ -296,11 +296,35 @@ pub(super) struct Menus {
     title: String,
     in_window: Vec<(egui::Id, Rect, Option<Rect>)>,
     in_window_items: Vec<egui::Id>,
+    pending_text_command: Option<PendingTextCommand>,
+    text_owner: Option<egui::Id>,
+    pub(super) drawing_popup: bool,
+}
+struct PendingTextCommand {
+    owner: egui::Id,
+    command: Command,
+    canvas: bool,
+    session: String,
 }
 impl Menus {
-    pub(super) fn begin_in_window(&mut self) {
+    pub(super) fn cancel_text_command(&mut self) {
+        self.pending_text_command = None;
+    }
+
+    pub(super) fn begin_in_window(&mut self, ctx: &egui::Context) {
+        if !self.in_window_open(ctx) {
+            self.text_owner = (wireframe::text_entry::is_focused(ctx) || ctx.text_edit_focused())
+                .then(|| ctx.memory(|m| m.focused()))
+                .flatten();
+        }
         self.in_window.clear();
         self.in_window_items.clear();
+    }
+
+    fn text_owner(&self, ctx: &egui::Context) -> Option<egui::Id> {
+        (self.drawing_popup || self.in_window_open(ctx))
+            .then_some(self.text_owner)
+            .flatten()
     }
 
     pub(super) fn record_in_window(&mut self, button: &egui::Response, popup: Option<Rect>) {
@@ -365,6 +389,31 @@ impl Menus {
     }
 }
 impl WireframeApp {
+    pub(super) fn deliver_menu_text_command(
+        &mut self,
+        ctx: &egui::Context,
+        raw: &mut egui::RawInput,
+    ) {
+        let Some(pending) = self.menus.pending_text_command.take() else {
+            return;
+        };
+        if self.menu_blocked()
+            || pending.session != self.editor.clipboard_session()
+            || (pending.canvas && self.canvas_text_menu_owner() != Some(pending.owner))
+        {
+            return;
+        }
+        // Canvas text is processed before the toolbar, and other fields may
+        // still be disabled by the closing popup. Deliver next frame, before
+        // newer keyboard input, to the original text owner.
+        wireframe::text_entry::restore_focus(ctx, pending.owner);
+        if let Some(event) = pending.command.editing_event() {
+            raw.events.insert(0, event);
+        } else if pending.command == Command::Paste {
+            ctx.send_viewport_cmd(egui::ViewportCommand::RequestPaste);
+        }
+    }
+
     pub(super) fn init_menus(&mut self, cc: &eframe::CreationContext<'_>) {
         #[cfg(target_os = "macos")]
         {
@@ -387,7 +436,10 @@ impl WireframeApp {
         if self.startup_open.is_some() {
             return matches!(command, Command::Quit | Command::Close);
         }
-        let text = wireframe::text_entry::is_focused(ctx) || ctx.text_edit_focused();
+        let text = wireframe::text_entry::is_focused(ctx)
+            || ctx.text_edit_focused()
+            || (!self.menu_blocked() && self.menus.text_owner(ctx).is_some())
+            || (command.editing() && !self.menu_blocked() && self.text_edit.is_some());
         if command.editing() && text {
             return !self.save_busy()
                 && self.library_drag.is_none()
@@ -456,6 +508,25 @@ impl WireframeApp {
         // command, since earlier commands in this frame can establish a modal.
         if !self.command_enabled(ctx, command) {
             return;
+        }
+        if command.editing() {
+            let canvas_owner = self.canvas_text_menu_owner();
+            // Menu enablement is cheap; validate the full draft only when an
+            // action is chosen. A stale draft must never fall through to the
+            // drawing's history or selection.
+            if self.text_edit.is_some() && canvas_owner.is_none() {
+                return;
+            }
+            if let Some(owner) = canvas_owner.or_else(|| self.menus.text_owner(ctx)) {
+                self.menus.pending_text_command = Some(PendingTextCommand {
+                    owner,
+                    command,
+                    canvas: canvas_owner.is_some(),
+                    session: self.editor.clipboard_session().into(),
+                });
+                ctx.request_repaint();
+                return;
+            }
         }
         if command.editing() && (wireframe::text_entry::is_focused(ctx) || ctx.text_edit_focused())
         {

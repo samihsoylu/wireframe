@@ -2051,6 +2051,7 @@ impl eframe::App for WireframeApp {
     }
 
     fn raw_input_hook(&mut self, ctx: &egui::Context, raw: &mut egui::RawInput) {
+        self.deliver_menu_text_command(ctx, raw);
         self.order_text_input(ctx, raw);
         self.prepare_viewport_input(ctx, raw);
     }

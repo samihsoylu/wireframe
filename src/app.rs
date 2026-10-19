@@ -62,6 +62,8 @@ mod text_session;
 mod toolbar;
 mod trash;
 #[cfg(target_os = "macos")]
+mod update_resume;
+#[cfg(target_os = "macos")]
 mod updates;
 mod versions;
 mod viewports;
@@ -421,10 +423,16 @@ impl WireframeApp {
             app.enable_persistence(&cc.egui_ctx, path);
         }
         let args: Vec<_> = std::env::args_os().skip(1).collect();
+        #[cfg(target_os = "macos")]
+        let update_project = updates::take_reopened_project(!args.is_empty());
         if args.iter().any(|a| a == "--demo") {
             app.editor = Editor::new(Project::try_from(example_document()).expect("valid example"));
         } else if let Some(path) = args.first() {
             app.start_startup_open(PathBuf::from(path), &cc.egui_ctx);
+        }
+        #[cfg(target_os = "macos")]
+        if let Some(path) = update_project {
+            app.start_startup_open(path, &cc.egui_ctx);
         }
         app.init_menus(cc);
         #[cfg(target_os = "macos")]
@@ -598,6 +606,15 @@ impl WireframeApp {
             }
             Pending::Open(_) => unreachable!("Open is prepared before session handoff"),
             Pending::Quit => {
+                #[cfg(target_os = "macos")]
+                if let Some(updates) = &self.updates
+                    && let Err(error) = updates.prepare_relaunch(self.file.as_deref())
+                {
+                    self.error = Some(format!(
+                        "Could not prepare project reopening after the update. The app remains open.\n\n{error}"
+                    ));
+                    return;
+                }
                 self.quit_allowed = true;
                 self.clear_recovery();
                 #[cfg(target_os = "macos")]

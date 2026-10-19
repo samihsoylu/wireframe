@@ -13,6 +13,69 @@ use objc2_app_kit::{NSApplication, NSMenu, NSMenuItem};
 use objc2_foundation::{
     MainThreadMarker, NSBundle, NSError, NSNumber, NSObject, NSObjectProtocol, NSString,
 };
+use std::{
+    cell::Cell,
+    path::PathBuf,
+    time::{SystemTime, UNIX_EPOCH},
+};
+
+define_class!(
+    #[unsafe(super = NSObject)]
+    #[thread_kind = MainThreadOnly]
+    #[ivars = Cell<bool>]
+    struct UpdateLifecycle;
+    unsafe impl NSObjectProtocol for UpdateLifecycle {}
+    impl UpdateLifecycle {
+        #[unsafe(method(updaterWillRelaunchApplication:))]
+        fn will_relaunch(&self, _updater: &AnyObject) {
+            // Sparkle sends this once per installation, not again after a
+            // canceled application save prompt. Retain it until updater abort.
+            self.ivars().set(true);
+        }
+        #[unsafe(method(updater:didAbortWithError:))]
+        fn aborted(&self, _updater: &AnyObject, _error: &NSError) {
+            self.ivars().set(false);
+        }
+    }
+);
+impl UpdateLifecycle {
+    fn new(mtm: MainThreadMarker) -> Retained<Self> {
+        let this = Self::alloc(mtm).set_ivars(Cell::new(false));
+        // SAFETY: Initialize the allocated NSObject subclass on the main thread.
+        unsafe { msg_send![super(this), init] }
+    }
+}
+
+fn now() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs())
+}
+fn resume_state() -> Option<super::update_resume::Resume> {
+    let host = NSBundle::mainBundle();
+    if !info_bool(&host, "WireframeEnableUpdater").unwrap_or(false) {
+        return None;
+    }
+    let id = host.bundleIdentifier()?.to_string();
+    if id.is_empty()
+        || !id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'-')
+    {
+        return None;
+    }
+    let path = wireframe::storage::recovery_path()?
+        .parent()?
+        .join(format!("update-reopen-{id}.json"));
+    Some(super::update_resume::Resume::new(
+        path,
+        PathBuf::from(host.bundlePath().to_string()),
+        info_string(&host, "CFBundleVersion")?,
+    ))
+}
+pub(super) fn take_reopened_project(explicit_open: bool) -> Option<PathBuf> {
+    resume_state()?.take(explicit_open, now())
+}
 
 struct Ivars {
     updater: Retained<AnyObject>,
@@ -57,6 +120,7 @@ pub(super) struct Updates {
     _preferences: Retained<UpdatePreferences>,
     _controller: Retained<AnyObject>,
     _framework: Retained<NSBundle>,
+    lifecycle: Retained<UpdateLifecycle>,
 }
 impl Updates {
     pub(super) fn start(termination_ready: bool) -> Result<Option<Self>, String> {
@@ -104,11 +168,12 @@ impl Updates {
             .ok_or("The update controller is unavailable.")?;
         // SAFETY: Signatures follow Sparkle 2.10.0 headers. NSObject allocation
         // transfers ownership to init; retained results outlive their menu items.
+        let lifecycle = UpdateLifecycle::new(mtm);
         let controller: Retained<AnyObject> = unsafe {
             let allocated: Allocated<AnyObject> = msg_send![class, alloc];
             let result: Option<Retained<AnyObject>> = msg_send![allocated,
                 initWithStartingUpdater: false,
-                updaterDelegate: Option::<&AnyObject>::None,
+                updaterDelegate: &*lifecycle,
                 userDriverDelegate: Option::<&AnyObject>::None];
             result.ok_or("The update controller could not be created.")?
         };
@@ -144,7 +209,18 @@ impl Updates {
             _preferences: preferences,
             _controller: controller,
             _framework: framework,
+            lifecycle,
         }))
+    }
+    pub(super) fn prepare_relaunch(&self, project: Option<&std::path::Path>) -> Result<(), String> {
+        if self.lifecycle.ivars().get()
+            && let Some(project) = project
+        {
+            resume_state()
+                .ok_or("The update reopening state is unavailable.")?
+                .save(project, now())?;
+        }
+        Ok(())
     }
 }
 impl Drop for Updates {

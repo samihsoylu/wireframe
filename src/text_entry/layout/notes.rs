@@ -126,7 +126,7 @@ impl NotesLayout {
     }
 
     pub fn raster(&mut self, engine: &mut Engine, viewport: Rect) -> Result<ColorImage, String> {
-        self.layout.raster(engine, viewport, Color32::from_gray(30))
+        self.layout.raster(engine, viewport, Color32::BLACK)
     }
 
     pub fn paint_icons(&self, painter: &egui::Painter, origin: Pos2) {
@@ -148,13 +148,17 @@ fn span_size(style: &Style, default: f32) -> f32 {
 
 fn ink(style: &Style) -> Color32 {
     if style.disabled {
-        Color32::from_gray(170)
-    } else if let Some(color) = style.color.as_deref().and_then(parse_color) {
+        Color32::from_gray(179)
+    } else if let Some(color) = style
+        .color
+        .as_deref()
+        .map(|value| parse_color(value).unwrap_or(Color32::BLACK))
+    {
         color
     } else if style.link {
-        Color32::from_rgb(35, 124, 165)
+        Color32::from_rgb(6, 123, 186)
     } else {
-        Color32::from_gray(30)
+        Color32::BLACK
     }
 }
 

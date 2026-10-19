@@ -30,7 +30,7 @@ fn explicit_links_have_color_without_changing_click_behavior_or_raw_addresses() 
     );
     for name in ["Website", "Mail", "No target", "Bare host"] {
         let span = parts.iter().find(|s| s.text == name).unwrap();
-        assert_eq!(ink(&span.style), Color32::from_rgb(35, 124, 165));
+        assert_eq!(ink(&span.style), Color32::from_rgb(6, 123, 186));
         assert!(!span.style.underline);
     }
     assert!(
@@ -82,7 +82,7 @@ fn color_and_decorations_reach_the_native_raster() {
     assert!(
         red.pixels
             .iter()
-            .any(|p| p.a() > 100 && p.r() > 100 && p.g() < 30)
+            .any(|p| p.a() == 255 && *p == Color32::from_rgb(207, 42, 39))
     );
 }
 
@@ -107,4 +107,19 @@ fn dimensions_and_viewport_allocations_remain_bounded() {
             )
             .is_err()
     );
+}
+
+#[test]
+fn notes_ink_preserves_explicit_colors_and_muted_precedence() {
+    for (source, color) in [
+        ("Plain", Color32::BLACK),
+        ("-Muted-", Color32::from_gray(179)),
+        ("{color:blue5}Blue{color}", Color32::from_rgb(8, 83, 148)),
+        ("{color:bogus}[Link]{color}", Color32::BLACK),
+        ("-{color:red}Muted{color}-", Color32::from_gray(179)),
+    ] {
+        let parts = spans(source);
+        assert_eq!(parts.len(), 1, "{source}");
+        assert_eq!(ink(&parts[0].style), color, "{source}");
+    }
 }

@@ -134,7 +134,11 @@ impl EguiMeasurer<'_> {
                 .map_or(base.size, |s| s as f32);
             let color = if style.disabled {
                 options.disabled_ink
-            } else if let Some(color) = style.color.as_deref().and_then(parse_color) {
+            } else if let Some(color) = style
+                .color
+                .as_deref()
+                .map(|value| parse_color(value).unwrap_or(Color32::BLACK))
+            {
                 color
             } else if style.link {
                 options.link
@@ -289,31 +293,63 @@ impl EguiMeasurer<'_> {
         }
     }
 }
+/// Resolve a markup color. Invalid values are rendered as black by callers.
 pub fn parse_color(value: &str) -> Option<Color32> {
     let value = value.trim().to_ascii_lowercase();
-    let hex = value.trim_start_matches('#');
-    if hex.len() == 6 && hex.bytes().all(|c| c.is_ascii_hexdigit()) {
-        let n = u32::from_str_radix(hex, 16).ok()?;
-        return Some(Color32::from_rgb((n >> 16) as u8, (n >> 8) as u8, n as u8));
-    }
-    if hex.len() == 3 && hex.bytes().all(|c| c.is_ascii_hexdigit()) {
-        let n = u16::from_str_radix(hex, 16).ok()?;
+    let packed = match value.as_str() {
+        "black" => Some(0x000000),
+        "white" => Some(0xffffff),
+        _ => named_color(&value),
+    };
+    if let Some(rgb) = packed {
         return Some(Color32::from_rgb(
+            (rgb >> 16) as u8,
+            (rgb >> 8) as u8,
+            rgb as u8,
+        ));
+    }
+    let hex = value.strip_prefix('#').unwrap_or(&value);
+    if !matches!(hex.len(), 3 | 6) || !hex.bytes().all(|c| c.is_ascii_hexdigit()) {
+        return None;
+    }
+    let n = u32::from_str_radix(hex, 16).ok()?;
+    if hex.len() == 3 {
+        Some(Color32::from_rgb(
             ((n >> 8) & 15) as u8 * 17,
             ((n >> 4) & 15) as u8 * 17,
             (n & 15) as u8 * 17,
-        ));
+        ))
+    } else {
+        Some(Color32::from_rgb((n >> 16) as u8, (n >> 8) as u8, n as u8))
     }
-    Some(match value.as_str() {
-        "red" => Color32::RED,
-        "green" => Color32::from_rgb(0, 128, 0),
-        "blue" => Color32::BLUE,
-        "black" => Color32::BLACK,
-        "white" => Color32::WHITE,
-        "gray" | "grey" => Color32::GRAY,
-        "yellow" => Color32::YELLOW,
-        "orange" => Color32::from_rgb(255, 165, 0),
-        "purple" => Color32::from_rgb(128, 0, 128),
+}
+
+fn named_color(name: &str) -> Option<u32> {
+    // Each hue has its base color followed by variants 2 through 6.
+    let end = name.trim_end_matches(|c: char| c.is_ascii_digit()).len();
+    let (hue, variant) = name.split_at(end);
+    let grayscale = matches!(hue, "gray" | "grey");
+    let index = match (grayscale, variant) {
+        (true, "1") | (false, "") => 0,
+        (_, "2") => 1,
+        (_, "3") => 2,
+        (_, "4") => 3,
+        (_, "5") => 4,
+        (_, "6") => 5,
         _ => return None,
-    })
+    };
+    Some(
+        match hue {
+            "gray" | "grey" => [0x333333, 0x666666, 0x999999, 0xcccccc, 0xdddddd, 0xeeeeee],
+            "red" => [0xcf2a27, 0xea9999, 0xe06666, 0xcc0000, 0x990000, 0x660000],
+            "orange" => [0xff9900, 0xf9cb9c, 0xf6b26b, 0xe69138, 0xb45f06, 0x783f04],
+            "yellow" => [0xffff00, 0xffe599, 0xffd966, 0xf1c232, 0xbf9000, 0x7f6000],
+            "green" => [0x009e0f, 0xb6d7a8, 0x93c47d, 0x6aa84f, 0x38761d, 0x274e13],
+            "cyan" => [0x00ffff, 0xa2c4c9, 0x76a5af, 0x45818e, 0x134f5c, 0x0c343d],
+            "blue" => [0x2b78e4, 0x9fc5f8, 0x6fa8dc, 0x597eaa, 0x085394, 0x073763],
+            "purple" => [0x9900ff, 0xb4a7d6, 0x8e7cc3, 0x674ea7, 0x351c75, 0x20124d],
+            "pink" => [0xff00ff, 0xd5a6bd, 0xc27ba0, 0xa64d79, 0x741b47, 0x4c1130],
+            _ => return None,
+        }[index],
+    )
 }

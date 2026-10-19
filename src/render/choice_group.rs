@@ -33,7 +33,9 @@ impl Scene {
                 } else {
                     row.symbol_color
                         .as_deref()
-                        .and_then(crate::rich_text::painting::parse_color)
+                        .map(|value| {
+                            crate::rich_text::painting::parse_color(value).unwrap_or(Color32::BLACK)
+                        })
                         .unwrap_or(options.ink)
                 };
                 let size = if radio { 13. } else { 16. };

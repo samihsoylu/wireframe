@@ -568,11 +568,10 @@ fn review_body(
                     if let Some(size) = style.size {
                         label = label.size(f32::from(size));
                     }
-                    if let Some(color) = style
-                        .color
-                        .as_deref()
-                        .and_then(wireframe::rich_text::painting::parse_color)
-                    {
+                    if let Some(color) = style.color.as_deref().map(|value| {
+                        wireframe::rich_text::painting::parse_color(value)
+                            .unwrap_or(egui::Color32::BLACK)
+                    }) {
                         label = label.color(color);
                     }
                     if style.bold {

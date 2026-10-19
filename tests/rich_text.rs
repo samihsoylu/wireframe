@@ -666,3 +666,87 @@ fn overflowing_separator_keeps_fitting_word_and_visible_link_width() {
     })
     .drop_without_applying_deltas();
 }
+
+#[test]
+fn markup_palette_names_and_hex_values_are_distinct_and_case_insensitive() {
+    use wireframe::rich_text::painting::parse_color;
+    for (name, rgb) in [
+        ("RED", [207, 42, 39]),
+        ("green", [0, 158, 15]),
+        ("blue", [43, 120, 228]),
+        ("orange", [255, 153, 0]),
+        ("purple", [153, 0, 255]),
+        ("pink", [255, 0, 255]),
+        ("red2", [234, 153, 153]),
+        ("yellow3", [255, 217, 102]),
+        ("cyan4", [69, 129, 142]),
+        ("blue5", [8, 83, 148]),
+        ("purple6", [32, 18, 77]),
+        ("black", [0, 0, 0]),
+        ("white", [255, 255, 255]),
+        (" #F00 ", [255, 0, 0]),
+        ("a0B1c2", [160, 177, 194]),
+    ] {
+        assert_eq!(
+            parse_color(name),
+            Some(egui::Color32::from_rgb(rgb[0], rgb[1], rgb[2])),
+            "{name}"
+        );
+    }
+    for (i, channel) in [51, 102, 153, 204, 221, 238].into_iter().enumerate() {
+        for spelling in ["gray", "grey"] {
+            assert_eq!(
+                parse_color(&format!("{spelling}{}", i + 1)),
+                Some(egui::Color32::from_gray(channel))
+            );
+        }
+    }
+    for name in [
+        "", "gray", "red1", "red7", "blue02", "#12", "#1234", "##123", "123xyz", "0xff00", "réd",
+    ] {
+        assert_eq!(parse_color(name), None, "{name}");
+    }
+}
+
+#[test]
+fn rendered_markup_uses_palette_ink_and_invalid_colors_do_not_inherit_link_ink() {
+    let ctx = egui::Context::default();
+    wireframe::fonts::install(&ctx);
+    ctx.run_ui(Default::default(), |_| {
+        let measure = EguiMeasurer {
+            context: &ctx,
+            regular: wireframe::fonts::family(false, false),
+            bold: wireframe::fonts::family(true, false),
+        };
+        for (tag, color) in [
+            ("red", egui::Color32::from_rgb(207, 42, 39)),
+            ("#ff0000", egui::Color32::RED),
+            ("invalid", egui::Color32::BLACK),
+        ] {
+            let source = format!("{{color:{tag}}}[Link](page:2){{color}}");
+            let rich = RichText::parse(&source, false);
+            let painted = measure.rich_galley(
+                &rich,
+                TextStyle {
+                    size: 13.,
+                    bold: false,
+                    italic: false,
+                },
+                None,
+                true,
+            );
+            assert_eq!(rich.source, source);
+            assert_eq!(painted.links.len(), 1);
+            assert_eq!(painted.links[0].target, "page:2");
+            assert!(!painted.runs.is_empty());
+            assert!(
+                painted
+                    .runs
+                    .iter()
+                    .flatten()
+                    .all(|run| run.format.color == color)
+            );
+        }
+    })
+    .drop_without_applying_deltas();
+}

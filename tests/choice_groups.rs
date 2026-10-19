@@ -354,3 +354,36 @@ fn choice_ink_tracks_style_without_replacing_explicit_colors() {
         assert_ink(&e, [51, 51, 51, 255]);
     }
 }
+
+#[test]
+fn named_choice_colors_match_explicit_rgb_in_canvas_and_svg() {
+    for (kind, marker) in [(Kind::CheckboxGroup, "[x]"), (Kind::RadioGroup, "(o)")] {
+        let (mut e, id, _) = fixture(kind);
+        for sketch in [false, true] {
+            e.document.settings.sketch = sketch;
+            for (name, hex) in [
+                ("red", "#cf2a27"),
+                ("blue5", "#085394"),
+                ("grey3", "#999999"),
+                ("invalid", "#000000"),
+            ] {
+                let source = format!("{{color:{name}}}{marker} Label{{color}}");
+                edit(&mut e, id, "text", Value::Text(source.clone()));
+                let named = e.rendered_scene(e.page).unwrap();
+                edit(
+                    &mut e,
+                    id,
+                    "text",
+                    Value::Text(format!("{{color:{hex}}}{marker} Label{{color}}")),
+                );
+                let explicit = e.rendered_scene(e.page).unwrap();
+                assert_eq!(named.svg(), explicit.svg(), "{kind:?} {sketch} {name}");
+                e.undo();
+                assert_eq!(
+                    e.control_properties(id).unwrap().1["text"],
+                    Value::Text(source)
+                );
+            }
+        }
+    }
+}

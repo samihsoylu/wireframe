@@ -269,7 +269,7 @@ fn shaped_runs_preserve_original_unicode_and_styles_after_joined_text() {
     assert!(runs.iter().any(|g| g.text == "Strong" && g.bold));
     assert!(
         runs.iter()
-            .any(|g| g.text == "After" && g.color == [255, 0, 0, 255])
+            .any(|g| g.text == "After" && g.color == [207, 42, 39, 255])
     );
     assert!(
         runs.iter()

@@ -148,3 +148,35 @@ impl InterfaceFont {
         axes
     }
 }
+
+/// Host text-system line metrics, in logical points. Canvas metrics are separate.
+pub(crate) fn system_line_metrics(size: f32, role: InterfaceRole) -> Option<(f32, f32)> {
+    #[cfg(target_os = "macos")]
+    {
+        use objc2_app_kit::{
+            NSFont, NSFontWeightBold, NSFontWeightMedium, NSFontWeightRegular, NSLayoutManager,
+        };
+        let weight = unsafe {
+            match role {
+                InterfaceRole::Regular => NSFontWeightRegular,
+                InterfaceRole::Medium => NSFontWeightMedium,
+                InterfaceRole::Bold => NSFontWeightBold,
+            }
+        };
+        let font = NSFont::systemFontOfSize_weight(f64::from(size), weight);
+        let layout = NSLayoutManager::new();
+        let height = layout.defaultLineHeightForFont(&font) as f32;
+        let baseline = layout.defaultBaselineOffsetForFont(&font) as f32;
+        (height.is_finite()
+            && baseline.is_finite()
+            && height > 0.
+            && baseline >= 0.
+            && baseline <= height)
+            .then_some((height, baseline))
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (size, role);
+        None
+    }
+}

@@ -98,6 +98,13 @@ impl Engine {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+struct LinePlacement {
+    top: f32,
+    baseline: f32,
+    height: f32,
+}
+
 #[derive(Clone, Debug)]
 pub struct Cell {
     pub source: Range<usize>,
@@ -566,6 +573,16 @@ impl Layout {
         viewport: Rect,
         color: Color32,
     ) -> Result<ColorImage, String> {
+        self.raster_with_lines(engine, viewport, color, None)
+    }
+
+    fn raster_with_lines(
+        &mut self,
+        engine: &mut Engine,
+        viewport: Rect,
+        color: Color32,
+        lines: Option<&[LinePlacement]>,
+    ) -> Result<ColorImage, String> {
         if !viewport.is_finite() || viewport.width() <= 0. || viewport.height() <= 0. {
             return Err("Invalid text viewport".into());
         }
@@ -577,21 +594,40 @@ impl Layout {
         let mut image = ColorImage::filled([width, height], Color32::TRANSPARENT);
         let left = (viewport.left() * self.scale).round() as i32;
         let top = (viewport.top() * self.scale).round() as i32;
-        self.buffer.draw(
-            &mut engine.fonts,
-            &mut engine.raster,
-            cosmic_text::Color::rgba(color.r(), color.g(), color.b(), color.a()),
-            |x, y, w, h, c| {
-                let [r, g, b, a] = c.as_rgba();
-                let ink = Color32::from_rgba_unmultiplied(r, g, b, a);
-                for py in (y - top).max(0)..(y - top + h as i32).min(height as i32) {
-                    for px in (x - left).max(0)..(x - left + w as i32).min(width as i32) {
-                        let pixel = &mut image.pixels[py as usize * width + px as usize];
-                        *pixel = ink + pixel.gamma_multiply(1. - a as f32 / 255.);
-                    }
+        let callback = |x: i32, y: i32, w: u32, h: u32, c: cosmic_text::Color| {
+            let [r, g, b, a] = c.as_rgba();
+            let ink = Color32::from_rgba_unmultiplied(r, g, b, a);
+            for py in (y - top).max(0)..(y - top + h as i32).min(height as i32) {
+                for px in (x - left).max(0)..(x - left + w as i32).min(width as i32) {
+                    let pixel = &mut image.pixels[py as usize * width + px as usize];
+                    *pixel = ink + pixel.gamma_multiply(1. - a as f32 / 255.);
                 }
-            },
-        );
+            }
+        };
+        let color = cosmic_text::Color::rgba(color.r(), color.g(), color.b(), color.a());
+        if let Some(lines) = lines {
+            use cosmic_text::Renderer;
+            let mut renderer = cosmic_text::LegacyRenderer {
+                font_system: &mut engine.fonts,
+                cache: &mut engine.raster,
+                callback,
+            };
+            for (mut run, placement) in self.buffer.layout_runs().zip(lines) {
+                run.line_top = placement.top;
+                run.line_y = placement.baseline;
+                run.line_height = placement.height;
+                for glyph in run.glyphs {
+                    renderer.glyph(
+                        glyph.physical((0., run.line_y), 1.),
+                        glyph.color_opt.unwrap_or(color),
+                    );
+                }
+                cosmic_text::render_decoration(&mut renderer, &run, color);
+            }
+        } else {
+            self.buffer
+                .draw(&mut engine.fonts, &mut engine.raster, color, callback);
+        }
         Ok(image)
     }
 }

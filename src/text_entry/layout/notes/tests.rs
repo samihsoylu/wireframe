@@ -123,3 +123,96 @@ fn notes_ink_preserves_explicit_colors_and_muted_precedence() {
         assert_eq!(ink(&parts[0].style), color, "{source}");
     }
 }
+
+#[test]
+#[cfg(target_os = "macos")]
+fn mixed_sizes_use_host_line_boxes_and_baselines_at_each_density() {
+    let mut engine = Engine::default();
+    for scale in [1., 1.25, 2.] {
+        let layout = NotesLayout::new(
+            &mut engine,
+            "Plain notes\n{size:20}Large{size}\nLast",
+            13.,
+            300.,
+            scale,
+        )
+        .unwrap();
+        assert_eq!(layout.lines.len(), 3);
+        for (line, (top, baseline, height)) in
+            layout
+                .lines
+                .iter()
+                .zip([(0., 13., 16.), (16., 35., 23.), (39., 52., 16.)])
+        {
+            assert!((line.top / scale - top).abs() < 0.001);
+            assert!((line.baseline / scale - baseline).abs() < 0.001);
+            assert!((line.height / scale - height).abs() < 0.001);
+        }
+        assert_eq!(layout.size().y, 55.);
+        let small = NotesLayout::new(&mut engine, "{size:8}Small{size}", 13., 300., scale).unwrap();
+        assert_eq!(small.size().y, 10.);
+    }
+}
+
+#[test]
+fn line_placement_keeps_icons_decorations_and_scrolled_rasters_together() {
+    let mut engine = Engine::default();
+    let mut layout = NotesLayout::new(
+        &mut engine,
+        "Plain\n{size:20}&Under& ~Strike~ :star-solid:{size}\nשלום 🙂\n\nLast\n",
+        13.,
+        400.,
+        2.,
+    )
+    .unwrap();
+    assert_eq!(layout.lines.len(), 6);
+    assert_eq!(layout.icons.len(), 1);
+    let icon = layout.icons[0].1;
+    let line = layout.lines[1];
+    assert!((icon.bottom() - line.baseline / 2. - 20. * 0.14).abs() < 0.001);
+    for pair in layout.lines.windows(2) {
+        assert!((pair[0].top + pair[0].height - pair[1].top).abs() < 0.001);
+    }
+    let full = layout
+        .raster(&mut engine, Rect::from_min_size(Pos2::ZERO, layout.size()))
+        .unwrap();
+    let crop = Rect::from_min_size(egui::pos2(4., 15.), Vec2::new(200., 40.));
+    let partial = layout.raster(&mut engine, crop).unwrap();
+    for y in 0..partial.size[1] {
+        let a = &partial.pixels[y * partial.size[0]..(y + 1) * partial.size[0]];
+        let start = (y + 30) * full.size[0] + 8;
+        assert_eq!(a, &full.pixels[start..start + partial.size[0]]);
+    }
+    assert!(partial.pixels.iter().any(|pixel| pixel.a() > 0));
+}
+
+#[test]
+fn portable_notes_metrics_come_from_the_available_font() {
+    let mut engine = Engine::default();
+    // Exercise the portable path even on a host with native UI fonts.
+    engine.interface_bases.clear();
+    let low = NotesLayout::new(
+        &mut engine,
+        "Plain\n{size:20}Large{size}\nLast",
+        13.,
+        300.,
+        1.,
+    )
+    .unwrap();
+    let high = NotesLayout::new(
+        &mut engine,
+        "Plain\n{size:20}Large{size}\nLast",
+        13.,
+        300.,
+        2.,
+    )
+    .unwrap();
+    assert_eq!(low.lines.len(), 3);
+    assert_eq!(low.size().y, high.size().y);
+    assert!(low.lines[1].height > low.lines[0].height);
+    assert!(
+        low.lines
+            .iter()
+            .all(|line| line.baseline >= line.top && line.baseline <= line.top + line.height)
+    );
+}

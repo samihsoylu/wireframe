@@ -6,6 +6,7 @@
 - Edit, arrange, group and reuse controls with Undo and Redo.
 - Organize pages, alternate versions, notes and review comments.
 - Format notes with styled text, colors, sizes and inline icons while keeping the original text editable.
+- Keep notes spacing consistent across mixed text sizes and inline icons, including trailing blank lines.
 - Use consistent named palette colors and numbered shades in text, notes, comments and choice controls.
 - Navigate component sources with arrow keys, extend selections with Shift, and expand or collapse libraries.
 - Keep page and component selection ready for keyboard navigation after saving from the File menu.

@@ -12,6 +12,7 @@ struct Span {
 
 pub struct NotesLayout {
     layout: Layout,
+    lines: Vec<LinePlacement>,
     icons: Vec<(&'static crate::icons::Icon, Rect, Color32)>,
 }
 
@@ -49,9 +50,29 @@ impl NotesLayout {
                 )
             })
             .collect::<Result<Vec<_>, _>>()?;
+        let base_family = engine.interface_family(size, InterfaceRole::Regular)?;
+        let base_metrics =
+            font_metrics(engine, size, InterfaceRole::Regular, base_family.as_deref())?;
+        let mut metrics_cache = BTreeMap::new();
+        let mut span_metrics = Vec::with_capacity(spans.len());
+        for (span, family) in spans.iter().zip(&families) {
+            let font_size = span_size(&span.style, size);
+            let role = if span.style.bold {
+                InterfaceRole::Bold
+            } else {
+                InterfaceRole::Regular
+            };
+            let metrics = match metrics_cache.entry((font_size.to_bits(), role)) {
+                std::collections::btree_map::Entry::Occupied(entry) => *entry.get(),
+                std::collections::btree_map::Entry::Vacant(entry) => {
+                    *entry.insert(font_metrics(engine, font_size, role, family.as_deref())?)
+                }
+            };
+            span_metrics.push(metrics);
+        }
         let mut buffer = Buffer::new(
             &mut engine.fonts,
-            Metrics::new(size * scale, size * 1.4 * scale),
+            Metrics::new(size * scale, base_metrics.0 * scale),
         );
         buffer.set_wrap(Wrap::WordOrGlyph);
         buffer.set_size(Some(width * scale), None);
@@ -68,7 +89,7 @@ impl NotesLayout {
                     Weight::LIGHT
                 })
                 .metadata(i)
-                .metrics(Metrics::new(font_size * scale, font_size * 1.4 * scale))
+                .metrics(Metrics::new(font_size * scale, span_metrics[i].0 * scale))
                 .color(cosmic_text::Color::rgba(
                     color.r(),
                     color.g(),
@@ -87,11 +108,33 @@ impl NotesLayout {
             (span.text.as_str(), attrs)
         });
         buffer.set_rich_text(attrs, &Attrs::new(), Shaping::Advanced, None);
+        // A final line break reserves the following empty line in the read view.
+        if spans.last().is_some_and(|span| span.text.ends_with('\n')) {
+            buffer.lines.push(cosmic_text::BufferLine::new(
+                "",
+                cosmic_text::LineEnding::None,
+                cosmic_text::AttrsList::new(&Attrs::new()),
+                Shaping::Advanced,
+            ));
+        }
         buffer.shape_until_scroll(&mut engine.fonts, false);
-        let mut height = size * 1.4;
+        let mut height = 0.;
+        let mut lines = Vec::new();
         let mut icons = Vec::new();
         for run in buffer.layout_runs() {
-            height = height.max((run.line_top + run.line_height) / scale);
+            let (baseline, below) = run
+                .glyphs
+                .iter()
+                .map(|glyph| span_metrics[glyph.metadata])
+                .map(|(height, baseline)| (baseline, height - baseline))
+                .reduce(|a, b| (a.0.max(b.0), a.1.max(b.1)))
+                .unwrap_or((base_metrics.1, base_metrics.0 - base_metrics.1));
+            let line = LinePlacement {
+                top: height * scale,
+                baseline: (height + baseline) * scale,
+                height: (baseline + below) * scale,
+            };
+            height += baseline + below;
             for glyph in run.glyphs {
                 let span = &spans[glyph.metadata];
                 if let Some(icon) = span.icon {
@@ -101,22 +144,31 @@ impl NotesLayout {
                     let rect = Rect::from_center_size(
                         egui::pos2(
                             (glyph.x + glyph.w / 2.) / scale,
-                            run.line_y / scale - side * 0.35,
+                            line.baseline / scale - side * 0.36,
                         ),
                         Vec2::splat(side),
                     );
                     icons.push((icon, rect, ink(&span.style)));
                 }
             }
+            lines.push(line);
         }
         Ok(Self {
             layout: Layout {
                 source: spans.iter().map(|s| s.text.as_str()).collect(),
                 buffer,
                 rows: Vec::new(),
-                size: Vec2::new(width, height),
+                size: Vec2::new(
+                    width,
+                    if lines.is_empty() {
+                        base_metrics.0
+                    } else {
+                        height
+                    },
+                ),
                 scale,
             },
+            lines,
             icons,
         })
     }
@@ -126,7 +178,8 @@ impl NotesLayout {
     }
 
     pub fn raster(&mut self, engine: &mut Engine, viewport: Rect) -> Result<ColorImage, String> {
-        self.layout.raster(engine, viewport, Color32::BLACK)
+        self.layout
+            .raster_with_lines(engine, viewport, Color32::BLACK, Some(&self.lines))
     }
 
     pub fn paint_icons(&self, painter: &egui::Painter, origin: Pos2) {
@@ -219,3 +272,50 @@ fn split_icons(text: &str, style: Style, output: &mut Vec<Span>) {
 
 #[cfg(test)]
 mod tests;
+
+fn font_metrics(
+    engine: &mut Engine,
+    size: f32,
+    role: InterfaceRole,
+    family: Option<&str>,
+) -> Result<(f32, f32), String> {
+    if family.is_some()
+        && let Some(metrics) = crate::fonts::interface::system_line_metrics(size, role)
+    {
+        return Ok(metrics);
+    }
+    let weight = if family.is_some() {
+        Weight::NORMAL
+    } else if role == InterfaceRole::Bold {
+        Weight::BOLD
+    } else {
+        Weight::LIGHT
+    };
+    let id = engine
+        .fonts
+        .db()
+        .query(&cosmic_text::fontdb::Query {
+            families: &[Family::Name(family.unwrap_or("Ubuntu"))],
+            weight,
+            ..Default::default()
+        })
+        .ok_or("Notes font unavailable")?;
+    let font = engine
+        .fonts
+        .get_font(id, weight)
+        .ok_or("Notes font metrics unavailable")?;
+    let metrics = font.metrics();
+    let factor = size / f32::from(metrics.units_per_em);
+    let baseline = (metrics.ascent * factor).ceil();
+    let height =
+        baseline + (-metrics.descent * factor).ceil() + (metrics.leading * factor).max(0.).ceil();
+    if !height.is_finite()
+        || !baseline.is_finite()
+        || height <= 0.
+        || baseline < 0.
+        || baseline > height
+    {
+        return Err("Invalid notes font metrics".into());
+    }
+    Ok((height, baseline))
+}

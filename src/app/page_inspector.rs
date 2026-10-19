@@ -281,10 +281,8 @@ impl WireframeApp {
             }
         }
         let read = self.page_inspector.read.as_mut().unwrap();
-        let (rect, response) = ui.allocate_exact_size(
-            Vec2::new(width, read.layout.size().y.max(size * 1.4)),
-            Sense::click(),
-        );
+        let (rect, response) =
+            ui.allocate_exact_size(Vec2::new(width, read.layout.size().y), Sense::click());
         response.widget_info(|| {
             egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), text)
         });

@@ -64,7 +64,8 @@ class UpdaterTests(unittest.TestCase):
 
     def test_failed_framework_stage_preserves_previous_bundle(self):
         (self.root / 'LICENSE').write_text('license')
-        (self.root / 'assets').mkdir()
+        (self.root / 'assets/app-icon').mkdir(parents=True)
+        (self.root / 'assets/app-icon/Wireframe.icns').write_bytes(b'icon fixture')
         binary = self.root / 'wireframe'
         binary.write_bytes(b'new binary')
         bundle = self.root / 'Wireframe.app'
@@ -79,7 +80,8 @@ class UpdaterTests(unittest.TestCase):
 
     def test_plain_build_does_not_keep_an_old_updater(self):
         (self.root / 'LICENSE').write_text('license')
-        (self.root / 'assets').mkdir()
+        (self.root / 'assets/app-icon').mkdir(parents=True)
+        (self.root / 'assets/app-icon/Wireframe.icns').write_bytes(b'icon fixture')
         binary = self.root / 'wireframe'
         binary.write_bytes(b'new binary')
         stale = self.root / 'Wireframe.app/Contents/Frameworks/Sparkle.framework'
@@ -89,6 +91,8 @@ class UpdaterTests(unittest.TestCase):
         embed.assert_not_called()
         self.assertFalse(stale.exists())
         info = plistlib.loads((bundle / 'Contents/Info.plist').read_bytes())
+        self.assertEqual(info['CFBundleIconFile'], 'Wireframe.icns')
+        self.assertEqual((bundle / 'Contents/Resources/Wireframe.icns').read_bytes(), b'icon fixture')
         self.assertNotIn('WireframeEnableUpdater', info)
         self.assertNotIn('SUPublicEDKey', info)
         self.assertEqual((bundle / 'Contents/MacOS/wireframe').read_bytes(), b'new binary')

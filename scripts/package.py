@@ -66,11 +66,13 @@ def mac_bundle(binary, out, version, update_info=None):
             'CFBundleIdentifier':sparkle.BUNDLE_ID, 'CFBundleExecutable':'wireframe',
             'CFBundlePackageType':'APPL', 'CFBundleShortVersionString':version,
             'CFBundleVersion':version, 'NSHighResolutionCapable':True,
+            'CFBundleIconFile':'Wireframe.icns',
             'LSMinimumSystemVersion':'12.0'}
         if update_info: info.update(update_info)
         (bundle / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
         resources = bundle / 'Contents/Resources'
         resources.mkdir()
+        shutil.copyfile(ROOT / 'assets/app-icon/Wireframe.icns', resources / 'Wireframe.icns')
         shutil.copyfile(ROOT / 'LICENSE', resources / 'LICENSE')
         shutil.copytree(ROOT / 'assets', resources / 'assets')
         if update_info: sparkle.embed(bundle, ROOT / '.tooling' / 'sparkle')

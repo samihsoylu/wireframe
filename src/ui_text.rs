@@ -2,6 +2,7 @@
 // Copyright 2026 Wireframe contributors
 
 //! Bounded, shaped captions with ordinary label/button accessibility semantics.
+use crate::fonts::InterfaceRole;
 use crate::text_entry::layout::{Engine, Layout, shared_engine};
 use eframe::egui::{
     self, Color32, ColorImage, Pos2, Rect, Response, Sense, TextureHandle, Ui, Vec2,
@@ -15,6 +16,32 @@ use unicode_segmentation::UnicodeSegmentation;
 const MAX_GRAPHEMES: usize = 4096;
 const MAX_ENTRIES: usize = 128;
 const MAX_BYTES: usize = 16 * 1024 * 1024;
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CaptionStyle {
+    pub size: f32,
+    pub role: InterfaceRole,
+}
+impl CaptionStyle {
+    pub fn regular(size: f32) -> Self {
+        Self {
+            size,
+            role: InterfaceRole::Regular,
+        }
+    }
+    pub fn panel_heading() -> Self {
+        Self {
+            size: 13.,
+            role: InterfaceRole::Medium,
+        }
+    }
+    pub fn selected_page() -> Self {
+        Self {
+            size: 12.,
+            role: InterfaceRole::Bold,
+        }
+    }
+}
 
 pub struct PreparedCaption {
     pub displayed: String,
@@ -47,21 +74,40 @@ pub fn prepare(
     scale: f32,
     color: Color32,
 ) -> Result<PreparedCaption, String> {
+    prepare_styled(
+        engine,
+        source,
+        CaptionStyle::regular(size),
+        width,
+        scale,
+        color,
+    )
+}
+
+pub fn prepare_styled(
+    engine: &mut Engine,
+    source: &str,
+    style: CaptionStyle,
+    width: f32,
+    scale: f32,
+    color: Color32,
+) -> Result<PreparedCaption, String> {
     let (source, capped) = display_source(source);
-    prepare_display(engine, &source, capped, size, width, scale, color)
+    prepare_display(engine, &source, capped, style, width, scale, color)
 }
 
 fn prepare_display(
     engine: &mut Engine,
     source: &str,
     capped: bool,
-    size: f32,
+    style: CaptionStyle,
     width: f32,
     scale: f32,
     color: Color32,
 ) -> Result<PreparedCaption, String> {
+    let size = style.size;
     let mut displayed = source.to_owned();
-    let mut layout = Layout::with_wrap(engine, &displayed, size, width, scale, false)?;
+    let mut layout = Layout::with_style(engine, &displayed, size, width, scale, false, style.role)?;
     let measure = |l: &Layout| l.rows.first().map_or(0., |r| r.rect.width());
     let truncated = capped || measure(&layout) > width;
     if truncated {
@@ -73,7 +119,8 @@ fn prepare_display(
         while lo + 1 < hi {
             let mid = (lo + hi) / 2;
             let candidate = format!("{}…", &source[..ends[mid]]);
-            let trial = Layout::with_wrap(engine, &candidate, size, width, scale, false)?;
+            let trial =
+                Layout::with_style(engine, &candidate, size, width, scale, false, style.role)?;
             if measure(&trial) <= width {
                 lo = mid;
             } else {
@@ -81,7 +128,7 @@ fn prepare_display(
             }
         }
         displayed = format!("{}…", &source[..ends[lo]]);
-        layout = Layout::with_wrap(engine, &displayed, size, width, scale, false)?;
+        layout = Layout::with_style(engine, &displayed, size, width, scale, false, style.role)?;
     }
     let ink_width = measure(&layout).min(width);
     let image = layout.raster(
@@ -101,7 +148,7 @@ fn prepare_display(
 struct Key {
     source: String,
     capped: bool,
-    size: f32,
+    style: CaptionStyle,
     width: f32,
     scale: f32,
     color: Color32,
@@ -122,6 +169,25 @@ struct Cache {
 /// Paint a single-line caption inside a fixed rectangle. The caller retains
 /// interaction and semantic ownership; shaping never creates an input field.
 pub fn paint(ui: &Ui, rect: Rect, source: &str, size: f32, color: Color32, centered: bool) -> bool {
+    paint_styled(
+        ui,
+        rect,
+        source,
+        CaptionStyle::regular(size),
+        color,
+        centered,
+    )
+}
+
+pub fn paint_styled(
+    ui: &Ui,
+    rect: Rect,
+    source: &str,
+    style: CaptionStyle,
+    color: Color32,
+    centered: bool,
+) -> bool {
+    let size = style.size;
     if rect.width() < 1. || rect.height() < 1. || !ui.is_rect_visible(rect) {
         return false;
     }
@@ -129,7 +195,7 @@ pub fn paint(ui: &Ui, rect: Rect, source: &str, size: f32, color: Color32, cente
     let key = Key {
         source,
         capped,
-        size,
+        style,
         width: rect.width().min(16384.),
         scale: ui.ctx().pixels_per_point(),
         color,
@@ -158,7 +224,7 @@ pub fn paint(ui: &Ui, rect: Rect, source: &str, size: f32, color: Color32, cente
             &mut engine,
             &key.source,
             key.capped,
-            key.size,
+            key.style,
             key.width,
             key.scale,
             key.color,
@@ -210,11 +276,16 @@ pub fn paint(ui: &Ui, rect: Rect, source: &str, size: f32, color: Color32, cente
 
 pub fn label(ui: &mut Ui, source: &str, width: f32) -> Response {
     let size = egui::TextStyle::Body.resolve(ui.style()).size;
+    label_styled(ui, source, width, CaptionStyle::regular(size))
+}
+
+pub fn label_styled(ui: &mut Ui, source: &str, width: f32, style: CaptionStyle) -> Response {
+    let size = style.size;
     let (rect, response) = ui.allocate_exact_size(
         Vec2::new(width.max(0.).min(ui.available_width()), size * 1.4),
         Sense::hover(),
     );
-    paint(ui, rect, source, size, ui.visuals().text_color(), false);
+    paint_styled(ui, rect, source, style, ui.visuals().text_color(), false);
     response.widget_info(|| {
         egui::WidgetInfo::labeled(egui::WidgetType::Label, ui.is_enabled(), source)
     });

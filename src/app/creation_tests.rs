@@ -72,8 +72,8 @@ fn repeated_insertion_scans_origins_down_the_viewport() {
     app.canvas_rect = Rect::from_min_size(Pos2::new(200., 100.), Vec2::new(700., 600.));
     app.pan = Vec2::ZERO;
     app.zoom = 1.;
-    app.add(Kind::Heading);
-    app.add(Kind::Button);
+    app.add_catalog_item(CatalogItem::Control(Kind::Heading), None);
+    app.add_catalog_item(CatalogItem::Control(Kind::Button), None);
     let controls = app.editor.current().controls;
     assert_eq!((controls[0].bounds.x, controls[0].bounds.y), (50., 50.));
     assert_eq!((controls[1].bounds.x, controls[1].bounds.y), (50., 100.));
@@ -87,7 +87,7 @@ fn insertion_respects_zoom_pan_wrapping_and_active_group() {
     app.pan = Vec2::new(-150., -250.);
     app.zoom = 2.;
     for expected in [(100., 150.), (100., 175.), (125., 150.)] {
-        app.add(Kind::Button);
+        app.add_catalog_item(CatalogItem::Control(Kind::Button), None);
         let c = app.editor.current().controls.last().unwrap().clone();
         assert_eq!((c.bounds.x, c.bounds.y), expected);
     }
@@ -95,7 +95,7 @@ fn insertion_respects_zoom_pan_wrapping_and_active_group() {
     app.editor.group();
     let group = app.editor.current().controls[0].id;
     assert!(app.editor.enter(group));
-    app.add(Kind::Button);
+    app.add_catalog_item(CatalogItem::Control(Kind::Button), None);
     let c = app.editor.current().controls.last().unwrap().clone();
     assert_eq!((c.bounds.x, c.bounds.y), (125., 175.));
     app.editor.undo();
@@ -110,13 +110,13 @@ fn insertion_clamps_measured_size_and_terminates_at_occupied_boundary() {
     let ctx = egui::Context::default();
     let mut app = WireframeApp::workspace(&ctx, None);
     app.pan = Vec2::splat(-20_000.);
-    app.add(Kind::Button);
+    app.add_catalog_item(CatalogItem::Control(Kind::Button), None);
     let first = app.editor.current().controls[0].bounds;
     assert_eq!((first.x + first.w, first.y + first.h), (10_000., 10_000.));
-    app.add(Kind::Button);
+    app.add_catalog_item(CatalogItem::Control(Kind::Button), None);
     assert_eq!(app.editor.current().controls[1].bounds, first);
     app.pan = Vec2::splat(500.);
-    app.add(Kind::Heading);
+    app.add_catalog_item(CatalogItem::Control(Kind::Heading), None);
     let third = app.editor.current().controls[2].bounds;
     assert_eq!((third.x, third.y), (0., 0.));
 }

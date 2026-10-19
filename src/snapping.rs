@@ -107,6 +107,25 @@ impl Targets {
         }
         result
     }
+    /// A creation origin follows an edge/spacing guide before a center guide.
+    pub fn point(&self, x: f32, y: f32) -> Result {
+        let mut bounds = Bounds::new(x, y, 0., 0.);
+        let mut guides = Vec::new();
+        for (axis, value) in [(Axis::X, x), (Axis::Y, y)] {
+            if let Some(guide) = [Kind::Edge, Kind::Spacing, Kind::Center]
+                .into_iter()
+                .find_map(|kind| self.find(axis, kind, rounded(value)))
+            {
+                if axis == Axis::X {
+                    bounds.x = guide.position;
+                } else {
+                    bounds.y = guide.position;
+                }
+                guides.push(guide);
+            }
+        }
+        Result { bounds, guides }
+    }
     pub fn moved(&self, input: Bounds, constraint: Constraint) -> Result {
         let mut b = Bounds::new(
             rounded(input.x),

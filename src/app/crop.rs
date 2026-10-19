@@ -28,6 +28,23 @@ pub(super) struct CropEdit {
     pub(super) preview: CropPreview,
     pub(super) background: wireframe::render::Scene,
     pub(super) drag: Option<CropDrag>,
+    pub(super) split: Option<SplitPreview>,
+}
+pub(super) struct SplitPreview {
+    pub(super) fraction: f32,
+    pub(super) grab: Option<f32>,
+    pub(super) session: String,
+    pub(super) surface: Id,
+    pub(super) context: Vec<Id>,
+    pub(super) original: wireframe::document::Node,
+}
+impl SplitPreview {
+    fn valid(&self, editor: &Editor) -> bool {
+        self.session == editor.clipboard_session()
+            && self.surface == editor.surface_id()
+            && self.context == editor.context
+            && editor.nodes().iter().any(|n| n == &self.original)
+    }
 }
 impl CropEdit {
     fn bounds(&self) -> Bounds {
@@ -99,8 +116,24 @@ impl CropEdit {
         };
     }
     fn apply(self, editor: &mut Editor) -> Result<(), String> {
+        if let Some(split) = self.split {
+            if !split.valid(editor) {
+                return Err("The image changed while splitting. Start the split again.".into());
+            }
+            return editor.split_image(self.id, split.fraction).map(|_| ());
+        }
         match self.preview {
             CropPreview::Image(_) => editor.crop_image(self.id, Some(self.crop)),
+            CropPreview::Group(_) if !editor.markup_visible() => {
+                let bounds = self.bounds();
+                let crop = Crop {
+                    x: (self.crop.x * 1000.).round() / 1000.,
+                    y: (self.crop.y * 1000.).round() / 1000.,
+                    width: (self.crop.width * 1000.).round().max(1.) / 1000.,
+                    height: (self.crop.height * 1000.).round().max(1.) / 1000.,
+                };
+                editor.crop_group_at(self.id, crop, Point::new(bounds.x, bounds.y))
+            }
             CropPreview::Group(_) => editor.crop_group(
                 self.id,
                 Some(self.crop),
@@ -115,7 +148,19 @@ impl CropEdit {
 impl WireframeApp {
     fn start_group_crop(&mut self, id: Id) -> Result<(), String> {
         self.end_pointer_gestures();
-        let (full, _, crop) = self.editor.group_crop_geometry(id)?;
+        let (full, visible, crop) = self.editor.group_crop_edit_geometry(id)?;
+        let crop = crop.map(|crop| {
+            if self.editor.markup_visible() {
+                crop
+            } else {
+                Crop {
+                    x: (visible.x - full.x) / full.w,
+                    y: (visible.y - full.y) / full.h,
+                    width: visible.w / full.w,
+                    height: visible.h / full.h,
+                }
+            }
+        });
         let preview = self.editor.group_crop_preview(id)?;
         self.image_crop = Some(CropEdit {
             id,
@@ -130,6 +175,7 @@ impl WireframeApp {
             preview: CropPreview::Group(preview),
             background: self.editor.crop_background(id)?,
             drag: None,
+            split: None,
         });
         Ok(())
     }
@@ -160,23 +206,72 @@ impl WireframeApp {
         });
     }
     pub(super) fn crop_controls(&mut self, ui: &mut egui::Ui) {
+        let splitting = self.image_crop.as_ref().is_some_and(|e| e.split.is_some());
         let mut apply = ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Enter));
         let mut cancel = ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape));
+        chrome::prepare_panel_resize(
+            ui,
+            egui::Id::new("crop-inspector"),
+            chrome::PanelEdge::Right,
+            96. ..=f32::INFINITY,
+            true,
+        );
         egui::Panel::right("crop-inspector")
             .default_size(300.)
             .show(ui, |ui| {
-                ui.heading("Crop selection");
-                ui.label("Drag inside the frame to move it. Drag a handle to resize it.");
-                if self
-                    .image_crop
-                    .as_ref()
-                    .is_some_and(|e| matches!(e.preview, CropPreview::Group(_)))
+                ui.set_min_width(ui.available_width());
+                ui.heading(if splitting {
+                    "Split image"
+                } else {
+                    "Crop selection"
+                });
+                ui.label(if splitting {
+                    "Drag the line or click inside the image to set the split point."
+                } else {
+                    "Drag inside the frame to move it. Drag a handle to resize it."
+                });
+                if splitting {
+                    let edit = self.image_crop.as_mut().unwrap();
+                    let height = edit.bounds().h;
+                    let split = edit.split.as_mut().unwrap();
+                    let minimum = 10_f32.min(height / 2.);
+                    let mut top = split.fraction * height;
+                    if ui
+                        .add(
+                            egui::DragValue::new(&mut top)
+                                .range(minimum..=height - minimum)
+                                .prefix("Top height: ")
+                                .suffix(" px"),
+                        )
+                        .changed()
+                    {
+                        split.fraction = top / height;
+                    }
+                    ui.small("The two pieces share the image, with a 20 px gap.");
+                }
+                if !splitting
+                    && self
+                        .image_crop
+                        .as_ref()
+                        .is_some_and(|e| matches!(e.preview, CropPreview::Group(_)))
                 {
                     ui.label("Drag outside the frame to move the content behind it.");
                 }
                 ui.horizontal(|ui| {
-                    apply |= ui.button("Apply crop").clicked();
-                    cancel |= ui.button("Cancel crop").clicked();
+                    apply |= ui
+                        .button(if splitting {
+                            "Apply split"
+                        } else {
+                            "Apply crop"
+                        })
+                        .clicked();
+                    cancel |= ui
+                        .button(if splitting {
+                            "Cancel split"
+                        } else {
+                            "Cancel crop"
+                        })
+                        .clicked();
                 });
                 ui.small("Enter applies · Escape cancels");
                 if let Some(edit) = &self.image_crop {
@@ -187,6 +282,9 @@ impl WireframeApp {
                     ));
                 }
             });
+        if let Some(split) = self.image_crop.as_ref().and_then(|e| e.split.as_ref()) {
+            self.image_split_fraction = split.fraction;
+        }
         if cancel {
             self.image_crop = None;
         } else if apply
@@ -203,6 +301,10 @@ impl WireframeApp {
         painter: &egui::Painter,
     ) {
         let mut edit = self.image_crop.take().unwrap();
+        if edit.split.as_ref().is_some_and(|s| !s.valid(&self.editor)) {
+            self.error = Some("The image changed while splitting. Start the split again.".into());
+            return;
+        }
         let instant = Self::instant_drag(ui, response.rect);
         // Native input may coalesce press + movement, then movement + release.
         // Retain the press immediately; egui's drag_started may never be observable.
@@ -226,7 +328,36 @@ impl WireframeApp {
         if !ui.is_enabled() || !ui.input(|i| i.focused) {
             edit.drag = None;
         }
-        if let Some(start) = start {
+        let visible = self.screen_rect(edit.bounds());
+        if let Some(split) = edit.split.as_mut() {
+            let line = visible.top() + visible.height() * split.fraction;
+            if !ui.is_enabled() || !ui.input(|i| i.focused) {
+                split.grab = None;
+            } else {
+                if let Some(start) = start {
+                    split.grab = (visible.contains(start) && (start.y - line).abs() <= 8.)
+                        .then_some(start.y - line);
+                }
+                if let Some(point) = instant
+                    .map(|(_, end)| end)
+                    .or_else(|| ui.input(|i| i.pointer.interact_pos()))
+                {
+                    let offset = split
+                        .grab
+                        .or_else(|| (response.clicked() && visible.contains(point)).then_some(0.));
+                    if let Some(offset) = offset {
+                        let minimum = (10. * self.zoom).min(visible.height() / 2.);
+                        split.fraction = ((point.y - offset - visible.top())
+                            .clamp(minimum, visible.height() - minimum)
+                            / visible.height())
+                        .clamp(f32::EPSILON, 1. - f32::EPSILON);
+                    }
+                }
+                if ui.input(|i| i.pointer.primary_released()) {
+                    split.grab = None;
+                }
+            }
+        } else if let Some(start) = start {
             let gesture = self
                 .resize_handles(edit.bounds())
                 .into_iter()
@@ -247,9 +378,10 @@ impl WireframeApp {
                 full: edit.full,
             });
         }
-        if let Some(end) = instant
-            .map(|(_, end)| end)
-            .or_else(|| ui.input(|i| i.pointer.interact_pos()))
+        if edit.split.is_none()
+            && let Some(end) = instant
+                .map(|(_, end)| end)
+                .or_else(|| ui.input(|i| i.pointer.interact_pos()))
         {
             edit.update_drag(end, self.zoom);
         }
@@ -306,16 +438,45 @@ impl WireframeApp {
             painter.rect_filled(rect, 0, Color32::from_black_alpha(100));
         }
         painter.rect_stroke(visible, 0, Stroke::new(1., ACCENT), StrokeKind::Inside);
-        for (_, point) in self.resize_handles(edit.bounds()) {
+        if let Some(split) = &edit.split {
+            let y = visible.top() + visible.height() * split.fraction;
+            painter.line_segment(
+                [Pos2::new(visible.left(), y), Pos2::new(visible.right(), y)],
+                Stroke::new(3., Color32::WHITE),
+            );
+            painter.line_segment(
+                [Pos2::new(visible.left(), y), Pos2::new(visible.right(), y)],
+                Stroke::new(1., Color32::BLACK),
+            );
             painter.rect(
-                Rect::from_center_size(point, Vec2::splat(7.)),
-                0,
+                Rect::from_center_size(Pos2::new(visible.center().x, y), Vec2::new(24., 8.)),
+                2.,
                 Color32::WHITE,
-                Stroke::new(1., ACCENT),
+                Stroke::new(1., Color32::DARK_GRAY),
                 StrokeKind::Inside,
             );
+            if response
+                .hover_pos()
+                .is_some_and(|p| visible.contains(p) && (p.y - y).abs() < 8.)
+                || split.grab.is_some()
+            {
+                ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeVertical);
+            }
+        } else {
+            for (_, point) in self.resize_handles(edit.bounds()) {
+                painter.rect(
+                    Rect::from_center_size(point, Vec2::splat(7.)),
+                    0,
+                    Color32::WHITE,
+                    Stroke::new(1., ACCENT),
+                    StrokeKind::Inside,
+                );
+            }
         }
-        if response.double_clicked() {
+        if let Some(split) = &edit.split {
+            self.image_split_fraction = split.fraction;
+        }
+        if response.double_clicked() && edit.split.is_none() {
             if let Err(e) = edit.apply(&mut self.editor) {
                 self.error = Some(e);
             }

@@ -44,7 +44,8 @@ pub struct TextRow {
     pub width: f32,
     pub baseline: f32,
 }
-/// A complete styled source run, shaped together when painted or exported.
+/// A complete styled source run. Positioned ink can omit an overflowing trailing
+/// separator while `text` retains the exact source bytes and formatting.
 #[derive(Clone, Debug)]
 pub struct TextRun {
     pub text: String,
@@ -193,7 +194,15 @@ impl EguiMeasurer<'_> {
         }
         let galley = self.context.fonts_mut(|f| f.layout_job(job));
         if positioned {
-            return match super::positioned::layout(self.context, galley.clone(), base, &links) {
+            // The UI galley cache rounds wrap widths. Canvas shaping must retain
+            // the requested width, including fractional document coordinates.
+            return match super::positioned::layout(
+                self.context,
+                galley.clone(),
+                base,
+                &links,
+                width.unwrap_or(f32::INFINITY),
+            ) {
                 Ok(painted) => painted,
                 Err(problem) => failed(problem),
             };
@@ -280,7 +289,7 @@ impl EguiMeasurer<'_> {
         }
     }
 }
-pub(crate) fn parse_color(value: &str) -> Option<Color32> {
+pub fn parse_color(value: &str) -> Option<Color32> {
     let value = value.trim().to_ascii_lowercase();
     let hex = value.trim_start_matches('#');
     if hex.len() == 6 && hex.bytes().all(|c| c.is_ascii_hexdigit()) {

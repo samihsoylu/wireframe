@@ -9,8 +9,7 @@ impl WireframeApp {
                 let definitions = self
                     .editor
                     .document
-                    .definitions
-                    .iter()
+                    .live_definitions()
                     .map(|d| (d.id, d.name.clone()))
                     .collect::<Vec<_>>();
                 if definitions.is_empty() {
@@ -32,7 +31,8 @@ impl WireframeApp {
                                 )
                                 .on_hover_text("Edit this component's source")
                                 .clicked()
-                                    && let Err(error) = self.editor.edit_definition(id)
+                                    && self.finish_page_notes()
+                                    && let Err(error) = self.editor.edit_library_source(id)
                                 {
                                     self.error = Some(error);
                                 }
@@ -40,6 +40,7 @@ impl WireframeApp {
                                     .small_button("+")
                                     .on_hover_text(format!("Insert {name}"))
                                     .clicked()
+                                    && self.finish_page_notes()
                                 {
                                     let n = self.editor.current().controls.len();
                                     if let Err(error) = self.editor.insert_component(
@@ -56,48 +57,6 @@ impl WireframeApp {
             });
         ui.separator();
     }
-    pub(super) fn component_source_inspector(&mut self, ui: &mut egui::Ui) {
-        let Some(id) = self.editor.definition else {
-            return;
-        };
-        ui.heading("Component source");
-        ui.label("Changes here update every instance. Local overrides keep their values.");
-        let mut name = self.editor.current().name;
-        ui.label("Name");
-        let edit = ui.add(TextInput::singleline(&mut name));
-        if edit.changed() {
-            self.editor.begin("Rename component");
-            if let Some(d) = self
-                .editor
-                .document
-                .definitions
-                .iter_mut()
-                .find(|d| d.id == id)
-            {
-                d.name = name.clone();
-            }
-        }
-        if edit.lost_focus() {
-            if name.trim().is_empty() {
-                self.editor.cancel();
-                self.error = Some("Give the component a name".into());
-            } else {
-                self.editor.commit();
-            }
-        }
-        ui.separator();
-        ui.small(
-            "Deleting this source leaves missing component placeholders. Undo restores the source.",
-        );
-        if ui.button("Delete component source").clicked()
-            && let Err(error) = self.editor.delete_definition(id)
-        {
-            self.error = Some(error);
-        }
-        if ui.button("Back to wireframe").clicked() {
-            self.editor.switch_page(self.editor.page);
-        }
-    }
     pub(super) fn component_actions(&mut self, ui: &mut egui::Ui) {
         if self.editor.selection.len() != 1 {
             return;
@@ -107,6 +66,15 @@ impl WireframeApp {
         if self.editor.missing_component(id) {
             ui.label("Component source is missing. Its reference and local changes are preserved.");
             ui.small("Source editing and detaching are unavailable while the source is missing.");
+            return;
+        }
+        if let Some(source) = self.editor.owning_source(id) {
+            if ui.button("Edit component source").clicked()
+                && self.finish_page_notes()
+                && let Err(error) = self.editor.edit_library_source(source)
+            {
+                self.error = Some(error);
+            }
             return;
         }
         if self.editor.editing_instance() {
@@ -128,7 +96,8 @@ impl WireframeApp {
                 self.error = Some(error);
             }
             if ui.button("Edit component source").clicked()
-                && let Err(error) = self.editor.edit_definition(definition)
+                && self.finish_page_notes()
+                && let Err(error) = self.editor.edit_library_source(definition)
             {
                 self.error = Some(error);
             }
@@ -140,7 +109,13 @@ impl WireframeApp {
             {
                 self.error = Some(error);
             }
-        } else if ui.button("Make component").clicked() {
+        } else if ui
+            .add_enabled(
+                !self.editor.position_locked(id),
+                egui::Button::new("Make component"),
+            )
+            .clicked()
+        {
             let name = format!("Component {}", self.editor.document.definitions.len() + 1);
             if let Err(error) = self.editor.create_component(name) {
                 self.error = Some(error);

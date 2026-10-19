@@ -4,6 +4,8 @@ fixtures/
 .DS_Store
 target/
 dist/
+__pycache__/
+*.pyc
 
 !tests/fixtures/
 !tests/fixtures/text/

@@ -29,7 +29,14 @@ fn fixture(instance: bool) -> Editor {
         let mut n = Node::group(21, Point::new(55., 92.), vec![]);
         n.content = NodeContent::Instance {
             definition: 20,
-            overrides: vec![],
+            // Position protection in an instance is explicit local state.
+            overrides: vec![Override {
+                path: vec![2, 4],
+                patch: Patch {
+                    locked: Some(true),
+                    ..Patch::default()
+                },
+            }],
         };
         let mut sibling = n.clone();
         sibling.id = 22;
@@ -38,7 +45,10 @@ fn fixture(instance: bool) -> Editor {
     } else {
         p.pages[0].content.nodes = vec![group];
     }
-    Editor::new(p)
+    {
+        p.organize_components().unwrap();
+        Editor::new(p)
+    }
 }
 fn resize(e: &mut Editor, id: Id, width: f32) {
     let mut c = e
@@ -181,13 +191,26 @@ fn cropped_frame_controls_fixed_height_anchoring_through_nested_groups_and_insta
                     root = Node::group(21, Point::default(), vec![]);
                     root.content = NodeContent::Instance {
                         definition: 20,
-                        overrides: vec![],
+                        overrides: if locked {
+                            vec![Override {
+                                path: if nested { vec![5, 2, 4] } else { vec![2, 4] },
+                                patch: Patch {
+                                    locked: Some(true),
+                                    ..Patch::default()
+                                },
+                            }]
+                        } else {
+                            vec![]
+                        },
                     };
                 }
                 root.origin = Point::new(100., 100.);
                 let id = root.id;
                 p.pages[0].content.nodes = vec![root];
-                let mut e = Editor::new(p);
+                let mut e = {
+                    p.organize_components().unwrap();
+                    Editor::new(p)
+                };
                 let before = e.document.clone();
                 let mut control = e.current().controls[0].clone();
                 assert_eq!(control.bounds.h, 50.);
@@ -262,7 +285,10 @@ fn offset_crop_resize_keeps_fixed_label_at_visible_bottom_and_clips_its_left_hal
                     overrides: vec![],
                 };
             }
-            let mut e = Editor::new(p);
+            let mut e = {
+                p.organize_components().unwrap();
+                Editor::new(p)
+            };
             e.document.pages[0].content.nodes = vec![root];
             let before = e.document.clone();
             let mut control = e.current().controls[0].clone();

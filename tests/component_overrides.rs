@@ -168,7 +168,6 @@ fn local_geometry_copy_reset_and_guards_preserve_source_structure() {
     e.group();
     e.ungroup();
     e.reorder(true);
-    e.lock(true);
     e.add(Kind::Button, 0., 0.);
     e.paste(&copy, 20.);
     assert!(e.create_component("No".into()).is_err());
@@ -188,7 +187,8 @@ fn local_geometry_copy_reset_and_guards_preserve_source_structure() {
     assert!(!patches(&e).is_empty());
     e.select(outer, false);
     e.lock(true);
-    assert!(!e.enter(outer));
+    assert!(e.enter(outer));
+    e.leave();
     assert!(e.reset_instance(outer).is_err());
     e.lock(false);
     e.edit_definition(inner).unwrap();
@@ -197,13 +197,11 @@ fn local_geometry_copy_reset_and_guards_preserve_source_structure() {
     e.switch_page(1);
     e.enter(outer);
     e.enter(nested);
-    let before = e.document.clone();
-    assert!(
-        e.set_control_property(child, "text", Value::Text("No".into()))
-            .is_err()
-    );
-    assert!(e.reset_local_changes(child).is_err());
-    assert_eq!(e.document, before);
+    let sources = e.document.definitions.clone();
+    assert!(!e.own_locked(child));
+    set(&mut e, child, "text", Value::Text("Editable".into()));
+    e.reset_local_changes(child).unwrap();
+    assert_eq!(e.document.definitions, sources);
 }
 
 #[test]

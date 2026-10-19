@@ -7,6 +7,87 @@ use wireframe::{
     render::Drawing,
     workspace::Editor,
 };
+
+#[test]
+fn rotated_screen_hints_follow_text_and_keep_occlusion_clips_and_annotations() {
+    use wireframe::{document::Value, render::intersect, scene::Primitive};
+    for orientation in ["left", "right", "diagonal"] {
+        let mut e = Editor::default();
+        e.add(Kind::Label, 50., 50.);
+        let id = *e.selection.iter().next().unwrap();
+        e.set_control_property(
+            id,
+            "text",
+            Value::Text("[Order target](https://example.com)".into()),
+        )
+        .unwrap();
+        e.set_control_property(id, "font_size", Value::Number(32.))
+            .unwrap();
+        e.set_control_property(id, "text_orientation", Value::Choice(orientation.into()))
+            .unwrap();
+        let original = e.rendered_scene(e.page).unwrap().links[0].clone();
+        // A later opaque control splits the link. Hints must not paint through it.
+        let b = original.bounds;
+        e.add(Kind::Rectangle, b.x + b.w * 0.4, b.y - 10.);
+        e.selected_mut(|c| {
+            c.bounds = Bounds::new(b.x + b.w * 0.4, b.y - 10., b.w * 0.2, b.h + 20.)
+        });
+        let before = e.document.encode().unwrap();
+        let plain = pdf::plan(&e.document, &Options::default()).unwrap();
+        let hinted = pdf::plan(
+            &e.document,
+            &Options {
+                hints: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let page = &hinted[0];
+        assert_eq!(page.links.len(), 2, "{orientation}");
+        let hints: Vec<_> = page
+            .decoration
+            .as_ref()
+            .unwrap()
+            .items
+            .iter()
+            .filter(|i| matches!(i.drawing, Drawing::Primitive(Primitive::Polygon { .. })))
+            .collect();
+        assert_eq!(
+            hints.len(),
+            2,
+            "{orientation}: each visible fragment needs a rotated hint"
+        );
+        for ((item, region), annotation) in hints.iter().zip(&page.scene.links).zip(&plain[0].links)
+        {
+            let Drawing::Primitive(Primitive::Polygon { points, .. }) = &item.drawing else {
+                unreachable!()
+            };
+            let map = |p: [f32; 2]| {
+                [
+                    page.origin[0] + (p[0] - page.scene.bounds.x) * page.scale,
+                    page.origin[1] + (p[1] - page.scene.bounds.y) * page.scale,
+                ]
+            };
+            assert_eq!(*points, original.quad.unwrap().map(map).to_vec());
+            let b = region.bounds;
+            let p = map([b.x, b.y]);
+            assert_eq!(
+                item.clip,
+                Some(intersect(
+                    Bounds::new(p[0], p[1], b.w * page.scale, b.h * page.scale),
+                    Bounds::new(0., 0., page.size[0], page.size[1])
+                ))
+            );
+            assert_eq!(annotation.bounds, region.bounds);
+        }
+        assert_eq!(before, e.document.encode().unwrap());
+        assert!(
+            pdf::encode("Rotated hints", &hinted)
+                .unwrap()
+                .starts_with(b"%PDF")
+        );
+    }
+}
 fn fixture() -> Project {
     let mut e = Editor::default();
     e.add(Kind::Rectangle, 100., 100.);
@@ -30,6 +111,46 @@ fn fixture() -> Project {
     e.selected_mut(|c| c.link = Some(target));
     e.document
 }
+#[test]
+fn page_names_numbers_and_notes_survive_pdf_text_encoding() {
+    let project = fixture();
+    let options = Options {
+        names: true,
+        numbers: true,
+        notes: true,
+        ..Default::default()
+    };
+    let mut pages = pdf::plan(&project, &options).unwrap();
+    for page in &mut pages {
+        page.scene.items.clear();
+        page.links.clear();
+        let glyphs: Vec<_> = page
+            .decoration
+            .as_ref()
+            .unwrap()
+            .items
+            .iter()
+            .filter_map(|item| {
+                if let Drawing::Glyph(glyph) = &item.drawing {
+                    Some(glyph)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert!(!glyphs.is_empty());
+        assert!(glyphs.iter().any(|glyph| glyph.text.contains("note.")));
+        assert!(glyphs.iter().any(|glyph| glyph.text.contains(" / 2")));
+    }
+    for page in pages {
+        let bytes = pdf::encode("Decoration only", &[page]).unwrap();
+        assert!(
+            bytes.windows(b"/Font".len()).any(|part| part == b"/Font"),
+            "PDF lost all decoration fonts"
+        );
+    }
+}
+
 #[test]
 fn content_and_paper_layout_keep_artwork_and_decoration_scales_separate() {
     let p = fixture();
@@ -78,6 +199,8 @@ fn selection_order_alternates_missing_targets_and_hints_follow_exported_pages() 
     let owner = p.pages[1].id;
     let alt = p.allocate_id().unwrap();
     p.pages[1].alternates.push(Alternate {
+        version: None,
+        notes: String::new(),
         id: alt,
         name: "Draft".into(),
         content: Content::default(),

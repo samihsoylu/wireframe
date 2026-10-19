@@ -2,47 +2,120 @@
 // Copyright 2026 Wireframe contributors
 //! Recursive editing owns project data; renderer projections never become saved documents.
 mod alignment;
+mod app_bar_icons;
+mod arrangement;
+mod markup_visibility;
+mod move_preview;
+mod row_icons;
+pub use app_bar_icons::AppBarIconSlot;
+mod row_selection;
+pub use row_icons::ListRowIcon;
+mod property_sections;
+mod selection_properties;
+pub use arrangement::AlignmentAction;
+pub use property_sections::PropertySection;
+pub use row_selection::{RowSelection, selectable_row_labels};
+pub use selection_properties::SelectionProperty;
+mod layering;
+pub use layering::LayerAction;
+mod arrows;
 mod clipboard;
+mod library_transfer;
+mod project_asset_import;
+mod project_copy;
+pub use project_asset_import::{AssetImportAction, AssetImportChoice, AssetImportEntry};
+mod project_library_import;
+mod project_page_import;
+pub use library_transfer::{
+    LibraryClipboard, LibraryImportAction, LibraryImportChoice, LibraryImportCounts,
+    LibraryImportEntry, LibraryImportPlan, PreparedLibraryImport,
+};
+pub use project_copy::{PreparedProjectCopy, ProjectCopyCounts};
+pub use project_library_import::ProjectLibraryImportPlan;
+pub use project_page_import::{PageImportChoice, PageImportEntry, PageImportPlan};
 mod images;
-pub use images::{ImageTarget, ImportChoice};
+mod links;
+mod locking;
+pub use images::{ImageImportTarget, ImageTarget, ImportChoice};
+pub use links::{LinkAction, LinkTarget};
+mod asset_catalog;
+mod asset_retention;
+pub use asset_catalog::AssetPreviews;
+mod catalog_items;
+mod catalog_presets;
+mod icon_catalog;
+pub use catalog_presets::CatalogPreset;
 mod components;
+pub use catalog_items::{CatalogCategory, CatalogEntry, CatalogItem};
+mod component_previews;
+pub use component_previews::ComponentPreviews;
+mod libraries;
+mod library_lifecycle;
+mod source_actions;
+mod source_move;
+pub use libraries::ComponentUsage;
 mod crop;
 mod overrides;
+mod page_clipboard;
+mod page_order;
+mod pages;
+pub use page_clipboard::PageClipboard;
+mod permanent;
 mod properties;
+mod quick_draw;
 mod resize;
+pub use resize::SelectionGeometry;
+mod reviews;
 mod text_controls;
+mod text_link_transfer;
+mod text_links;
+pub use text_links::TextLink;
+mod trash;
+pub use trash::RetainedResource;
+mod versions;
 mod view;
 use crate::{
     catalog,
     document::*,
     model::{self, Bounds, Control, Kind},
 };
-pub use clipboard::Clipboard;
+pub use clipboard::{Clipboard, SourceOrigin};
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
 };
-pub use view::Layer;
+pub use view::{ExportSnapshot, Layer, SceneScope};
 #[derive(Clone)]
 struct Snapshot {
+    alternate: Option<Id>,
     document: Project,
     page: Id,
     definition: Option<Id>,
+    library: Option<Id>,
     context: NodePath,
     selection: HashSet<Id>,
+    selection_order: Vec<Id>,
 }
+#[derive(Clone)]
 struct Change {
+    invalidated: bool,
     name: String,
     before: Snapshot,
     after: Snapshot,
     bytes: usize,
+    page_history: Option<trash::PageHistory>,
 }
 pub struct Editor {
+    clipboard_session: String,
+    markup_visible: bool,
+    active_versions: HashMap<Id, Id>,
     pub document: Project,
     pub page: Id,
     pub definition: Option<Id>,
+    pub library: Option<Id>,
     pub context: NodePath,
     pub selection: HashSet<Id>,
+    selection_order: Vec<Id>,
     saved: Project,
     unsaved: bool,
     history: Vec<Change>,
@@ -53,6 +126,7 @@ pub struct Editor {
     fonts: eframe::egui::Context,
     clock: fn() -> crate::tablet::Clock,
     date: fn() -> crate::date_controls::Date,
+    frozen_time: Option<(crate::tablet::Clock, crate::date_controls::Date)>,
 }
 impl Default for Editor {
     fn default() -> Self {
@@ -68,13 +142,29 @@ impl Editor {
         let fonts = eframe::egui::Context::default();
         crate::fonts::install_project(&fonts, document.font.as_deref());
         Self {
-            page: document.pages[0].id,
+            markup_visible: true,
+            clipboard_session: {
+                static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+                format!(
+                    "{}-{}-{}",
+                    std::process::id(),
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_nanos(),
+                    NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+                )
+            },
+            page: document.first_live_page().id,
+            active_versions: HashMap::new(),
             definition: None,
+            library: None,
             saved: document.clone(),
             unsaved: false,
             document,
             context: vec![],
             selection: HashSet::new(),
+            selection_order: Vec::new(),
             history: vec![],
             cursor: 0,
             pending: None,
@@ -83,7 +173,12 @@ impl Editor {
             fonts,
             clock,
             date: crate::date_controls::Date::today,
+            frozen_time: None,
         }
+    }
+    /// Stable for this editor session, independent of document history.
+    pub fn clipboard_session(&self) -> &str {
+        &self.clipboard_session
     }
     /// Inject the local date for repeatable calendar scenes; it is never serialized.
     pub fn with_date(document: Project, date: fn() -> crate::date_controls::Date) -> Self {
@@ -93,36 +188,43 @@ impl Editor {
     }
     fn snapshot(&self) -> Snapshot {
         Snapshot {
+            alternate: self.active_alternate(self.page),
             document: self.document.clone(),
             page: self.page,
             definition: self.definition,
+            library: self.library,
             context: self.context.clone(),
             selection: self.selection.clone(),
+            selection_order: self.ordered_selection(),
         }
     }
     fn restore(&mut self, s: Snapshot) {
         self.document = s.document;
         self.page = s.page;
+        if let Some(id) = s.alternate {
+            self.active_versions.insert(s.page, id);
+        } else {
+            self.active_versions.remove(&s.page);
+        }
         self.definition = s.definition;
+        self.library = s.library;
         self.context = s.context;
         self.selection = s.selection;
+        self.selection_order = s.selection_order;
         self.reconcile();
     }
     pub fn page_data(&self) -> &Page {
         self.document
-            .pages
-            .iter()
-            .find(|p| p.id == self.page)
-            .unwrap_or(&self.document.pages[0])
+            .live_page(self.page)
+            .unwrap_or_else(|| self.document.first_live_page())
     }
     pub fn current_mut(&mut self) -> &mut Page {
-        let i = self
-            .document
+        let id = self.page_data().id;
+        self.document
             .pages
-            .iter()
-            .position(|p| p.id == self.page)
-            .unwrap_or(0);
-        &mut self.document.pages[i]
+            .iter_mut()
+            .find(|page| page.id == id)
+            .unwrap()
     }
     pub fn nodes(&self) -> std::borrow::Cow<'_, [Node]> {
         self.context_nodes().unwrap_or_default()
@@ -134,22 +236,41 @@ impl Editor {
     }
     fn reconcile(&mut self) {
         if self
+            .library
+            .is_some_and(|id| !self.document.live_libraries().any(|l| l.id == id))
+        {
+            self.library = None;
+            self.context.clear();
+            self.selection.clear();
+        }
+        self.active_versions.retain(|page, alternate| {
+            self.document.pages.iter().any(|p| {
+                !p.trashed && p.id == *page && p.alternates.iter().any(|a| a.id == *alternate)
+            })
+        });
+        if self
             .definition
-            .is_some_and(|id| !self.document.definitions.iter().any(|d| d.id == id))
+            .is_some_and(|id| !self.document.definition_available(id))
         {
             self.definition = None;
             self.context.clear();
             self.selection.clear();
         }
-        if !self.document.pages.iter().any(|p| p.id == self.page) {
-            self.page = self.document.pages[0].id;
+        if self.document.live_page(self.page).is_none() {
+            self.page = self.document.first_live_page().id;
             self.context.clear();
         }
         while self.context_nodes().is_none() {
             self.context.pop();
         }
-        let ids: HashSet<_> = self.nodes().iter().map(|n| n.id).collect();
+        let ids: HashSet<_> = if self.markup_visible {
+            self.nodes().iter().map(|n| n.id).collect()
+        } else {
+            self.current().controls.iter().map(|c| c.id).collect()
+        };
         self.selection.retain(|id| ids.contains(id));
+        self.selection_order
+            .retain(|id| self.selection.contains(id));
     }
     pub fn dirty(&self) -> bool {
         self.unsaved || self.document != self.saved
@@ -201,6 +322,14 @@ impl Editor {
         }
     }
     fn record(&mut self, name: String, before: Snapshot) {
+        self.record_with_page_history(name, before, None);
+    }
+    fn record_with_page_history(
+        &mut self,
+        name: String,
+        before: Snapshot,
+        page_history: Option<trash::PageHistory>,
+    ) {
         if before.document == self.document {
             return;
         }
@@ -213,14 +342,26 @@ impl Editor {
             self.error = Some(error);
             return;
         }
+        if !self.markup_visible
+            && markup_visibility::has_added_markup(
+                &before.document,
+                &self.document,
+                self.surface_id(),
+            )
+        {
+            self.markup_visible = true;
+        }
+        self.retain_visible_selection();
         self.history.truncate(self.cursor);
         let bytes = serde_json::to_vec(&before.document).map_or(0, |v| v.len())
             + serde_json::to_vec(&self.document).map_or(0, |v| v.len());
         self.history.push(Change {
+            invalidated: false,
             name,
             before,
             after: self.snapshot(),
             bytes,
+            page_history,
         });
         let mut bytes: usize = self.history.iter().map(|c| c.bytes).sum();
         while self.history.len() > 1 && (self.history.len() > 100 || bytes > 64 * 1024 * 1024) {
@@ -238,32 +379,80 @@ impl Editor {
     pub fn undo(&mut self) {
         self.commit();
         if self.cursor > 0 {
-            self.cursor -= 1;
-            self.restore(self.history[self.cursor].before.clone());
+            let index = self.cursor - 1;
+            if self.history[index].invalidated {
+                let change = self.history.remove(index);
+                self.cursor = index;
+                self.error = Some(format!(
+                    "Cannot undo {}: the resource was permanently deleted",
+                    change.name
+                ));
+                return;
+            }
+            let target = &self.history[index].before;
+            let surface = target
+                .definition
+                .or(target.library)
+                .or(target.alternate)
+                .unwrap_or(target.page);
+            let reveal = !self.markup_visible
+                && markup_visibility::has_added_markup(&self.document, &target.document, surface);
+            if reveal {
+                self.markup_visible = true;
+            }
+            if self.replay_page_history(index, true) {
+                self.cursor = index;
+            } else if reveal {
+                self.set_markup_visible(false);
+            }
         }
     }
     pub fn redo(&mut self) {
         self.commit();
+        if self.cursor < self.history.len() && self.history[self.cursor].invalidated {
+            let change = self.history.remove(self.cursor);
+            self.error = Some(format!(
+                "Cannot redo {}: the resource was permanently deleted",
+                change.name
+            ));
+            return;
+        }
         if self.cursor < self.history.len() {
-            let after = self.history[self.cursor].after.clone();
-            self.cursor += 1;
-            self.restore(after);
+            let target = &self.history[self.cursor].after;
+            let surface = target
+                .definition
+                .or(target.library)
+                .or(target.alternate)
+                .unwrap_or(target.page);
+            let reveal = !self.markup_visible
+                && markup_visibility::has_added_markup(&self.document, &target.document, surface);
+            if reveal {
+                self.markup_visible = true;
+            }
+            if self.replay_page_history(self.cursor, false) {
+                self.cursor += 1;
+            } else if reveal {
+                self.set_markup_visible(false);
+            }
         }
     }
     pub fn switch_page(&mut self, id: Id) {
         self.commit();
-        if self.document.pages.iter().any(|p| p.id == id) {
+        if self.document.live_page(id).is_some() {
             self.page = id;
             self.definition = None;
+            self.library = None;
             self.context.clear();
             self.selection.clear();
         }
     }
     pub fn enter(&mut self, id: Id) -> bool {
         self.commit();
+        if let Some(definition) = self.owning_source(id) {
+            return self.edit_definition(definition).is_ok();
+        }
         if self.nodes().iter().any(|n| {
             n.id == id
-                && !n.locked
                 && !self.missing_component(id)
                 && matches!(
                     n.content,
@@ -281,8 +470,9 @@ impl Editor {
         self.commit();
         if let Some(id) = self.context.pop() {
             self.selection = HashSet::from([id]);
+            self.retain_visible_selection();
             true
-        } else if self.definition.take().is_some() {
+        } else if self.definition.take().is_some() || self.library.take().is_some() {
             self.selection.clear();
             true
         } else {
@@ -295,6 +485,12 @@ impl Editor {
             .any(|n| n.id == id && matches!(n.content, NodeContent::Group { .. }))
     }
     pub fn add(&mut self, kind: Kind, x: f32, y: f32) {
+        self.add_control(kind, None, x, y);
+    }
+    pub fn add_preset(&mut self, preset: CatalogPreset, x: f32, y: f32) {
+        self.add_control(preset.kind(), Some(preset), x, y);
+    }
+    fn add_control(&mut self, kind: Kind, preset: Option<CatalogPreset>, x: f32, y: f32) {
         if !self.structure_edit_allowed() {
             return;
         }
@@ -305,7 +501,16 @@ impl Editor {
             };
             if matches!(
                 kind,
-                Kind::Heading
+                Kind::Label
+                    | Kind::Link
+                    | Kind::Paragraph
+                    | Kind::Table
+                    | Kind::Progress
+                    | Kind::Line
+                    | Kind::Arrow
+                    | Kind::Toggle
+                    | Kind::Shape
+                    | Kind::Heading
                     | Kind::Popover
                     | Kind::SiteMap
                     | Kind::FormattingToolbar
@@ -383,6 +588,15 @@ impl Editor {
                     | Kind::List
             ) {
                 let kind_id = match kind {
+                    Kind::Label => "label",
+                    Kind::Link => "link",
+                    Kind::Paragraph => "paragraph",
+                    Kind::Table => "table",
+                    Kind::Progress => "progress",
+                    Kind::Line => "horizontal_rule",
+                    Kind::Arrow => "arrow",
+                    Kind::Toggle => "toggle",
+                    Kind::Shape => "shape",
                     Kind::Checkbox => "checkbox",
                     Kind::Radio => "radio",
                     Kind::CheckboxGroup => "checkbox_group",
@@ -464,9 +678,12 @@ impl Editor {
                     _ => unreachable!(),
                 };
                 let parent = e.context_origin();
-                let node = catalog::get(kind_id)
+                let mut node = catalog::get(kind_id)
                     .unwrap()
                     .create(id, Point::new(x - parent.x, y - parent.y));
+                if let Some(preset) = preset {
+                    preset.apply(&mut node);
+                }
                 e.nodes_mut().push(node);
                 e.selection = HashSet::from([id]);
                 e.append_order(id);
@@ -495,8 +712,9 @@ impl Editor {
         self.edit("New page", |e| {
             if let Ok(id) = e.document.allocate_id() {
                 e.document.pages.push(Page {
+                    trashed: false,
                     id,
-                    name: format!("Wireframe {}", e.document.pages.len() + 1),
+                    name: format!("Wireframe {}", e.document.live_pages().count() + 1),
                     notes: String::new(),
                     parent: None,
                     content: Content::default(),
@@ -504,21 +722,24 @@ impl Editor {
                 });
                 e.page = id;
                 e.definition = None;
+                e.library = None;
                 e.context.clear();
                 e.selection.clear();
             }
         });
     }
     pub fn delete_page(&mut self) {
-        if self.definition.is_some() {
+        if self.in_source_workspace() {
             return;
         }
-        if self.document.pages.len() < 2 {
+        if self.document.live_pages().count() < 2 {
             return;
         }
         self.edit("Delete page", |e| {
             let id = e.page;
             e.document.pages.retain(|p| p.id != id);
+            e.document.remove_unowned_reviews();
+            e.document.page_imports.remove(&id);
             for p in &mut e.document.pages {
                 if p.parent == Some(id) {
                     p.parent = None;
@@ -531,40 +752,66 @@ impl Editor {
             for d in &mut e.document.definitions {
                 clear_links(&mut d.content.nodes, id);
             }
-            e.page = e.document.pages[0].id;
+            for library in &mut e.document.libraries {
+                clear_links(&mut library.content.nodes, id);
+            }
+            e.page = e.document.first_live_page().id;
             e.context.clear();
             e.selection.clear();
         });
     }
     pub fn select(&mut self, id: Id, toggle: bool) {
-        if !self.nodes().iter().any(|n| n.id == id) {
+        if !self.nodes().iter().any(|n| n.id == id)
+            || (!self.markup_visible && !self.current().controls.iter().any(|c| c.id == id))
+        {
             return;
         }
+        self.selection_order = self.ordered_selection();
         if !toggle {
             self.selection.clear();
+            self.selection_order.clear();
         }
         if !toggle || !self.selection.remove(&id) {
             self.selection.insert(id);
+            self.selection_order.push(id);
+        } else {
+            self.selection_order.retain(|selected| *selected != id);
         }
     }
     pub fn select_all(&mut self) {
+        let visible: Option<HashSet<_>> =
+            (!self.markup_visible).then(|| self.current().controls.iter().map(|c| c.id).collect());
+        self.selection_order = self
+            .nodes()
+            .iter()
+            .filter(|n| !n.locked && visible.as_ref().is_none_or(|ids| ids.contains(&n.id)))
+            .map(|n| n.id)
+            .collect();
         self.selection = self
             .nodes()
             .iter()
-            .filter(|n| !n.locked)
+            .filter(|n| !n.locked && visible.as_ref().is_none_or(|ids| ids.contains(&n.id)))
             .map(|n| n.id)
             .collect();
     }
     pub fn select_area(&mut self, b: Bounds, previous: &HashSet<Id>) {
+        self.selection_order.retain(|id| previous.contains(id));
         self.selection = previous.clone();
+        let own_locks: HashSet<_> = self
+            .nodes()
+            .iter()
+            .filter(|n| n.locked)
+            .map(|n| n.id)
+            .collect();
         for c in self.current().controls {
-            if !c.locked
+            if !own_locks.contains(&c.id)
                 && b.contains(c.bounds.x, c.bounds.y)
                 && b.contains(c.bounds.x + c.bounds.w, c.bounds.y + c.bounds.h)
             {
                 self.selection.insert(c.id);
             }
         }
+        self.retain_visible_selection();
     }
     pub fn bounds(&self) -> Option<Bounds> {
         self.selected_views()
@@ -580,6 +827,9 @@ impl Editor {
             .reduce(Bounds::union)
     }
     pub fn selected_views(&self) -> Vec<Control> {
+        if self.selection.is_empty() {
+            return Vec::new();
+        }
         self.current()
             .controls
             .into_iter()
@@ -628,8 +878,9 @@ impl Editor {
         let before = edited.clone();
         {
             let node = &mut edited;
-            if !node.locked {
-                if old.bounds != c.bounds
+            {
+                if !old.locked
+                    && old.bounds != c.bounds
                     && let Err(error) = transform(
                         &self.document,
                         node,
@@ -729,9 +980,13 @@ impl Editor {
                     );
                 }
             }
-            if !self.editing_instance() {
-                node.locked = c.locked;
-            }
+        }
+        if c.locked != old.locked {
+            edited.locked = c.locked;
+        }
+        if let Err(error) = self.preserve_text_anchor(&before, &mut edited) {
+            self.error = Some(error);
+            return;
         }
         if self.editing_instance() {
             if let Err(error) = self.write_local_node(c.id, &before, &edited) {
@@ -750,7 +1005,7 @@ impl Editor {
         });
     }
     pub fn delete(&mut self) {
-        if !self.structure_edit_allowed() {
+        if self.source_owner_locked() || !self.structure_edit_allowed() {
             return;
         }
         self.edit("Delete controls", |e| {
@@ -760,6 +1015,27 @@ impl Editor {
                 .filter(|n| e.selection.contains(&n.id) && !n.locked)
                 .map(|n| n.id)
                 .collect();
+            if e.definition.is_none()
+                && e.context.is_empty()
+                && let Some(library) = e.library
+            {
+                let library = e
+                    .document
+                    .libraries
+                    .iter_mut()
+                    .find(|l| l.id == library)
+                    .unwrap();
+                let definitions: HashSet<_> = library
+                    .sources
+                    .iter()
+                    .filter(|s| ids.contains(&s.node))
+                    .map(|s| s.definition)
+                    .collect();
+                library.sources.retain(|s| !ids.contains(&s.node));
+                e.document
+                    .definitions
+                    .retain(|d| !definitions.contains(&d.id));
+            }
             e.nodes_mut().retain(|n| !ids.contains(&n.id));
             let context = e.context.clone();
             e.active_content_mut().paint_order.retain(|p| {
@@ -770,6 +1046,15 @@ impl Editor {
         });
     }
     pub fn group(&mut self) {
+        if self.source_owner_locked() {
+            return;
+        }
+        if self.at_library_root() {
+            if let Err(error) = self.group_library_selection() {
+                self.error = Some(error);
+            }
+            return;
+        }
         if !self.structure_edit_allowed() {
             return;
         }
@@ -828,6 +1113,15 @@ impl Editor {
         });
     }
     pub fn ungroup(&mut self) {
+        if self.source_owner_locked() {
+            return;
+        }
+        if self.at_library_root() {
+            if let Err(error) = self.ungroup_library_selection() {
+                self.error = Some(error);
+            }
+            return;
+        }
         if !self.structure_edit_allowed() {
             return;
         }
@@ -905,97 +1199,11 @@ impl Editor {
             e.selection = selection;
         });
     }
-    pub fn lock(&mut self, locked: bool) {
-        if !self.structure_edit_allowed() {
-            return;
-        }
-        self.edit(if locked { "Lock" } else { "Unlock" }, |e| {
-            let ids = e.selection.clone();
-            for n in e.nodes_mut() {
-                if ids.contains(&n.id) {
-                    n.locked = locked;
-                }
-            }
-        });
-    }
     pub fn reorder(&mut self, front: bool) {
-        if !self.structure_edit_allowed() {
-            return;
-        }
-        self.edit("Change layering", |e| {
-            let ids = e.selection.clone();
-            e.nodes_mut().sort_by_key(|n| ids.contains(&n.id) == front);
-            let context = e.context.clone();
-            let order = &mut e.active_content_mut().paint_order;
-            let mut scoped: Vec<_> = order
-                .iter()
-                .filter(|p| p.starts_with(&context))
-                .cloned()
-                .collect();
-            scoped
-                .sort_by_key(|p| p.get(context.len()).is_some_and(|id| ids.contains(id)) == front);
-            let mut scoped = scoped.into_iter();
-            for path in order.iter_mut().filter(|p| p.starts_with(&context)) {
-                *path = scoped.next().unwrap();
-            }
-        });
-    }
-    pub fn align(&mut self, axis: usize, edge: usize) {
-        if let Some(b) = self.bounds() {
-            self.edit("Align", |e| {
-                e.selected_mut(|c| {
-                    let (start, size, own) = if axis == 0 {
-                        (b.x, b.w, c.bounds.w)
-                    } else {
-                        (b.y, b.h, c.bounds.h)
-                    };
-                    let v = start
-                        + match edge {
-                            0 => 0.,
-                            1 => (size - own) / 2.,
-                            _ => size - own,
-                        };
-                    if axis == 0 {
-                        c.bounds.x = v
-                    } else {
-                        c.bounds.y = v
-                    }
-                })
-            });
-        }
-    }
-    pub fn distribute(&mut self, axis: usize) {
-        let mut items: Vec<_> = self
-            .selected_views()
-            .into_iter()
-            .filter(|c| !c.locked)
-            .map(|c| {
-                (
-                    c.id,
-                    if axis == 0 {
-                        c.bounds.x + c.bounds.w / 2.
-                    } else {
-                        c.bounds.y + c.bounds.h / 2.
-                    },
-                )
-            })
-            .collect();
-        if items.len() < 3 {
-            return;
-        }
-        items.sort_by(|a, b| a.1.total_cmp(&b.1));
-        let start = items[0].1;
-        let step = (items.last().unwrap().1 - start) / (items.len() - 1) as f32;
-        self.edit("Distribute", |e| {
-            e.selected_mut(|c| {
-                if let Some(i) = items.iter().position(|v| v.0 == c.id) {
-                    if axis == 0 {
-                        c.bounds.x = start + i as f32 * step - c.bounds.w / 2.
-                    } else {
-                        c.bounds.y = start + i as f32 * step - c.bounds.h / 2.
-                    }
-                }
-            })
+        self.arrange(if front {
+            LayerAction::Front
+        } else {
+            LayerAction::Back
         });
     }
     fn context_origin(&self) -> Point {
@@ -1028,20 +1236,7 @@ impl Editor {
         if self.surface(id).is_none() {
             return Ok(());
         }
-        let content = before
-            .document
-            .pages
-            .iter()
-            .find(|p| p.id == id)
-            .map(|p| &p.content)
-            .or_else(|| {
-                before
-                    .document
-                    .definitions
-                    .iter()
-                    .find(|d| d.id == id)
-                    .map(|d| &d.content)
-            });
+        let content = before.document.surface(id).map(|(_, content)| content);
         if let Some(content) = content {
             self.active_content_mut().repair_empty_order(content)?;
         }
@@ -1177,6 +1372,24 @@ fn transform(
         }
     }
     node.origin = Point::new(next.x - new_parent.x, next.y - new_parent.y);
+    if resizing && let Some((arrow, _)) = crate::arrows::node_geometry(node) {
+        let old = Point::new(layout.uncropped.width, layout.uncropped.height);
+        let (w, h) = catalog::get("arrow")
+            .unwrap()
+            .resized((old.x, old.y), (old.x * sx, old.y * sy));
+        arrow
+            .resize(
+                old,
+                Bounds::new(
+                    node.origin.x,
+                    node.origin.y,
+                    crate::model::round_coordinate(w),
+                    crate::model::round_coordinate(h),
+                ),
+            )
+            .apply(node);
+        return Ok(());
+    }
     match &mut node.content {
         NodeContent::Control { kind, size } => {
             if from.w != to.w || from.h != to.h {

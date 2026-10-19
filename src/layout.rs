@@ -145,11 +145,16 @@ pub struct LayoutNode {
     pub path: NodePath,
     pub kind: Option<String>,
     pub bounds: Rect,
+    /// User frame excluding marked descendants, retaining canonical crop geometry.
+    /// Selection and resizing deliberately keep using the complete bounds above.
+    pub without_markup: Rect,
     pub uncropped: Rect,
     pub clip: Option<Rect>,
     pub properties: Properties,
     pub locked: bool,
     pub markup: bool,
+    /// The node's own flag, distinct from the inherited markup classification.
+    pub local_markup: bool,
     pub children: Vec<LayoutNode>,
 }
 #[derive(Clone, Debug, Default)]
@@ -167,13 +172,47 @@ impl<M: TextMeasurer> Engine<'_, M> {
     pub fn layout(&self, content: &Content) -> Result<Layout, String> {
         let title = self
             .project
-            .pages
-            .iter()
+            .live_pages()
             .find(|p| p.content == *content)
             .map_or("", |p| p.name.as_str());
         self.layout_named(content, title)
     }
     pub fn layout_named(&self, content: &Content, title: &str) -> Result<Layout, String> {
+        self.layout_resolved(content, title, self.project.resolve_all(&content.nodes)?)
+    }
+    pub fn layout_library(&self, id: crate::document::Id) -> Result<Layout, String> {
+        self.layout_library_view(id, false)
+    }
+    pub(crate) fn layout_library_preview(&self, id: crate::document::Id) -> Result<Layout, String> {
+        self.layout_library_view(id, true)
+    }
+    fn layout_library_view(
+        &self,
+        id: crate::document::Id,
+        retained: bool,
+    ) -> Result<Layout, String> {
+        let library = self
+            .project
+            .libraries
+            .iter()
+            .find(|l| l.id == id)
+            .ok_or("Component library no longer exists")?;
+        self.layout_resolved(
+            &library.content,
+            &library.name,
+            if retained {
+                self.project.resolve_library_preview(id)?
+            } else {
+                self.project.resolve_library(id)?
+            },
+        )
+    }
+    fn layout_resolved(
+        &self,
+        content: &Content,
+        title: &str,
+        resolved: Vec<crate::document::Resolution>,
+    ) -> Result<Layout, String> {
         let mut result = Layout {
             paint_order: if content.paint_order.is_empty() {
                 vec![]
@@ -182,7 +221,7 @@ impl<M: TextMeasurer> Engine<'_, M> {
             },
             ..Layout::default()
         };
-        for expanded in self.project.resolve_all(&content.nodes)? {
+        for expanded in resolved {
             for (instance, path) in expanded.orphan_overrides {
                 result.warnings.push(format!(
                     "Unused component override at {instance:?}/{path:?}"
@@ -280,15 +319,34 @@ impl<M: TextMeasurer> Engine<'_, M> {
             }
             clip
         });
+        let without_markup = if kind.is_some() {
+            clip.unwrap_or(uncropped)
+        } else {
+            let children_bounds = children
+                .iter()
+                .filter(|child| !child.local_markup)
+                .map(|child| child.without_markup)
+                .filter(|bounds| bounds.width > 0. && bounds.height > 0.)
+                .reduce(Rect::union)
+                .unwrap_or(Rect {
+                    x: origin.x,
+                    y: origin.y,
+                    width: 0.,
+                    height: 0.,
+                });
+            clip.map_or(children_bounds, |clip| children_bounds.intersect(clip))
+        };
         let result = LayoutNode {
             path: path.clone(),
             kind,
             bounds: clip.unwrap_or(uncropped),
+            without_markup,
             uncropped,
             clip,
             properties,
             locked,
             markup,
+            local_markup: node.markup,
             children,
         };
         path.pop();
@@ -302,6 +360,21 @@ impl<M: TextMeasurer> Engine<'_, M> {
         height: Dimension,
         warnings: &mut Vec<String>,
     ) -> Result<(f32, f32), String> {
+        if kind == "toggle" {
+            return Ok((42., 24.));
+        }
+        if kind == "arrow" {
+            return Ok((
+                match width {
+                    Dimension::Fixed(v) => v.max(1.),
+                    Dimension::Auto => 150.,
+                },
+                match height {
+                    Dimension::Fixed(v) => v.max(1.),
+                    Dimension::Auto => 100.,
+                },
+            ));
+        }
         let text = match props.get("text") {
             Some(Value::Text(s)) => s.as_str(),
             _ => "",
@@ -329,6 +402,15 @@ impl<M: TextMeasurer> Engine<'_, M> {
             let l = crate::site_map::Tree::parse(text).layout(self.measurer, style, horizontal);
             validate_size(l.width, l.height)?;
             return Ok((l.width, l.height));
+        }
+        if matches!(kind, "line" | "horizontal_rule") && !crate::rules::legacy_frame(props) {
+            let w = match width {
+                Dimension::Auto => 100.,
+                Dimension::Fixed(w) => w,
+            };
+            let h = crate::rules::height(props);
+            validate_size(w, h)?;
+            return Ok((w, h));
         }
         if let Some(size) = crate::static_layouts::size(kind, width, height) {
             validate_size(size.0, size.1)?;
@@ -728,6 +810,25 @@ impl<M: TextMeasurer> Engine<'_, M> {
             validate_size(w, h)?;
             return Ok((w, h));
         }
+        if kind == "progress" {
+            let thin = matches!(props.get("progress_style"), Some(Value::Choice(s)) if s == "thin");
+            let w = match width {
+                Dimension::Auto => 100.,
+                Dimension::Fixed(w) => w,
+            };
+            let h = match height {
+                Dimension::Auto => {
+                    if thin {
+                        10.
+                    } else {
+                        20.
+                    }
+                }
+                Dimension::Fixed(h) => h,
+            };
+            validate_size(w, h)?;
+            return Ok((w, h));
+        }
         if kind == "pointed_button" {
             let measured =
                 self.measurer
@@ -807,9 +908,7 @@ impl<M: TextMeasurer> Engine<'_, M> {
             let natural = match props.get("image") {
                 Some(Value::Asset(id)) => self
                     .project
-                    .assets
-                    .iter()
-                    .find(|a| a.id == *id)
+                    .live_asset(*id)
                     .ok_or_else(|| "Image resource is unavailable".to_owned())
                     .and_then(|a| crate::images::dimensions(&a.bytes)),
                 _ => Ok((77, 79)),
@@ -963,6 +1062,18 @@ impl<M: TextMeasurer> Engine<'_, M> {
             .all(|v| v.is_finite() && *v >= 0.)
         {
             return Err("Text measurement returned invalid geometry".into());
+        }
+        if kind == "label" {
+            let orientation = crate::text_controls::LabelOrientation::from_properties(props);
+            if orientation != crate::text_controls::LabelOrientation::Upright {
+                let (natural_w, h) = orientation.size(measured.width, measured.height, pad_y);
+                let w = match width {
+                    Dimension::Auto => natural_w,
+                    Dimension::Fixed(w) => w,
+                };
+                validate_size(w, h)?;
+                return Ok((w, h));
+            }
         }
         let icon = (kind == "button")
             .then(|| crate::icons::setting(props))

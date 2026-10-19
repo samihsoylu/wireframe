@@ -4,6 +4,7 @@
 use eframe::egui;
 mod filter;
 mod tint;
+pub mod web;
 use image::{DynamicImage, ImageFormat, ImageReader};
 use std::{
     io::{Cursor, Read},

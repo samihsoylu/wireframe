@@ -3,9 +3,11 @@
 //! Offline icon lookup, aspect fitting and shared vector/texture drawing.
 //! Artwork is Font Awesome Free, separately licensed CC BY 4.0.
 use crate::model::Bounds;
-use eframe::egui::{self, Color32};
+use eframe::egui;
 use serde::Deserialize;
-use std::{collections::VecDeque, sync::LazyLock};
+use std::sync::{LazyLock, OnceLock};
+
+mod paint;
 
 pub const ATTRIBUTION: &str = "Font Awesome Free 6.7.2 by Fonticons, Inc. — https://fontawesome.com — CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ — path data unchanged";
 #[derive(Debug, Deserialize)]
@@ -17,6 +19,8 @@ pub struct Icon {
     pub width: u32,
     pub height: u32,
     pub paths: Vec<String>,
+    #[serde(skip)]
+    geometry: OnceLock<Option<paint::Geometry>>,
 }
 static CATALOG: LazyLock<Vec<Icon>> = LazyLock::new(|| {
     serde_json::from_str(include_str!(
@@ -24,6 +28,32 @@ static CATALOG: LazyLock<Vec<Icon>> = LazyLock::new(|| {
     ))
     .expect("bundled icon catalog")
 });
+#[derive(Debug, Deserialize)]
+pub struct Category {
+    pub id: String,
+    pub label: String,
+    icons: Vec<String>,
+}
+impl Category {
+    pub fn contains(&self, icon: &Icon) -> bool {
+        let name = icon
+            .id
+            .strip_suffix(&format!("-{}", icon.style))
+            .unwrap_or(&icon.id);
+        self.icons
+            .binary_search_by(|entry| entry.as_str().cmp(name))
+            .is_ok()
+    }
+}
+pub fn categories() -> &'static [Category] {
+    static CATEGORIES: LazyLock<Vec<Category>> = LazyLock::new(|| {
+        serde_json::from_str(include_str!(
+            "../assets/icons/font-awesome-free/categories.json"
+        ))
+        .expect("bundled icon categories")
+    });
+    &CATEGORIES
+}
 pub fn all() -> &'static [Icon] {
     &CATALOG
 }
@@ -38,17 +68,7 @@ pub fn search(query: &str, style: &str) -> Vec<&'static Icon> {
     let terms: Vec<_> = query.split_whitespace().collect();
     let mut icons: Vec<_> = all()
         .iter()
-        .filter(|icon| {
-            (style.is_empty() || icon.style == style)
-                && terms.iter().all(|term| {
-                    icon.id.contains(term)
-                        || icon.label.to_lowercase().contains(term)
-                        || icon
-                            .keywords
-                            .iter()
-                            .any(|word| word.to_lowercase().contains(term))
-                })
-        })
+        .filter(|icon| (style.is_empty() || icon.style == style) && icon.matches_query(&terms))
         .collect();
     // Put an exact name before semantic keyword matches.
     icons.sort_by_key(|icon| {
@@ -59,6 +79,29 @@ pub fn search(query: &str, style: &str) -> Vec<&'static Icon> {
     icons
 }
 impl Icon {
+    pub fn catalog_name(&self) -> String {
+        let style = match self.style.as_str() {
+            "regular" => "Regular",
+            "solid" => "Solid",
+            "brands" => "Brand",
+            other => other,
+        };
+        format!("{} {style}", self.label)
+    }
+    /// Terms are normalized by the caller; the same metadata powers the picker
+    /// and creation catalog.
+    pub fn matches_query(&self, terms: &[&str]) -> bool {
+        terms.iter().all(|term| {
+            self.id.contains(term)
+                || self.label.to_lowercase().contains(term)
+                || self.style.contains(term)
+                || self
+                    .keywords
+                    .iter()
+                    .any(|word| word.to_lowercase().contains(term))
+        })
+    }
+
     pub fn fit(&self, bounds: Bounds) -> Bounds {
         let scale = (bounds.w / self.width as f32).min(bounds.h / self.height as f32);
         let w = self.width as f32 * scale;
@@ -111,82 +154,7 @@ impl Icon {
             pixels.data(),
         ))
     }
-    pub fn paint(&self, painter: &egui::Painter, rect: egui::Rect, color: Color32) {
-        self.paint_rotated(painter, rect, color, 0);
-    }
-    pub fn paint_rotated(
-        &self,
-        painter: &egui::Painter,
-        rect: egui::Rect,
-        color: Color32,
-        turns: u8,
-    ) {
-        if !rect.is_positive() || !painter.clip_rect().intersects(rect) {
-            return;
-        }
-        let size = ((rect.width().max(rect.height()) * painter.ctx().pixels_per_point()).ceil()
-            as u32)
-            .clamp(1, 512)
-            .next_power_of_two();
-        let key = egui::Id::new("wireframe-icon-textures");
-        let found = painter.ctx().data_mut(|d| {
-            let cache = d.get_temp_mut_or_default::<Textures>(key);
-            let i = cache
-                .0
-                .iter()
-                .position(|(id, s, _)| id == &self.id && *s == size)?;
-            let entry = cache.0.remove(i)?;
-            let texture = entry.2.clone();
-            cache.0.push_back(entry);
-            Some(texture)
-        });
-        let texture = found.or_else(|| {
-            let pixels = self.raster(size).ok()?;
-            let texture = painter.ctx().load_texture(
-                format!("icon:{}:{size}", self.id),
-                pixels,
-                egui::TextureOptions::LINEAR,
-            );
-            painter.ctx().data_mut(|d| {
-                let cache = d.get_temp_mut_or_default::<Textures>(key);
-                cache.0.push_back((self.id.clone(), size, texture.clone()));
-                while cache.0.len() > 128
-                    || cache
-                        .0
-                        .iter()
-                        .map(|(_, _, t)| t.size()[0] * t.size()[1] * 4)
-                        .sum::<usize>()
-                        > 16 * 1024 * 1024
-                {
-                    cache.0.pop_front();
-                }
-            });
-            Some(texture)
-        });
-        if let Some(texture) = texture {
-            let b = self.fit(Bounds::new(
-                rect.min.x,
-                rect.min.y,
-                rect.width(),
-                rect.height(),
-            ));
-            let mut mesh = egui::epaint::Mesh::with_texture(texture.id());
-            mesh.add_rect_with_uv(
-                egui::Rect::from_min_size(egui::pos2(b.x, b.y), egui::vec2(b.w, b.h)),
-                egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1., 1.)),
-                color,
-            );
-            let rotation =
-                egui::emath::Rot2::from_angle(-((turns % 4) as f32) * std::f32::consts::FRAC_PI_2);
-            for vertex in &mut mesh.vertices {
-                vertex.pos = rect.center() + rotation * (vertex.pos - rect.center());
-            }
-            painter.add(egui::Shape::mesh(mesh));
-        }
-    }
 }
-#[derive(Clone, Default)]
-struct Textures(VecDeque<(String, u32, egui::TextureHandle)>);
 
 /// An optional control icon keeps its size independently of text size.
 pub struct Setting<'a> {

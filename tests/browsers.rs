@@ -260,6 +260,7 @@ fn torn_export_reveals_underlying_control_instead_of_white_cover() {
 fn mesh_mask_preserves_texture_coordinates_and_canvas_order() {
     let bounds = Bounds::new(0., 0., 100., 100.);
     let mask = BottomMask {
+        keep_above: true,
         bounds,
         edge: vec![[0., 70.], [50., 30.], [100., 70.]],
     };

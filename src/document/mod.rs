@@ -2,10 +2,13 @@
 // Copyright 2026 Wireframe contributors
 
 //! Versioned project data. Layout caches and editor selection are not persisted here.
+mod libraries;
 mod migration;
+pub use libraries::{ComponentLibrary, ComponentSource, LibraryImport};
 mod palette;
 pub use palette::Palette;
 mod resolve;
+mod reviews;
 mod validation;
 
 pub use migration::decode;
@@ -17,7 +20,7 @@ pub use validation::{MAX_DEPTH, MAX_NODES};
 pub type Id = u64;
 pub type NodePath = Vec<Id>;
 pub type Properties = BTreeMap<String, Value>;
-pub const FORMAT_VERSION: u32 = 2;
+pub const FORMAT_VERSION: u32 = 15;
 /// Internal marker on disposable resolved placeholders; canonical instances retain their data.
 pub const MISSING_COMPONENT: &str = "_missing_component";
 pub const EMPTY_COMPONENT: &str = "_empty_component";
@@ -180,6 +183,9 @@ pub struct Node {
     pub properties: Properties,
     pub content: NodeContent,
 }
+/// Ordinary groups retain source labels/notes when library structure changes.
+pub const GROUP_NAME: &str = "group_name";
+pub const GROUP_NOTES: &str = "group_notes";
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum NodeContent {
@@ -242,6 +248,14 @@ impl Node {
                 for child in &mut children {
                     child.origin = child.origin.translated(self.origin);
                     child.markup |= self.markup;
+                    if self.markup
+                        && let NodeContent::Instance { overrides, .. } = &mut child.content
+                        && let Some(root) = overrides.iter_mut().find(|o| o.path.is_empty())
+                    {
+                        // The removed ancestor's markup still covers this child,
+                        // including an instance that locally cleared its source.
+                        root.patch.markup = Some(true);
+                    }
                 }
                 Ok(children)
             }
@@ -251,6 +265,11 @@ impl Node {
 }
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Patch {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub markup: Option<bool>,
+    /// Editing state owned by this instance, never inherited from a definition.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub locked: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub crop: Option<CropOverride>,
     #[serde(default)]
@@ -275,14 +294,27 @@ pub struct Content {
     pub paint_order: Vec<NodePath>,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct NamedVersion {
+    pub id: Id,
+    pub name: String,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Alternate {
     pub id: Id,
     pub name: String,
+    /// None preserves an isolated legacy label without inventing shared identity.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub version: Option<Id>,
+    #[serde(default)]
+    pub notes: String,
     pub content: Content,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Page {
     pub id: Id,
+    /// Retained pages keep their complete content and canonical ordering.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub trashed: bool,
     pub name: String,
     pub notes: String,
     #[serde(default)]
@@ -300,6 +332,9 @@ pub struct Definition {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Asset {
     pub id: Id,
+    /// Retain the bytes and identity while excluding this asset from live lookup.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub trashed: bool,
     pub name: String,
     pub media_type: String,
     pub bytes: Vec<u8>,
@@ -311,8 +346,42 @@ pub struct Settings {
     pub sketch: bool,
     pub font_size: f32,
 }
+/// Foreign page identity and alternate bindings. Retired alternate IDs remain
+/// reserved so later imports cannot attach to an unrelated resource.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PageImport {
+    pub project: String,
+    pub page: Id,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub alternates: BTreeMap<Id, Id>,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AssetImport {
+    pub project: String,
+    pub asset: Id,
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Project {
+    /// Discussions are scoped to a page or alternate, including retained pages.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub reviews: BTreeMap<Id, crate::review::Discussion>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub asset_imports: BTreeMap<Id, Vec<AssetImport>>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub page_imports: BTreeMap<Id, Vec<PageImport>>,
+    /// Known removed destinations remain identifiable without retaining their content.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeSet::is_empty")]
+    pub removed_pages: std::collections::BTreeSet<Id>,
+    /// Reserved image identities without names, metadata or encoded bytes.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeSet::is_empty")]
+    pub removed_assets: std::collections::BTreeSet<Id>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub libraries: Vec<ComponentLibrary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_library: Option<Id>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub versions: Vec<NamedVersion>,
     pub format_version: u32,
     pub title: String,
     pub next_id: Id,
@@ -328,7 +397,15 @@ pub struct Project {
 impl Default for Project {
     fn default() -> Self {
         Self {
+            reviews: BTreeMap::new(),
+            asset_imports: BTreeMap::new(),
+            page_imports: BTreeMap::new(),
+            removed_pages: Default::default(),
+            removed_assets: Default::default(),
+            libraries: vec![],
+            default_library: None,
             format_version: FORMAT_VERSION,
+            versions: vec![],
             title: "Untitled project".into(),
             next_id: 2,
             settings: Settings {
@@ -338,6 +415,7 @@ impl Default for Project {
             },
             pages: vec![Page {
                 id: 1,
+                trashed: false,
                 name: "Wireframe 1".into(),
                 notes: String::new(),
                 parent: None,
@@ -351,6 +429,62 @@ impl Default for Project {
     }
 }
 impl Project {
+    pub fn live_assets(&self) -> impl DoubleEndedIterator<Item = &Asset> {
+        self.assets.iter().filter(|asset| !asset.trashed)
+    }
+    pub fn live_asset(&self, id: Id) -> Option<&Asset> {
+        self.live_assets().find(|asset| asset.id == id)
+    }
+    /// Live navigation is separate from the complete retained resource graph.
+    pub fn live_pages(&self) -> impl DoubleEndedIterator<Item = &Page> {
+        self.pages.iter().filter(|page| !page.trashed)
+    }
+    pub fn live_page(&self, id: Id) -> Option<&Page> {
+        self.live_pages().find(|page| page.id == id)
+    }
+    pub fn first_live_page(&self) -> &Page {
+        self.live_pages()
+            .next()
+            .expect("Validated project has a live page")
+    }
+    /// A retained parent is preserved in storage but absent from visible hierarchy.
+    pub fn live_parent(&self, page: &Page) -> Option<Id> {
+        page.parent.filter(|id| self.live_page(*id).is_some())
+    }
+    /// Official pages, alternate pages and component definitions share live surface lookup.
+    pub fn surface(&self, id: Id) -> Option<(&str, &Content)> {
+        for page in self.live_pages() {
+            if page.id == id {
+                return Some((&page.name, &page.content));
+            }
+            if let Some(alt) = page.alternates.iter().find(|a| a.id == id) {
+                return Some((&page.name, &alt.content));
+            }
+        }
+        self.live_definitions()
+            .find(|d| d.id == id)
+            .map(|d| (d.name.as_str(), &d.content))
+            .or_else(|| {
+                self.live_libraries()
+                    .find(|l| l.id == id)
+                    .map(|l| (l.name.as_str(), &l.content))
+            })
+    }
+    pub fn surface_notes(&self, id: Id) -> &str {
+        for page in self.live_pages() {
+            if page.id == id {
+                return &page.notes;
+            }
+            if let Some(alt) = page.alternates.iter().find(|a| a.id == id) {
+                return &alt.notes;
+            }
+        }
+        if let Some(library) = self.live_libraries().find(|l| l.id == id) {
+            return &library.notes;
+        }
+        self.live_component_source(id)
+            .map_or("", |(_, source)| source.notes.as_str())
+    }
     pub fn allocate_id(&mut self) -> Result<Id, String> {
         fn reserved(nodes: &[Node], ids: &mut std::collections::HashSet<Id>) {
             for node in nodes {
@@ -375,6 +509,12 @@ impl Project {
         }
         for definition in &self.definitions {
             reserved(&definition.content.nodes, &mut ids);
+        }
+        for library in &self.libraries {
+            reserved(&library.content.nodes, &mut ids);
+            for import in &library.imports {
+                ids.extend(import.definitions.values().copied());
+            }
         }
         let mut id = self.next_id;
         while ids.contains(&id) {

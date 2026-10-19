@@ -153,6 +153,7 @@ fn clipboard_retains_component_dependencies_and_existing_data() {
         overrides: vec![],
     };
     e.current_mut().content.nodes.push(n);
+    e.document.organize_components().unwrap();
     e.select(instance, false);
     let copy = e.copy();
     assert_eq!(copy.definitions.len(), 1);
@@ -215,10 +216,19 @@ fn layered_component_instances_remain_atomic_and_valid_after_paste() {
         definition: d,
         overrides: vec![],
     };
+    e.document.organize_components().unwrap();
     let copy = Clipboard {
+        pages: None,
+        origin: None,
+        session: None,
         nodes: vec![instance],
         definitions: e.document.definitions.clone(),
         assets: vec![],
+        removed_assets: Default::default(),
+        libraries: vec![],
+        source: None,
+        sources: vec![],
+        resources: None,
     };
     e.paste(&copy, 0.);
     assert!(e.error.is_none(), "{:?}", e.error);

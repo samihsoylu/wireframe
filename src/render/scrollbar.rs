@@ -169,6 +169,7 @@ impl Scene {
                     subtract(link.bounds, cover)
                         .into_iter()
                         .map(move |bounds| LinkRegion {
+                            quad: None,
                             hint: link.hint,
                             target: link.target.clone(),
                             bounds,

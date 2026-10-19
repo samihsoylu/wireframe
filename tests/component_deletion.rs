@@ -81,6 +81,8 @@ fn nested_missing_sources_alternates_crops_and_context_recovery_retain_canonical
     let alt_id = e.document.allocate_id().unwrap();
     let content = e.document.pages[0].content.clone();
     e.document.pages[0].alternates.push(Alternate {
+        version: None,
+        notes: String::new(),
         id: alt_id,
         name: "Variant".into(),
         content,

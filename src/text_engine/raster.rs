@@ -6,6 +6,11 @@ use eframe::egui;
 use egui::emath::GuiRounding as _;
 use std::{collections::VecDeque, sync::Arc};
 
+// Canvas text, visible page previews and the control library share this cache.
+// Bound metadata independently while letting ordinary combined working sets stay warm.
+const MAX_TEXTURE_ENTRIES: usize = 1024;
+const MAX_TEXTURE_BYTES: usize = 32 * 1024 * 1024;
+
 pub struct Raster {
     pub pixels: egui::ColorImage,
     /// Baseline-relative bounds in document points, including raster padding.
@@ -92,7 +97,23 @@ pub fn paint(
     baseline: egui::Pos2,
     zoom: f32,
 ) -> Result<(), String> {
-    if !zoom.is_finite() || zoom <= 0. || !baseline.x.is_finite() || !baseline.y.is_finite() {
+    paint_rotated(painter, text, color, baseline, zoom, 0.)
+}
+/// Rotates already positioned ink without reshaping or changing the text cache.
+pub fn paint_rotated(
+    painter: &egui::Painter,
+    text: &Arc<ShapedText>,
+    color: [u8; 4],
+    baseline: egui::Pos2,
+    zoom: f32,
+    rotation: f32,
+) -> Result<(), String> {
+    if !rotation.is_finite()
+        || !zoom.is_finite()
+        || zoom <= 0.
+        || !baseline.x.is_finite()
+        || !baseline.y.is_finite()
+    {
         return Err("Invalid text paint coordinates".into());
     }
     let scale = (zoom * painter.ctx().pixels_per_point()).clamp(0.125, 32.);
@@ -130,7 +151,7 @@ pub fn paint(
                 texture: texture.clone(),
                 bounds,
             });
-            while cache.0.len() > 128 || cache.storage_bytes() > 32 * 1024 * 1024 {
+            while cache.0.len() > MAX_TEXTURE_ENTRIES || cache.storage_bytes() > MAX_TEXTURE_BYTES {
                 cache.0.pop_front();
             }
         });
@@ -139,14 +160,26 @@ pub fn paint(
     // The glyph texture is already antialiased at the physical display scale.
     // Align its origin so linear sampling does not blur it a second time.
     // Keep layout positions and export geometry unchanged.
-    let origin =
-        (baseline + bounds.min.to_vec2() * zoom).round_to_pixels(painter.ctx().pixels_per_point());
-    painter.image(
-        texture.id(),
-        egui::Rect::from_min_size(origin, bounds.size() * zoom),
+    let rotate = egui::emath::Rot2::from_angle(rotation);
+    let mut mesh = egui::Mesh::with_texture(texture.id());
+    mesh.add_rect_with_uv(
+        egui::Rect::from_min_max(
+            (bounds.min.to_vec2() * zoom).to_pos2(),
+            (bounds.max.to_vec2() * zoom).to_pos2(),
+        ),
         egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1., 1.)),
         egui::Color32::WHITE,
     );
+    let origin = baseline + rotate * (bounds.min.to_vec2() * zoom);
+    let snap = if (rotation / std::f32::consts::FRAC_PI_2).fract().abs() < 0.00001 {
+        origin.round_to_pixels(painter.ctx().pixels_per_point()) - origin
+    } else {
+        egui::Vec2::ZERO
+    };
+    for vertex in &mut mesh.vertices {
+        vertex.pos = baseline + rotate * vertex.pos.to_vec2() + snap;
+    }
+    painter.add(egui::Shape::mesh(mesh));
     Ok(())
 }
 
@@ -154,6 +187,36 @@ pub fn paint(
 mod storage_tests {
     use super::super::{FontData, FontFace, storage_tests::text};
     use super::*;
+    #[test]
+    fn visible_text_working_set_reuses_textures_across_frames() {
+        let ctx = egui::Context::default();
+        let shared = Arc::new(FontFace {
+            data: FontData::Bytes(Arc::from(vec![0; 1024])),
+            index: 0,
+            variations: vec![],
+        });
+        // The canvas, visible page previews and control library share this cache.
+        // Keep a modest combined working set warm without changing its artwork.
+        let texts: Vec<_> = (0..256)
+            .map(|i| Arc::new(text(&format!("Visible caption {i}"), shared.clone())))
+            .collect();
+        for frame in 0..3 {
+            let mut output = ctx.run_ui(Default::default(), |_| {
+                let painter = ctx.layer_painter(egui::LayerId::background());
+                for shaped in &texts {
+                    paint(&painter, shaped, [0, 0, 0, 255], egui::pos2(0., 20.), 1.).unwrap();
+                }
+            });
+            let uploads = output.textures_delta.set.len();
+            let frees = output.textures_delta.free.len();
+            output.textures_delta.clear();
+            output.drop_without_applying_deltas();
+            if frame > 0 {
+                assert_eq!(uploads, 0, "stationary text uploaded again");
+                assert_eq!(frees, 0, "visible text was evicted");
+            }
+        }
+    }
     #[test]
     fn texture_cache_shares_large_faces_and_evicts_distinct_faces() {
         let ctx = egui::Context::default();

@@ -7,7 +7,7 @@ use eframe::{
 };
 use std::sync::{Arc, Mutex};
 
-/// Owns one reusable GPU tile. Destruction must run with the rendering context current.
+/// Owns reusable GPU tiles by opacity depth. Destruction requires the current GL context.
 #[derive(Default)]
 pub struct Compositor(Mutex<State>);
 #[derive(Default)]
@@ -52,6 +52,7 @@ struct Gpu {
     size: glow::UniformLocation,
     flip: glow::UniformLocation,
     tile: i32,
+    child: Option<Box<Gpu>>,
 }
 impl Gpu {
     unsafe fn new(gl: &glow::Context) -> Result<Self, String> {
@@ -173,6 +174,7 @@ impl Gpu {
                 size,
                 flip,
                 tile,
+                child: None,
             }),
             Err(e) => {
                 unsafe {
@@ -232,12 +234,97 @@ impl Gpu {
             );
         }
     }
+    unsafe fn prepare(&mut self, gl: &glow::Context, depth: usize) -> Result<(), String> {
+        if depth > 1 {
+            if self.child.is_none() {
+                self.child = Some(Box::new(unsafe { Self::new(gl)? }));
+            }
+            unsafe { self.child.as_mut().unwrap().prepare(gl, depth - 1)? };
+        }
+        Ok(())
+    }
+    unsafe fn destroy(&mut self, gl: &glow::Context) {
+        unsafe {
+            if let Some(child) = &mut self.child {
+                child.destroy(gl);
+            }
+            self.resources.destroy(gl);
+        }
+    }
+    // Every depth owns one reusable tile. Child groups are composed before
+    // their opacity is applied onto the parent, preserving overlap semantics.
+    unsafe fn paint_tile(
+        &mut self,
+        info: &egui::PaintCallbackInfo,
+        painter: &eframe::egui_glow::Painter,
+        group: &Group,
+        bounds: [i32; 4],
+        region: egui::Rect,
+    ) {
+        let gl = painter.gl();
+        let density = info.pixels_per_point;
+        let [sw, sh] = info.screen_size_px.map(|v| v as i32);
+        let [left, top, right, bottom] = bounds;
+        unsafe {
+            gl.bind_framebuffer(glow::FRAMEBUFFER, self.resources.fbo);
+            gl.viewport(-left, -top, sw, sh);
+            gl.disable(glow::SCISSOR_TEST);
+            gl.clear_color(0., 0., 0., 0.);
+            gl.clear(glow::COLOR_BUFFER_BIT);
+            self.setup(gl, info, true);
+            for job in &group.jobs {
+                let clip = job.clip_rect.intersect(region);
+                let x = ((clip.left() * density).round() as i32).max(left);
+                let y = ((clip.top() * density).round() as i32).max(top);
+                let r = ((clip.right() * density).round() as i32).min(right);
+                let b = ((clip.bottom() * density).round() as i32).min(bottom);
+                if r <= x || b <= y {
+                    continue;
+                }
+                let child_texture =
+                    if let egui::epaint::Primitive::Callback(callback) = &job.primitive {
+                        if let Some(nested) = callback.callback.downcast_ref::<Group>() {
+                            let child = self.child.as_mut().expect("prepared opacity depth");
+                            child.paint_tile(
+                                info,
+                                painter,
+                                nested,
+                                bounds,
+                                clip.intersect(callback.rect),
+                            );
+                            Some((child.resources.texture.unwrap(), nested.opacity))
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    };
+                if child_texture.is_some() {
+                    gl.bind_framebuffer(glow::FRAMEBUFFER, self.resources.fbo);
+                    gl.viewport(-left, -top, sw, sh);
+                    self.setup(gl, info, true);
+                }
+                gl.scissor(x - left, y - top, r - x, b - y);
+                match &job.primitive {
+                    egui::epaint::Primitive::Mesh(mesh) => {
+                        if let Some(texture) = painter.texture(mesh.texture_id) {
+                            self.mesh(gl, mesh, texture);
+                        }
+                    }
+                    egui::epaint::Primitive::Callback(_) => {
+                        if let Some((texture, opacity)) = child_texture {
+                            self.mesh(gl, &tile_mesh(bounds, density, self.tile, opacity), texture);
+                        }
+                    }
+                }
+            }
+        }
+    }
     unsafe fn paint(
-        &self,
+        &mut self,
         info: egui::PaintCallbackInfo,
         painter: &eframe::egui_glow::Painter,
-        jobs: &[egui::ClippedPrimitive],
-        opacity: f32,
+        group: &Group,
     ) {
         let gl = painter.gl();
         let density = info.pixels_per_point;
@@ -252,62 +339,151 @@ impl Gpu {
             return;
         }
         unsafe {
+            let destination = gl.get_parameter_framebuffer(glow::FRAMEBUFFER_BINDING);
             let mut clear = [0.; 4];
             gl.get_parameter_f32_slice(glow::COLOR_CLEAR_VALUE, &mut clear);
-            for [left, top, right, bottom] in tiles(bounds, self.tile) {
-                let width = right - left;
-                let height = bottom - top;
-                gl.bind_framebuffer(glow::FRAMEBUFFER, self.resources.fbo);
-                gl.viewport(-left, -top, sw, sh);
-                gl.disable(glow::SCISSOR_TEST);
-                gl.clear_color(0., 0., 0., 0.);
-                gl.clear(glow::COLOR_BUFFER_BIT);
-                self.setup(gl, &info, true);
-                for job in jobs {
-                    let egui::epaint::Primitive::Mesh(mesh) = &job.primitive else {
-                        continue;
-                    };
-                    let Some(texture) = painter.texture(mesh.texture_id) else {
-                        continue;
-                    };
-                    let clip = job.clip_rect.intersect(region);
-                    let x = ((clip.left() * density).round() as i32).max(left);
-                    let y = ((clip.top() * density).round() as i32).max(top);
-                    let r = ((clip.right() * density).round() as i32).min(right);
-                    let b = ((clip.bottom() * density).round() as i32).min(bottom);
-                    if r <= x || b <= y {
-                        continue;
-                    }
-                    gl.scissor(x - left, y - top, r - x, b - y);
-                    self.mesh(gl, mesh, texture);
-                }
-                gl.bind_framebuffer(glow::FRAMEBUFFER, painter.intermediate_fbo());
+            let fallback;
+            let group = if self.prepare(gl, group.depth()).is_ok() {
+                group
+            } else {
+                // Allocation failure retains visible content with approximate
+                // inner fading, using the already allocated outer surface.
+                fallback = group.flattened();
+                &fallback
+            };
+            for tile in tiles(bounds, self.tile) {
+                self.paint_tile(&info, painter, group, tile, region);
+                let [left, top, right, bottom] = tile;
+                gl.bind_framebuffer(glow::FRAMEBUFFER, destination);
                 gl.viewport(0, 0, sw, sh);
                 self.setup(gl, &info, false);
-                gl.scissor(left, sh - bottom, width, height);
-                let rect = egui::Rect::from_min_max(
-                    egui::pos2(left as f32 / density, top as f32 / density),
-                    egui::pos2(right as f32 / density, bottom as f32 / density),
+                gl.scissor(left, sh - bottom, right - left, bottom - top);
+                self.mesh(
+                    gl,
+                    &tile_mesh(tile, density, self.tile, group.opacity),
+                    self.resources.texture.unwrap(),
                 );
-                let mut mesh = egui::Mesh::default();
-                mesh.add_rect_with_uv(
-                    rect,
-                    egui::Rect::from_min_max(
-                        egui::Pos2::ZERO,
-                        egui::pos2(
-                            width as f32 / self.tile as f32,
-                            height as f32 / self.tile as f32,
-                        ),
-                    ),
-                    egui::Color32::WHITE.gamma_multiply(opacity),
-                );
-                self.mesh(gl, &mesh, self.resources.texture.unwrap());
             }
             gl.clear_color(clear[0], clear[1], clear[2], clear[3]);
-            // egui restores its program, VAO, buffers, viewport, blending and
-            // scissor state after callbacks; its public FBO is restored above.
+            // egui restores its other GL state after callbacks. Restore the
+            // actual caller's framebuffer, including offscreen render targets.
+            gl.bind_framebuffer(glow::FRAMEBUFFER, destination);
         }
     }
+}
+fn tile_mesh(
+    [left, top, right, bottom]: [i32; 4],
+    density: f32,
+    edge: i32,
+    opacity: f32,
+) -> egui::Mesh {
+    let mut mesh = egui::Mesh::default();
+    mesh.add_rect_with_uv(
+        egui::Rect::from_min_max(
+            egui::pos2(left as f32 / density, top as f32 / density),
+            egui::pos2(right as f32 / density, bottom as f32 / density),
+        ),
+        egui::Rect::from_min_max(
+            egui::Pos2::ZERO,
+            egui::pos2(
+                (right - left) as f32 / edge as f32,
+                (bottom - top) as f32 / edge as f32,
+            ),
+        ),
+        egui::Color32::WHITE.gamma_multiply(opacity),
+    );
+    mesh
+}
+#[derive(Clone)]
+struct Group {
+    jobs: Vec<egui::ClippedPrimitive>,
+    opacity: f32,
+}
+impl Group {
+    fn depth(&self) -> usize {
+        1 + self
+            .jobs
+            .iter()
+            .filter_map(|job| match &job.primitive {
+                egui::epaint::Primitive::Callback(c) => {
+                    c.callback.downcast_ref::<Self>().map(Self::depth)
+                }
+                _ => None,
+            })
+            .max()
+            .unwrap_or(0)
+    }
+    fn bounds(&self) -> egui::Rect {
+        self.jobs
+            .iter()
+            .map(|job| {
+                match &job.primitive {
+                    egui::epaint::Primitive::Mesh(mesh) => mesh.calc_bounds(),
+                    egui::epaint::Primitive::Callback(c) => c.rect,
+                }
+                .intersect(job.clip_rect)
+            })
+            .fold(egui::Rect::NOTHING, egui::Rect::union)
+    }
+    fn flattened(&self) -> Self {
+        fn append(
+            group: &Group,
+            opacity: f32,
+            clip: egui::Rect,
+            out: &mut Vec<egui::ClippedPrimitive>,
+        ) {
+            for job in &group.jobs {
+                let clip = clip.intersect(job.clip_rect);
+                match &job.primitive {
+                    egui::epaint::Primitive::Mesh(mesh) => {
+                        let mut mesh = mesh.clone();
+                        for vertex in &mut mesh.vertices {
+                            vertex.color = vertex.color.gamma_multiply(opacity);
+                        }
+                        out.push(egui::ClippedPrimitive {
+                            clip_rect: clip,
+                            primitive: egui::epaint::Primitive::Mesh(mesh),
+                        });
+                    }
+                    egui::epaint::Primitive::Callback(c) => {
+                        if let Some(child) = c.callback.downcast_ref::<Group>() {
+                            append(child, opacity * child.opacity, clip.intersect(c.rect), out);
+                        }
+                    }
+                }
+            }
+        }
+        let mut jobs = Vec::new();
+        append(self, 1., egui::Rect::EVERYTHING, &mut jobs);
+        Self {
+            jobs,
+            opacity: self.opacity,
+        }
+    }
+}
+// Opacity callbacks remain data until the enclosing scene has finished its
+// opacity and clipping scopes. Only then are outer groups bound to the GPU.
+pub(super) fn masked_callback(
+    callback: &egui::PaintCallback,
+    mask: &super::mask::BottomMask,
+    origin: egui::Pos2,
+    scale: f32,
+) -> Option<egui::PaintCallback> {
+    let mut group = callback.callback.downcast_ref::<Group>()?.clone();
+    for job in &mut group.jobs {
+        match &mut job.primitive {
+            egui::epaint::Primitive::Mesh(mesh) => *mesh = mask.clip_mesh(mesh, origin, scale),
+            egui::epaint::Primitive::Callback(c) => {
+                if let Some(clipped) = masked_callback(c, mask, origin, scale) {
+                    *c = clipped;
+                }
+            }
+        }
+    }
+    Some(egui::PaintCallback {
+        rect: group.bounds().intersect(callback.rect),
+        callback: Arc::new(group),
+    })
 }
 fn pixel_bounds(region: egui::Rect, density: f32, screen: [i32; 2]) -> [i32; 4] {
     [
@@ -342,7 +518,7 @@ impl Compositor {
     pub fn destroy(&self, gl: &glow::Context) {
         if let Some(mut gpu) = self.0.lock().unwrap().gpu.take() {
             unsafe {
-                gpu.resources.destroy(gl);
+                gpu.destroy(gl);
             }
         }
     }
@@ -363,58 +539,167 @@ impl Compositor {
         let jobs = painter
             .ctx()
             .tessellate(shapes, painter.ctx().pixels_per_point());
+        let group = Group { jobs, opacity };
+        let region = group.bounds().intersect(painter.clip_rect());
+        if region.is_positive() {
+            painter.add(egui::Shape::Callback(egui::PaintCallback {
+                rect: region,
+                callback: Arc::new(group),
+            }));
+        }
+    }
+    /// Finalize outer opacity groups after all scene masks and scopes close.
+    pub fn resolve(painter: &egui::Painter, start: usize) {
         let owner = painter
             .ctx()
             .data(|d| d.get_temp::<Arc<Self>>(egui::Id::new(Self::KEY)));
-        let usable = owner.as_ref().is_some_and(|c| {
-            let state = c.0.lock().unwrap();
-            state.gpu.is_some()
-        });
-        if !usable {
-            // Headless painting and explicitly reported unsupported GL contexts
-            // retain readable content using the former per-part approximation.
-            for job in jobs {
-                if let egui::epaint::Primitive::Mesh(mut mesh) = job.primitive {
-                    for v in &mut mesh.vertices {
-                        v.color = v.color.gamma_multiply(opacity);
-                    }
-                    painter
-                        .with_clip_rect(job.clip_rect)
-                        .add(egui::Shape::mesh(mesh));
-                }
+        let usable = owner
+            .as_ref()
+            .is_some_and(|c| c.0.lock().unwrap().gpu.is_some());
+        painter.ctx().graphics_mut(|graphics| {
+            let Some(list) = graphics.get_mut(painter.layer_id()) else {
+                return;
+            };
+            let entries: Vec<_> = list.all_entries().skip(start).cloned().collect();
+            for (index, entry) in entries.into_iter().enumerate() {
+                let egui::Shape::Callback(callback) = &entry.shape else {
+                    continue;
+                };
+                let Some(group) = callback.callback.downcast_ref::<Group>() else {
+                    continue;
+                };
+                let group = group.clone();
+                let shape = if usable {
+                    let owner = owner.as_ref().unwrap().clone();
+                    egui::Shape::Callback(egui::PaintCallback {
+                        rect: callback.rect,
+                        callback: Arc::new(eframe::egui_glow::CallbackFn::new(
+                            move |info, painter| {
+                                let mut state = owner.0.lock().unwrap();
+                                if let Some(gpu) = &mut state.gpu {
+                                    unsafe {
+                                        gpu.paint(info, painter, &group);
+                                    }
+                                }
+                            },
+                        )),
+                    })
+                } else {
+                    // Headless or explicitly unsupported GL fallback retains
+                    // every nested group using per-part opacity approximation.
+                    let flat = group.flattened();
+                    egui::Shape::Vec(
+                        flat.jobs
+                            .into_iter()
+                            .filter_map(|job| {
+                                if let egui::epaint::Primitive::Mesh(mut mesh) = job.primitive {
+                                    for vertex in &mut mesh.vertices {
+                                        vertex.color = vertex.color.gamma_multiply(flat.opacity);
+                                    }
+                                    let clip = job.clip_rect.intersect(entry.clip_rect);
+                                    let mask = super::mask::BottomMask {
+                                        bounds: crate::model::Bounds::new(
+                                            clip.left(),
+                                            clip.top(),
+                                            clip.width(),
+                                            clip.height(),
+                                        ),
+                                        edge: vec![
+                                            [clip.left(), clip.bottom()],
+                                            [clip.right(), clip.bottom()],
+                                        ],
+                                        keep_above: true,
+                                    };
+                                    Some(egui::Shape::mesh(mask.clip_mesh(
+                                        &mesh,
+                                        egui::Pos2::ZERO,
+                                        1.,
+                                    )))
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect(),
+                    )
+                };
+                list.set(
+                    egui::layers::ShapeIdx(start + index),
+                    entry.clip_rect,
+                    shape,
+                );
             }
-            return;
-        }
-        let region = jobs
-            .iter()
-            .filter_map(|job| match &job.primitive {
-                egui::epaint::Primitive::Mesh(mesh) => {
-                    Some(mesh.calc_bounds().intersect(job.clip_rect))
-                }
-                _ => None,
-            })
-            .fold(egui::Rect::NOTHING, egui::Rect::union)
-            .intersect(painter.clip_rect());
-        if !region.is_positive() {
-            return;
-        }
-        let owner = owner.unwrap();
-        painter.add(egui::Shape::Callback(egui::PaintCallback {
-            rect: region,
-            callback: Arc::new(eframe::egui_glow::CallbackFn::new(move |info, p| {
-                let state = owner.0.lock().unwrap();
-                if let Some(gpu) = &state.gpu {
-                    unsafe {
-                        gpu.paint(info, p, &jobs, opacity);
-                    }
-                }
-            })),
-        }));
+        });
     }
 }
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn nested_groups_keep_clip_and_order_without_gl() {
+        let ctx = egui::Context::default();
+        let mut output = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(64., 64.),
+                )),
+                ..Default::default()
+            },
+            |ui| {
+                let painter = ui.ctx().layer_painter(egui::LayerId::background());
+                let bounds =
+                    |x, y, w, h| egui::Rect::from_min_size(egui::pos2(x, y), egui::vec2(w, h));
+                painter.rect_filled(bounds(40., 40., 10., 10.), 0., egui::Color32::BLUE);
+                let start = painter
+                    .ctx()
+                    .graphics(|g| g.get(painter.layer_id()).unwrap().next_idx().0);
+                painter
+                    .with_clip_rect(bounds(10., 0., 10., 30.))
+                    .rect_filled(bounds(0., 0., 30., 30.), 0., egui::Color32::RED);
+                Compositor::finish(&painter, start, 0.5);
+                super::super::mask::finish(
+                    &painter,
+                    start,
+                    &super::super::mask::BottomMask {
+                        bounds: crate::model::Bounds::new(0., 0., 30., 30.),
+                        edge: vec![[0., 15.], [30., 15.]],
+                        keep_above: true,
+                    },
+                    egui::Pos2::ZERO,
+                    1.,
+                );
+                Compositor::finish(&painter, start, 0.5);
+                Compositor::resolve(&painter, start);
+                painter.rect_filled(bounds(50., 50., 10., 10.), 0., egui::Color32::GREEN);
+            },
+        );
+        output.textures_delta.clear();
+        let jobs = ctx.tessellate(output.shapes, output.pixels_per_point);
+        let mut red = 0;
+        let mut blue = 0;
+        let mut green = 0;
+        for job in jobs {
+            let egui::epaint::Primitive::Mesh(mesh) = job.primitive else {
+                panic!("unresolved opacity callback")
+            };
+            for vertex in mesh.vertices {
+                let [r, g, b, a] = vertex.color.to_array();
+                if r > 0 && g == 0 && b == 0 {
+                    red += 1;
+                    assert!((10.0..=20.0).contains(&vertex.pos.x));
+                    assert!(vertex.pos.y <= 15.);
+                    assert!(a <= 64);
+                } else if b == 255 {
+                    blue += 1;
+                    assert_eq!(a, 255);
+                } else if g == 255 {
+                    green += 1;
+                    assert_eq!(a, 255);
+                }
+            }
+        }
+        assert!(red > 0 && blue > 0 && green > 0);
+    }
     #[test]
     fn fractional_bounds_and_large_tiles_cover_each_pixel_once() {
         let bounds = pixel_bounds(

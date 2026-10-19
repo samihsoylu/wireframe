@@ -30,6 +30,7 @@ impl Scene {
                 opacity: 1.,
                 clip,
                 drawing: Drawing::BeginMask(mask::BottomMask {
+                    keep_above: true,
                     bounds: b,
                     edge: torn_edge(b.w, b.h - 19., 0.)
                         .into_iter()
@@ -121,58 +122,10 @@ impl Scene {
         let point = |x: f32, y: f32| [b.x + chrome.x(x.abs(), x < 0.), b.y + chrome.y(y, false)];
         let ink = if sketch { [0; 3] } else { [51; 3] };
         let chrome_fill = if sketch { [193; 3] } else { [222, 222, 221] };
-        let thickness = if sketch { 2.5 } else { 2. };
-        self.primitive(
-            Primitive::Rect {
-                b: Bounds::new(b.x, b.y, b.w, s.content_top * sy),
-                fill: chrome_fill,
-                stroke: false,
-                radius: 0.,
-            },
-            clip,
-        );
         if sketch {
-            self.primitive(
-                Primitive::Rect {
-                    b: Bounds::new(b.x, b.y + chrome.y(s.bottom, true), b.w, s.bottom * sy),
-                    fill: chrome_fill,
-                    stroke: false,
-                    radius: 0.,
-                },
-                clip,
-            );
-        }
-        self.rectangle_frame(b, ink, thickness, clip);
-        self.primitive(
-            Primitive::Line {
-                points: vec![
-                    [b.x, b.y + s.content_top * sy],
-                    [b.x + b.w, b.y + s.content_top * sy],
-                ],
-                color: ink,
-                width: if sketch { 2.5 } else { 1. },
-            },
-            clip,
-        );
-        if !sketch {
-            self.primitive(
-                Primitive::Line {
-                    points: vec![[b.x, b.y + 32. * sy], [b.x + b.w, b.y + 32. * sy]],
-                    color: ink,
-                    width: 1.,
-                },
-                clip,
-            );
-        } else {
-            let y = b.y + chrome.y(s.bottom, true);
-            self.primitive(
-                Primitive::Line {
-                    points: vec![[b.x, y], [b.x + b.w, y]],
-                    color: ink,
-                    width: 2.5,
-                },
-                clip,
-            );
+            for primitive in super::browser_frame::sketch(b) {
+                self.primitive(primitive, clip);
+            }
             for offset in [0., 7.] {
                 self.primitive(
                     Primitive::Line {
@@ -182,6 +135,27 @@ impl Scene {
                         ],
                         color: ink,
                         width: 2.,
+                    },
+                    clip,
+                );
+            }
+        } else {
+            self.primitive(
+                Primitive::Rect {
+                    b: Bounds::new(b.x, b.y, b.w, s.content_top * sy),
+                    fill: chrome_fill,
+                    stroke: false,
+                    radius: 0.,
+                },
+                clip,
+            );
+            self.rectangle_frame(b, ink, 2., clip);
+            for y in [s.content_top, 32.] {
+                self.primitive(
+                    Primitive::Line {
+                        points: vec![[b.x, b.y + y * sy], [b.x + b.w, b.y + y * sy]],
+                        color: ink,
+                        width: 1.,
                     },
                     clip,
                 );
@@ -210,12 +184,14 @@ impl Scene {
                 },
                 clip,
             );
-            self.rectangle_frame(
-                address,
-                if sketch { ink } else { [107; 3] },
-                if sketch { 2.5 } else { 1. },
-                clip,
-            );
+            if sketch {
+                self.primitive(
+                    outlines::sketch(address, outlines::Profile::Square, ink),
+                    clip,
+                );
+            } else {
+                self.rectangle_frame(address, [107; 3], 1., clip);
+            }
         }
         // Original symbols drawn from simple paths; no embedded chrome artwork.
         for (cx, dir) in if sketch {

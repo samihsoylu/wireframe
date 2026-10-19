@@ -36,7 +36,9 @@ def main():
         for line in cargo('tree', '--locked', '--edges', 'normal,build', '--prefix', 'none', '--format', '{p}', '--target', target).splitlines():
             match = re.match(r'([^ ]+) v([^ ]+)', line)
             if match: used.add(match.groups())
-    packages = [p for p in meta['packages'] if p['source'] and (p['name'], p['version']) in used]
+    packages = [p for p in meta['packages']
+        if (p['source'] or Path(p['manifest_path']).is_relative_to(ROOT / 'vendor'))
+        and (p['name'], p['version']) in used]
     DEST.mkdir(exist_ok=True)
     upstream = {}
     missing = []
@@ -113,8 +115,9 @@ def main():
     for p in manifest:
         key = f"{p['name']}-{p['version']}"
         rows.append(f"| {key} | {p['license']} | [files](licenses/{key}/) |")
+    rows.extend(['', '## Maintained dependency extensions', '', 'The local egui, egui-winit, resvg and tiny-skia copies retain upstream notices and add GPL-3.0-only native gesture routing or regional rendering code. See [maintained changes](vendor/README.md) and the source inventories in each vendor directory. Ordinary APIs remain available; typed smart-zoom and application-command events preserve native input order, and the regional API is used for streaming image export.'])
     rows.extend(['', '## Canvas fonts', '', 'Comic Neue regular, bold, italic and bold italic are redistributed unchanged under OFL-1.1. Copyright 2014 The Comic Neue Project Authors. See [font license](assets/fonts/comic-neue/OFL.txt) and [provenance](assets/fonts/comic-neue/PROVENANCE.json).'])
-    rows.extend(['', 'Wireframe Draft regular, bold, italic and bold italic are modified derivatives of Comic Neue Bold and Bold Italic, redistributed under OFL-1.1 with the original copyright retained. See [license](assets/fonts/wireframe-draft/OFL.txt), [modifications](assets/fonts/wireframe-draft/MODIFICATIONS.txt) and [reproducible build](docs/PROJECT-FONTS.md).'])
+    rows.extend(['', 'Wireframe Draft regular, bold, italic and bold italic are modified derivatives of Comic Neue Regular, Bold, Italic and Bold Italic, redistributed under OFL-1.1 with the original copyright retained. See [license](assets/fonts/wireframe-draft/OFL.txt), [modifications](assets/fonts/wireframe-draft/MODIFICATIONS.txt) and [reproducible build](docs/PROJECT-FONTS.md).'])
     rows.extend(['', 'Unicode emoji property data is covered by [Unicode License V3](assets/unicode/LICENSE.txt); pinned sources and regeneration instructions are in [Unicode data](assets/unicode/README.md).'])
     rows.extend(['', '## Bundled icons', '', 'Font Awesome Free 6.7.2 by Fonticons, Inc. is bundled under CC BY 4.0. SVG path data and dimensions are unchanged; metadata is compacted and free styles are selected. See [license](assets/icons/font-awesome-free/LICENSE.txt), [upstream](https://fontawesome.com), and [provenance](assets/icons/font-awesome-free/PROVENANCE.json). SVG and PNG exports containing these icons include attribution metadata.'])
     (ROOT / 'THIRD_PARTY_NOTICES.md').write_text('\n'.join(rows) + '\n')

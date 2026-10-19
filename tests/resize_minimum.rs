@@ -44,7 +44,10 @@ fn resolved_selection_limits_follow_fixed_axes_overrides_and_editing_context() {
         .unwrap()
         .create(23, Point::new(500., 0.));
     p.pages[0].content.nodes = vec![instance, arrow, color];
-    let mut e = Editor::new(p);
+    let mut e = {
+        p.organize_components().unwrap();
+        Editor::new(p)
+    };
     let saved = e.document.clone();
     assert_eq!(e.resize_minimum(&[21]), (12., 40.));
     assert_eq!(e.resize_minimum(&[22]), (1., 1.));

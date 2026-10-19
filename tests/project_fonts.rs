@@ -198,3 +198,158 @@ fn malformed_fonts_fail_at_the_document_boundary_and_old_projects_keep_defaults(
         .is_err()
     );
 }
+
+#[test]
+fn default_cedilla_letters_preserve_case_and_canonical_forms() {
+    let font = fonts::default_project_font();
+    for (role, face) in font.faces().into_iter().enumerate() {
+        for (composed, decomposed, base, opposite) in
+            [("ţ", "t\u{0327}", "t", "Ț"), ("Ţ", "T\u{0327}", "T", "ț")]
+        {
+            let shape = |s: &str| wireframe::text_engine::shape(face, s, 24.).unwrap();
+            let a = shape(composed);
+            let b = shape(decomposed);
+            assert!(
+                (a.width - shape(base).width).abs() < 0.01,
+                "role {role}: {composed} must retain its base letter's advance"
+            );
+            assert_ne!(
+                a.svg([0, 0, 0, 255]),
+                shape(opposite).svg([0, 0, 0, 255]),
+                "role {role}: {composed} must retain case"
+            );
+            assert_eq!(a.svg([0, 0, 0, 255]), b.svg([0, 0, 0, 255]));
+            assert_eq!(a.width, b.width);
+            assert!(
+                a.runs
+                    .iter()
+                    .all(|r| r.font_name.contains("WireframeDraft")),
+                "The default face must supply the character without system substitution"
+            );
+            for accent in ["\u{0301}", "\u{0308}"] {
+                let a = shape(&format!("{composed}{accent}"));
+                let b = shape(&format!("{decomposed}{accent}"));
+                assert_eq!(a.svg([0, 0, 0, 255]), b.svg([0, 0, 0, 255]));
+            }
+        }
+        // A new below-mark glyph retains pair positioning on both sides.
+        for (new, existing) in [("Ţ", "Ț"), ("ţ", "ț")] {
+            for neighbor in ["A", "V", "T", "a", "o", "y", ".", ","] {
+                for (a, b) in [
+                    (format!("{new}{neighbor}"), format!("{existing}{neighbor}")),
+                    (format!("{neighbor}{new}"), format!("{neighbor}{existing}")),
+                ] {
+                    let a = wireframe::text_engine::shape(face, &a, 24.).unwrap();
+                    let b = wireframe::text_engine::shape(face, &b, 24.).unwrap();
+                    assert!(
+                        (a.width - b.width).abs() < 0.01,
+                        "role {role}: pair advances differ for {new}/{existing} near {neighbor}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn default_breve_letters_use_project_font_and_preserve_canonical_positioning() {
+    let font = fonts::default_project_font();
+    for (role, face) in font.faces().into_iter().enumerate() {
+        let shape = |s: &str| wireframe::text_engine::shape(face, s, 24.).unwrap();
+        for (composed, decomposed, base) in [("ğ", "g\u{0306}", "g"), ("Ğ", "G\u{0306}", "G")] {
+            let a = shape(composed);
+            assert!(
+                a.runs
+                    .iter()
+                    .all(|r| r.font_name.contains("WireframeDraft")),
+                "role {role}: {composed} must use the project font, got {:?}",
+                a.runs.iter().map(|r| &r.font_name).collect::<Vec<_>>()
+            );
+            assert!((a.width - shape(base).width).abs() < 0.01);
+            for (prefix, suffix) in [
+                ("", ""),
+                ("A", "V"),
+                ("T", "a"),
+                ("o", "y"),
+                ("", "\u{0301}"),
+                ("", "\u{0327}"),
+                ("", "\u{0328}"),
+                ("", "\u{0327}\u{0301}"),
+            ] {
+                let a = shape(&format!("{prefix}{composed}{suffix}"));
+                let b = shape(&format!("{prefix}{decomposed}{suffix}"));
+                assert_eq!(
+                    a.svg([0, 0, 0, 255]),
+                    b.svg([0, 0, 0, 255]),
+                    "role {role}: {prefix}{composed}{suffix}"
+                );
+                assert!((a.width - b.width).abs() < 1e-9);
+                if suffix.is_ascii() {
+                    let base = shape(&format!("{prefix}{base}{suffix}"));
+                    assert!((a.width - base.width).abs() < 0.01);
+                }
+            }
+        }
+        // Above accents with the same combining class keep their source order.
+        assert_ne!(
+            shape("g\u{0301}\u{0306}").svg([0, 0, 0, 255]),
+            shape("g\u{0306}\u{0301}").svg([0, 0, 0, 255])
+        );
+        let name = shape("Çağrı GÜNEŞ");
+        assert!(
+            name.runs
+                .iter()
+                .all(|r| r.font_name.contains("WireframeDraft"))
+        );
+    }
+}
+
+#[test]
+fn default_operators_are_legible_and_space_variants_have_equal_advance() {
+    let font = fonts::default_project_font();
+    for face in font.faces() {
+        for size in [12., 17., 28.] {
+            let shape = |text: &str| wireframe::text_engine::shape(face, text, size).unwrap();
+            let x = shape("x").raster([0, 0, 0, 255], 2.).unwrap().unwrap();
+            for symbol in ["+", "×"] {
+                let shaped = shape(symbol);
+                let ink = shaped.raster([0, 0, 0, 255], 2.).unwrap().unwrap();
+                assert!((shaped.width / size - 0.65).abs() < 0.002);
+                assert!(ink.bounds.height() >= x.bounds.height() * 0.9);
+                assert!(ink.bounds.height() <= x.bounds.height() * 1.1);
+                assert!(
+                    shaped
+                        .runs
+                        .iter()
+                        .all(|r| r.font_name.contains("WireframeDraft"))
+                );
+            }
+            for (ordinary, protected) in [
+                ("Price 24.50", "Price\u{a0}24.50"),
+                ("2 × 19.95", "2\u{a0}×\u{a0}19.95"),
+            ] {
+                let a = shape(ordinary);
+                let b = shape(protected);
+                // The portable shaper accumulates word advances in f32.
+                // Keep the native bound and require identical rendered pixels
+                // below; only the scalar total permits portable rounding.
+                let tolerance = if cfg!(target_os = "macos") {
+                    1e-9
+                } else {
+                    2. * f64::from(f32::EPSILON) * a.width.max(b.width).max(1.)
+                };
+                assert!(
+                    (a.width - b.width).abs() < tolerance,
+                    "{ordinary:?} at {size}: {} versus {} (tolerance {tolerance})",
+                    a.width,
+                    b.width
+                );
+                let a = a.raster([0, 0, 0, 255], 2.).unwrap().unwrap();
+                let b = b.raster([0, 0, 0, 255], 2.).unwrap().unwrap();
+                assert_eq!(a.bounds, b.bounds);
+                assert_eq!(a.pixels.size, b.pixels.size);
+                assert_eq!(a.pixels.pixels, b.pixels.pixels);
+            }
+        }
+    }
+}

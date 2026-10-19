@@ -10,6 +10,13 @@ impl Editor {
     /// Snapshot sibling targets at gesture start. Coordinates are global even
     /// inside a group; selection editing converts them back to parent space.
     pub fn alignment_targets(&self, gravity: f32) -> Result<Targets, String> {
+        self.alignment_targets_with_selection(gravity, false)
+    }
+    pub fn alignment_targets_with_selection(
+        &self,
+        gravity: f32,
+        include_selection: bool,
+    ) -> Result<Targets, String> {
         let layout = self.layout_page(self.surface_id())?;
         let nodes = if self.context.is_empty() {
             &layout.nodes
@@ -29,10 +36,17 @@ impl Editor {
                 let mut targets = Targets::new(gravity);
                 for node in nodes {
                     let c = view::control(node);
-                    if self.selection.contains(&c.id) {
+                    if (!self.markup_visible && node.markup)
+                        || (!include_selection && self.selection.contains(&c.id))
+                    {
                         continue;
                     }
-                    let b = c.bounds;
+                    let b = if self.markup_visible {
+                        c.bounds
+                    } else {
+                        let b = node.without_markup;
+                        Bounds::new(b.x, b.y, b.width, b.height)
+                    };
                     let p = &node.properties;
                     let sketch = self.document.settings.sketch;
                     let number = |key, default| match p.get(key) {

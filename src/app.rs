@@ -1,25 +1,67 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 
+mod activation;
+mod arrangement;
+mod arrows;
+#[cfg(test)]
+mod canvas_action_tests;
 mod canvas_scroll;
+mod chrome;
+mod clipboard;
+#[cfg(test)]
+mod close_tests;
+mod closing;
 mod components;
 #[cfg(test)]
 mod creation_tests;
 mod crop;
+#[cfg(test)]
+mod export_tests;
 mod fonts;
+mod geometry;
+mod icon_dialog;
 mod icon_picker;
+mod image_export;
 mod images;
 mod insertion;
+mod layering;
+mod library;
 mod library_drag;
+mod library_import;
+mod menus;
+mod more_controls;
+mod navigator;
+#[cfg(test)]
+mod navigator_tests;
+#[cfg(all(test, target_os = "macos"))]
+mod offscreen_tests;
+mod page_clipboard;
+mod page_inspector;
+mod pages;
 mod palette;
 mod pdf_export;
 mod persistence;
+mod presentation;
 mod previews;
 mod properties;
+mod property_sections;
+mod quick_draw;
 mod recovery;
+mod review;
+mod selection;
+mod selection_properties;
 #[cfg(test)]
 mod shortcut_tests;
 mod shortcuts;
+mod source_navigator;
+mod startup;
+mod text_session;
+mod toolbar;
+mod trash;
+mod versions;
+mod viewports;
+mod web_image;
 
 use eframe::egui::{
     self, Align2, Color32, FontId, Key, Modifiers, Pos2, Rect, Sense, Stroke, StrokeKind, Vec2,
@@ -37,7 +79,7 @@ use wireframe::{
     storage::{self, ProjectRepository, ProjectStore},
     text_entry::TextInput,
     ui_text,
-    workspace::{Clipboard, Editor},
+    workspace::{CatalogCategory, CatalogItem, Clipboard, Editor},
 };
 
 const ACCENT: Color32 = Color32::from_rgb(49, 94, 145);
@@ -49,10 +91,17 @@ enum Pending {
     Restore(String),
 }
 enum Drag {
+    Arrow {
+        id: Id,
+        handle: wireframe::arrows::Handle,
+        origin: Pos2,
+        offset: wireframe::document::Point,
+    },
     Move {
         start: Pos2,
         original: Vec<(Id, Bounds)>,
         targets: Targets,
+        duplicate_targets: Targets,
         motion: Motion,
     },
     Resize {
@@ -73,90 +122,135 @@ enum Drag {
     },
 }
 pub struct WireframeApp {
+    menus: menus::Menus,
     compositor: Option<std::sync::Arc<wireframe::render::compositor::Compositor>>,
     editor: Editor,
     installed_font: Option<std::sync::Arc<wireframe::fonts::ProjectFont>>,
     font_import: Option<fonts::FontImport>,
     palette_defaults: palette::PaletteDefaults,
+    image_export: image_export::ImageExport,
+    versions: versions::Versions,
+    page_rename: Option<pages::Rename>,
+    page_inspector: page_inspector::PageInspector,
+    review: review::Review,
+    source_navigation: source_navigator::SourceNavigation,
+    library_import: Option<library_import::Review>,
+    more_controls: Option<more_controls::Browser>,
+    page_paste: Option<page_clipboard::Review>,
+    page_paste_request: Option<page_clipboard::Request>,
+    trash: Option<trash::Trash>,
+    navigator: navigator::Navigator,
+    viewports: viewports::Viewports,
     pdf_options: Option<wireframe::pdf::Options>,
     pdf_job: Option<wireframe::pdf::ExportJob>,
     quit_after_pdf: bool,
     store: Box<dyn ProjectRepository>,
     persistence: Option<persistence::Persistence>,
     file: Option<PathBuf>,
+    // Unit frames supply the chooser outcome; native dialogs are exercised in the app.
+    #[cfg(test)]
+    save_dialog_choice: Option<PathBuf>,
     deferred_text_input: Vec<egui::Event>,
     deferred_text_focus: Option<egui::Id>,
+    save_navigator_focus: Option<egui::Id>,
     quick: String,
     quick_index: usize,
     quick_focus: bool,
+    quick_input_id: Option<egui::Id>,
     show_library: bool,
     show_navigator: bool,
     show_inspector: bool,
     thumbnails: bool,
-    category: String,
+    categories: Vec<CatalogCategory>,
     zoom: f32,
     pan: Vec2,
     drag: Option<Drag>,
+    quick_draw: quick_draw::State,
     drag_scroll: Option<wireframe::viewport::DragScroll>,
-    library_drag: Option<Kind>,
+    library_drag: Option<CatalogItem>,
     library_press: Option<library_drag::LibraryPress>,
     library_anchor: Vec2,
     alignment_guides: Vec<snapping::Guide>,
     canvas_press: Option<Pos2>,
+    unlock_press: Option<selection::UnlockPress>,
     grid: bool,
     snap: bool,
     status: String,
     error: Option<String>,
     pending: Option<Pending>,
+    startup_open: Option<startup::Opening>,
     image_import: Option<(
-        wireframe::workspace::ImageTarget,
+        wireframe::workspace::ImageImportTarget,
         wireframe::images::Prepared,
     )>,
     image_crop: Option<crop::CropEdit>,
+    web_image: Option<web_image::Review>,
+    image_split_fraction: f32,
     quit_allowed: bool,
+    window_close_pending: bool,
+    icon_dialog: Option<icon_dialog::IconDialog>,
     text_edit: Option<(Id, String)>,
+    image_source_request: Option<Id>,
+    text_edit_view: Option<text_session::TextEditView>,
+    text_edit_return_to_quick: bool,
     clipboard: Clipboard,
+    pending_cut: Option<clipboard::PendingCut>,
+    deferred_cut_input: Vec<egui::Event>,
+    clipboard_paste: clipboard::PasteState,
     previews: previews::LibraryPreviews,
     recovery: Option<PathBuf>,
-    _recovery_lock: Option<std::fs::File>,
+    _recovery_lock: Option<storage::ExclusiveFileLock>,
     recovery_offer: Option<Project>,
     last_recovery: Instant,
     recovery_doc: Option<Project>,
     help: bool,
     about: bool,
     present: bool,
-    presentation_history: Vec<Id>,
+    presentation_history: presentation::History,
+    presentation_view: presentation::State,
     canvas_rect: Rect,
+    canvas_focus_id: Option<egui::Id>,
 }
 impl WireframeApp {
     /// End transient pointer state at document/action boundaries. Commit the
     /// last visible canvas edit before a save captures its immutable document.
     fn end_pointer_gestures(&mut self) {
+        self.cancel_quick_draw();
         self.editor.commit();
         self.drag = None;
         self.drag_scroll = None;
         self.library_drag = None;
         self.library_press = None;
+        self.source_navigation.drag = None;
         self.canvas_press = None;
+        if let Some(press) = &mut self.unlock_press {
+            press.cancelled = true;
+        }
         self.alignment_guides.clear();
     }
     fn canvas_input_blocked(&self) -> bool {
-        self.pdf_options.is_some()
+        self.startup_open.is_some()
+            || self.pdf_options.is_some()
+            || self.image_export.blocks_input()
+            || self.versions.rename.is_some()
+            || self.page_rename.is_some()
+            || self.trash.is_some()
+            || self.library_import.is_some()
+            || self.more_controls.is_some()
+            || self.page_paste.is_some()
             || self.save_busy()
             || self.recovery_chooser_open()
             || self.pending.is_some()
-            || self.text_edit.is_some()
+            || self.icon_dialog.is_some()
+            || self.image_import.is_some()
+            || self.web_image.is_some()
+            || self.image_source_request.is_some()
             || self.error.is_some()
             || self.recovery_offer.is_some()
     }
-    fn begin_text_edit(&mut self, id: Id) {
-        match self.editor.prepare_text_edit(id) {
-            Ok(draft) => self.text_edit = draft,
-            Err(error) => self.editor.error = Some(error),
-        }
-    }
     fn workspace(ctx: &egui::Context, mut recovery: Option<PathBuf>) -> Self {
         wireframe::fonts::install(ctx);
+        ctx.options_mut(|options| options.input_options.zoom_modifier = Modifiers::COMMAND);
         ctx.set_visuals(egui::Visuals::light());
         ctx.global_style_mut(|s| {
             s.spacing.item_spacing = Vec2::new(8., 8.);
@@ -208,46 +302,77 @@ impl WireframeApp {
             }
         }
         Self {
+            menus: menus::Menus::default(),
             compositor: None,
             editor: Editor::default(),
             installed_font: None,
             font_import: None,
             palette_defaults: Default::default(),
+            image_export: Default::default(),
+            versions: Default::default(),
+            page_rename: None,
+            page_inspector: Default::default(),
+            review: Default::default(),
+            source_navigation: Default::default(),
+            library_import: None,
+            more_controls: None,
+            page_paste: None,
+            page_paste_request: None,
+            trash: None,
+            navigator: Default::default(),
+            viewports: Default::default(),
             pdf_options: None,
             pdf_job: None,
             quit_after_pdf: false,
             store: Box::new(ProjectStore),
             persistence: None,
             file: None,
+            #[cfg(test)]
+            save_dialog_choice: None,
             deferred_text_input: Vec::new(),
             deferred_text_focus: None,
+            save_navigator_focus: None,
             quick: String::new(),
             quick_index: 0,
             quick_focus: false,
+            quick_input_id: None,
             show_library: true,
             show_navigator: true,
             show_inspector: true,
             thumbnails: true,
-            category: "All".into(),
+            categories: vec![CatalogCategory::All],
             zoom: 1.,
             pan: Vec2::ZERO,
             drag: None,
+            quick_draw: quick_draw::State::default(),
             drag_scroll: None,
             library_drag: None,
             library_press: None,
             library_anchor: Vec2::ZERO,
             alignment_guides: Vec::new(),
             canvas_press: None,
+            unlock_press: None,
             grid: false,
             snap: false,
             status,
             error: recovery_error,
             pending: None,
+            startup_open: None,
             image_import: None,
+            web_image: None,
             image_crop: None,
+            image_split_fraction: 0.3,
             quit_allowed: false,
+            window_close_pending: false,
+            icon_dialog: None,
             text_edit: None,
+            image_source_request: None,
+            text_edit_view: None,
+            text_edit_return_to_quick: false,
             clipboard: Clipboard::default(),
+            pending_cut: None,
+            deferred_cut_input: Vec::new(),
+            clipboard_paste: Default::default(),
             previews: previews::LibraryPreviews::default(),
             recovery,
             _recovery_lock: recovery_lock,
@@ -257,8 +382,10 @@ impl WireframeApp {
             help: false,
             about: false,
             present: false,
-            presentation_history: vec![],
+            presentation_history: presentation::History::default(),
+            presentation_view: presentation::State::default(),
             canvas_rect: Rect::NOTHING,
+            canvas_focus_id: None,
         }
     }
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
@@ -276,18 +403,25 @@ impl WireframeApp {
         if let Some(path) = storage::recovery_path().and_then(|p| p.parent().map(|p| p.to_owned()))
         {
             app.load_palette_defaults(&path);
+            app.load_reviewer(&path);
+            app.load_image_export_preferences(&path);
             app.editor = app.new_editor();
             app.enable_persistence(&cc.egui_ctx, path);
         }
-        let args: Vec<_> = std::env::args().skip(1).collect();
+        let args: Vec<_> = std::env::args_os().skip(1).collect();
         if args.iter().any(|a| a == "--demo") {
             app.editor = Editor::new(Project::try_from(example_document()).expect("valid example"));
         } else if let Some(path) = args.first() {
-            app.load(PathBuf::from(path));
+            app.start_startup_open(PathBuf::from(path), &cc.egui_ctx);
         }
+        app.init_menus(cc);
         app
     }
+    #[cfg(test)]
     fn load(&mut self, path: PathBuf) -> bool {
+        self.remember_version_view();
+        self.remember_viewports(true);
+        self.remember_presentation();
         self.font_import = None;
         if self.persistence.is_some() {
             return self.load_persistent(path);
@@ -295,16 +429,16 @@ impl WireframeApp {
         match self.store.load(&path) {
             Ok(doc) => {
                 let candidate = Editor::new(doc);
-                for page in &candidate.document.pages {
+                for page in candidate.document.live_pages() {
                     if let Err(error) = candidate.layout_page(page.id) {
                         self.error = Some(error);
                         return false;
                     }
                 }
+                self.review.reset();
                 self.editor = candidate;
                 self.file = Some(path);
-                self.pan = Vec2::ZERO;
-                self.zoom = 1.;
+                self.restore_version_view();
                 self.status = "Project opened".into();
                 true
             }
@@ -315,21 +449,16 @@ impl WireframeApp {
         }
     }
     fn save(&mut self, choose: bool) -> bool {
-        if self.save_busy() {
+        if self.save_busy() || self.startup_open.is_some() {
             return false;
         }
+        if !self.finish_page_notes() {
+            return false;
+        }
+        self.remember_viewports(true);
         self.editor.commit();
         let path = if choose || self.file.is_none() {
-            rfd::FileDialog::new()
-                .add_filter("Wireframe project", &["wireframe"])
-                .set_file_name(
-                    self.file
-                        .as_ref()
-                        .and_then(|p| p.file_name())
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("Untitled.wireframe"),
-                )
-                .save_file()
+            self.choose_save_path()
         } else {
             self.file.clone()
         };
@@ -357,8 +486,45 @@ impl WireframeApp {
             }
         }
     }
+    fn choose_save_path(&self) -> Option<PathBuf> {
+        #[cfg(test)]
+        {
+            self.save_dialog_choice.clone()
+        }
+        #[cfg(not(test))]
+        self.menus.with_dialog(|| {
+            rfd::FileDialog::new()
+                .add_filter("Wireframe project", &["wireframe"])
+                .set_file_name(
+                    self.file
+                        .as_ref()
+                        .and_then(|p| p.file_name())
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("Untitled.wireframe"),
+                )
+                .save_file()
+        })
+    }
     fn request(&mut self, pending: Pending, ctx: &egui::Context) {
+        self.dismiss_recoveries();
+        if self.startup_open.is_some() {
+            if matches!(pending, Pending::Quit) {
+                if !self.cancel_open_for_quit() {
+                    return;
+                }
+            } else {
+                return;
+            }
+        }
         if self.save_busy() {
+            return;
+        }
+        if !self.finish_page_notes() {
+            return;
+        }
+        if matches!(pending, Pending::Quit) && self.image_export.job.is_some() {
+            self.image_export.quit_after = true;
+            self.status = "Finishing image export before closing…".into();
             return;
         }
         if matches!(pending, Pending::Quit) && self.pdf_job.is_some() {
@@ -367,6 +533,16 @@ impl WireframeApp {
             return;
         }
         self.pdf_options = None;
+        self.image_export.draft = None;
+        self.versions.rename = None;
+        self.page_rename = None;
+        self.page_inspector = Default::default();
+        self.source_navigation = Default::default();
+        self.library_import = None;
+        self.more_controls = None;
+        self.page_paste = None;
+        self.page_paste_request = None;
+        self.trash = None;
         self.font_import = None;
         self.end_pointer_gestures();
         if self.automatic_named() {
@@ -379,6 +555,13 @@ impl WireframeApp {
         }
     }
     fn perform(&mut self, pending: Pending, ctx: &egui::Context) {
+        if let Pending::Open(path) = pending {
+            self.start_menu_open(path, false, ctx);
+            return;
+        }
+        self.remember_version_view();
+        self.remember_viewports(true);
+        self.remember_presentation();
         if self.persistence.is_some() && !self.finish_session(false) {
             return;
         }
@@ -386,17 +569,14 @@ impl WireframeApp {
             Pending::New => {
                 self.reset_session_identity();
                 self.editor = self.new_editor();
+                self.categories = library::default_categories();
                 self.font_import = None;
                 self.file = None;
-                self.pan = Vec2::ZERO;
-                self.zoom = 1.;
+                self.status = "New project · not saved to a file".into();
+                self.restore_viewports();
                 self.clear_recovery();
             }
-            Pending::Open(p) => {
-                if self.load(p) {
-                    self.clear_recovery();
-                }
-            }
+            Pending::Open(_) => unreachable!("Open is prepared before session handoff"),
             Pending::Quit => {
                 self.quit_allowed = true;
                 self.clear_recovery();
@@ -407,394 +587,73 @@ impl WireframeApp {
             }
             Pending::Example => {
                 self.reset_session_identity();
+                self.categories = library::default_categories();
                 self.clear_recovery();
                 self.editor =
                     Editor::new(Project::try_from(example_document()).expect("valid example"));
                 self.file = None;
-                self.zoom = 1.;
-                self.pan = Vec2::ZERO;
+                self.status = "Example project · not saved to a file".into();
+                self.restore_viewports();
             }
         }
     }
     fn open(&mut self, ctx: &egui::Context) {
-        if let Some(path) = rfd::FileDialog::new()
-            .add_filter("Wireframe project", &["wireframe"])
-            .pick_file()
-        {
+        if let Some(path) = self.menus.with_dialog(|| {
+            rfd::FileDialog::new()
+                .add_filter("Wireframe project", &["wireframe"])
+                .pick_file()
+        }) {
             self.request(Pending::Open(path), ctx);
         }
     }
     fn export(&mut self, png: bool) {
+        if !self.finish_page_notes() {
+            return;
+        }
         let ext = if png { "png" } else { "svg" };
-        if let Some(path) = rfd::FileDialog::new()
-            .add_filter("Wireframe export", &[ext])
-            .set_file_name(format!("{}.{}", self.editor.current().name, ext))
-            .save_file()
-        {
-            let bytes = self
-                .editor
-                .rendered_scene(self.editor.surface_id())
-                .and_then(|drawing| {
-                    if png {
-                        drawing.png()
-                    } else {
-                        Ok(drawing.svg().into_bytes())
-                    }
-                });
-            match bytes.and_then(|bytes| storage::write_atomic(&path, &bytes)) {
+        if let Some(path) = self.menus.with_dialog(|| {
+            rfd::FileDialog::new()
+                .add_filter("Wireframe export", &[ext])
+                .set_file_name(format!("{}.{}", self.editor.current().name, ext))
+                .save_file()
+        }) {
+            match self.write_page_export(&path, png) {
                 Ok(()) => self.status = format!("Exported {}", path.display()),
                 Err(e) => self.error = Some(e),
             }
         }
     }
-    fn add(&mut self, kind: Kind) {
-        let point = self.default_insertion(kind);
-        self.editor.add(kind, point.x, point.y);
-        self.status = format!("Added {}", kind.name());
-    }
-    fn copy(&mut self, ctx: &egui::Context) {
-        self.clipboard = self.editor.copy();
-        if let Ok(s) = serde_json::to_string(&self.clipboard) {
-            ctx.copy_text(format!("wireframe-nodes-v2:{s}"));
-        }
-        self.status = format!("Copied {} controls", self.clipboard.len());
-    }
-    fn pasted(&mut self, s: &str) {
-        if let Some(json) = s.strip_prefix("wireframe-nodes-v2:") {
-            if json.len() > 4_000_000 {
-                self.error = Some("Clipboard content is too large".into());
-                return;
-            }
-            match serde_json::from_str::<Clipboard>(json) {
-                Ok(copy) => self.editor.paste(&copy, 20.),
-                Err(e) => self.error = Some(format!("Cannot paste controls: {e}")),
-            };
-            return;
-        }
-        if let Some(json) = s.strip_prefix("wireframe-controls-v1:") {
-            if json.len() > 4_000_000 {
-                self.error = Some("Clipboard content is too large".into());
-                return;
-            }
-            if let Ok(controls) = serde_json::from_str::<Vec<Control>>(json) {
-                if controls.len() <= 1000
-                    && controls.iter().all(|c| {
-                        c.bounds.valid()
-                            && c.font_size.is_finite()
-                            && (6.0..=120.0).contains(&c.font_size)
-                            && c.text.len() <= 100_000
-                    })
-                {
-                    self.editor.paste_legacy(&controls, 20.);
-                } else {
-                    self.error = Some("Clipboard contains invalid controls".into());
-                }
-            }
-        }
-    }
-    fn navigate_page(&mut self, id: Id) {
-        if self.editor.document.pages.iter().any(|p| p.id == id) {
-            if id != self.editor.page {
-                self.presentation_history.push(self.editor.page);
-            }
-            self.editor.switch_page(id);
+    fn write_page_export(&self, path: &std::path::Path, png: bool) -> Result<(), String> {
+        self.ensure_export_destination(path)?;
+        let drawing = self.editor.export_scene(
+            self.editor.surface_id(),
+            &wireframe::workspace::SceneScope::Whole,
+        )?;
+        let bytes = if png {
+            drawing.png()?
         } else {
-            self.status = "This page is no longer available".into();
-        }
+            drawing.svg().into_bytes()
+        };
+        storage::write_atomic(path, &bytes)
     }
-    fn follow_target(&mut self, target: &str, ctx: &egui::Context) {
-        if let Some(id) = target
-            .strip_prefix("page:")
-            .and_then(|s| s.parse::<Id>().ok())
-        {
-            self.navigate_page(id);
-        } else if target == "back:" {
-            while let Some(id) = self.presentation_history.pop() {
-                if self.editor.document.pages.iter().any(|p| p.id == id) {
-                    self.editor.switch_page(id);
-                    return;
-                }
-            }
-            self.status = "No previous page in this presentation".into();
-        } else if target.starts_with("https://") || target.starts_with("http://") {
-            ctx.open_url(egui::OpenUrl::new_tab(target));
-        } else {
-            self.status = "This link destination is not available".into();
-        }
-    }
-    fn toolbar(&mut self, ui: &mut egui::Ui) {
-        if self.present {
-            egui::Panel::top("presentation").show(ui, |ui| {
-                if self.image_crop.is_some() {
-                    ui.disable();
-                }
-                ui.horizontal(|ui| {
-                    if ui.button("Back to editor").clicked() {
-                        self.present = false;
-                    }
-                    ui.separator();
-                    ui_text::label(ui, &self.editor.document.title, 180.);
-                    if ui.button("Fit").clicked() {
-                        self.fit();
-                    }
-                    let pages: Vec<_> = self
-                        .editor
-                        .document
-                        .pages
-                        .iter()
-                        .map(|p| (p.id, p.name.clone()))
-                        .collect();
-                    egui::ScrollArea::horizontal()
-                        .id_salt("presentation-pages")
-                        .show(ui, |ui| {
-                            ui.horizontal(|ui| {
-                                for (id, name) in pages {
-                                    if ui_text::selectable(ui, self.editor.page == id, &name, 160.)
-                                        .clicked()
-                                    {
-                                        self.navigate_page(id);
-                                    }
-                                }
-                            });
-                        });
-                });
-            });
-            return;
-        }
-        let ctx = ui.ctx().clone();
-        egui::Panel::top("toolbar")
-            .frame(
-                egui::Frame::NONE
-                    .fill(Color32::from_rgb(56, 61, 66))
-                    .inner_margin(8),
-            )
-            .show(ui, |ui| {
-                if self.image_crop.is_some() {
-                    ui.disable();
-                }
-                *ui.visuals_mut() = egui::Visuals::dark();
-                ui.visuals_mut().override_text_color = Some(Color32::from_gray(235));
-                ui.spacing_mut().button_padding = Vec2::new(8., 4.);
-                ui.horizontal(|ui| {
-                    ui.add_space(6.);
-                    ui.label(
-                        egui::RichText::new("Wireframe")
-                            .size(15.)
-                            .strong()
-                            .color(Color32::WHITE),
-                    );
-                    ui.separator();
-                    ui.menu_button("File", |ui| {
-                        if ui.button("New project     ⌘/Ctrl N").clicked() {
-                            self.request(Pending::New, &ctx);
-                            ui.close();
-                        }
-                        if ui.button("Open…               ⌘/Ctrl O").clicked() {
-                            self.open(&ctx);
-                            ui.close();
-                        }
-                        if ui.button("Save                   ⌘/Ctrl S").clicked() {
-                            self.save(false);
-                            ui.close();
-                        }
-                        if ui.button("Save as…").clicked() {
-                            self.save(true);
-                            ui.close();
-                        }
-                        ui.separator();
-                        self.persistence_menu(ui);
-                        if ui
-                            .add_enabled(self.pdf_job.is_none(), egui::Button::new("Export PDF…"))
-                            .clicked()
-                        {
-                            self.end_pointer_gestures();
-                            self.pdf_options = Some(wireframe::pdf::Options::default());
-                            ui.close();
-                        }
-                        if ui.button("Export page as PNG…").clicked() {
-                            self.export(true);
-                            ui.close();
-                        }
-                        if ui.button("Export page as SVG…").clicked() {
-                            self.export(false);
-                            ui.close();
-                        }
-                        ui.separator();
-                        if ui.button("Open example project").clicked() {
-                            self.request(Pending::Example, &ctx);
-                            ui.close();
-                        }
-                    });
-                    ui.menu_button("Edit", |ui| {
-                        if ui
-                            .add_enabled(
-                                !self.editor.selection.is_empty(),
-                                egui::Button::new("Copy"),
-                            )
-                            .clicked()
-                        {
-                            self.copy(&ctx);
-                            ui.close();
-                        }
-                        if ui
-                            .add_enabled(
-                                !self.clipboard.is_empty(),
-                                egui::Button::new("Paste copied controls"),
-                            )
-                            .clicked()
-                        {
-                            self.editor.paste(&self.clipboard, 20.);
-                            ui.close();
-                        }
-                        if ui.button("Duplicate").clicked() {
-                            self.editor.duplicate();
-                            ui.close();
-                        }
-                        if ui.button("Select all").clicked() {
-                            self.editor.select_all();
-                            ui.close();
-                        }
-                        if ui.button("Delete selection").clicked() {
-                            self.editor.delete();
-                            ui.close();
-                        }
-                        ui.separator();
-                        if ui.button("Group").clicked() {
-                            self.editor.group();
-                            ui.close();
-                        }
-                        if ui.button("Ungroup").clicked() {
-                            self.editor.ungroup();
-                            ui.close();
-                        }
-                    });
-                    if ui
-                        .add_enabled(self.editor.undo_name().is_some(), egui::Button::new("Undo"))
-                        .on_hover_text(self.editor.undo_name().unwrap_or("Nothing to undo"))
-                        .clicked()
-                    {
-                        self.editor.undo();
-                    }
-                    if ui
-                        .add_enabled(self.editor.redo_name().is_some(), egui::Button::new("Redo"))
-                        .on_hover_text(self.editor.redo_name().unwrap_or("Nothing to redo"))
-                        .clicked()
-                    {
-                        self.editor.redo();
-                    }
-                    ui.separator();
-                    let title_width = (ui.available_width() - 230.).max(0.);
-                    ui_text::label(ui, &self.editor.document.title, title_width);
-                    if self.editor.dirty() {
-                        ui.label("•");
-                    }
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.button("Help").clicked() {
-                            self.help = true;
-                        }
-                        if ui.button("Save").clicked() {
-                            self.save(false);
-                        }
-                        if ui
-                            .button(if self.present { "Edit" } else { "Present" })
-                            .clicked()
-                        {
-                            self.presentation_history.clear();
-                            self.present = !self.present;
-                        }
-                    });
-                });
-                ui.horizontal(|ui| {
-                    ui.add_space(6.);
-                    if ui.button("−").clicked() {
-                        self.zoom = (self.zoom / 1.2).max(0.2);
-                    }
-                    ui.label(format!("{:.0}%", self.zoom * 100.));
-                    if self.editor.definition.is_some() {
-                        ui_text::label(
-                            ui,
-                            &format!("Editing component: {}", self.editor.current().name),
-                            180.,
-                        );
-                        if ui.button("Back to wireframe").clicked() {
-                            self.editor.switch_page(self.editor.page);
-                        }
-                    }
-                    if self.editor.editing_instance() {
-                        ui.strong("Editing this instance");
-                    }
-                    if !self.editor.context.is_empty()
-                        && ui
-                            .button(if self.editor.editing_instance() {
-                                "Exit component level"
-                            } else {
-                                "Exit group"
-                            })
-                            .clicked()
-                    {
-                        self.editor.leave();
-                    }
-                    if ui.button("+").clicked() {
-                        self.zoom = (self.zoom * 1.2).min(4.);
-                    }
-                    if ui.button("Fit").clicked() {
-                        self.fit();
-                    }
-                    if ui.button("100%").clicked() {
-                        self.zoom = 1.;
-                    }
-                    ui.separator();
-                    ui.checkbox(&mut self.grid, "Grid");
-                    ui.checkbox(&mut self.snap, "Snap to 10");
-                    ui.separator();
-                    let mut sketch = self.editor.document.settings.sketch;
-                    if ui.checkbox(&mut sketch, "Sketch style").changed() {
-                        self.editor
-                            .edit("Change style", |e| e.document.settings.sketch = sketch);
-                    }
-                    if ui.button("Font and colors…").clicked() {
-                        self.font_import = Some(fonts::FontImport::default());
-                    }
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        self.quick_add_ui(ui);
-                        if ui
-                            .selectable_label(self.show_inspector, "Inspector")
-                            .clicked()
-                        {
-                            self.show_inspector = !self.show_inspector;
-                        }
-                        if ui.selectable_label(self.show_library, "Library").clicked() {
-                            self.show_library = !self.show_library;
-                        }
-                        if ui.selectable_label(self.show_navigator, "Pages").clicked() {
-                            self.show_navigator = !self.show_navigator;
-                        }
-                    });
-                });
-            });
-        egui::Panel::bottom("status").show(ui, |ui| {
-            if self.image_crop.is_some() {
-                ui.disable();
-            }
-            ui.horizontal(|ui| {
-                ui.small(&self.status);
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.small(format!(
-                        "{} controls  ·  {} selected",
-                        self.editor.current().controls.len(),
-                        self.editor.selection.len()
-                    ));
-                });
-            });
+    fn ensure_export_destination(&self, path: &std::path::Path) -> Result<(), String> {
+        let same_project = self.file.as_ref().is_some_and(|project| {
+            project == path
+                || project
+                    .canonicalize()
+                    .ok()
+                    .zip(path.canonicalize().ok())
+                    .is_some_and(|(a, b)| a == b)
         });
+        if same_project {
+            Err("Choose an export destination other than the open project file".into())
+        } else {
+            Ok(())
+        }
     }
     fn quick_add_ui(&mut self, ui: &mut egui::Ui) {
-        let response = ui.add(
-            TextInput::singleline(&mut self.quick)
-                .id_salt("quick-add")
-                .hint_text("Quick Add  /")
-                .desired_width(180.),
-        );
+        let response = toolbar::quick_input(ui, &mut self.quick);
+        self.quick_input_id = Some(response.id);
         if self.quick_focus {
             response.request_focus();
             self.quick_focus = false;
@@ -802,14 +661,8 @@ impl WireframeApp {
         if response.changed() {
             self.quick_index = 0;
         }
-        let matches: Vec<_> = wireframe::catalog::search(&self.quick)
-            .into_iter()
-            .filter_map(|spec| {
-                Kind::ALL
-                    .into_iter()
-                    .find(|kind| kind.catalog_id() == spec.id)
-            })
-            .collect();
+        let matches = self.editor.search_catalog(&self.quick);
+        self.quick_index = self.quick_index.min(matches.len().saturating_sub(1));
         if response.has_focus() && ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::ArrowDown))
         {
             self.quick_index = (self.quick_index + 1).min(matches.len().saturating_sub(1));
@@ -822,7 +675,7 @@ impl WireframeApp {
             && !self.quick.is_empty()
             && ui.input(|i| i.key_pressed(Key::Enter))
         {
-            chosen = matches.get(self.quick_index).copied();
+            chosen = matches.get(self.quick_index).map(|entry| entry.item);
         }
         if response.has_focus() && !self.quick.is_empty() {
             let mut open = true;
@@ -833,399 +686,82 @@ impl WireframeApp {
                     if matches.is_empty() {
                         ui.label("No matching controls");
                     }
-                    for (index, kind) in matches.iter().enumerate().take(10) {
+                    for (index, entry) in matches.iter().enumerate().take(10) {
                         if ui
-                            .selectable_label(index == self.quick_index, kind.name())
+                            .selectable_label(index == self.quick_index, &entry.name)
                             .clicked()
                         {
-                            chosen = Some(*kind);
+                            chosen = Some(entry.item);
                         }
                     }
                 });
         }
-        if let Some(kind) = chosen {
-            if ui.input(|i| i.modifiers.shift)
-                && let Some(pos) = ui.ctx().pointer_latest_pos()
-            {
-                let point = self.world(pos);
-                self.editor.add(kind, point.x, point.y);
+        if let Some(item) = chosen {
+            let point = if ui.input(|i| i.modifiers.shift) {
+                ui.ctx().pointer_latest_pos().map(|pos| self.world(pos))
             } else {
-                self.add(kind);
-            }
+                None
+            };
+            self.add_catalog_item(item, point);
             self.quick.clear();
             response.request_focus();
         }
     }
-    fn library(&mut self, ui: &mut egui::Ui) {
-        egui::Panel::top("control-library")
-            .frame(
-                egui::Frame::NONE
-                    .fill(Color32::from_gray(235))
-                    .inner_margin(6),
-            )
-            .show(ui, |ui| {
-                if self.image_crop.is_some() {
-                    ui.disable();
-                }
-                egui::ScrollArea::horizontal()
-                    .id_salt("library-categories")
-                    .show(ui, |ui| {
-                        if self.image_crop.is_some() {
-                            ui.disable();
-                        }
-                        ui.horizontal(|ui| {
-                            for cat in [
-                                "All",
-                                "Buttons",
-                                "Common",
-                                "Containers",
-                                "Forms",
-                                "Layout",
-                                "Navigation",
-                                "Media",
-                                "Markup",
-                                "Charts",
-                                "Icons",
-                                "Text",
-                            ] {
-                                ui.selectable_value(&mut self.category, cat.into(), cat);
-                            }
-                        });
-                    });
-                egui::ScrollArea::horizontal()
-                    .id_salt("library-previews")
-                    .show(ui, |ui| {
-                        if self.image_crop.is_some() {
-                            ui.disable();
-                        }
-                        ui.horizontal(|ui| {
-                            ui.spacing_mut().item_spacing.x = 16.;
-                            ui.add_space(10.);
-                            let mut kinds: Vec<_> = Kind::ALL
-                                .into_iter()
-                                .filter(|kind| match self.category.as_str() {
-                                    "All" => true,
-                                    "Buttons" => matches!(
-                                        kind,
-                                        Kind::Button
-                                            | Kind::CircleButton
-                                            | Kind::PointedButton
-                                            | Kind::MultilineButton
-                                            | Kind::ButtonBar
-                                            | Kind::Checkbox
-                                            | Kind::Radio
-                                            | Kind::CheckboxGroup
-                                            | Kind::RadioGroup
-                                            | Kind::Toggle
-                                    ),
-                                    "Common" => matches!(
-                                        kind,
-                                        Kind::Button
-                                            | Kind::Label
-                                            | Kind::TextInput
-                                            | Kind::Rectangle
-                                            | Kind::Image
-                                            | Kind::Checkbox
-                                            | Kind::Browser
-                                    ),
-                                    "Containers" => {
-                                        matches!(
-                                            kind,
-                                            Kind::Browser
-                                                | Kind::Popover
-                                                | Kind::ModalOverlay
-                                                | Kind::Phone
-                                                | Kind::Tablet
-                                                | Kind::Smartphone
-                                                | Kind::Panel
-                                                | Kind::FieldSet
-                                        )
-                                    }
-                                    "Media" => matches!(
-                                        kind,
-                                        Kind::Image
-                                            | Kind::StreetMap
-                                            | Kind::VolumeSlider
-                                            | Kind::Playback
-                                            | Kind::Webcam
-                                            | Kind::Video
-                                            | Kind::CoverFlow
-                                    ),
-                                    cat => kind.category() == cat,
-                                })
-                                .collect();
-                            kinds.sort_by_key(|k| k.name());
-                            for kind in kinds {
-                                ui.vertical(|ui| {
-                                    let (r, response) = ui.allocate_exact_size(
-                                        Vec2::splat(68.),
-                                        Sense::click_and_drag(),
-                                    );
-                                    if response.hovered()
-                                        || response.is_pointer_button_down_on()
-                                        || self.library_drag == Some(kind)
-                                    {
-                                        ui.painter().rect_filled(r, 3, Color32::from_gray(222));
-                                    }
-                                    let painter = ui.painter().with_clip_rect(r);
-                                    match self.previews.scene(
-                                        kind,
-                                        &self.editor.document.settings,
-                                        &self.editor.document.font,
-                                    ) {
-                                        Ok(drawing) => {
-                                            let image =
-                                                library_drag::TileImage::new(r, drawing.bounds);
-                                            Self::paint_scene(
-                                                &painter,
-                                                drawing,
-                                                image.origin,
-                                                image.scale,
-                                            );
-                                        }
-                                        Err(_) => {
-                                            painter.text(
-                                                r.center_top() + Vec2::new(0., 18.),
-                                                Align2::CENTER_TOP,
-                                                "Preview unavailable",
-                                                FontId::proportional(10.),
-                                                Color32::DARK_GRAY,
-                                            );
-                                        }
-                                    }
-                                    let mut label = egui::text::LayoutJob::simple_singleline(
-                                        kind.name().to_owned(),
-                                        FontId::proportional(11.),
-                                        Color32::from_gray(35),
-                                    );
-                                    label.wrap.max_width = r.width();
-                                    label.wrap.max_rows = 1;
-                                    let label = painter.layout_job(label);
-                                    painter.galley(
-                                        r.center_top() + Vec2::new(-label.size().x / 2., 51.),
-                                        label,
-                                        Color32::from_gray(35),
-                                    );
-                                    response.widget_info(|| {
-                                        egui::WidgetInfo::labeled(
-                                            egui::WidgetType::Button,
-                                            true,
-                                            kind.name(),
-                                        )
-                                    });
-                                    if response.double_clicked() {
-                                        self.add(kind);
-                                    }
-                                    self.library_drag_source(ui, kind, r, &response);
-                                    response.on_hover_text(format!(
-                                        "{} — double-click to add, or drag onto the canvas",
-                                        kind.name()
-                                    ));
-                                });
-                            }
-                        });
-                    });
-            });
-    }
-    fn sidebar(&mut self, ui: &mut egui::Ui) {
-        egui::Panel::left("navigator")
-            .resizable(true)
-            .default_size(192.)
-            .size_range(160.0..=300.0)
-            .show(ui, |ui| {
-                if self.image_crop.is_some() {
-                    ui.disable();
-                }
-                ui.horizontal(|ui| {
-                    ui.strong("Wireframes");
-                    if ui
-                        .small_button("+")
-                        .on_hover_text("New wireframe")
-                        .clicked()
-                    {
-                        self.editor.add_page();
-                    }
-                    if ui
-                        .small_button(if self.thumbnails { "List" } else { "Tiles" })
-                        .clicked()
-                    {
-                        self.thumbnails = !self.thumbnails;
-                    }
-                });
-                ui.separator();
-                let pages = self.editor.document.pages.clone();
-                egui::ScrollArea::vertical()
-                    .id_salt("page-navigator")
-                    .max_height((ui.available_height() - 120.).max(140.))
-                    .show(ui, |ui| {
-                        if self.image_crop.is_some() {
-                            ui.disable();
-                        }
-                        for page in pages {
-                            let page = self.editor.rendered_page(page.id).unwrap_or(Page {
-                                id: page.id,
-                                name: page.name,
-                                notes: page.notes,
-                                controls: vec![],
-                            });
-                            let selected =
-                                self.editor.definition.is_none() && self.editor.page == page.id;
-                            if self.thumbnails {
-                                let width = ui.available_width();
-                                let (r, response) =
-                                    ui.allocate_exact_size(Vec2::new(width, 144.), Sense::click());
-                                ui.painter().rect_filled(
-                                    r,
-                                    0,
-                                    if selected {
-                                        Color32::from_rgb(65, 155, 221)
-                                    } else {
-                                        Color32::from_gray(235)
-                                    },
-                                );
-                                let paper = Rect::from_min_max(
-                                    r.min + Vec2::new(10., 8.),
-                                    r.max - Vec2::new(10., 30.),
-                                );
-                                ui.painter().rect_filled(paper, 0, Color32::WHITE);
-                                let bounds = scene::page_bounds(&page);
-                                let scale = ((paper.width() - 12.) / bounds.w.max(1.))
-                                    .min((paper.height() - 12.) / bounds.h.max(1.))
-                                    .min(1.);
-                                let origin = paper.center()
-                                    - Vec2::new(bounds.w, bounds.h) * scale / 2.
-                                    - Vec2::new(bounds.x, bounds.y) * scale;
-                                let painter = ui.painter().with_clip_rect(paper);
-                                if let Ok(drawing) = self.editor.rendered_scene(page.id) {
-                                    Self::paint_scene(&painter, &drawing, origin, scale);
-                                }
-                                let caption = Rect::from_min_max(
-                                    Pos2::new(r.left() + 8., r.bottom() - 28.),
-                                    Pos2::new(r.right() - 8., r.bottom() - 5.),
-                                );
-                                ui_text::paint(
-                                    ui,
-                                    caption,
-                                    &page.name,
-                                    12.,
-                                    if selected {
-                                        Color32::WHITE
-                                    } else {
-                                        Color32::from_gray(40)
-                                    },
-                                    true,
-                                );
-                                response.widget_info(|| {
-                                    egui::WidgetInfo::labeled(
-                                        egui::WidgetType::SelectableLabel,
-                                        true,
-                                        &page.name,
-                                    )
-                                });
-                                if response.clicked() {
-                                    self.editor.switch_page(page.id);
-                                }
-                            } else if ui_text::selectable(
-                                ui,
-                                selected,
-                                &page.name,
-                                ui.available_width(),
-                            )
-                            .clicked()
-                            {
-                                self.editor.switch_page(page.id);
-                            }
-                        }
-                    });
-                ui.separator();
-                self.components_sidebar(ui);
-                egui::CollapsingHeader::new("Layers")
-                    .default_open(false)
-                    .show(ui, |ui| {
-                        if self.image_crop.is_some() {
-                            ui.disable();
-                        }
-                        let controls = self.editor.current().controls.clone();
-                        for c in controls.iter().rev() {
-                            let label = format!(
-                                "{}{}",
-                                if c.locked { "[locked] " } else { "" },
-                                self.editor.selection_label(c.id)
-                            );
-                            if ui_text::selectable(
-                                ui,
-                                self.editor.selection.contains(&c.id),
-                                &label,
-                                ui.available_width(),
-                            )
-                            .clicked()
-                            {
-                                self.editor.select(c.id, ui.input(|i| i.modifiers.shift));
-                            }
-                        }
-                    });
-            });
-    }
     fn inspector(&mut self, ui: &mut egui::Ui) {
-        egui::Panel::right("inspector").resizable(true).default_size(250.).size_range(220.0..=340.0).show(ui,|ui|{
+        let page = self.editor.selection.is_empty() && !self.editor.editing_instance();
+        let frame = if page {
+            egui::Frame::NONE.fill(Color32::from_gray(238))
+        } else {
+            egui::Frame::side_top_panel(ui.style())
+        };
+        chrome::prepare_panel_resize(
+            ui,
+            egui::Id::new("inspector"),
+            chrome::PanelEdge::Right,
+            220. ..=400.,
+            !self.canvas_input_blocked(),
+        );
+        egui::Panel::right("inspector").resizable(true).default_size(300.).size_range(220.0..=400.0).frame(frame).show(ui,|ui|{
+            if self.linked_destination_notice(ui) { return; }
+            if page { self.page_inspector(ui); return; }
             ui.add_space(10.);egui::ScrollArea::vertical().show(ui,|ui|{
                 let selected=self.editor.selected_views();
                 if selected.is_empty() && self.editor.editing_instance() {ui.heading("Component instance");ui.label("Select a child to change this instance. Reset returns a property to its source value.");return;}
-                if selected.is_empty() && self.editor.definition.is_some() { self.component_source_inspector(ui); return; }
-                if selected.is_empty(){ui.heading("Page");ui.label("Project title");let mut title=self.editor.document.title.clone();let r=ui.add(TextInput::singleline(&mut title));if r.changed(){self.editor.begin("Rename project");self.editor.document.title=title;}
-if r.lost_focus(){self.editor.commit();}
-                    ui.label("Page name");let mut name=self.editor.current().name.clone();let r=ui.add(TextInput::singleline(&mut name));if r.changed(){self.editor.begin("Rename page");self.editor.current_mut().name=name;}
-if r.lost_focus(){self.editor.commit();}
-                    ui.label("Notes");let mut notes=self.editor.current().notes.clone();let r=ui.add(TextInput::multiline(&mut notes).desired_rows(8).desired_width(f32::INFINITY).hint_text("Explain what this wireframe is for…"));if r.changed(){self.editor.begin("Edit notes");self.editor.current_mut().notes=notes;}
-if r.lost_focus(){self.editor.commit();}
-                    ui.add_space(14.);if ui.add_enabled(self.editor.document.pages.len()>1,egui::Button::new("Delete this page")).clicked(){self.editor.delete_page();}ui.separator();ui.small("Select a control on the canvas to change its content and appearance. Double-click it to edit text.");return;
-                }
                 ui.heading(if selected.len()==1{self.editor.selection_label(selected[0].id)}else{format!("{} controls",selected.len())});
-                if selected.len()==1 {let mut c=selected[0].clone();let original=c.clone();let fixed_axis=wireframe::linear_controls::Axis::for_kind(c.kind);let minimum=self.editor.resize_minimum(&[c.id]);
-                    ui.add_space(10.);ui.label("Position & size");egui::Grid::new("geometry").num_columns(4).spacing([7.,8.]).show(ui,|ui|{ui.label("X");ui.add(egui::DragValue::new(&mut c.bounds.x).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.label("Y");ui.add(egui::DragValue::new(&mut c.bounds.y).update_while_editing(false).speed(1.).range(-50_000.0..=50_000.0));ui.end_row();ui.label("W");ui.add_enabled(!matches!(c.kind,Kind::SiteMap|Kind::ColorPicker|Kind::HelpButton|Kind::Icon|Kind::Breadcrumbs|Kind::LinkBar|Kind::Playback) && !fixed_axis.is_some_and(|a| a.vertical) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id) && c.bounds.w>0.,egui::DragValue::new(&mut c.bounds.w).update_while_editing(false).speed(1.).clamp_existing_to_range(false).range(minimum.0..=10_000_f32.max(minimum.0)));ui.label("H");ui.add_enabled(!matches!(c.kind,Kind::SiteMap|Kind::ColorPicker|Kind::HelpButton|Kind::Icon|Kind::IconLabel|Kind::PointedButton|Kind::Heading|Kind::Subtitle|Kind::NumericStepper|Kind::Breadcrumbs|Kind::LinkBar|Kind::Playback) && !fixed_axis.is_some_and(|a| !a.vertical) && !self.editor.missing_component(c.id) && !self.editor.empty_container(c.id) && c.bounds.h>0.,egui::DragValue::new(&mut c.bounds.h).update_while_editing(false).speed(1.).clamp_existing_to_range(false).range(minimum.1..=10_000_f32.max(minimum.1)));ui.end_row();});
+                self.arrangement_properties(ui);
+                self.geometry_properties(ui);
+                self.auto_size_properties(ui);
+                let selected=self.editor.selected_views();
+                let movable = selected.iter().any(|c| !c.locked);
+                if selected.len()==1 {let mut c=selected[0].clone();let original=c.clone();
+                    self.layering_properties(ui);
                     if c.group.is_none() && !self.typed_properties(ui, c.id) {ui.add_space(10.);ui.label("Text");wireframe::text_entry::multiline(ui, &mut c.text, 4, false);if c.kind==Kind::Table {ui.small("Separate columns with commas and rows with new lines.");}
 if c.kind==Kind::Tabs {ui.small("Separate tabs with commas.");}
                     ui.horizontal(|ui|{ui.label("Size");ui.add(egui::DragValue::new(&mut c.font_size).range(6.0..=120.0));ui.checkbox(&mut c.bold,"Bold");});
                     ui.horizontal(|ui|{ui.label("Fill");ui.color_edit_button_srgb(&mut c.fill);});if matches!(c.kind,Kind::Checkbox|Kind::Radio|Kind::Toggle){ui.checkbox(&mut c.checked,"Selected state");}
                     }
-                    if !self.editor.editing_instance() {ui.checkbox(&mut c.locked,"Lock position and content");}
-                    if c.group.is_some() || (fixed_axis.is_none() && !matches!(c.kind, Kind::SiteMap | Kind::Popover | Kind::StreetMap | Kind::ModalOverlay | Kind::ColorPicker | Kind::HelpButton | Kind::ButtonBar | Kind::Breadcrumbs | Kind::LinkBar | Kind::Tabs | Kind::VerticalTabs | Kind::CheckboxGroup | Kind::RadioGroup | Kind::Menu | Kind::MenuBar | Kind::Tree | Kind::Accordion | Kind::Alert | Kind::AppBar | Kind::Playback | Kind::Webcam | Kind::Video | Kind::CoverFlow | Kind::ColumnChart | Kind::BarChart | Kind::LineChart | Kind::PieChart | Kind::HorizontalBrace | Kind::VerticalBrace | Kind::RedCross | Kind::ScratchOut | Kind::TextBlock | Kind::TextLine | Kind::TagCloud | Kind::Callout | Kind::StickyNote | Kind::Tooltip)) {
-                    let link_caption=c.link.and_then(|id|self.editor.document.pages.iter().find(|p|p.id==id).map(|p|p.name.clone())).unwrap_or("No page link".into());
-                    ui_text::combo_box(ui,"page-link",&link_caption,|ui|{if ui_text::selectable_value(ui,&mut c.link,None,"No page link").clicked(){ui.close();}for p in &self.editor.document.pages {if ui_text::selectable_value(ui,&mut c.link,Some(p.id),&p.name).clicked(){ui.close();}}});
+                    let mut own_lock=self.editor.own_locked(c.id);if ui.checkbox(&mut own_lock,"Lock position").changed(){self.editor.lock(own_lock);c.locked=self.editor.position_locked(c.id);}
+                    if self.whole_link_available(&c) {
+                    let typed_link = self.editor.control_properties(c.id).is_some_and(|(spec,_)| spec.property("link").is_some_and(|field| field.visible));
+                    if c.group.is_some() || !typed_link { self.whole_link_properties(ui,c.id); }
                     }
                     if self.editor.is_group(c.id) && ui.button("Edit group contents").clicked(){self.editor.enter(c.id);}
-                    if c!=original {self.editor.begin("Edit properties");if original.locked {c.bounds=original.bounds;c.text=original.text;c.font_size=original.font_size;c.bold=original.bold;c.fill=original.fill;c.checked=original.checked;c.link=original.link;}
+                    if c!=original {if c.link == original.link {c.link=self.editor.node_link(c.id).and_then(|link|match link {wireframe::document::Link::Page(id)=>Some(id),_=>None});}self.editor.begin("Edit properties");if original.locked {c.bounds=original.bounds;}
                         self.editor.update_control(c);}
                     if !wireframe::text_entry::is_focused(ui.ctx()) && !ui.ctx().text_edit_focused()&&!ui.input(|i|i.pointer.any_down()){self.editor.commit();}
-                }else {ui.label("Align");ui.horizontal(|ui|{for(i,name)in ["Left","Center","Right"].iter().enumerate(){if ui.button(*name).clicked(){self.editor.align(0,i);}}});ui.horizontal(|ui|{for(i,name)in ["Top","Middle","Bottom"].iter().enumerate(){if ui.button(*name).clicked(){self.editor.align(1,i);}}});ui.horizontal(|ui|{if ui.button("Spread X").clicked(){self.editor.distribute(0);}
-if ui.button("Spread Y").clicked(){self.editor.distribute(1);}});}
+                }else {self.layering_properties(ui);self.selection_properties(ui);}
+                self.inline_link_properties(ui, &selected.iter().map(|c| c.id).collect::<Vec<_>>());
                 if selected.len() == 1 { self.group_crop_properties(ui, selected[0].id); }
                 self.component_actions(ui);
-                if self.editor.editing_instance() {ui.small("Edit the source to add, remove or rearrange children.");return;}
-                ui.add_space(14.);ui.separator();ui.horizontal(|ui|{if ui.button("Group").clicked(){self.editor.group();}
-if ui.button("Ungroup").clicked(){self.editor.ungroup();}});ui.horizontal(|ui|{if ui.button("To front").clicked(){self.editor.reorder(true);}
-if ui.button("To back").clicked(){self.editor.reorder(false);}});ui.horizontal(|ui|{if ui.button("Duplicate").clicked(){self.editor.duplicate();}
-if ui.button("Delete").clicked(){self.editor.delete();}});
                 if selected.len()>1 {ui.horizontal(|ui|{if ui.button("Lock").clicked(){self.editor.lock(true);}
 if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
+                if self.editor.editing_instance() {ui.small("Edit the source to add, remove or rearrange children.");return;}
+                ui.add_space(14.);ui.separator();ui.horizontal(|ui|{if ui.add_enabled(movable, egui::Button::new("Group")).clicked(){self.editor.group();}
+if ui.add_enabled(movable, egui::Button::new("Ungroup")).clicked(){self.editor.ungroup();}});ui.horizontal(|ui|{if ui.button("Duplicate").clicked(){self.editor.duplicate();}
+if ui.add_enabled(movable, egui::Button::new("Delete")).clicked(){self.editor.delete();}});
+
             });
         });
-    }
-    fn fit(&mut self) {
-        let b = scene::page_bounds(
-            &self
-                .editor
-                .rendered_page(self.editor.surface_id())
-                .unwrap_or_else(|_| self.editor.current()),
-        );
-        let size = self.canvas_rect.size();
-        self.zoom = ((size.x - 100.) / b.w.max(1.))
-            .min((size.y - 100.) / b.h.max(1.))
-            .clamp(0.2, 2.);
-        self.pan = Vec2::new(
-            (size.x - b.w * self.zoom) / 2. - b.x * self.zoom,
-            (size.y - b.h * self.zoom) / 2. - b.y * self.zoom,
-        );
     }
     fn screen(&self, p: [f32; 2]) -> Pos2 {
         self.canvas_rect.min + self.pan + Vec2::new(p[0], p[1]) * self.zoom
@@ -1243,6 +779,10 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
         origin: Pos2,
         scale: f32,
     ) {
+        let scene_start = painter.ctx().graphics(|g| {
+            g.get(painter.layer_id())
+                .map_or(0, |list| list.next_idx().0)
+        });
         let mut masks = Vec::new();
         let mut opacity_scopes = Vec::new();
         for item in &drawing.items {
@@ -1349,6 +889,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                 }
             }
         }
+        wireframe::render::compositor::Compositor::resolve(painter, scene_start);
     }
     fn paint_at(painter: &egui::Painter, p: Primitive, origin: Pos2, scale: f32) {
         let screen = |p: [f32; 2]| origin + Vec2::new(p[0], p[1]) * scale;
@@ -1414,6 +955,15 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                 indices,
                 fill,
             } => {
+                if wireframe::render::coverage::paint(
+                    painter, &points, &indices, fill, origin, scale,
+                )
+                .is_ok()
+                {
+                    return;
+                }
+                // Preserve the previous drawing path if invalid or out-of-range
+                // geometry cannot be represented by the coverage renderer.
                 let mut mesh = egui::Mesh::default();
                 let color = Color32::from_rgb(fill[0], fill[1], fill[2]);
                 for point in points {
@@ -1472,7 +1022,8 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
         if single
             && matches!(
                 selected[0].kind,
-                Kind::SiteMap
+                Kind::Arrow
+                    | Kind::SiteMap
                     | Kind::ColorPicker
                     | Kind::HelpButton
                     | Kind::Icon
@@ -1484,7 +1035,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
             return vec![];
         }
         let axis = if single {
-            wireframe::linear_controls::Axis::for_kind(selected[0].kind)
+            self.editor.linear_axis(selected[0].id)
         } else {
             None
         };
@@ -1557,36 +1108,28 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE.fill(Color32::WHITE))
             .show(ui, |ui| {
-                if self.canvas_input_blocked() {
+                if self.canvas_input_blocked() || chrome::panel_owns_pointer(ui.ctx()) {
                     self.end_pointer_gestures();
                     ui.disable();
                 }
                 let (response, painter) =
                     ui.allocate_painter(ui.available_size(), Sense::click_and_drag());
                 self.canvas_rect = response.rect;
+                self.canvas_focus_id = Some(response.id);
                 let ctx = ui.ctx().clone();
-                if response.hovered() {
-                    let (scroll, zoom_mod) = ui.input(|i| {
-                        (
-                            i.smooth_scroll_delta,
-                            i.modifiers.command || i.modifiers.ctrl,
-                        )
-                    });
-                    if zoom_mod && scroll.y != 0. {
-                        let pointer = ui
-                            .input(|i| i.pointer.hover_pos())
-                            .unwrap_or(response.rect.center());
-                        let before = self.world(pointer);
-                        self.zoom = (self.zoom * (scroll.y * 0.003).exp()).clamp(0.2, 4.);
-                        self.pan =
-                            pointer - response.rect.min - Vec2::new(before.x, before.y) * self.zoom;
-                    } else {
-                        self.pan += scroll;
-                    }
-                    let pinch = ui.input(|i| i.zoom_delta());
-                    if pinch != 1.0 {
-                        self.zoom = (self.zoom * pinch).clamp(0.2, 4.);
-                    }
+                self.sync_viewport();
+                self.viewports.canvas_layer = Some(response.layer_id);
+                if self.present {
+                    self.presentation_canvas(ui, &response, &painter);
+                    return;
+                }
+                if !self.canvas_input_blocked()
+                    && self.text_edit.is_none()
+                    && ui.input(|i| i.focused)
+                {
+                    self.viewport_input(&ctx);
+                } else {
+                    self.reset_canvas_scroll();
                 }
                 self.library_drag_update(&ctx);
                 if !ui.input(|i| i.focused) {
@@ -1602,434 +1145,593 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     self.crop_canvas(ui, &response, &painter);
                     return;
                 }
-                // Native automation and fast mice can deliver a complete drag between
-                // paints. Preserve the press origin even after egui releases its state.
-                let instant_drag = if ui.input(|i| i.focused && !i.key_pressed(Key::Escape))
-                    && !self.save_busy()
-                    && !self.recovery_chooser_open()
-                    && self.pending.is_none()
-                    && self.text_edit.is_none()
-                    && self.error.is_none()
-                    && self.recovery_offer.is_none()
-                {
-                    let mut completed = None;
-                    for event in ui.input(|i| i.events.clone()) {
-                        if let egui::Event::PointerButton {
-                            pos,
-                            button: egui::PointerButton::Primary,
-                            pressed,
-                            ..
-                        } = event
-                        {
-                            if pressed {
-                                self.canvas_press = (response.rect.contains(pos)
-                                    && ctx.layer_id_at(pos) == Some(ui.layer_id()))
-                                .then_some(pos);
-                            } else if let Some(start) = self.canvas_press.take()
-                                && start.distance(pos) > 6.
+                if self.review_pointer(ui) {
+                    if let Ok(scene) = self.editor.editing_scene() {
+                        Self::paint_scene(
+                            &painter,
+                            &scene,
+                            self.canvas_rect.min + self.pan,
+                            self.zoom,
+                        );
+                    }
+                    self.paint_review_markers(&painter);
+                    return;
+                }
+                let quick_draw_used =
+                    self.unlock_press.is_none() && self.quick_draw_input(ui, &response);
+                let unlock_used = !quick_draw_used && self.unlock_badge_input(ui, &response);
+                if !quick_draw_used && !unlock_used {
+                    // Native automation and fast mice can deliver a complete drag between
+                    // paints. Preserve the press origin even after egui releases its state.
+                    let instant_drag = if ui.input(|i| i.focused && !i.key_pressed(Key::Escape))
+                        && !self.save_busy()
+                        && !self.recovery_chooser_open()
+                        && self.pending.is_none()
+                        && self.text_edit.is_none()
+                        && self.icon_dialog.is_none()
+                        && self.error.is_none()
+                        && self.recovery_offer.is_none()
+                    {
+                        let mut completed = None;
+                        for event in ui.input(|i| i.events.clone()) {
+                            if let egui::Event::PointerButton {
+                                pos,
+                                button: egui::PointerButton::Primary,
+                                pressed,
+                                ..
+                            } = event
                             {
-                                completed = Some((start, pos));
+                                if pressed {
+                                    self.canvas_press = (response.rect.contains(pos)
+                                        && ctx.layer_id_at(pos) == Some(ui.layer_id()))
+                                    .then_some(pos);
+                                } else if let Some(start) = self.canvas_press.take()
+                                    && start.distance(pos) > 6.
+                                {
+                                    completed = Some((start, pos));
+                                }
                             }
                         }
-                    }
-                    completed
-                } else {
-                    self.canvas_press = None;
-                    None
-                };
-                let pointer = instant_drag
-                    .map(|(_, end)| end)
-                    .or(response.interact_pointer_pos());
-                if self.drag.is_none()
-                    && (response.drag_started() || instant_drag.is_some())
-                    && let Some(pos) = instant_drag
-                        .map(|(start, _)| start)
-                        .or(ui.input(|i| i.pointer.press_origin()))
-                        .or(pointer)
-                {
-                    let start = self.world(pos);
-                    let space = ui.input(|i| {
-                        i.key_down(Key::Space) || i.pointer.button_down(egui::PointerButton::Middle)
-                    });
-                    let resize = self
-                        .editor
-                        .movable_bounds()
-                        .and_then(|b| {
-                            self.resize_handles(b)
-                                .into_iter()
-                                .find(|(_, point)| point.distance(pos) < 7.)
-                        })
-                        .filter(|_| self.editor.selected_views().iter().any(|c| !c.locked));
-                    if space {
-                        self.drag = Some(Drag::Pan {
-                            start: pos,
-                            pan: self.pan,
-                        });
-                    } else if let Some((handle, _)) = resize.filter(|_| !self.present) {
-                        self.editor.begin("Resize");
-                        self.drag = Some(Drag::Resize {
-                            start,
-                            original: self
-                                .editor
-                                .selected_views()
-                                .iter()
-                                .filter(|c| !c.locked)
-                                .map(|c| (c.id, c.bounds))
-                                .collect(),
-                            bounds: self.editor.movable_bounds().unwrap(),
-                            handle,
-                            targets: self
-                                .editor
-                                .alignment_targets(5.)
-                                .unwrap_or_else(|_| Targets::new(5.)),
-                        });
+                        completed
                     } else {
-                        let hit = self.editor.hit(start.x, start.y).map(|c| (c.id, c.locked));
-                        if let Some((id, locked)) = hit {
-                            if !self.editor.selection.contains(&id) {
-                                self.editor.select(id, ui.input(|i| i.modifiers.shift));
-                            }
-                            if !locked && !self.present {
-                                self.editor.begin("Move");
-                                self.drag = Some(Drag::Move {
+                        self.canvas_press = None;
+                        None
+                    };
+                    let pointer = instant_drag
+                        .map(|(_, end)| end)
+                        .or(response.interact_pointer_pos());
+                    if self.drag.is_none()
+                        && (response.drag_started() || instant_drag.is_some())
+                        && let Some(pos) = instant_drag
+                            .map(|(start, _)| start)
+                            .or(ui.input(|i| i.pointer.press_origin()))
+                            .or(pointer)
+                    {
+                        let start = self.world(pos);
+                        let space = ui.input(|i| {
+                            i.key_down(Key::Space)
+                                || i.pointer.button_down(egui::PointerButton::Middle)
+                        });
+                        let resize = self
+                            .editor
+                            .movable_bounds()
+                            .and_then(|b| {
+                                self.resize_handles(b)
+                                    .into_iter()
+                                    .find(|(_, point)| point.distance(pos) < 7.)
+                            })
+                            .filter(|_| self.editor.selected_views().iter().any(|c| !c.locked));
+                        if space {
+                            self.drag = Some(Drag::Pan {
+                                start: pos,
+                                pan: self.pan,
+                            });
+                        } else if let Some(handle) = self
+                            .arrow_handles()
+                            .into_iter()
+                            .find(|h| h.position.distance(pos) < 7.)
+                        {
+                            self.editor.begin("Move arrow handle");
+                            self.drag = Some(Drag::Arrow {
+                                id: handle.id,
+                                handle: handle.kind,
+                                origin: handle.origin,
+                                offset: handle.offset,
+                            });
+                        } else if let Some((handle, _)) = resize.filter(|_| !self.present) {
+                            self.editor.begin("Resize");
+                            self.drag = Some(Drag::Resize {
+                                start,
+                                original: self
+                                    .editor
+                                    .selected_views()
+                                    .iter()
+                                    .filter(|c| !c.locked)
+                                    .map(|c| (c.id, c.bounds))
+                                    .collect(),
+                                bounds: self.editor.movable_bounds().unwrap(),
+                                handle,
+                                targets: self
+                                    .editor
+                                    .alignment_targets(5.)
+                                    .unwrap_or_else(|_| Targets::new(5.)),
+                            });
+                        } else {
+                            let hit = self.editor.hit(start.x, start.y).map(|c| (c.id, c.locked));
+                            if let Some((id, locked)) = hit {
+                                if !self.editor.selection.contains(&id)
+                                    && (!self.editor.own_locked(id)
+                                        || ui.input(|i| i.modifiers.command))
+                                {
+                                    self.editor.select(id, ui.input(|i| i.modifiers.shift));
+                                }
+                                if !locked && !self.present {
+                                    self.editor.begin("Move");
+                                    self.drag = Some(Drag::Move {
+                                        start,
+                                        targets: self
+                                            .editor
+                                            .alignment_targets(5.)
+                                            .unwrap_or_else(|_| Targets::new(5.)),
+                                        duplicate_targets: self
+                                            .editor
+                                            .alignment_targets_with_selection(5., true)
+                                            .unwrap_or_else(|_| Targets::new(5.)),
+                                        motion: Motion::default(),
+                                        original: self
+                                            .editor
+                                            .selected_views()
+                                            .iter()
+                                            .filter(|c| !c.locked)
+                                            .map(|c| (c.id, c.bounds))
+                                            .collect(),
+                                    });
+                                }
+                            } else if !self.present {
+                                let previous = if ui.input(|i| i.modifiers.shift) {
+                                    self.editor.selection.clone()
+                                } else {
+                                    HashSet::new()
+                                };
+                                self.editor.selection = previous.clone();
+                                self.drag = Some(Drag::Marquee {
                                     start,
-                                    targets: self
-                                        .editor
-                                        .alignment_targets(5.)
-                                        .unwrap_or_else(|_| Targets::new(5.)),
-                                    motion: Motion::default(),
-                                    original: self
-                                        .editor
-                                        .selected_views()
-                                        .iter()
-                                        .filter(|c| !c.locked)
-                                        .map(|c| (c.id, c.bounds))
-                                        .collect(),
+                                    now: start,
+                                    previous,
                                 });
                             }
-                        } else if !self.present {
-                            let previous = if ui.input(|i| i.modifiers.shift) {
-                                self.editor.selection.clone()
-                            } else {
-                                HashSet::new()
-                            };
-                            self.editor.selection = previous.clone();
-                            self.drag = Some(Drag::Marquee {
-                                start,
-                                now: start,
-                                previous,
-                            });
                         }
                     }
-                }
-                let scrolled = self.scroll_during_drag(&ctx);
-                if (scrolled
-                    || response.dragged()
-                    || response.drag_stopped()
-                    || instant_drag.is_some())
-                    && let (Some(pos), Some(drag)) = (pointer, self.drag.take())
-                {
-                    let now = self.world(pos);
-                    match drag {
-                        Drag::Pan { start, pan } => {
-                            self.pan = pan + (pos - start);
-                            self.drag = Some(Drag::Pan { start, pan });
-                        }
-                        Drag::Move {
-                            start,
-                            original,
-                            targets,
-                            mut motion,
-                        } => {
-                            let mut delta = now - start;
-                            let modifiers = ui.input(|i| i.modifiers);
-                            let constraint = if modifiers.shift {
-                                if delta.x.abs() > delta.y.abs() {
-                                    delta.y = 0.;
-                                    Constraint::Horizontal
-                                } else {
-                                    delta.x = 0.;
-                                    Constraint::Vertical
-                                }
-                            } else {
-                                Constraint::Free
-                            };
-                            let mut fast = motion.too_fast();
-                            let events = ui.input(|i| i.events.clone());
-                            // A coalesced native frame may contain pointer travel before
-                            // the press. Only movement belonging to this gesture counts.
-                            let first = events
-                                .iter()
-                                .rposition(|event| {
-                                    matches!(
-                                        event,
-                                        egui::Event::PointerButton {
-                                            button: egui::PointerButton::Primary,
-                                            pressed: true,
-                                            ..
-                                        }
-                                    )
-                                })
-                                .map_or(0, |index| index + 1);
-                            for event in events.into_iter().skip(first) {
-                                if let egui::Event::PointerMoved(p) = event {
-                                    fast = motion.too_fast();
-                                    let d = self.world(p) - start;
-                                    motion.push([d.x, d.y]);
-                                }
-                            }
-                            if response.drag_stopped() || instant_drag.is_some() {
-                                fast = motion.too_fast();
-                            }
-                            self.alignment_guides.clear();
-                            let bypass = modifiers.command;
-                            if !bypass
-                                && !self.snap
-                                && !fast
-                                && let Some(bounds) =
-                                    original.iter().map(|(_, b)| *b).reduce(Bounds::union)
-                            {
-                                let wanted = Bounds::new(
-                                    bounds.x + delta.x,
-                                    bounds.y + delta.y,
-                                    bounds.w,
-                                    bounds.h,
+                    let scrolled = self.scroll_during_drag(&ctx);
+                    if (scrolled
+                        || response.dragged()
+                        || (matches!(self.drag, Some(Drag::Move { .. }))
+                            && ui.input(|i| {
+                                i.events
+                                    .iter()
+                                    .any(|e| matches!(e, egui::Event::ModifiersChanged(_)))
+                            }))
+                        || response.drag_stopped()
+                        || instant_drag.is_some())
+                        && let (Some(pos), Some(drag)) = (pointer, self.drag.take())
+                    {
+                        let now = self.world(pos);
+                        match drag {
+                            Drag::Arrow {
+                                id,
+                                handle,
+                                origin,
+                                offset,
+                            } => {
+                                self.editor.reset_preview();
+                                let target = wireframe::document::Point::new(
+                                    now.x - origin.x + offset.x,
+                                    now.y - origin.y + offset.y,
                                 );
-                                let result = targets.moved(wanted, constraint);
-                                if result.bounds.x >= 0. && result.bounds.y >= 0. {
-                                    delta = Vec2::new(
-                                        result.bounds.x - bounds.x,
-                                        result.bounds.y - bounds.y,
-                                    );
-                                    self.alignment_guides = result.guides;
+                                if let Err(error) = self.editor.move_arrow_handle(
+                                    id,
+                                    handle,
+                                    target,
+                                    ui.input(|i| i.modifiers.shift),
+                                ) {
+                                    self.error = Some(error);
                                 }
+                                self.drag = Some(Drag::Arrow {
+                                    id,
+                                    handle,
+                                    origin,
+                                    offset,
+                                });
                             }
-                            let grid = self.snap && !bypass;
-                            self.editor.selected_mut(|c| {
-                                if let Some((_, b)) = original.iter().find(|v| v.0 == c.id) {
-                                    c.bounds.x = (b.x + delta.x).clamp(-50_000., 50_000.);
-                                    c.bounds.y = (b.y + delta.y).clamp(-50_000., 50_000.);
-                                    if grid {
-                                        c.bounds.x = (c.bounds.x / 10.).round() * 10.;
-                                        c.bounds.y = (c.bounds.y / 10.).round() * 10.;
-                                    }
-                                }
-                            });
-                            self.drag = Some(Drag::Move {
+                            Drag::Pan { start, pan } => {
+                                self.pan = pan + (pos - start);
+                                self.drag = Some(Drag::Pan { start, pan });
+                            }
+                            Drag::Move {
                                 start,
                                 original,
                                 targets,
-                                motion,
-                            });
-                        }
-                        Drag::Resize {
-                            start,
-                            original,
-                            bounds,
-                            handle,
-                            targets,
-                        } => {
-                            self.editor.reset_preview();
-                            let mut delta = now - start;
-                            let modifiers = ui.input(|i| i.modifiers);
-                            let bypass = modifiers.command || modifiers.alt;
-                            if self.snap && !bypass {
-                                delta.x = (delta.x / 10.).round() * 10.;
-                                delta.y = (delta.y / 10.).round() * 10.;
-                            }
-                            let selected = self.editor.selected_views();
-                            let minimum = self.editor.resize_minimum(
-                                &original.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
-                            );
-                            let axis = (selected.len() == 1 && original.len() == 1)
-                                .then(|| selected[0].kind)
-                                .and_then(wireframe::linear_controls::Axis::for_kind);
-                            let scalable_media = selected.len() == 1
-                                && original.len() == 1
-                                && matches!(
-                                    selected[0].kind,
-                                    Kind::Popover
-                                        | Kind::StreetMap
-                                        | Kind::ModalOverlay
-                                        | Kind::Webcam
-                                        | Kind::Video
-                                        | Kind::CoverFlow
-                                        | Kind::ColumnChart
-                                        | Kind::BarChart
-                                        | Kind::LineChart
-                                        | Kind::PieChart
-                                        | Kind::HorizontalBrace
-                                        | Kind::VerticalBrace
-                                        | Kind::RedCross
-                                        | Kind::ScratchOut
-                                        | Kind::TextBlock
-                                        | Kind::TextLine
-                                        | Kind::TagCloud
-                                        | Kind::Heading
-                                        | Kind::Subtitle
-                                        | Kind::NumericStepper
-                                        | Kind::Callout
-                                        | Kind::StickyNote
-                                        | Kind::Tooltip
-                                );
-                            let aspect = modifiers.shift
-                                && axis.is_none()
-                                && !(selected.len() == 1
-                                    && matches!(
-                                        selected[0].kind,
-                                        Kind::Heading | Kind::Subtitle | Kind::NumericStepper
-                                    ));
-                            let mut resized = if let Some(axis) = axis {
-                                axis.resize(
-                                    bounds,
-                                    if axis.vertical { handle.1 } else { handle.0 },
-                                    if axis.vertical { delta.y } else { delta.x },
-                                )
-                            } else if scalable_media {
-                                wireframe::media_controls::resize_placeholder(
-                                    bounds,
-                                    handle,
-                                    (delta.x, delta.y),
-                                    aspect,
-                                )
-                            } else {
-                                bounds.resized_with_minimum_size(
-                                    handle,
-                                    (delta.x, delta.y),
-                                    aspect,
-                                    minimum,
-                                )
-                            };
-                            self.alignment_guides.clear();
-                            if !self.snap && !bypass {
-                                let result = targets.resized(
-                                    resized,
-                                    handle,
-                                    aspect.then_some(bounds.w / bounds.h),
-                                );
-                                if (!scalable_media
-                                    || (result.bounds.w >= 10. && result.bounds.h >= 10.))
-                                    && (handle.0 == 0 || result.bounds.w >= minimum.0)
-                                    && (handle.1 == 0 || result.bounds.h >= minimum.1)
-                                    && axis.is_none_or(|a| {
-                                        if a.vertical {
-                                            result.bounds.h >= 10.
-                                        } else {
-                                            result.bounds.w >= 10.
-                                        }
+                                duplicate_targets,
+                                mut motion,
+                            } => {
+                                let mut delta = now - start;
+                                let modifiers = ui.input(|i| {
+                                    i.events
+                                        .iter()
+                                        .rev()
+                                        .find_map(|e| {
+                                            if let egui::Event::PointerButton {
+                                                button: egui::PointerButton::Primary,
+                                                pressed: false,
+                                                modifiers,
+                                                ..
+                                            } = e
+                                            {
+                                                Some(*modifiers)
+                                            } else {
+                                                None
+                                            }
+                                        })
+                                        .unwrap_or(i.modifiers)
+                                });
+                                let duplicate = modifiers.alt && self.editor.can_duplicate_move();
+                                let constraint = if modifiers.shift {
+                                    if delta.x.abs() > delta.y.abs() {
+                                        delta.y = 0.;
+                                        Constraint::Horizontal
+                                    } else {
+                                        delta.x = 0.;
+                                        Constraint::Vertical
+                                    }
+                                } else {
+                                    Constraint::Free
+                                };
+                                let mut fast = motion.too_fast();
+                                let events = ui.input(|i| i.events.clone());
+                                // A coalesced native frame may contain pointer travel before
+                                // the press. Only movement belonging to this gesture counts.
+                                let first = events
+                                    .iter()
+                                    .rposition(|event| {
+                                        matches!(
+                                            event,
+                                            egui::Event::PointerButton {
+                                                button: egui::PointerButton::Primary,
+                                                pressed: true,
+                                                ..
+                                            }
+                                        )
                                     })
+                                    .map_or(0, |index| index + 1);
+                                for event in events.into_iter().skip(first) {
+                                    if let egui::Event::PointerMoved(p) = event {
+                                        fast = motion.too_fast();
+                                        let d = self.world(p) - start;
+                                        motion.push([d.x, d.y]);
+                                    }
+                                }
+                                if response.drag_stopped() || instant_drag.is_some() {
+                                    fast = motion.too_fast();
+                                }
+                                self.alignment_guides.clear();
+                                let bypass = modifiers.command;
+                                if !bypass
+                                    && !self.snap
+                                    && !fast
+                                    && let Some(bounds) =
+                                        original.iter().map(|(_, b)| *b).reduce(Bounds::union)
                                 {
-                                    resized = result.bounds;
-                                    self.alignment_guides = result.guides;
+                                    let wanted = Bounds::new(
+                                        bounds.x + delta.x,
+                                        bounds.y + delta.y,
+                                        bounds.w,
+                                        bounds.h,
+                                    );
+                                    let result = if duplicate {
+                                        &duplicate_targets
+                                    } else {
+                                        &targets
+                                    }
+                                    .moved(wanted, constraint);
+                                    if result.bounds.x >= 0. && result.bounds.y >= 0. {
+                                        delta = Vec2::new(
+                                            result.bounds.x - bounds.x,
+                                            result.bounds.y - bounds.y,
+                                        );
+                                        self.alignment_guides = result.guides;
+                                    }
                                 }
+                                let grid = self.snap && !bypass;
+                                let offsets = original
+                                    .iter()
+                                    .map(|(id, b)| {
+                                        let mut x = (b.x + delta.x).clamp(-50_000., 50_000.);
+                                        let mut y = (b.y + delta.y).clamp(-50_000., 50_000.);
+                                        if grid {
+                                            x = (x / 10.).round() * 10.;
+                                            y = (y / 10.).round() * 10.;
+                                        }
+                                        (*id, wireframe::document::Point::new(x - b.x, y - b.y))
+                                    })
+                                    .collect::<Vec<_>>();
+                                if let Err(error) = self.editor.preview_move(&offsets, duplicate) {
+                                    self.error = Some(error);
+                                }
+                                self.drag = Some(Drag::Move {
+                                    start,
+                                    original,
+                                    targets,
+                                    duplicate_targets,
+                                    motion,
+                                });
                             }
-                            self.editor.selected_mut(|c| {
-                                if let Some((_, b)) = original.iter().find(|v| v.0 == c.id) {
-                                    let sx = if bounds.w > 0. {
-                                        resized.w / bounds.w
-                                    } else {
-                                        1.
-                                    };
-                                    let sy = if bounds.h > 0. {
-                                        resized.h / bounds.h
-                                    } else {
-                                        1.
-                                    };
-                                    c.bounds.x = resized.x + (b.x - bounds.x) * sx;
-                                    c.bounds.y = resized.y + (b.y - bounds.y) * sy;
-                                    c.bounds.w = if b.w == 0. { 0. } else { (b.w * sx).max(1.) };
-                                    c.bounds.h = if b.h == 0. { 0. } else { (b.h * sy).max(1.) };
-                                }
-                            });
-                            self.drag = Some(Drag::Resize {
+                            Drag::Resize {
                                 start,
                                 original,
                                 bounds,
                                 handle,
                                 targets,
-                            });
-                        }
-                        Drag::Marquee {
-                            start, previous, ..
-                        } => {
-                            let r = Bounds::new(
-                                start.x.min(now.x),
-                                start.y.min(now.y),
-                                (start.x - now.x).abs(),
-                                (start.y - now.y).abs(),
-                            );
-                            self.editor.select_area(r, &previous);
-                            self.drag = Some(Drag::Marquee {
-                                start,
-                                now,
-                                previous,
-                            });
+                            } => {
+                                self.editor.reset_preview();
+                                let mut delta = now - start;
+                                let modifiers = ui.input(|i| i.modifiers);
+                                let bypass = modifiers.command || modifiers.alt;
+                                if self.snap && !bypass {
+                                    delta.x = (delta.x / 10.).round() * 10.;
+                                    delta.y = (delta.y / 10.).round() * 10.;
+                                }
+                                let selected = self.editor.selected_views();
+                                let minimum = self.editor.resize_minimum(
+                                    &original.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
+                                );
+                                let axis = (selected.len() == 1 && original.len() == 1)
+                                    .then(|| selected[0].id)
+                                    .and_then(|id| self.editor.linear_axis(id));
+                                let scalable_media = selected.len() == 1
+                                    && original.len() == 1
+                                    && matches!(
+                                        selected[0].kind,
+                                        Kind::Popover
+                                            | Kind::StreetMap
+                                            | Kind::ModalOverlay
+                                            | Kind::Webcam
+                                            | Kind::Video
+                                            | Kind::CoverFlow
+                                            | Kind::ColumnChart
+                                            | Kind::BarChart
+                                            | Kind::LineChart
+                                            | Kind::PieChart
+                                            | Kind::HorizontalBrace
+                                            | Kind::VerticalBrace
+                                            | Kind::RedCross
+                                            | Kind::ScratchOut
+                                            | Kind::TextBlock
+                                            | Kind::TextLine
+                                            | Kind::TagCloud
+                                            | Kind::Heading
+                                            | Kind::Subtitle
+                                            | Kind::NumericStepper
+                                            | Kind::Callout
+                                            | Kind::StickyNote
+                                            | Kind::Tooltip
+                                    );
+                                let aspect = modifiers.shift
+                                    && axis.is_none()
+                                    && !(selected.len() == 1
+                                        && matches!(
+                                            selected[0].kind,
+                                            Kind::Heading | Kind::Subtitle | Kind::NumericStepper
+                                        ));
+                                let mut resized = if let Some(axis) = axis {
+                                    axis.resize(
+                                        bounds,
+                                        if axis.vertical { handle.1 } else { handle.0 },
+                                        if axis.vertical { delta.y } else { delta.x },
+                                    )
+                                } else if scalable_media {
+                                    wireframe::media_controls::resize_placeholder(
+                                        bounds,
+                                        handle,
+                                        (delta.x, delta.y),
+                                        aspect,
+                                    )
+                                } else {
+                                    bounds.resized_with_minimum_size(
+                                        handle,
+                                        (delta.x, delta.y),
+                                        aspect,
+                                        minimum,
+                                    )
+                                };
+                                self.alignment_guides.clear();
+                                if !self.snap && !bypass {
+                                    let result = targets.resized(
+                                        resized,
+                                        handle,
+                                        aspect.then_some(bounds.w / bounds.h),
+                                    );
+                                    if (!scalable_media
+                                        || (result.bounds.w >= 10. && result.bounds.h >= 10.))
+                                        && (handle.0 == 0 || result.bounds.w >= minimum.0)
+                                        && (handle.1 == 0 || result.bounds.h >= minimum.1)
+                                        && axis.is_none_or(|a| {
+                                            if a.vertical {
+                                                result.bounds.h >= 10.
+                                            } else {
+                                                result.bounds.w >= 10.
+                                            }
+                                        })
+                                    {
+                                        resized = result.bounds;
+                                        self.alignment_guides = result.guides;
+                                    }
+                                }
+                                self.editor.update_selection_bounds(resized);
+                                self.drag = Some(Drag::Resize {
+                                    start,
+                                    original,
+                                    bounds,
+                                    handle,
+                                    targets,
+                                });
+                            }
+                            Drag::Marquee {
+                                start, previous, ..
+                            } => {
+                                let r = Bounds::new(
+                                    start.x.min(now.x),
+                                    start.y.min(now.y),
+                                    (start.x - now.x).abs(),
+                                    (start.y - now.y).abs(),
+                                );
+                                self.editor.select_area(r, &previous);
+                                self.drag = Some(Drag::Marquee {
+                                    start,
+                                    now,
+                                    previous,
+                                });
+                            }
                         }
                     }
-                }
-                if response.drag_stopped() || instant_drag.is_some() {
-                    self.editor.commit();
-                    self.drag = None;
-                    self.drag_scroll = None;
-                    self.alignment_guides.clear();
-                }
-                if response.clicked()
-                    && instant_drag.is_none()
-                    && let Some(pos) = pointer
-                {
-                    if let Some(id) = ctx.memory(|m| m.focused()) {
-                        ctx.memory_mut(|m| m.surrender_focus(id));
+                    if response.drag_stopped() || instant_drag.is_some() {
+                        self.editor.commit();
+                        self.drag = None;
+                        self.drag_scroll = None;
+                        self.alignment_guides.clear();
                     }
-                    let p = self.world(pos);
-                    let hit = if self.present {
-                        self.editor
-                            .layers(self.editor.surface_id())
-                            .ok()
-                            .and_then(|layers| {
-                                layers
-                                    .into_iter()
-                                    .rev()
-                                    .find(|l| {
-                                        l.control.bounds.contains(p.x, p.y)
-                                            && l.clip.is_none_or(|b| b.contains(p.x, p.y))
-                                    })
-                                    .map(|l| l.control)
-                            })
-                    } else {
-                        self.editor.hit(p.x, p.y)
-                    };
-                    let inline = self
-                        .present
-                        .then(|| {
+                    let arrow_handle = pointer.and_then(|pos| {
+                        self.arrow_handles()
+                            .into_iter()
+                            .find(|h| h.position.distance(pos) < 7.)
+                    });
+                    if response.double_clicked()
+                        && let Some(handle) = arrow_handle
+                            .as_ref()
+                            .filter(|h| h.kind == wireframe::arrows::Handle::Middle)
+                    {
+                        self.editor.begin("Reset arrow bend");
+                        if let Err(error) = self.editor.snap_arrow_middle(handle.id) {
+                            self.error = Some(error);
+                        }
+                        self.editor.commit();
+                    }
+                    if response.clicked()
+                        && arrow_handle.is_none()
+                        && instant_drag.is_none()
+                        && let Some(pos) = pointer
+                    {
+                        // A modifier can be released after the click but before this paint.
+                        // Use the click's snapshot rather than the frame's final key state.
+                        let modifiers = ui.input(|i| {
+                            i.events
+                                .iter()
+                                .rev()
+                                .find_map(|event| match event {
+                                    egui::Event::PointerButton {
+                                        button: egui::PointerButton::Primary,
+                                        pressed: false,
+                                        modifiers,
+                                        ..
+                                    } => Some(*modifiers),
+                                    _ => None,
+                                })
+                                .unwrap_or(i.modifiers)
+                        });
+                        if let Some(id) = ctx.memory(|m| m.focused()) {
+                            ctx.memory_mut(|m| m.surrender_focus(id));
+                        }
+                        let p = self.world(pos);
+                        let hit = if self.present {
                             self.editor
-                                .rendered_scene(self.editor.surface_id())
+                                .layers(self.editor.surface_id())
                                 .ok()
-                                .and_then(|s| s.hit_link(p.x, p.y).map(str::to_owned))
-                        })
-                        .flatten();
-                    if let Some(target) = inline {
-                        self.follow_target(&target, &ctx);
-                    } else if let Some(c) = hit {
-                        if self.present {
-                            if let Some(id) = c.link {
-                                self.navigate_page(id);
+                                .and_then(|layers| {
+                                    layers
+                                        .into_iter()
+                                        .rev()
+                                        .find(|l| {
+                                            l.control.bounds.contains(p.x, p.y)
+                                                && l.clip.is_none_or(|b| b.contains(p.x, p.y))
+                                        })
+                                        .map(|l| l.control)
+                                })
+                        } else {
+                            self.editor.hit(p.x, p.y)
+                        };
+                        let inline = self
+                            .present
+                            .then(|| {
+                                self.editor
+                                    .rendered_scene(self.editor.surface_id())
+                                    .ok()
+                                    .and_then(|s| s.hit_link(p.x, p.y).map(str::to_owned))
+                            })
+                            .flatten();
+                        if let Some(target) = inline {
+                            self.follow_target(&target, &ctx);
+                        } else if let Some(c) = hit {
+                            if self.present {
+                                if let Some(id) = c.link {
+                                    self.navigate_page(id);
+                                }
+                            } else if !self.editor.own_locked(c.id)
+                                || self.editor.selection.contains(&c.id)
+                                || modifiers.command
+                            {
+                                self.editor.select(c.id, modifiers.shift);
                             }
                         } else {
-                            self.editor.select(c.id, ui.input(|i| i.modifiers.shift));
+                            self.editor.selection.clear();
                         }
-                    } else {
+                    }
+                    let exit_group = response.double_clicked()
+                        && !self.present
+                        && !self.editor.context.is_empty()
+                        && response.interact_pointer_pos().is_some_and(|pointer| {
+                            let point = self.world(pointer);
+                            self.editor.hit(point.x, point.y).is_none()
+                        });
+                    if response.double_clicked()
+                        && arrow_handle.is_none()
+                        && !self.present
+                        && let Some(pointer) = response.interact_pointer_pos()
+                        && let point = self.world(pointer)
+                        && let Some(c) = self.editor.hit(point.x, point.y)
+                        && self.editor.selection.contains(&c.id)
+                        && !self.editor.enter(c.id)
+                        && c.group.is_none()
+                    {
+                        let command = ctx.input(|i| {
+                            i.events
+                                .iter()
+                                .rev()
+                                .find_map(|event| {
+                                    if let egui::Event::PointerButton {
+                                        button: egui::PointerButton::Primary,
+                                        modifiers,
+                                        ..
+                                    } = event
+                                    {
+                                        Some(modifiers.command)
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .unwrap_or(i.modifiers.command)
+                        });
+                        if matches!(c.kind, Kind::Image | Kind::CoverFlow) {
+                            self.image_source_request = Some(c.id);
+                            ctx.request_repaint();
+                        } else if c.kind == Kind::Icon || (c.kind == Kind::IconLabel && command) {
+                            self.begin_icon_dialog(c.id);
+                        } else if c.kind.text_editable() {
+                            self.begin_text_edit(c.id);
+                        }
+                    }
+                    if exit_group {
+                        self.editor.leave();
                         self.editor.selection.clear();
                     }
-                }
-                if response.double_clicked()
-                    && !self.present
-                    && let Some(c) = self.editor.selected_views().first()
-                    && !c.locked
-                    && !self.editor.enter(c.id)
-                    && c.group.is_none()
-                    && c.kind.text_editable()
-                {
-                    self.begin_text_edit(c.id);
                 }
                 if self.grid && !self.present && self.zoom > 0.35 {
                     let step = 20. * self.zoom;
@@ -2050,7 +1752,10 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                 let drawing = if self.present {
                     self.editor.rendered_scene(self.editor.surface_id())
                 } else {
-                    self.editor.editing_scene()
+                    self.text_edit_view
+                        .as_ref()
+                        .and_then(|view| view.preview.clone())
+                        .map_or_else(|| self.editor.editing_scene(), Ok)
                 };
                 match drawing {
                     Ok(drawing) => Self::paint_scene(
@@ -2069,6 +1774,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                         );
                     }
                 }
+                self.paint_quick_draw(ui, &painter);
                 if !self.present {
                     for guide in &self.alignment_guides {
                         let color = match guide.kind {
@@ -2091,48 +1797,73 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                         };
                         painter.line_segment(points, Stroke::new(1., color));
                     }
-                    for c in &self.editor.current().controls {
-                        if self.editor.selection.contains(&c.id) {
-                            painter.rect_stroke(
-                                self.screen_rect(c.bounds).expand(3.),
-                                1,
-                                Stroke::new(1., ACCENT),
-                                StrokeKind::Outside,
-                            );
-                        }
-                    }
-                    if let Some(b) = self.editor.bounds() {
-                        let r = self.screen_rect(b).expand(4.);
-                        painter.rect_stroke(r, 0, Stroke::new(1., ACCENT), StrokeKind::Outside);
-                        if self.editor.selected_views().iter().any(|c| !c.locked) {
-                            for (_, point) in
-                                self.resize_handles(self.editor.movable_bounds().unwrap_or(b))
-                            {
-                                painter.rect(
-                                    Rect::from_center_size(point, Vec2::splat(6.)),
-                                    0,
-                                    Color32::WHITE,
-                                    Stroke::new(1., Color32::from_gray(65)),
-                                    StrokeKind::Inside,
+                    if !self.quick_draw.is_active() {
+                        let arrow_selection = self.paint_arrow_selection(&painter);
+                        for c in &self.editor.current().controls {
+                            if self.editor.selection.contains(&c.id) && c.locked {
+                                self.paint_locked_selection(&painter, c.bounds);
+                            } else if self.editor.selection.contains(&c.id) && !arrow_selection {
+                                painter.rect_stroke(
+                                    self.screen_rect(c.bounds).expand(3.),
+                                    1,
+                                    Stroke::new(1., ACCENT),
+                                    StrokeKind::Outside,
                                 );
                             }
                         }
-                    }
-                    if let Some(Drag::Marquee { start, now, .. }) = &self.drag {
-                        let r = Rect::from_two_pos(
-                            self.screen([start.x, start.y]),
-                            self.screen([now.x, now.y]),
-                        );
-                        painter.rect(
-                            r,
-                            0,
-                            Color32::from_rgba_unmultiplied(49, 94, 145, 22),
-                            Stroke::new(1., ACCENT),
-                            StrokeKind::Inside,
-                        );
+                        if let Some(b) = self.editor.movable_bounds()
+                            && !arrow_selection
+                        {
+                            let r = self.screen_rect(b).expand(4.);
+                            painter.rect_stroke(r, 0, Stroke::new(1., ACCENT), StrokeKind::Outside);
+                            if self.editor.selected_views().iter().any(|c| !c.locked) {
+                                for (_, point) in
+                                    self.resize_handles(self.editor.movable_bounds().unwrap_or(b))
+                                {
+                                    painter.rect(
+                                        Rect::from_center_size(point, Vec2::splat(6.)),
+                                        0,
+                                        Color32::WHITE,
+                                        Stroke::new(1., Color32::from_gray(65)),
+                                        StrokeKind::Inside,
+                                    );
+                                }
+                            }
+                        }
+                        for handle in self.arrow_handles() {
+                            painter.rect(
+                                Rect::from_center_size(
+                                    handle.position,
+                                    Vec2::splat(
+                                        if handle.kind == wireframe::arrows::Handle::Middle {
+                                            7.
+                                        } else {
+                                            6.
+                                        },
+                                    ),
+                                ),
+                                1,
+                                Color32::WHITE,
+                                Stroke::new(1., Color32::from_gray(65)),
+                                StrokeKind::Inside,
+                            );
+                        }
+                        if let Some(Drag::Marquee { start, now, .. }) = &self.drag {
+                            let r = Rect::from_two_pos(
+                                self.screen([start.x, start.y]),
+                                self.screen([now.x, now.y]),
+                            );
+                            painter.rect(
+                                r,
+                                0,
+                                Color32::from_rgba_unmultiplied(49, 94, 145, 22),
+                                Stroke::new(1., ACCENT),
+                                StrokeKind::Inside,
+                            );
+                        }
                     }
                 }
-                if self.editor.current().controls.is_empty() {
+                if self.editor.nodes().is_empty() && !self.quick_draw.is_active() {
                     painter.text(
                         response.rect.center() - Vec2::new(0., 24.),
                         Align2::CENTER_CENTER,
@@ -2148,6 +1879,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                         Color32::from_gray(140),
                     );
                 }
+                self.paint_review_markers(&painter);
                 if !self.present {
                     response.context_menu(|ui| {
                         if ui.button("Duplicate").clicked() {
@@ -2176,6 +1908,7 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                             self.editor.ungroup();
                             ui.close();
                         }
+                        self.menu_item(ui, menus::Command::TreatAsMarkup);
                         if ui.button("Delete").clicked() {
                             self.editor.delete();
                             ui.close();
@@ -2185,64 +1918,13 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
             });
     }
     fn dialogs(&mut self, ctx: &egui::Context) {
-        if let Some((id, mut value)) = self.text_edit.take() {
-            let mut keep = true;
-            let multiline = self
-                .editor
-                .current()
-                .controls
-                .iter()
-                .find(|control| control.id == id)
-                .is_none_or(|control| control.kind.multiline_text());
-            egui::Modal::new(egui::Id::new("edit-text")).show(ctx, |ui| {
-                ui.set_width(400.);
-                ui.heading("Edit text");
-                let field = if multiline {
-                    TextInput::multiline(&mut value).desired_rows(7)
-                } else {
-                    TextInput::singleline(&mut value)
-                };
-                let r = ui.add(
-                    field
-                        .desired_width(f32::INFINITY)
-                        .autofocus(true)
-                        .select_all_on_open(true)
-                        .submit_on_command_enter(true),
-                );
-                let submit = (r.has_focus() || r.lost_focus())
-                    && ui.input_mut(|i| {
-                        i.consume_key(Modifiers::COMMAND, Key::Enter)
-                            || (!multiline && i.consume_key(Modifiers::NONE, Key::Enter))
-                    });
-                ui.horizontal(|ui| {
-                    if ui.button("Apply").clicked() || submit {
-                        self.editor.edit("Edit text", |e| {
-                            if let Some(mut c) = e
-                                .current()
-                                .controls
-                                .into_iter()
-                                .find(|c| c.id == id && !c.locked)
-                            {
-                                c.text = value.clone();
-                                e.update_control(c);
-                            }
-                        });
-                        keep = false;
-                    }
-                    if ui.button("Cancel").clicked() || ui.input(|i| i.key_pressed(Key::Escape)) {
-                        keep = false;
-                    }
-                });
-                if !keep {
-                    wireframe::text_entry::forget(ctx, r.id);
-                }
-            });
-            if keep {
-                self.text_edit = Some((id, value));
-            }
+        if self.startup_open.is_some() {
+            self.startup_open_dialog(ctx);
+            return;
         }
+        self.text_session_ui(ctx);
         if self.pending.is_some() {
-            egui::Modal::new(egui::Id::new("unsaved")).show(ctx, |ui| {
+            let response = egui::Modal::new(egui::Id::new("unsaved")).show(ctx, |ui| {
                 ui.heading("Save your changes?");
                 ui.label("Save this project before continuing, or discard its local changes.");
                 ui.horizontal(|ui| {
@@ -2265,6 +1947,14 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     }
                 });
             });
+            // Escape is Cancel, never Discard. Only the visible modal owns it;
+            // an error above this review must be dismissed independently.
+            if response.is_top_modal
+                && !response.any_popup_open
+                && ctx.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape))
+            {
+                self.pending = None;
+            }
         }
         if self.recovery_offer.is_some() {
             egui::Modal::new(egui::Id::new("recover")).show(ctx, |ui| {
@@ -2283,13 +1973,19 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
         }
         self.persistence_dialogs(ctx);
         if let Some(error) = self.error.clone() {
-            egui::Modal::new(egui::Id::new("error")).show(ctx, |ui| {
+            let response = egui::Modal::new(egui::Id::new("error")).show(ctx, |ui| {
                 ui.heading("Couldn't complete that action");
                 ui.label(error);
                 if ui.button("OK").clicked() {
                     self.error = None;
                 }
             });
+            if response.is_top_modal
+                && !response.any_popup_open
+                && ctx.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape))
+            {
+                self.error = None;
+            }
         }
         egui::Window::new("Wireframe license")
             .open(&mut self.about)
@@ -2300,49 +1996,61 @@ if ui.button("Unlock").clicked(){self.editor.lock(false);}});}
                     ui.label(include_str!("../LICENSE"));
                 });
             });
-        egui::Window::new("Working with Wireframe").open(&mut self.help).default_width(470.).show(ctx,|ui|{ui.label("Copyright 2026 Wireframe contributors · GNU GPL v3.0 only · No warranty.");if ui.button("View license").clicked(){self.about=true;}ui.separator();ui.label("Everything stays on your computer. Save editable projects as .wireframe files; export pages as PDF or the current page as PNG or SVG.");ui.separator();for (keys,what)in [("Click / Shift-click","Select one or several controls"),("Drag empty canvas","Select an area"),("Drag a selection","Move controls"),("Eight resize handles","Resize; hold Shift for aspect ratio"),("Arrow / Shift+Arrow","Move by 1 / 10 units"),("Double-click / Enter","Edit selected control text"),("⌘/Ctrl Z · Shift Z","Undo · Redo"),("⌘/Ctrl D · G · Shift G","Duplicate · Group · Ungroup"),("Space + drag","Pan the canvas"),("⌘/Ctrl + scroll","Zoom around the pointer")]{ui.horizontal(|ui|{ui.strong(keys);ui.label(what);});}ui.separator();ui.label("Groups move and resize together. Double-click a group to edit its children; Escape or Exit group returns to its parent. Images are embedded in the project. Rotate or crop them from the inspector. Click page links in Present mode.");});
+        egui::Window::new("Working with Wireframe").open(&mut self.help).default_width(470.).show(ctx,|ui|{ui.label("Copyright 2026 Wireframe contributors · GNU GPL v3.0 only · No warranty.");if ui.button("View license").clicked(){self.about=true;}ui.separator();ui.label("Everything stays on your computer. Save editable projects as .wireframe files; export pages as PDF or PNG images, or the current page as SVG.");ui.separator();for (keys,what)in [("Click / Shift-click","Select one or several controls"),("Drag empty canvas","Select an area"),("Drag a selection","Move controls"),("Eight resize handles","Resize; hold Shift for aspect ratio"),("Arrow / Shift+Arrow","Move by 1 / 10 units"),("Double-click / Enter","Edit selected control text"),("⌘/Ctrl Z · Shift Z","Undo · Redo"),("⌘/Ctrl D · G · Shift G","Duplicate · Group · Ungroup"),("Space + drag","Pan the canvas"),("⌘/Ctrl + scroll","Zoom around the pointer")]{ui.horizontal(|ui|{ui.strong(keys);ui.label(what);});}ui.separator();ui.label("Groups move and resize together. Double-click a group to edit its children; Escape or Exit group returns to its parent. Images are embedded in the project. Rotate or crop them from the inspector. Click page links in Present mode.");});
     }
 }
 impl eframe::App for WireframeApp {
+    fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // A minimized window may receive a logic-only pass before its next UI pass.
+        self.capture_window_close(ctx);
+    }
+
     fn raw_input_hook(&mut self, ctx: &egui::Context, raw: &mut egui::RawInput) {
         self.order_text_input(ctx, raw);
+        self.prepare_viewport_input(ctx, raw);
     }
 
     fn on_exit(&mut self, gl: Option<&eframe::glow::Context>) {
+        self.startup_open = None;
         if let (Some(compositor), Some(gl)) = (self.compositor.take(), gl) {
             compositor.destroy(gl);
         }
         if let Some(job) = self.pdf_job.take() {
             let _ = job.finish();
         }
+        if let Some(job) = self.image_export.job.take() {
+            job.cancel();
+            let _ = job.finish();
+        }
+        self.remember_version_view();
+        self.remember_viewports(true);
+        self.remember_presentation();
         self.shutdown_persistence();
     }
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.image_import_dialog(ui.ctx());
         let ctx = ui.ctx().clone();
+        self.poll_startup_open();
+        self.poll_recoveries();
+        self.sync_reviews();
+        self.prepare_page_notes(&ctx);
         self.poll_saves(&ctx);
+        self.preserve_save_navigator_focus(&ctx);
         self.poll_pdf_export(&ctx);
-        if ctx.input(|i| i.viewport().close_requested()) && !self.quit_allowed {
-            self.editor.commit();
-            if self.pdf_job.is_some() {
-                ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
-                self.quit_after_pdf = true;
-                self.status = "Finishing PDF export before closing…".into();
-            } else if self.persistence.is_some() {
-                ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
-                self.request(Pending::Quit, &ctx);
-            } else if self.editor.dirty() {
-                ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
-                self.pending = Some(Pending::Quit);
-            } else if self.recovery_offer.is_none() {
-                self.clear_recovery();
-            }
-        }
-        if !self.save_busy()
+        self.poll_image_export(&ctx);
+        self.capture_window_close(&ctx);
+        if !(self.startup_open.is_some()
+            || self.save_busy()
+            || self.present && self.presentation_view.settings_open)
             && !self.recovery_chooser_open()
             && self.pdf_options.is_none()
+            && !self.image_export.blocks_input()
+            && self.versions.rename.is_none()
+            && self.page_rename.is_none()
+            && self.trash.is_none()
             && self.pending.is_none()
             && self.text_edit.is_none()
+            && self.icon_dialog.is_none()
             && self.recovery_offer.is_none()
             && self.image_crop.is_none()
             && let Some(path) =
@@ -2375,11 +2083,19 @@ impl eframe::App for WireframeApp {
                 }
             }
         }
-        if self.save_busy() || self.recovery_chooser_open() {
+        if self.startup_open.is_some()
+            || self.save_busy()
+            || self.recovery_chooser_open()
+            || self.trash.is_some()
+        {
             ui.disable();
         }
+        self.sync_viewport();
         self.shortcuts(&ctx);
+        self.text_session_ui(&ctx);
+        self.sync_viewport();
         let cropping = self.image_crop.is_some();
+        self.update_menus(&ctx);
         self.toolbar(ui);
         self.font_dialog(&ctx);
         if self.installed_font != self.editor.document.font {
@@ -2397,19 +2113,35 @@ impl eframe::App for WireframeApp {
             }
             if cropping {
                 self.crop_controls(ui);
+            } else if self.review.open && !self.editor.in_source_workspace() {
+                self.review_panel(ui);
             } else if self.show_inspector {
                 self.inspector(ui);
             }
         }
         self.canvas(ui);
         self.library_drag_overlay(ui.ctx());
+        self.presentation_dialog(&ctx);
         if let Some(error) = self.editor.error.take() {
             self.error = Some(error);
         }
         self.pdf_export_dialog(&ctx);
+        self.image_export_dialogs(&ctx);
+        self.version_dialog(&ctx);
+        self.page_rename_dialog(&ctx);
+        self.trash_dialog(&ctx);
+        self.library_import_dialog(&ctx);
+        self.more_controls_dialog(&ctx);
+        self.page_paste_dialog(&ctx);
+        self.icon_dialog_ui(&ctx);
         self.dialogs(&ctx);
+        self.finish_window_close(&ctx);
         self.observe_project();
+        self.remember_version_view();
+        self.remember_viewports(false);
+        self.remember_presentation();
         self.sync_recovery(false);
+        self.update_menus(&ctx);
         ctx.request_repaint_after(Duration::from_secs(2));
     }
 }
@@ -2633,7 +2365,21 @@ mod tests {
                 .as_ref()
                 .unwrap()
                 .nodes;
-            for label in ["Help", "Save", "Present"] {
+            for label in [
+                "Help",
+                "File",
+                "Edit",
+                "View",
+                "Present",
+                "Zoom out",
+                "Zoom in",
+                "Actual size",
+                "Fit page",
+                "Pages",
+                "Library",
+                "Inspector",
+                "New wireframe",
+            ] {
                 let node = &nodes
                     .iter()
                     .find(|(_, n)| n.label() == Some(label))
@@ -2677,6 +2423,7 @@ mod tests {
             .insert("text".into(), Value::Text("é [Continue](page:3)".into()));
         p.pages[0].content.nodes.push(node);
         p.pages.push(Page {
+            trashed: false,
             id: 3,
             name: "Destination".into(),
             notes: String::new(),
@@ -2742,7 +2489,7 @@ mod tests {
             assert_eq!(app.editor.page, expected);
         }
         assert_eq!(app.editor.document, saved);
-        assert!(app.presentation_history.is_empty());
+        assert!(app.history_destination(false).is_none());
         app.follow_target("back:", &ctx);
         assert_eq!(app.editor.page, first);
         app.follow_target("page:999999", &ctx);
@@ -2784,7 +2531,7 @@ mod tests {
             assert_eq!(app.editor.page, contact);
             app.follow_target("back:", &ctx);
             assert_eq!(app.editor.page, first);
-            assert!(app.presentation_history.is_empty());
+            assert!(app.history_destination(false).is_none());
         }
         assert_eq!(app.editor.document, saved);
     }
@@ -2824,6 +2571,84 @@ mod tests {
         assert_eq!(resized.h, before.h + 20.);
         app.editor.undo();
         assert_eq!(app.editor.current().controls[0].bounds, before);
+    }
+
+    #[test]
+    fn modified_click_uses_click_time_modifiers_after_key_release() {
+        for release_modifier_in_frame in [false, true] {
+            let ctx = egui::Context::default();
+            let mut app = WireframeApp::workspace(&ctx, None);
+            app.editor.add(Kind::TextInput, 50., 50.);
+            let locked = *app.editor.selection.iter().next().unwrap();
+            app.editor.lock(true);
+            app.editor.selection.clear();
+            let before = app.editor.document.clone();
+            frame(&ctx, &mut app, vec![]);
+            let pos = app.screen([70., 60.]);
+            let event = |pressed| egui::Event::PointerButton {
+                pos,
+                button: egui::PointerButton::Primary,
+                pressed,
+                modifiers: Modifiers::COMMAND,
+            };
+            frame(
+                &ctx,
+                &mut app,
+                vec![
+                    egui::Event::ModifiersChanged(Modifiers::COMMAND),
+                    egui::Event::PointerMoved(pos),
+                    event(true),
+                ],
+            );
+            let mut events = vec![event(false)];
+            if release_modifier_in_frame {
+                events.push(egui::Event::ModifiersChanged(Modifiers::NONE));
+            }
+            frame(&ctx, &mut app, events);
+            assert!(
+                app.editor.selection.contains(&locked),
+                "modifier released in click frame: {release_modifier_in_frame}"
+            );
+            assert_eq!(app.editor.document, before);
+            assert!(app.text_edit.is_none());
+        }
+    }
+
+    #[test]
+    fn double_click_edits_only_the_explicitly_selected_locked_target() {
+        for explicit in [false, true] {
+            let ctx = egui::Context::default();
+            let mut app = WireframeApp::workspace(&ctx, None);
+            app.editor.add(Kind::TextInput, 50., 50.);
+            let locked = *app.editor.selection.iter().next().unwrap();
+            app.editor.lock(true);
+            app.editor.add(Kind::Button, 50., 150.);
+            let other = *app.editor.selection.iter().next().unwrap();
+            if explicit {
+                app.editor.select(locked, false);
+            }
+            let before = app.editor.document.clone();
+            frame(&ctx, &mut app, vec![]);
+            let pos = app.screen([70., 60.]);
+            for _ in 0..2 {
+                frame(
+                    &ctx,
+                    &mut app,
+                    vec![egui::Event::PointerMoved(pos), pointer(pos, true)],
+                );
+                frame(&ctx, &mut app, vec![pointer(pos, false)]);
+            }
+            assert_eq!(
+                app.text_edit.as_ref().map(|(id, _)| *id),
+                explicit.then_some(locked)
+            );
+            assert!(
+                app.editor
+                    .selection
+                    .contains(&if explicit { locked } else { other })
+            );
+            assert_eq!(app.editor.document, before);
+        }
     }
     #[test]
     fn cropped_group_pointer_minimum_includes_fixed_height_descendants() {
@@ -2874,7 +2699,10 @@ mod tests {
                 }
                 let id = root.id;
                 project.pages[0].content.nodes = vec![root];
-                app.editor = Editor::new(project);
+                app.editor = {
+                    project.organize_components().unwrap();
+                    Editor::new(project)
+                };
                 app.editor.select(id, false);
                 frame(&ctx, &mut app, vec![]);
                 let before = app.editor.document.clone();
@@ -2927,12 +2755,71 @@ mod tests {
     }
 
     #[test]
+    fn horizontal_rule_handles_follow_style_and_keep_height_during_pointer_resize() {
+        for style in [
+            "solid",
+            "dashed",
+            "dotted",
+            "breakline_top",
+            "breakline_bottom",
+        ] {
+            let ctx = egui::Context::default();
+            let mut app = WireframeApp::workspace(&ctx, None);
+            app.editor.add(Kind::Line, 200., 200.);
+            let id = *app.editor.selection.iter().next().unwrap();
+            app.editor
+                .set_control_property(
+                    id,
+                    "stroke",
+                    wireframe::document::Value::Choice(style.into()),
+                )
+                .unwrap();
+            frame(&ctx, &mut app, vec![]);
+            let before = app.editor.document.clone();
+            let bounds = app.editor.selected_views()[0].bounds;
+            let handles = app.resize_handles(bounds);
+            assert_eq!(handles.len(), 2);
+            assert!(handles.iter().all(|((_, y), _)| *y == 0));
+            let start = handles[1].1;
+            let end = start + Vec2::new(70., 40.);
+            alignment_frame(
+                &ctx,
+                &mut app,
+                vec![egui::Event::PointerMoved(start), pointer(start, true)],
+                Modifiers::NONE,
+                true,
+            );
+            alignment_frame(
+                &ctx,
+                &mut app,
+                vec![egui::Event::PointerMoved(end)],
+                Modifiers::SHIFT,
+                true,
+            );
+            alignment_frame(
+                &ctx,
+                &mut app,
+                vec![pointer(end, false)],
+                Modifiers::SHIFT,
+                true,
+            );
+            assert_eq!(
+                app.editor.selected_views()[0].bounds,
+                Bounds::new(200., 200., 170., bounds.h)
+            );
+            app.editor.undo();
+            assert_eq!(app.editor.document, before);
+        }
+    }
+
+    #[test]
     fn linear_resize_handles_preserve_thickness_minimum_anchor_and_history() {
         for kind in [
             Kind::HorizontalSlider,
             Kind::VerticalSlider,
             Kind::FormattingToolbar,
             Kind::VerticalRule,
+            Kind::Line,
             Kind::HorizontalScrollbar,
             Kind::VerticalScrollbar,
             Kind::HorizontalSplitter,
@@ -3067,7 +2954,10 @@ mod tests {
                     project.pages[0].content.nodes.push(group);
                     2
                 };
-                app.editor = Editor::new(project);
+                app.editor = {
+                    project.organize_components().unwrap();
+                    Editor::new(project)
+                };
                 app.editor.select(selected, false);
                 frame(&ctx, &mut app, vec![]);
                 let before = app.editor.document.clone();
@@ -3587,6 +3477,170 @@ mod tests {
         app.editor.add(Kind::CircleButton, 201., 100.);
         frame(ctx, &mut app, vec![]);
         app
+    }
+    #[test]
+    fn option_drag_stationary_modifier_changes_release_and_cancel_preserve_history() {
+        for ending in ["copy", "move", "escape", "focus"] {
+            let ctx = egui::Context::default();
+            let mut app = WireframeApp::workspace(&ctx, None);
+            app.editor.add(Kind::Button, 50., 50.);
+            app.editor.add(Kind::Checkbox, 300., 50.);
+            let redo = app.editor.document.clone();
+            app.editor.undo();
+            frame(&ctx, &mut app, vec![]);
+            let before = app.editor.document.clone();
+            let start = app.screen([80., 65.]);
+            let end = start + Vec2::new(90., 60.);
+            alignment_frame(
+                &ctx,
+                &mut app,
+                vec![egui::Event::PointerMoved(start), pointer(start, true)],
+                Modifiers::NONE,
+                true,
+            );
+            alignment_frame(
+                &ctx,
+                &mut app,
+                vec![egui::Event::PointerMoved(end)],
+                Modifiers::NONE,
+                true,
+            );
+            assert_eq!(app.editor.nodes().len(), 1);
+            alignment_frame(&ctx, &mut app, vec![], Modifiers::ALT, true);
+            assert_eq!(app.editor.nodes().len(), 2, "{ending}");
+            assert_eq!(app.editor.nodes()[0], before.pages[0].content.nodes[0]);
+            let copy_id = app.editor.nodes()[1].id;
+            assert!(app.editor.redo_name().is_some());
+            alignment_frame(&ctx, &mut app, vec![], Modifiers::NONE, true);
+            assert_eq!(app.editor.nodes().len(), 1);
+            alignment_frame(&ctx, &mut app, vec![], Modifiers::ALT, true);
+            assert_eq!(app.editor.nodes()[1].id, copy_id);
+            if ending == "escape" || ending == "focus" {
+                let events = if ending == "escape" {
+                    vec![egui::Event::Key {
+                        key: Key::Escape,
+                        physical_key: None,
+                        pressed: true,
+                        repeat: false,
+                        modifiers: Modifiers::ALT,
+                    }]
+                } else {
+                    vec![]
+                };
+                alignment_frame(&ctx, &mut app, events, Modifiers::ALT, ending != "focus");
+                assert!(app.drag.is_none());
+                assert_eq!(app.editor.document, before);
+                app.editor.redo();
+                assert_eq!(app.editor.document, redo);
+            } else {
+                alignment_frame(
+                    &ctx,
+                    &mut app,
+                    vec![pointer(end, false)],
+                    if ending == "copy" {
+                        Modifiers::ALT
+                    } else {
+                        Modifiers::NONE
+                    },
+                    true,
+                );
+                assert_eq!(
+                    app.editor.nodes().len(),
+                    if ending == "copy" { 2 } else { 1 }
+                );
+                assert!(!app.editor.redo_name().is_some());
+                app.editor.undo();
+                assert_eq!(app.editor.document, before);
+            }
+        }
+    }
+    #[test]
+    fn option_drag_release_modifiers_win_over_later_events_and_keep_grid_constraints() {
+        for (shift, command, expected) in [
+            (false, false, (140., 110.)),
+            (true, false, (140., 50.)),
+            (false, true, (143., 113.)),
+        ] {
+            let ctx = egui::Context::default();
+            let mut app = WireframeApp::workspace(&ctx, None);
+            app.snap = true;
+            app.editor.add(Kind::Button, 50., 50.);
+            frame(&ctx, &mut app, vec![]);
+            let start = app.screen([80., 65.]);
+            let end = start + Vec2::new(93., 63.);
+            let modifiers = Modifiers {
+                alt: true,
+                shift,
+                command,
+                ..Modifiers::NONE
+            };
+            let mut events = vec![
+                egui::Event::ModifiersChanged(modifiers),
+                egui::Event::PointerMoved(start),
+                pointer(start, true),
+                egui::Event::PointerMoved(end),
+                pointer(end, false),
+                egui::Event::ModifiersChanged(Modifiers::NONE),
+            ];
+            for event in &mut events {
+                if let egui::Event::PointerButton { modifiers: m, .. } = event {
+                    *m = modifiers;
+                }
+            }
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(1000., 700.))),
+                    events,
+                    ..Default::default()
+                },
+                |ui| {
+                    app.shortcuts(ui.ctx());
+                    app.canvas(ui);
+                },
+            );
+            output.textures_delta.clear();
+            let controls = app.editor.current().controls;
+            assert_eq!(controls.len(), 2);
+            assert_eq!((controls[1].bounds.x, controls[1].bounds.y), expected);
+            assert_eq!((controls[0].bounds.x, controls[0].bounds.y), (50., 50.));
+        }
+    }
+    #[test]
+    fn option_drag_duplicates_without_moving_original_and_undo_is_atomic() {
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        app.editor.add(Kind::Button, 50., 50.);
+        frame(&ctx, &mut app, vec![]);
+        let before = app.editor.document.clone();
+        let original = app.editor.current().controls[0].id;
+        let start = app.screen([80., 65.]);
+        let end = start + Vec2::new(90., 60.);
+        alignment_frame(
+            &ctx,
+            &mut app,
+            vec![
+                egui::Event::PointerMoved(start),
+                pointer(start, true),
+                egui::Event::PointerMoved(end),
+                pointer(end, false),
+            ],
+            Modifiers::ALT,
+            true,
+        );
+        let controls = app.editor.current().controls;
+        assert_eq!(controls.len(), 2);
+        assert_eq!(
+            controls.iter().find(|c| c.id == original).unwrap().bounds.x,
+            50.
+        );
+        let copy = controls.iter().find(|c| c.id != original).unwrap();
+        assert_eq!((copy.bounds.x, copy.bounds.y), (140., 110.));
+        assert_eq!(app.editor.selection, HashSet::from([copy.id]));
+        let after = app.editor.document.clone();
+        app.editor.undo();
+        assert_eq!(app.editor.document, before);
+        app.editor.redo();
+        assert_eq!(app.editor.document, after);
     }
     #[test]
     fn canvas_alignment_drag_shows_guides_at_each_zoom_and_undo_restores_start() {

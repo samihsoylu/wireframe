@@ -43,6 +43,7 @@ fn fixture() -> (Editor, Id, Id) {
     other.origin.y = 250.;
     p.pages[0].content.nodes = vec![instance, other];
     p.next_id = 9;
+    p.organize_components().unwrap();
     p.validate().unwrap();
     (Editor::new(p), 7, 5)
 }

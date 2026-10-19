@@ -235,6 +235,7 @@ impl Scene {
                     let hit = intersect(hit, clip.unwrap_or(b));
                     if hit.w > 0. && hit.h > 0. {
                         self.links.push(LinkRegion {
+                            quad: None,
                             hint: hit,
                             target: link.target(),
                             bounds: hit,

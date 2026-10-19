@@ -5,11 +5,17 @@ use wireframe::viewport::{DragScroll, scroll_limits};
 
 impl WireframeApp {
     pub(super) fn scroll_during_drag(&mut self, ctx: &egui::Context) -> bool {
-        let active = matches!(
-            self.drag,
-            Some(Drag::Move { .. } | Drag::Resize { .. } | Drag::Marquee { .. })
-        ) && ctx
-            .input(|i| i.focused && i.pointer.primary_down() && !i.key_pressed(Key::Escape))
+        let active = (self.quick_draw.is_active()
+            || matches!(
+                self.drag,
+                Some(
+                    Drag::Move { .. }
+                        | Drag::Resize { .. }
+                        | Drag::Arrow { .. }
+                        | Drag::Marquee { .. }
+                )
+            ))
+            && ctx.input(|i| i.focused && i.pointer.primary_down() && !i.key_pressed(Key::Escape))
             && !self.present
             && !self.canvas_input_blocked();
         if !active {

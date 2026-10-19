@@ -76,10 +76,10 @@ impl WireframeApp {
                 {
                     ui.horizontal(|ui| {
                         if ui.button(format!("Choose {label}…")).clicked()
-                            && let Some(path) = rfd::FileDialog::new()
+                            && let Some(path) = self.menus.with_dialog(|| rfd::FileDialog::new()
                                 .set_title(format!("Choose {label} font"))
                                 .add_filter("Font face", &["ttf", "otf"])
-                                .pick_file()
+                                .pick_file())
                         {
                             match read_face(&path) {
                                 Ok((name, bytes)) => {

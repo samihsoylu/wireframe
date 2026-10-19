@@ -1,6 +1,6 @@
 # Implementation and acceptance plan
 
-The product will provide a complete local wireframing workflow on macOS, Windows and Linux. Its document and editor foundation is being redesigned before broadening the interface. Original code remains GPL-3.0-only; preserve license notices for redistributed dependencies and independently sourced assets.
+The product will provide a complete local wireframing workflow on macOS, Windows and Linux. The document/editor foundation and substantial workflow implementation now exist. The milestones below retain the required scope; the [release checklist](RELEASE-CHECKLIST.md) records actual completion gates and remaining work. Original code remains GPL-3.0-only; preserve license notices for redistributed dependencies and independently sourced assets.
 
 ## Milestone 1: document foundation
 

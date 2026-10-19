@@ -132,6 +132,92 @@ fn save_as_keeps_source_when_busy_and_transfers_ownership_after_success() {
     assert_eq!(ProjectStore.load(&named).unwrap(), project("New contents"));
 }
 #[test]
+fn save_as_updates_original_only_in_automatic_mode_and_keeps_its_request_snapshot() {
+    for automatic in [false, true] {
+        let (dir, copies, named, mut session) = fixture(automatic);
+        let destination = dir.path().join("copy.wireframe");
+        let id = session
+            .save_as(destination.clone(), &project("Copied"))
+            .unwrap();
+        session.observe(&project("Later local edit")).unwrap();
+        let receipt = request(&session, id).unwrap();
+        assert_eq!(receipt.path, destination.canonicalize().unwrap());
+        assert_eq!(*receipt.snapshot, project("Copied"));
+        assert!(receipt.warning.is_none());
+        session.finish().unwrap();
+        assert_eq!(
+            ProjectStore.load(&named).unwrap(),
+            project(if automatic { "Copied" } else { "Original" })
+        );
+        assert_eq!(ProjectStore.load(&destination).unwrap(), project("Copied"));
+        assert_eq!(
+            copies.open_named(&destination).unwrap().project(),
+            &project("Later local edit")
+        );
+    }
+}
+
+#[test]
+fn automatic_save_as_preserves_external_or_missing_original_and_reports_the_gap() {
+    for missing in [false, true] {
+        let (dir, _copies, named, mut session) = fixture(true);
+        if missing {
+            std::fs::remove_file(&named).unwrap();
+        } else {
+            ProjectStore.save(&named, &project("External")).unwrap();
+        }
+        let destination = dir.path().join("recovered.wireframe");
+        let id = session
+            .save_as(destination.clone(), &project("Recovered"))
+            .unwrap();
+        let receipt = request(&session, id).unwrap();
+        assert!(
+            receipt
+                .warning
+                .as_deref()
+                .unwrap()
+                .contains("original file")
+        );
+        assert_eq!(receipt.path, destination.canonicalize().unwrap());
+        assert_eq!(
+            ProjectStore.load(&destination).unwrap(),
+            project("Recovered")
+        );
+        if missing {
+            assert!(!named.exists());
+        } else {
+            assert_eq!(ProjectStore.load(&named).unwrap(), project("External"));
+        }
+        session.finish().unwrap();
+    }
+}
+
+#[test]
+fn refused_save_as_destination_does_not_flush_the_automatic_original() {
+    let (dir, copies, named, mut session) = fixture(true);
+    let destination = dir.path().join("busy.wireframe");
+    ProjectStore
+        .save(&destination, &project("Other owner"))
+        .unwrap();
+    let _owner = copies.open_named(&destination).unwrap();
+    let id = session
+        .save_as(destination.clone(), &project("Pending"))
+        .unwrap();
+    assert!(request(&session, id).unwrap_err().contains("in use"));
+    session.set_automatic(false).unwrap();
+    session.finish().unwrap();
+    assert_eq!(ProjectStore.load(&named).unwrap(), project("Original"));
+    assert_eq!(
+        ProjectStore.load(&destination).unwrap(),
+        project("Other owner")
+    );
+    assert_eq!(
+        copies.open_named(&named).unwrap().project(),
+        &project("Pending")
+    );
+}
+
+#[test]
 fn save_as_to_current_destination_keeps_ownership_without_relocking() {
     let (_dir, copies, named, mut session) = fixture(false);
     let id = session

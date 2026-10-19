@@ -26,7 +26,7 @@ impl Editor {
         path.push(id);
         let layout = self.layout_page(self.surface_id())?;
         let n = view::find_layout(&layout.nodes, &path).ok_or("Group no longer exists")?;
-        if n.locked {
+        if node.locked {
             return Err("Unlock the group before cropping it".into());
         }
         let rect = |b: crate::layout::Rect| Bounds::new(b.x, b.y, b.width, b.height);
@@ -36,9 +36,68 @@ impl Editor {
         Ok((rect(n.uncropped), rect(n.bounds), resolved.crop))
     }
 
-    /// A disposable scene of the complete target, preserving descendant clips and paint order.
+    /// Crop UI geometry follows the visible group frame. Existing crop fractions
+    /// are inverted from that frame; canonical document geometry stays intact.
+    pub fn group_crop_edit_geometry(
+        &self,
+        id: Id,
+    ) -> Result<(Bounds, Bounds, Option<Crop>), String> {
+        let geometry = self.group_crop_view_geometry(id)?;
+        if !self.markup_visible && (geometry.1.w <= 0. || geometry.1.h <= 0.) {
+            return Err("The group has no visible content to crop".into());
+        }
+        Ok(geometry)
+    }
+
+    // Removal must also work when the current mask clips every plain child.
+    fn group_crop_view_geometry(&self, id: Id) -> Result<(Bounds, Bounds, Option<Crop>), String> {
+        let geometry = self.group_crop_geometry(id)?;
+        if self.markup_visible {
+            return Ok(geometry);
+        }
+        let mut path = self.context.clone();
+        path.push(id);
+        let layout = self.layout_page(self.surface_id())?;
+        let b = view::find_layout(&layout.nodes, &path)
+            .ok_or("Group no longer exists")?
+            .without_markup;
+        let visible = Bounds::new(b.x, b.y, b.width, b.height);
+        let full = geometry.2.map_or(visible, |c| {
+            Bounds::new(
+                (b.x - c.x * b.width / c.width).round(),
+                (b.y - c.y * b.height / c.height).round(),
+                (b.width / c.width).round(),
+                (b.height / c.height).round(),
+            )
+        });
+        Ok((full, visible, geometry.2))
+    }
+
+    /// Apply crop fractions to the complete group while keeping the preview's
+    /// chosen corner. Hidden descendants participate in the saved mask.
+    pub fn crop_group_at(&mut self, id: Id, crop: Crop, origin: Point) -> Result<(), String> {
+        let (full, _, _) = self.group_crop_geometry(id)?;
+        let parent = self.context_origin();
+        let translation = Point::new(
+            origin.x - parent.x - (full.x - parent.x + crop.x * full.w).round(),
+            origin.y - parent.y - (full.y - parent.y + crop.y * full.h).round(),
+        );
+        self.crop_group(id, Some(crop), translation)
+    }
+
+    /// A disposable scene of the target, preserving descendant clips, paint
+    /// order and editor markup visibility while removing the target's crop.
     pub fn group_crop_preview(&self, id: Id) -> Result<crate::render::Scene, String> {
         self.group_crop_geometry(id)?;
+        self.crop_preview(id)
+    }
+
+    pub fn image_split_preview(&self, id: Id) -> Result<crate::render::Scene, String> {
+        self.image_split_geometry(id)?;
+        self.crop_preview(id)
+    }
+
+    fn crop_preview(&self, id: Id) -> Result<crate::render::Scene, String> {
         let node = self
             .nodes()
             .iter()
@@ -70,7 +129,8 @@ impl Editor {
         // The preview is never saved; other surfaces remain available for linked content.
         let mut preview = Editor::with_clock(document, self.clock);
         preview.date = self.date;
-        preview.rendered_scene(preview.page)
+        preview.markup_visible = self.markup_visible;
+        preview.export_scene(preview.page, &SceneScope::Whole)
     }
 
     /// Translate the underlying artwork and change its mask as one history entry.
@@ -86,7 +146,12 @@ impl Editor {
         {
             return Err("Choose a crop inside the group".into());
         }
-        let (full, visible, _) = self.group_crop_geometry(id)?;
+        let (full, visible, existing_crop) = self.group_crop_geometry(id)?;
+        let reset = if crop.is_none() && existing_crop.is_some() && !self.markup_visible {
+            self.group_crop_view_geometry(id)?.0
+        } else {
+            visible
+        };
         let before = self
             .nodes()
             .iter()
@@ -106,8 +171,8 @@ impl Editor {
                 let delta = if crop.is_none() {
                     // A group's origin need not be the minimum of its children's bounds.
                     Point::new(
-                        (visible.x - parent.x).max(0.) + parent.x - full.x,
-                        (visible.y - parent.y).max(0.) + parent.y - full.y,
+                        (reset.x - parent.x).max(0.) + parent.x - full.x,
+                        (reset.y - parent.y).max(0.) + parent.y - full.y,
                     )
                 } else {
                     translation
@@ -115,6 +180,18 @@ impl Editor {
                 after.origin = after.origin.translated(delta);
                 if e.editing_instance() {
                     e.write_local_node(id, &before, &after)?;
+                } else if matches!(before.content, NodeContent::Instance { .. })
+                    && e.owning_source(id).is_none()
+                {
+                    let mut path = e.context.clone();
+                    path.push(id);
+                    e.change_patch(&path, &[], |patch| {
+                        patch.crop =
+                            Some(after.crop.map_or(CropOverride::Clear, CropOverride::Region));
+                    })?;
+                    let node = e.nodes_mut().iter_mut().find(|n| n.id == id).unwrap();
+                    node.crop = None;
+                    node.origin = after.origin;
                 } else {
                     *e.nodes_mut()
                         .iter_mut()

@@ -40,6 +40,7 @@ fn control_opacity_is_applied_after_overlapping_parts_and_mask() {
     let control = scene(vec![
         item(Drawing::BeginOpacity(0.4)),
         item(Drawing::BeginMask(BottomMask {
+            keep_above: true,
             bounds: b,
             edge: vec![[0., 60.], [100., 60.]],
         })),
@@ -76,6 +77,7 @@ fn pdf_opacity_scopes_validate_nesting_and_unwind_on_error() {
     };
     let mask = || {
         Drawing::BeginMask(BottomMask {
+            keep_above: true,
             bounds: Bounds::new(0., 0., 100., 100.),
             edge: vec![[0., 60.], [100., 60.]],
         })

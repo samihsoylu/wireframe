@@ -34,6 +34,19 @@ fn embedded_fonts(
 }
 impl Scene {
     pub fn svg(&self) -> String {
+        let b = self.bounds;
+        let viewport = Bounds::new(b.x - 24., b.y - 24., b.w + 48., b.h + 48.);
+        self.svg_viewport(viewport, viewport.w, viewport.h, true)
+    }
+    /// Explicit output framing for raster encoding. The ordinary SVG export
+    /// retains its existing margin and background contract.
+    pub(crate) fn svg_viewport(
+        &self,
+        viewport: Bounds,
+        width: f32,
+        height: f32,
+        white: bool,
+    ) -> String {
         let fallbacks = self
             .items
             .iter()
@@ -42,18 +55,22 @@ impl Scene {
                 _ => None,
             })
             .collect();
-        let b = self.bounds;
-        let w = b.w + 48.;
-        let h = b.h + 48.;
+        let b = viewport;
         let mut out = format!(
-            "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{w}\" height=\"{h}\" viewBox=\"{} {} {w} {h}\"><title>{}</title>{}<rect x=\"{}\" y=\"{}\" width=\"{w}\" height=\"{h}\" fill=\"white\"/>",
-            b.x - 24.,
-            b.y - 24.,
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width}\" height=\"{height}\" viewBox=\"{} {} {} {}\" preserveAspectRatio=\"none\"><title>{}</title>{}",
+            b.x,
+            b.y,
+            b.w,
+            b.h,
             escape(&self.title),
             embedded_fonts(self.font.as_deref(), &fallbacks),
-            b.x - 24.,
-            b.y - 24.
         );
+        if white {
+            out.push_str(&format!(
+                "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"white\"/>",
+                b.x, b.y, b.w, b.h
+            ));
+        }
         if self
             .items
             .iter()
@@ -107,6 +124,7 @@ impl Scene {
     Drawing::Image { bounds: b, data } => out.push_str(&format!("<image x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" preserveAspectRatio=\"none\" href=\"data:image/png;base64,{}\"/>", b.x,b.y,b.w,b.h,base64(&data.png))),
     Drawing::Primitive(p)=>out.push_str(&crate::scene::primitive_svg(p.clone())),
     Drawing::Glyph(g) => {
+        if g.rotation != 0. { out.push_str(&format!("<g transform=\"rotate({} {} {})\">",g.rotation.to_degrees(),g.x,g.baseline)); }
         if let Some(text) = &g.positioned {
             out.push_str(&format!("<g aria-label=\"{}\" transform=\"translate({} {})\">{}</g>",escape(&g.text),g.x,g.baseline,text.svg(g.color)));
         } else {
@@ -114,6 +132,7 @@ impl Scene {
         let family = if primary { crate::fonts::export_family(self.font.as_deref()).to_owned() } else { crate::fonts::export_fallback_family(&g.face) };
         out.push_str(&format!("<text x=\"{}\" y=\"{}\" font-family=\"{}\" font-size=\"{}\" font-weight=\"{}\" font-style=\"{}\" fill=\"{}\" fill-opacity=\"{}\" xml:space=\"preserve\">{}</text>",g.x,g.baseline,escape(&family),g.size*g.face_scale,if primary && g.bold{700}else{400},if primary && g.italic{"italic"}else{"normal"},color([g.color[0],g.color[1],g.color[2]]),g.color[3]as f32/255.,escape(&g.text)));
         }
+        if g.rotation != 0. { out.push_str("</g>"); }
     },
    }
             if item.opacity != 1. {
@@ -126,7 +145,16 @@ impl Scene {
         for link in &self.links {
             if link.target.starts_with("https://") || link.target.starts_with("http://") {
                 let b = link.bounds;
-                out.push_str(&format!("<a href=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"transparent\"/></a>",escape(&link.target),b.x,b.y,b.w,b.h));
+                if let Some(quad) = link.quad {
+                    let points = quad
+                        .iter()
+                        .map(|p| format!("{},{}", p[0], p[1]))
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    out.push_str(&format!("<svg x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" viewBox=\"{} {} {} {}\" overflow=\"hidden\"><a href=\"{}\"><polygon points=\"{}\" fill=\"transparent\"/></a></svg>",b.x,b.y,b.w,b.h,b.x,b.y,b.w,b.h,escape(&link.target),points));
+                } else {
+                    out.push_str(&format!("<a href=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"transparent\"/></a>",escape(&link.target),b.x,b.y,b.w,b.h));
+                }
             }
         }
         out.push_str("</svg>");

@@ -1,6 +1,6 @@
 # Project colors
 
-Choose **Font and colors…** in the toolbar to edit selection and link colors. Use the swatch picker or enter six hexadecimal digits, with an optional `#`. **Apply colors** changes both colors together and closes the dialog. Invalid entries cannot be applied. Cancel leaves the project and its defaults unchanged.
+Choose **Font and colors…** in the **File** menu to edit selection and link colors. Use the swatch picker or enter six hexadecimal digits, with an optional `#`. **Apply colors** changes both colors together and closes the dialog. Invalid entries cannot be applied. Cancel leaves the project and its defaults unchanged.
 
 The selection color controls selected rows and buttons, focused field borders and other selection accents. The link color controls ordinary links. Selected content uses white automatic text and links on dark backgrounds. At weighted RGB brightness 153 and above, normal ink and the configured link color are used. Selected menu/dropdown links use black on light selections. Explicit text colors and inline color markup are preserved; disabled content remains muted. Existing opacity and control-family rules still apply.
 

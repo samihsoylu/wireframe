@@ -5,7 +5,9 @@ mod accordion;
 mod alert;
 mod annotations;
 mod app_bar;
+mod arrows;
 mod browser;
+mod browser_frame;
 mod button_bar;
 mod charts;
 mod choice;
@@ -14,12 +16,14 @@ mod circle_button;
 pub mod compositor;
 mod control_icons;
 mod cover_flow;
+pub mod coverage;
 mod date_controls;
 mod diagrams;
 mod dropdown;
 mod field_set;
 mod forms;
 mod images;
+mod label;
 mod linear_controls;
 mod list;
 mod markup;
@@ -34,9 +38,12 @@ mod outlines;
 mod phone;
 mod pickers;
 mod pointed_button;
+mod progress;
 mod rasters;
+mod rules;
 mod scrollbar;
 mod search;
+mod shapes;
 mod sliders;
 mod small_forms;
 mod smartphone;
@@ -47,6 +54,7 @@ mod table;
 mod tablet;
 mod tabs;
 mod text_controls;
+mod toggle;
 mod tree;
 mod video;
 mod window;
@@ -65,6 +73,8 @@ pub struct Glyph {
     pub text: String,
     pub x: f32,
     pub baseline: f32,
+    /// Clockwise radians around this run’s baseline origin.
+    pub rotation: f32,
     pub size: f32,
     pub bold: bool,
     pub italic: bool,
@@ -102,6 +112,8 @@ pub struct Item {
 }
 #[derive(Clone, Debug)]
 pub struct LinkRegion {
+    /// Optional rotated hit shape; bounds also apply clipping and occlusion.
+    pub quad: Option<[[f32; 2]; 4]>,
     pub target: String,
     pub bounds: Bounds,
     /// Original visible link area, retained when occlusion splits annotations.
@@ -169,24 +181,8 @@ impl Scene {
             let visible = layer.clip.map_or(layer.control.bounds, |clip| {
                 intersect(layer.control.bounds, clip)
             });
-            if visible.w > 0. && visible.h > 0. {
-                // Later controls own their visible hit area, including blank space.
-                // Split covered links so canvas and exported anchors agree.
-                scene.links = scene
-                    .links
-                    .drain(..)
-                    .flat_map(|link| {
-                        subtract(link.bounds, visible)
-                            .into_iter()
-                            .map(move |bounds| LinkRegion {
-                                hint: link.hint,
-                                target: link.target.clone(),
-                                bounds,
-                            })
-                    })
-                    .collect();
-            }
             let own_links_start = scene.links.len();
+            let own_items_start = scene.items.len();
             if layer.opacity != 1. {
                 scene.items.push(Item {
                     opacity: 1.,
@@ -258,6 +254,7 @@ impl Scene {
                             .into_iter()
                             .filter(|b| b.w > 0. && b.h > 0.)
                             .map(|bounds| LinkRegion {
+                                quad: None,
                                 hint: visible,
                                 target: link.target(),
                                 bounds,
@@ -265,21 +262,40 @@ impl Scene {
                     );
                 scene.links.extend(own_links);
             }
+            // Determine coverage from the actual drawing, not its library category:
+            // text fields and placeholder strokes block; labels and text-first
+            // composite controls preserve the targets beneath them.
+            let text_first = scene.items[own_items_start..]
+                .iter()
+                .find(|item| {
+                    !matches!(
+                        item.drawing,
+                        Drawing::BeginOpacity(_)
+                            | Drawing::EndOpacity
+                            | Drawing::BeginMask(_)
+                            | Drawing::EndMask
+                    )
+                })
+                .is_some_and(|item| {
+                    matches!(
+                        item.drawing,
+                        Drawing::Glyph(_) | Drawing::Primitive(Primitive::Text { .. })
+                    )
+                });
+            let own_links = scene.links.split_off(own_links_start);
+            if !layer.local_markup && !text_first {
+                scene.cover_links(visible);
+            }
+            // An overlay can preserve underlying links and still have its own
+            // target. Keep the regions disjoint for both pointer use and exports.
+            for link in &own_links {
+                scene.cover_links(link.bounds);
+            }
+            scene.links.extend(own_links);
             for (bounds, target) in &layer.group_links {
-                scene.links = scene
-                    .links
-                    .drain(..)
-                    .flat_map(|link| {
-                        subtract(link.bounds, *bounds)
-                            .into_iter()
-                            .map(move |bounds| LinkRegion {
-                                hint: link.hint,
-                                target: link.target.clone(),
-                                bounds,
-                            })
-                    })
-                    .collect();
+                scene.cover_links(*bounds);
                 scene.links.push(LinkRegion {
+                    quad: None,
                     hint: *bounds,
                     bounds: *bounds,
                     target: target.target(),
@@ -331,6 +347,12 @@ impl Scene {
     ) -> Result<(), String> {
         let c = &layer.control;
         let b = c.bounds;
+        if c.kind == Kind::Line {
+            return self.horizontal_rule(layer, sketch);
+        }
+        if c.kind == Kind::Arrow {
+            return self.arrow_control(layer, sketch, fonts);
+        }
         let missing =
             layer.properties.get(crate::document::MISSING_COMPONENT) == Some(&Value::Bool(true));
         if missing || c.group.is_some() {
@@ -498,12 +520,20 @@ impl Scene {
             self.media_control(layer, sketch);
             return Ok(());
         }
+        if c.kind == Kind::Toggle {
+            self.toggle(layer, sketch);
+            return Ok(());
+        }
         if matches!(c.kind, Kind::HorizontalSlider | Kind::VerticalSlider) {
             self.slider(layer, sketch);
             return Ok(());
         }
         if matches!(c.kind, Kind::DatePicker | Kind::TimePicker) {
             return self.picker(layer, sketch, fonts);
+        }
+        if c.kind == Kind::Progress {
+            self.progress_control(layer, sketch);
+            return Ok(());
         }
         if c.kind == Kind::Alert {
             return self.alert(layer, sketch, fonts);
@@ -535,6 +565,9 @@ impl Scene {
         if c.kind == Kind::Table {
             return self.table(layer, sketch, fonts);
         }
+        if matches!(c.kind, Kind::Shape | Kind::Ellipse) {
+            return self.shape_control(layer, sketch, fonts, rasters);
+        }
         if c.kind == Kind::Rectangle {
             self.rectangle_control(layer, sketch);
             return Ok(());
@@ -558,6 +591,12 @@ impl Scene {
                 self.primitive(p, layer.clip);
             }
             return Ok(());
+        }
+        if c.kind == Kind::Label
+            && crate::text_controls::LabelOrientation::from_properties(&layer.properties)
+                != crate::text_controls::LabelOrientation::Upright
+        {
+            return self.oriented_label(layer, fonts);
         }
         let text_only = matches!(
             c.kind,
@@ -737,6 +776,9 @@ impl Scene {
             let dx = area.bounds.x + area.align.offset(area.bounds.w, width);
             let dy = area.bounds.y + vertical;
             for run in runs {
+                if run.positioned.as_ref().is_some_and(|p| p.source.is_empty()) {
+                    continue;
+                }
                 let format = &run.format;
                 let family = format.font_id.family.to_string();
                 let x = dx + run.x;
@@ -747,6 +789,7 @@ impl Scene {
                         text: run.text,
                         x,
                         baseline,
+                        rotation: 0.,
                         size: format.font_id.size,
                         bold: family.contains("bold"),
                         italic: family.contains("italic") || format.italics,
@@ -798,6 +841,7 @@ impl Scene {
             }
             if bounds.w > 0. && bounds.h > 0. {
                 self.links.push(LinkRegion {
+                    quad: None,
                     hint: bounds,
                     target: link.target,
                     bounds,
@@ -813,8 +857,28 @@ impl Scene {
         self.links
             .iter()
             .rev()
-            .find(|l| l.bounds.contains(x, y))
+            .find(|l| l.contains(x, y))
             .map(|l| l.target.as_str())
+    }
+
+    fn cover_links(&mut self, cover: Bounds) {
+        if cover.w <= 0. || cover.h <= 0. {
+            return;
+        }
+        self.links = self
+            .links
+            .drain(..)
+            .flat_map(|link| {
+                subtract(link.bounds, cover)
+                    .into_iter()
+                    .map(move |bounds| LinkRegion {
+                        quad: link.quad,
+                        hint: link.hint,
+                        target: link.target.clone(),
+                        bounds,
+                    })
+            })
+            .collect();
     }
 }
 fn subtract(bounds: Bounds, cover: Bounds) -> Vec<Bounds> {
@@ -949,7 +1013,9 @@ fn paint_options(p: &Properties) -> PaintOptions {
 pub fn paint_glyph(painter: &egui::Painter, g: &Glyph, origin: egui::Pos2, scale: f32) {
     if let Some(text) = &g.positioned {
         let baseline = origin + egui::vec2(g.x, g.baseline) * scale;
-        if let Err(error) = crate::text_engine::paint(painter, text, g.color, baseline, scale) {
+        if let Err(error) =
+            crate::text_engine::paint_rotated(painter, text, g.color, baseline, scale, g.rotation)
+        {
             painter.text(
                 baseline,
                 egui::Align2::LEFT_BOTTOM,
@@ -972,9 +1038,13 @@ pub fn paint_glyph(painter: &egui::Painter, g: &Glyph, origin: egui::Pos2, scale
                 .map(|glyph| r.pos.to_vec2() + glyph.pos.to_vec2())
         })
         .unwrap_or_default();
-    painter.galley(
-        origin + egui::vec2(g.x, g.baseline) * scale - offset,
-        galley,
-        color,
+    painter.add(
+        egui::epaint::TextShape::new(
+            origin + egui::vec2(g.x, g.baseline) * scale
+                - egui::emath::Rot2::from_angle(g.rotation) * offset,
+            galley,
+            color,
+        )
+        .with_angle(g.rotation),
     );
 }

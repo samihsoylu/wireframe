@@ -138,33 +138,32 @@ pub fn get(id: &str) -> Option<&'static ControlSpec> {
 }
 /// Stable ranking: exact display/ID, exact alias, prefix, then all-token substring.
 pub fn search(query: &str) -> Vec<&'static ControlSpec> {
-    let query = query.trim().to_lowercase();
-    let words: Vec<_> = query.split_whitespace().collect();
     let mut found: Vec<_> = CONTROLS
         .iter()
-        .filter_map(|c| {
-            let name = c.name.to_lowercase();
-            let id = c.id.replace('_', " ");
-            let aliases: Vec<_> = c.aliases.iter().map(|s| s.to_lowercase()).collect();
-            let rank = if query.is_empty() || name == query || id == query {
-                0
-            } else if aliases.iter().any(|a| a == &query) {
-                1
-            } else if name.starts_with(&query) || aliases.iter().any(|a| a.starts_with(&query)) {
-                2
-            } else {
-                let haystack = format!("{name} {id} {}", aliases.join(" "));
-                if words.iter().all(|w| haystack.contains(w)) {
-                    3
-                } else {
-                    return None;
-                }
-            };
-            Some((rank, c))
-        })
+        .filter_map(|control| search_rank(control, query).map(|rank| (rank, control)))
         .collect();
     found.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.name.cmp(b.1.name)));
     found.into_iter().map(|(_, c)| c).collect()
+}
+
+pub(crate) fn search_rank(control: &ControlSpec, query: &str) -> Option<u8> {
+    let query = query.trim().to_lowercase();
+    let name = control.name.to_lowercase();
+    let id = control.id.replace('_', " ");
+    let aliases: Vec<_> = control.aliases.iter().map(|s| s.to_lowercase()).collect();
+    if query.is_empty() || name == query || id == query {
+        Some(0)
+    } else if aliases.iter().any(|alias| alias == &query) {
+        Some(1)
+    } else if name.starts_with(&query) || aliases.iter().any(|alias| alias.starts_with(&query)) {
+        Some(2)
+    } else {
+        let haystack = format!("{name} {id} {}", aliases.join(" "));
+        query
+            .split_whitespace()
+            .all(|word| haystack.contains(word))
+            .then_some(3)
+    }
 }
 impl PropertySpec {
     pub fn default_value(&self, context: &Context) -> Value {
@@ -248,7 +247,8 @@ impl ControlSpec {
         let mut node = Node::control(id, self.id, origin, self.default_size);
         node.markup = matches!(
             self.id,
-            "callout"
+            "arrow"
+                | "callout"
                 | "sticky_note"
                 | "horizontal_brace"
                 | "vertical_brace"
@@ -385,6 +385,18 @@ impl ControlSpec {
         {
             values.insert("shape".into(), Value::Choice("ellipse".into()));
         }
+        if self.id == "arrow" && !node.properties.contains_key("label_position") {
+            let start = values.get("start_head") == Some(&Value::Bool(true));
+            let end = values.get("end_head") == Some(&Value::Bool(true));
+            values.insert(
+                "label_position".into(),
+                Value::Number(match (start, end) {
+                    (true, false) => 8.,
+                    (false, true) => 2.,
+                    _ => 5.,
+                }),
+            );
+        }
         Ok(values)
     }
     /// Store only a difference from the current catalog/context default.
@@ -396,7 +408,9 @@ impl ControlSpec {
         context: &Context,
     ) -> Result<(), PropertyError> {
         // Preserve explicit colors across dependent fill or button-style changes.
-        if key == "text_color" && matches!(self.id, "text_input" | "text_area" | "alert" | "table")
+        if (key == "text_color"
+            && matches!(self.id, "text_input" | "text_area" | "alert" | "table"))
+            || (self.id == "arrow" && key == "label_position")
         {
             self.property(key)
                 .expect("Control text color")

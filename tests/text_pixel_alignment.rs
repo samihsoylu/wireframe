@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
-#![cfg(target_os = "macos")]
 use eframe::egui;
 use std::sync::Arc;
 use wireframe::{fonts, text_engine};
@@ -74,6 +73,46 @@ fn panning_reuses_the_raster_without_reshaping_or_changing_its_scale() {
             assert!(!output.textures_delta.set.contains_key(&id));
         } else {
             first = Some((mesh.texture_id, mesh.calc_bounds().size()));
+        }
+        output.drop_without_applying_deltas();
+    }
+}
+
+#[test]
+fn rotated_text_reuses_texture_and_quarter_turns_remain_pixel_aligned() {
+    let text = Arc::new(text_engine::shape(fonts::REGULAR, "Rotated caption", 17.).unwrap());
+    let ctx = egui::Context::default();
+    ctx.set_pixels_per_point(2.);
+    let mut texture = None;
+    for angle in [
+        0.,
+        -std::f32::consts::FRAC_PI_2,
+        std::f32::consts::FRAC_PI_2,
+        -std::f32::consts::PI / 12.,
+    ] {
+        let output = ctx.run_ui(Default::default(), |ui| {
+            text_engine::paint_rotated(
+                ui.painter(),
+                &text,
+                [0, 0, 0, 255],
+                egui::pos2(100.125, 100.25),
+                1.,
+                angle,
+            )
+            .unwrap();
+        });
+        let mesh = text_mesh(&ctx, &output);
+        if let Some(id) = texture {
+            assert_eq!(mesh.texture_id, id);
+            assert!(!output.textures_delta.set.contains_key(&id));
+        }
+        texture = Some(mesh.texture_id);
+        if angle.abs() != std::f32::consts::PI / 12. {
+            for v in &mesh.vertices {
+                for p in [v.pos.x * 2., v.pos.y * 2.] {
+                    assert!((p - p.round()).abs() < 0.002);
+                }
+            }
         }
         output.drop_without_applying_deltas();
     }

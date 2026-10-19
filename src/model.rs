@@ -147,6 +147,7 @@ pub enum Kind {
     Dropdown,
     Search,
     Rectangle,
+    Shape,
     Ellipse,
     Line,
     Arrow,
@@ -224,6 +225,7 @@ impl Kind {
                 | Self::Paragraph
                 | Self::Popover
                 | Self::Rectangle
+                | Self::Shape
                 | Self::Ellipse
                 | Self::SiteMap
                 | Self::StickyNote
@@ -272,6 +274,7 @@ impl Kind {
             Self::Dropdown => "dropdown",
             Self::Search => "search",
             Self::Rectangle => "rectangle",
+            Self::Shape => "shape",
             Self::Ellipse => "ellipse",
             Self::Line => "line",
             Self::Arrow => "arrow",
@@ -364,7 +367,7 @@ impl Kind {
         Self::Dropdown,
         Self::Search,
         Self::Rectangle,
-        Self::Ellipse,
+        Self::Shape,
         Self::Line,
         Self::Arrow,
         Self::Image,
@@ -455,6 +458,7 @@ impl Kind {
             Self::Dropdown => "Dropdown",
             Self::Search => "Search box",
             Self::Rectangle => "Rectangle",
+            Self::Shape => "Shape",
             Self::Ellipse => "Ellipse",
             Self::Line => "Line",
             Self::Arrow => "Arrow",
@@ -560,7 +564,7 @@ impl Kind {
             | Self::HorizontalSlider
             | Self::VerticalSlider
             | Self::Toggle => "Forms",
-            Self::Rectangle | Self::Ellipse | Self::Line | Self::Arrow => "Shapes",
+            Self::Rectangle | Self::Shape | Self::Ellipse | Self::Line | Self::Arrow => "Shapes",
             _ => "Layout",
         }
     }
@@ -640,14 +644,18 @@ impl Kind {
             Self::Tabs => (199., 100.),
             Self::VerticalTabs => (200., 178.),
             Self::Progress => (240., 24.),
-            Self::Toggle => (54., 28.),
+            Self::Toggle => (42., 24.),
+            Self::Shape => (32., 32.),
             _ => (180., 120.),
         }
     }
     pub fn text_editable(self) -> bool {
         !matches!(
             self,
-            Self::FormattingToolbar
+            Self::Progress
+                | Self::Icon
+                | Self::Toggle
+                | Self::FormattingToolbar
                 | Self::StreetMap
                 | Self::ModalOverlay
                 | Self::VerticalRule

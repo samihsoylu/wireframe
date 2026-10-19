@@ -217,9 +217,8 @@ pub fn from_project(project: &Project) -> (String, Vec<Option<Link>>) {
     let mut text = project.title.clone();
     let mut links = vec![None];
     let mut pending: Vec<_> = project
-        .pages
-        .iter()
-        .filter(|p| p.parent.is_none())
+        .live_pages()
+        .filter(|p| project.live_parent(p).is_none())
         .rev()
         .map(|p| (p, 1usize))
         .collect();
@@ -231,8 +230,7 @@ pub fn from_project(project: &Project) -> (String, Vec<Option<Link>>) {
         links.push(Some(Link::Page(page.id)));
         pending.extend(
             project
-                .pages
-                .iter()
+                .live_pages()
                 .filter(|p| p.parent == Some(page.id))
                 .rev()
                 .map(|p| (p, level + 1)),

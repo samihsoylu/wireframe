@@ -9,6 +9,71 @@ use unicode_segmentation::UnicodeSegmentation;
 static SERIAL: Mutex<()> = Mutex::new(());
 
 #[test]
+fn caret_blinks_restarts_after_input_and_stops_when_inactive() {
+    let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+    let ctx = egui::Context::default();
+    let mut value = "Title".to_owned();
+    let field = std::cell::Cell::new(egui::Id::NULL);
+    let mut run = |time, focused, enabled, events| {
+        let mut output = ctx.run_ui(
+            egui::RawInput {
+                time: Some(time),
+                focused,
+                events,
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(500., 300.))),
+                ..Default::default()
+            },
+            |ui| {
+                ui.add_enabled_ui(enabled, |ui| {
+                    field.set(
+                        ui.add(
+                            wireframe::text_entry::TextInput::singleline(&mut value)
+                                .autofocus(true),
+                        )
+                        .id,
+                    );
+                });
+            },
+        );
+        let has_caret = output.shapes.iter().any(|s| {
+            matches!(&s.shape,
+            egui::Shape::LineSegment { points, stroke }
+            if points[0].x == points[1].x && points[1].y - points[0].y > 5. && stroke.width == 1.)
+        });
+        let ime = output.platform_output.ime.is_some();
+        output.textures_delta.clear();
+        (has_caret, ime)
+    };
+    assert_eq!(run(10., true, true, vec![]), (true, true));
+    assert_eq!(run(10.6, true, true, vec![]), (false, true));
+    assert_eq!(run(11.1, true, true, vec![]), (true, true));
+    assert_eq!(
+        run(11.6, true, true, vec![Event::Text("x".into())]),
+        (true, true)
+    );
+    assert_eq!(run(12.2, true, true, vec![]), (false, true));
+    assert_eq!(
+        run(12.3, true, true, vec![key(Key::ArrowLeft, Modifiers::NONE)]),
+        (true, true)
+    );
+    assert_eq!(
+        run(12.4, false, true, vec![Event::WindowFocused(false)]),
+        (false, false)
+    );
+    assert_eq!(
+        run(13.0, true, true, vec![Event::WindowFocused(true)]),
+        (true, true)
+    );
+    assert_eq!(run(13.1, true, false, vec![]), (false, false));
+    assert_eq!(run(13.2, true, true, vec![]), (false, false));
+    ctx.memory_mut(|m| m.request_focus(field.get()));
+    assert_eq!(run(13.3, true, true, vec![]), (true, true));
+    ctx.all_styles_mut(|s| s.visuals.text_cursor.blink = false);
+    assert_eq!(run(13.8, true, true, vec![]), (true, true));
+    assert_eq!(run(14.4, true, true, vec![]), (true, true));
+}
+
+#[test]
 fn accessibility_click_focuses_a_field_without_a_pointer() {
     let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
     let ctx = egui::Context::default();
@@ -507,4 +572,64 @@ fn typing_before_clicking_another_field_stays_with_the_original_field() {
         run(events);
         assert_eq!(values, ["befor", "afte"], "reverse={reverse}");
     }
+}
+
+#[test]
+fn window_deactivation_keeps_only_text_before_the_focus_boundary() {
+    let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+    let ctx = egui::Context::default();
+    let mut value = String::new();
+    fn run(ctx: &egui::Context, value: &mut String, focused: bool, events: Vec<Event>) {
+        let mut out = ctx.run_ui(
+            egui::RawInput {
+                focused,
+                events,
+                ..Default::default()
+            },
+            |ui| {
+                ui.add(wireframe::text_entry::TextInput::singleline(value).autofocus(true));
+            },
+        );
+        out.textures_delta.clear();
+    }
+    run(&ctx, &mut value, true, vec![]);
+    run(
+        &ctx,
+        &mut value,
+        false,
+        vec![
+            Event::Text("Before".into()),
+            Event::WindowFocused(false),
+            Event::Text("ignored".into()),
+        ],
+    );
+    assert_eq!(
+        value, "Before",
+        "The final focus state must not erase preceding input"
+    );
+    run(
+        &ctx,
+        &mut value,
+        false,
+        vec![Event::Text("ignored idle input".into())],
+    );
+    assert_eq!(value, "Before");
+    run(
+        &ctx,
+        &mut value,
+        true,
+        vec![
+            Event::Text("ignored before activation".into()),
+            Event::WindowFocused(true),
+            Event::Text("After".into()),
+        ],
+    );
+    assert_eq!(value, "BeforeAfter");
+    run(
+        &ctx,
+        &mut value,
+        true,
+        vec![key(Key::Z, Modifiers::COMMAND)],
+    );
+    assert_eq!(value, "Before");
 }

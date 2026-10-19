@@ -212,12 +212,18 @@ fn property_edits_respect_nested_context_lock_and_validation() {
     );
     e.select(id, false);
     e.lock(true);
-    let locked = e.document.clone();
-    assert!(
-        e.set_control_property(id, "text", Value::Text("Changed".into()))
-            .is_err()
+    let origin = e.nodes().iter().find(|n| n.id == id).unwrap().origin;
+    e.set_control_property(id, "text", Value::Text("Changed".into()))
+        .unwrap();
+    assert!(e.own_locked(id));
+    assert_eq!(
+        e.nodes().iter().find(|n| n.id == id).unwrap().origin,
+        origin
     );
-    assert_eq!(e.document, locked);
+    let edited = e.document.clone();
+    e.move_by(10., 10.);
+    e.delete();
+    assert_eq!(e.document, edited);
 }
 
 #[test]

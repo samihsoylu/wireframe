@@ -418,6 +418,120 @@ fn capture(font: &skrifa::FontRef<'_>, remaining: &mut usize) -> Result<FontData
 #[cfg(test)]
 mod resource_tests {
     use super::*;
+    #[test]
+    fn default_cedilla_case_marks_and_pairs_survive_portable_shaping() {
+        let font = crate::fonts::default_project_font();
+        let mut engine = Engine::new();
+        for face in font.faces() {
+            for (letter, decomposed, base, sibling) in
+                [("ţ", "t\u{0327}", "t", "ț"), ("Ţ", "T\u{0327}", "T", "Ț")]
+            {
+                let actual = engine.shape(face, letter, 24.).unwrap();
+                let plain = engine.shape(face, base, 24.).unwrap();
+                let canonical = engine.shape(face, decomposed, 24.).unwrap();
+                assert!((actual.width - plain.width).abs() < 0.01);
+                assert_eq!(actual.svg([0, 0, 0, 255]), canonical.svg([0, 0, 0, 255]));
+                for neighbor in ["A", "V", "a", "y", "."] {
+                    for (a, b) in [
+                        (
+                            format!("{letter}{neighbor}"),
+                            format!("{sibling}{neighbor}"),
+                        ),
+                        (
+                            format!("{neighbor}{letter}"),
+                            format!("{neighbor}{sibling}"),
+                        ),
+                    ] {
+                        let a = engine.shape(face, &a, 24.).unwrap();
+                        let b = engine.shape(face, &b, 24.).unwrap();
+                        assert!((a.width - b.width).abs() < 0.01);
+                    }
+                }
+                let a = engine
+                    .shape(face, &format!("{letter}\u{0301}"), 24.)
+                    .unwrap();
+                let b = engine
+                    .shape(face, &format!("{decomposed}\u{0301}"), 24.)
+                    .unwrap();
+                assert_eq!(a.svg([0, 0, 0, 255]), b.svg([0, 0, 0, 255]));
+            }
+        }
+    }
+    #[test]
+    fn default_breve_letters_preserve_canonical_marks_in_portable_shaping() {
+        let font = crate::fonts::default_project_font();
+        let mut engine = Engine::new();
+        for face in font.faces() {
+            for (letter, decomposed) in [("ğ", "g\u{0306}"), ("Ğ", "G\u{0306}")] {
+                for suffix in [
+                    "",
+                    "a",
+                    "\u{0301}",
+                    "\u{0327}",
+                    "\u{0328}",
+                    "\u{0327}\u{0301}",
+                ] {
+                    let a = engine
+                        .shape(face, &format!("{letter}{suffix}"), 24.)
+                        .unwrap();
+                    let b = engine
+                        .shape(face, &format!("{decomposed}{suffix}"), 24.)
+                        .unwrap();
+                    assert_eq!(a.svg([0, 0, 0, 255]), b.svg([0, 0, 0, 255]));
+                    assert!((a.width - b.width).abs() < 1e-9);
+                    assert!(
+                        a.runs
+                            .iter()
+                            .all(|r| r.font_name.contains("WireframeDraft"))
+                    );
+                }
+            }
+            let a = engine.shape(face, "g\u{0301}\u{0306}", 24.).unwrap();
+            let b = engine.shape(face, "g\u{0306}\u{0301}", 24.).unwrap();
+            assert_ne!(a.svg([0, 0, 0, 255]), b.svg([0, 0, 0, 255]));
+        }
+    }
+
+    #[test]
+    fn default_operators_and_spaces_survive_portable_shaping() {
+        let font = crate::fonts::default_project_font();
+        let mut engine = Engine::new();
+        for face in font.faces() {
+            for size in [12., 17., 28.] {
+                let mut shape = |text: &str| engine.shape(face, text, size).unwrap();
+                let x = shape("x").raster([0, 0, 0, 255], 2.).unwrap().unwrap();
+                for symbol in ["+", "×"] {
+                    let shaped = shape(symbol);
+                    let ink = shaped.raster([0, 0, 0, 255], 2.).unwrap().unwrap();
+                    assert!((shaped.width / size - 0.65).abs() < 0.002);
+                    assert!(ink.bounds.height() >= x.bounds.height() * 0.9);
+                    assert!(ink.bounds.height() <= x.bounds.height() * 1.1);
+                    assert!(
+                        shaped
+                            .runs
+                            .iter()
+                            .all(|r| r.font_name.contains("WireframeDraft"))
+                    );
+                }
+                for (ordinary, protected) in [
+                    ("Price 24.50", "Price\u{a0}24.50"),
+                    ("2 × 19.95", "2\u{a0}×\u{a0}19.95"),
+                ] {
+                    let a = shape(ordinary);
+                    let b = shape(protected);
+                    // Word segmentation can change f32 line-width accumulation
+                    // by one ULP even when glyph placement is identical.
+                    assert!((a.width - b.width).abs() < 0.0001);
+                    let a = a.raster([0, 0, 0, 255], 2.).unwrap().unwrap();
+                    let b = b.raster([0, 0, 0, 255], 2.).unwrap().unwrap();
+                    assert_eq!(a.bounds, b.bounds);
+                    assert_eq!(a.pixels.size, b.pixels.size);
+                    assert_eq!(a.pixels.pixels, b.pixels.pixels);
+                }
+            }
+        }
+    }
+
     fn fixture(name: &str) -> Vec<u8> {
         std::fs::read(
             std::path::Path::new(env!("CARGO_MANIFEST_DIR"))

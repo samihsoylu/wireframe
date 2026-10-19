@@ -3,7 +3,7 @@
     "style": "Regular",
     "source": "ComicNeue-Bold.ttf",
     "source_sha256": "3e7e5fccfd7e0788f317b43312151c1bd5cf058c9697a8d83eac3939050bd61e",
-    "sha256": "043f1eca9e4cb6d2609931ad3f514f7f6d8463b68642a5a88ec43bdb520719f4",
+    "sha256": "8fec677ebd93359108825bf72e85705cdfb504a61930e9351277158adf8fa25a",
     "horizontal_scale": 1.02,
     "stroke": 10.0,
     "stroke_caps": [],
@@ -851,10 +851,134 @@
           "guilsinglright",
           "guilsinglright"
         ]
+      },
+      {
+        "glyph": "uni0162",
+        "parts": [
+          "T",
+          "uni0327"
+        ]
+      },
+      {
+        "glyph": "uni0163",
+        "parts": [
+          "t",
+          "uni0327"
+        ]
+      },
+      {
+        "glyph": "uni011E",
+        "parts": [
+          "G",
+          "uni0306.case"
+        ]
+      },
+      {
+        "glyph": "uni011F",
+        "parts": [
+          "g",
+          "uni0306"
+        ]
       }
     ],
-    "glyphs": 328,
-    "cmap_entries": 303,
+    "character_repairs": [
+      {
+        "codepoint": 354,
+        "glyph": "uni0162",
+        "previous": null,
+        "components": [
+          "T",
+          "uni0327"
+        ],
+        "mark_offset": [
+          386,
+          0
+        ],
+        "positioning_sibling": "uni021A"
+      },
+      {
+        "codepoint": 355,
+        "glyph": "uni0163",
+        "previous": "uni021A",
+        "components": [
+          "t",
+          "uni0327"
+        ],
+        "mark_offset": [
+          286,
+          -6
+        ],
+        "positioning_sibling": "uni021B"
+      },
+      {
+        "codepoint": 286,
+        "glyph": "uni011E",
+        "previous": null,
+        "components": [
+          "G",
+          "uni0306.case"
+        ],
+        "mark_offset": [
+          524,
+          0
+        ],
+        "positioning_sibling": "G"
+      },
+      {
+        "codepoint": 287,
+        "glyph": "uni011F",
+        "previous": null,
+        "components": [
+          "g",
+          "uni0306"
+        ],
+        "mark_offset": [
+          436,
+          0
+        ],
+        "positioning_sibling": "g"
+      }
+    ],
+    "operators": {
+      "source": "ComicNeue-Regular.ttf",
+      "source_sha256": "a0ee5a37c8b27c4db0700137d928598b1e23b0089e1546a8961909176b779360",
+      "changes": [
+        {
+          "character": "+",
+          "glyph": "plus",
+          "source_glyph": "plus",
+          "scale": 1.5401234567901234,
+          "translation": [
+            -16.907407407407376,
+            -120.12962962962962
+          ],
+          "stroke": 0,
+          "advance": 650
+        },
+        {
+          "character": "\u00d7",
+          "glyph": "multiply",
+          "source_glyph": "multiply",
+          "scale": 2.0120967741935485,
+          "translation": [
+            -53.2741935483871,
+            -225.35483870967744
+          ],
+          "stroke": 0,
+          "advance": 650
+        }
+      ]
+    },
+    "spacing": {
+      "uppercase": 1.07,
+      "lowercase": 1.04,
+      "digits": 1.11,
+      "punctuation": 0.95,
+      "space": 0.75,
+      "alias_conflicts": []
+    },
+    "glyphs": 332,
+    "cmap_entries": 306,
     "ink_y_bounds": [
       -240,
       938
@@ -868,7 +992,7 @@
     "style": "Bold",
     "source": "ComicNeue-Bold.ttf",
     "source_sha256": "3e7e5fccfd7e0788f317b43312151c1bd5cf058c9697a8d83eac3939050bd61e",
-    "sha256": "986b255c61d7602b26e2344effb96ce33af01a072a9341a32ce20e9cda94f00d",
+    "sha256": "b4bb45f4115aa655ae041e97defbbb6694c3936c6dff304e5bbc406eef42a56c",
     "horizontal_scale": 1.02,
     "stroke": 34.0,
     "stroke_caps": [
@@ -1873,10 +1997,134 @@
           "guilsinglright",
           "guilsinglright"
         ]
+      },
+      {
+        "glyph": "uni0162",
+        "parts": [
+          "T",
+          "uni0327"
+        ]
+      },
+      {
+        "glyph": "uni0163",
+        "parts": [
+          "t",
+          "uni0327"
+        ]
+      },
+      {
+        "glyph": "uni011E",
+        "parts": [
+          "G",
+          "uni0306.case"
+        ]
+      },
+      {
+        "glyph": "uni011F",
+        "parts": [
+          "g",
+          "uni0306"
+        ]
       }
     ],
-    "glyphs": 328,
-    "cmap_entries": 303,
+    "character_repairs": [
+      {
+        "codepoint": 354,
+        "glyph": "uni0162",
+        "previous": null,
+        "components": [
+          "T",
+          "uni0327"
+        ],
+        "mark_offset": [
+          386,
+          0
+        ],
+        "positioning_sibling": "uni021A"
+      },
+      {
+        "codepoint": 355,
+        "glyph": "uni0163",
+        "previous": "uni021A",
+        "components": [
+          "t",
+          "uni0327"
+        ],
+        "mark_offset": [
+          286,
+          -6
+        ],
+        "positioning_sibling": "uni021B"
+      },
+      {
+        "codepoint": 286,
+        "glyph": "uni011E",
+        "previous": null,
+        "components": [
+          "G",
+          "uni0306.case"
+        ],
+        "mark_offset": [
+          524,
+          0
+        ],
+        "positioning_sibling": "G"
+      },
+      {
+        "codepoint": 287,
+        "glyph": "uni011F",
+        "previous": null,
+        "components": [
+          "g",
+          "uni0306"
+        ],
+        "mark_offset": [
+          436,
+          0
+        ],
+        "positioning_sibling": "g"
+      }
+    ],
+    "operators": {
+      "source": "ComicNeue-Regular.ttf",
+      "source_sha256": "a0ee5a37c8b27c4db0700137d928598b1e23b0089e1546a8961909176b779360",
+      "changes": [
+        {
+          "character": "+",
+          "glyph": "plus",
+          "source_glyph": "plus",
+          "scale": 1.478395061728395,
+          "translation": [
+            -3.2037037037036953,
+            -99.31481481481481
+          ],
+          "stroke": 32,
+          "advance": 650
+        },
+        {
+          "character": "\u00d7",
+          "glyph": "multiply",
+          "source_glyph": "multiply",
+          "scale": 1.9314516129032258,
+          "translation": [
+            -38.11290322580645,
+            -200.32258064516128
+          ],
+          "stroke": 32,
+          "advance": 650
+        }
+      ]
+    },
+    "spacing": {
+      "uppercase": 1.07,
+      "lowercase": 1.06,
+      "digits": 1.13,
+      "punctuation": 1.02,
+      "space": 0.75,
+      "alias_conflicts": []
+    },
+    "glyphs": 332,
+    "cmap_entries": 306,
     "ink_y_bounds": [
       -276,
       974
@@ -1890,7 +2138,7 @@
     "style": "Italic",
     "source": "ComicNeue-BoldItalic.ttf",
     "source_sha256": "5c312c2a2fa64eee82f3b87fcfab8f3b12a5e59b043124401d322eb323cfbf16",
-    "sha256": "bd1b88404fc4154398ad7aff3d37158d025367b87312df396379c890f67184eb",
+    "sha256": "a671c1159bf4f611709ad218f2f7decf2540d5419e1b7f66f8abfc747169f93d",
     "horizontal_scale": 1.02,
     "stroke": 10.0,
     "stroke_caps": [],
@@ -2862,10 +3110,134 @@
           "guilsinglright",
           "guilsinglright"
         ]
+      },
+      {
+        "glyph": "uni0162",
+        "parts": [
+          "T",
+          "uni0327"
+        ]
+      },
+      {
+        "glyph": "uni0163",
+        "parts": [
+          "t",
+          "uni0327"
+        ]
+      },
+      {
+        "glyph": "uni011E",
+        "parts": [
+          "G",
+          "uni0306.case"
+        ]
+      },
+      {
+        "glyph": "uni011F",
+        "parts": [
+          "g",
+          "uni0306"
+        ]
       }
     ],
-    "glyphs": 344,
-    "cmap_entries": 319,
+    "character_repairs": [
+      {
+        "codepoint": 354,
+        "glyph": "uni0162",
+        "previous": "uni021A",
+        "components": [
+          "T",
+          "uni0327"
+        ],
+        "mark_offset": [
+          389,
+          0
+        ],
+        "positioning_sibling": "uni021A"
+      },
+      {
+        "codepoint": 355,
+        "glyph": "uni0163",
+        "previous": "uni021B",
+        "components": [
+          "t",
+          "uni0327"
+        ],
+        "mark_offset": [
+          294,
+          0
+        ],
+        "positioning_sibling": "uni021B"
+      },
+      {
+        "codepoint": 286,
+        "glyph": "uni011E",
+        "previous": null,
+        "components": [
+          "G",
+          "uni0306.case"
+        ],
+        "mark_offset": [
+          535,
+          0
+        ],
+        "positioning_sibling": "G"
+      },
+      {
+        "codepoint": 287,
+        "glyph": "uni011F",
+        "previous": null,
+        "components": [
+          "g",
+          "uni0306"
+        ],
+        "mark_offset": [
+          445,
+          0
+        ],
+        "positioning_sibling": "g"
+      }
+    ],
+    "operators": {
+      "source": "ComicNeue-Italic.ttf",
+      "source_sha256": "e06bfd1552f5c9464c5665733ffd69239b0593885dbb9e059688a5900f78cf98",
+      "changes": [
+        {
+          "character": "+",
+          "glyph": "plus",
+          "source_glyph": "plus",
+          "scale": 1.5401234567901234,
+          "translation": [
+            -19.987654320987616,
+            -129.37037037037038
+          ],
+          "stroke": 0,
+          "advance": 650
+        },
+        {
+          "character": "\u00d7",
+          "glyph": "multiply",
+          "source_glyph": "multiply",
+          "scale": 2.0284552845528454,
+          "translation": [
+            -56.349593495934926,
+            -241.3861788617886
+          ],
+          "stroke": 0,
+          "advance": 650
+        }
+      ]
+    },
+    "spacing": {
+      "uppercase": 1.08,
+      "lowercase": 1.04,
+      "digits": 1.06,
+      "punctuation": 0.96,
+      "space": 0.75,
+      "alias_conflicts": []
+    },
+    "glyphs": 348,
+    "cmap_entries": 321,
     "ink_y_bounds": [
       -241,
       944
@@ -2879,7 +3251,7 @@
     "style": "BoldItalic",
     "source": "ComicNeue-BoldItalic.ttf",
     "source_sha256": "5c312c2a2fa64eee82f3b87fcfab8f3b12a5e59b043124401d322eb323cfbf16",
-    "sha256": "a33b075e3973a1b5e7bdf03dd8822cc26eebf02081ccc3b62186f19fb2a6632d",
+    "sha256": "052a5fd2e29736eb62cb865ccca348e95f88a203bf15012b473e64dc625d96bf",
     "horizontal_scale": 1.02,
     "stroke": 34.0,
     "stroke_caps": [
@@ -4023,10 +4395,134 @@
           "guilsinglright",
           "guilsinglright"
         ]
+      },
+      {
+        "glyph": "uni0162",
+        "parts": [
+          "T",
+          "uni0327"
+        ]
+      },
+      {
+        "glyph": "uni0163",
+        "parts": [
+          "t",
+          "uni0327"
+        ]
+      },
+      {
+        "glyph": "uni011E",
+        "parts": [
+          "G",
+          "uni0306.case"
+        ]
+      },
+      {
+        "glyph": "uni011F",
+        "parts": [
+          "g",
+          "uni0306"
+        ]
       }
     ],
-    "glyphs": 344,
-    "cmap_entries": 319,
+    "character_repairs": [
+      {
+        "codepoint": 354,
+        "glyph": "uni0162",
+        "previous": "uni021A",
+        "components": [
+          "T",
+          "uni0327"
+        ],
+        "mark_offset": [
+          389,
+          0
+        ],
+        "positioning_sibling": "uni021A"
+      },
+      {
+        "codepoint": 355,
+        "glyph": "uni0163",
+        "previous": "uni021B",
+        "components": [
+          "t",
+          "uni0327"
+        ],
+        "mark_offset": [
+          294,
+          0
+        ],
+        "positioning_sibling": "uni021B"
+      },
+      {
+        "codepoint": 286,
+        "glyph": "uni011E",
+        "previous": null,
+        "components": [
+          "G",
+          "uni0306.case"
+        ],
+        "mark_offset": [
+          535,
+          0
+        ],
+        "positioning_sibling": "G"
+      },
+      {
+        "codepoint": 287,
+        "glyph": "uni011F",
+        "previous": null,
+        "components": [
+          "g",
+          "uni0306"
+        ],
+        "mark_offset": [
+          445,
+          0
+        ],
+        "positioning_sibling": "g"
+      }
+    ],
+    "operators": {
+      "source": "ComicNeue-Italic.ttf",
+      "source_sha256": "e06bfd1552f5c9464c5665733ffd69239b0593885dbb9e059688a5900f78cf98",
+      "changes": [
+        {
+          "character": "+",
+          "glyph": "plus",
+          "source_glyph": "plus",
+          "scale": 1.478395061728395,
+          "translation": [
+            -6.160493827160479,
+            -108.18518518518518
+          ],
+          "stroke": 32,
+          "advance": 650
+        },
+        {
+          "character": "\u00d7",
+          "glyph": "multiply",
+          "source_glyph": "multiply",
+          "scale": 1.9471544715447155,
+          "translation": [
+            -41.0650406504065,
+            -215.71138211382114
+          ],
+          "stroke": 32,
+          "advance": 650
+        }
+      ]
+    },
+    "spacing": {
+      "uppercase": 1.08,
+      "lowercase": 1.06,
+      "digits": 1.08,
+      "punctuation": 1.02,
+      "space": 0.75,
+      "alias_conflicts": []
+    },
+    "glyphs": 348,
+    "cmap_entries": 321,
     "ink_y_bounds": [
       -277,
       980

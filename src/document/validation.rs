@@ -15,14 +15,21 @@ struct Check<'a> {
 }
 impl Project {
     pub fn validate(&self) -> Result<(), String> {
+        self.validate_libraries(true)
+    }
+    pub(super) fn validate_libraries(&self, require_owners: bool) -> Result<(), String> {
         if self.format_version != FORMAT_VERSION {
             return Err(format!(
                 "Unsupported document version {}",
                 self.format_version
             ));
         }
-        if self.pages.is_empty() || self.pages.len() > 1000 {
-            return Err("A project must have 1–1000 pages".into());
+        let live = self.live_pages().count();
+        self.validate_reviews()?;
+        if live == 0 || live > 1000 || self.pages.len() - live > 1000 {
+            return Err(
+                "A project must have 1–1000 live pages and at most 1000 trashed pages".into(),
+            );
         }
         text(&self.title, 10000)?;
         if !self.settings.font_size.is_finite() || !(6.0..=120.0).contains(&self.settings.font_size)
@@ -43,7 +50,9 @@ impl Project {
             .iter()
             .map(|p| p.id)
             .chain(self.assets.iter().map(|a| a.id))
+            .chain(self.versions.iter().map(|v| v.id))
             .chain(self.definitions.iter().map(|d| d.id))
+            .chain(self.libraries.iter().map(|l| l.id))
             .chain(
                 self.pages
                     .iter()
@@ -56,6 +65,93 @@ impl Project {
             check.maximum_id = check.maximum_id.max(id);
         }
         check.resources = resources;
+        if self.removed_pages.len() > MAX_NODES {
+            return Err("Too many removed page identities".into());
+        }
+        for id in &self.removed_pages {
+            if *id == 0 || !check.resources.insert(*id) {
+                return Err("Removed page identity is zero or reused".into());
+            }
+            check.maximum_id = check.maximum_id.max(*id);
+        }
+        if self.removed_assets.len() > MAX_NODES {
+            return Err("Too many removed image identities".into());
+        }
+        for id in &self.removed_assets {
+            if *id == 0 || !check.resources.insert(*id) {
+                return Err("Removed image identity is zero or reused".into());
+            }
+            check.maximum_id = check.maximum_id.max(*id);
+        }
+        let mut asset_import_count = 0usize;
+        for (&owner, records) in &self.asset_imports {
+            if !check.assets.contains(&owner) {
+                return Err("Asset import correspondence has no owning asset".into());
+            }
+            let mut origins = HashSet::new();
+            for record in records {
+                asset_import_count += 1;
+                if asset_import_count > MAX_NODES {
+                    return Err("Project exceeds asset import correspondence limits".into());
+                }
+                if record.project.is_empty()
+                    || record.project.len() > 512
+                    || record.project.chars().any(char::is_control)
+                    || record.asset == 0
+                    || !origins.insert((&record.project, record.asset))
+                {
+                    return Err("Invalid or duplicate asset import origin".into());
+                }
+            }
+        }
+        let mut version_names = HashSet::new();
+        let mut page_import_count = 0usize;
+        let mut alternate_binding_count = 0usize;
+        let mut alternate_owners = HashMap::new();
+        for (&owner, records) in &self.page_imports {
+            let page = self
+                .pages
+                .iter()
+                .find(|p| p.id == owner)
+                .ok_or("Page import correspondence has no owning page")?;
+            let mut origins = HashSet::new();
+            for record in records {
+                page_import_count += 1;
+                alternate_binding_count += record.alternates.len();
+                if page_import_count > MAX_NODES || alternate_binding_count > MAX_NODES {
+                    return Err("Project exceeds page import correspondence limits".into());
+                }
+                if record.project.is_empty()
+                    || record.project.len() > 512
+                    || record.project.chars().any(char::is_control)
+                    || record.page == 0
+                    || !origins.insert((&record.project, record.page))
+                {
+                    return Err("Invalid or duplicate page import origin".into());
+                }
+                let mut targets = HashSet::new();
+                for (&foreign, &local) in &record.alternates {
+                    if foreign == 0
+                        || local == 0
+                        || !targets.insert(local)
+                        || alternate_owners
+                            .insert(local, owner)
+                            .is_some_and(|old| old != owner)
+                        || (check.resources.contains(&local)
+                            && !page.alternates.iter().any(|a| a.id == local))
+                    {
+                        return Err("Invalid page import alternate correspondence".into());
+                    }
+                    check.maximum_id = check.maximum_id.max(local);
+                }
+            }
+        }
+        for version in &self.versions {
+            text(&version.name, 10000)?;
+            if version.name.trim().is_empty() || !version_names.insert(&version.name) {
+                return Err("Empty or duplicate version name".into());
+            }
+        }
         let mut asset_bytes = 0usize;
         for a in &self.assets {
             text(&a.name, 10000)?;
@@ -84,8 +180,20 @@ impl Project {
                     .parent;
             }
             check.content(&page.content)?;
+            let mut memberships = HashSet::new();
             for alt in &page.alternates {
                 text(&alt.name, 10000)?;
+                text(&alt.notes, 1_000_000)?;
+                if let Some(id) = alt.version {
+                    let version = self
+                        .versions
+                        .iter()
+                        .find(|v| v.id == id)
+                        .ok_or("Missing named version")?;
+                    if version.name != alt.name || !memberships.insert(id) {
+                        return Err("Inconsistent or duplicate page version".into());
+                    }
+                }
                 check.content(&alt.content)?;
             }
         }
@@ -96,6 +204,99 @@ impl Project {
                 return Err("Component definitions cannot use legacy paint order".into());
             }
         }
+        if self.libraries.len() > 1000 {
+            return Err("Project exceeds 1000 component libraries".into());
+        }
+        if let Some(id) = self.default_library
+            && !self.libraries.iter().any(|l| l.id == id)
+        {
+            return Err("Default component library is missing".into());
+        }
+        let mut import_records = 0usize;
+        let mut import_bindings = 0usize;
+        let mut owners = HashSet::new();
+        for library in &self.libraries {
+            text(&library.name, 10000)?;
+            text(&library.notes, 1_000_000)?;
+            if library.name.trim().is_empty() {
+                return Err("Give the component library a name".into());
+            }
+            let mut origins = HashSet::new();
+            for import in &library.imports {
+                import_records = import_records
+                    .checked_add(1)
+                    .ok_or("Import record overflow")?;
+                import_bindings = import_bindings
+                    .checked_add(import.definitions.len())
+                    .ok_or("Import binding overflow")?;
+                if import_records > 1000 || import_bindings > MAX_NODES {
+                    return Err("Project exceeds library import correspondence limits".into());
+                }
+                if import.project.is_empty()
+                    || import.project.len() > 512
+                    || import.project.chars().any(char::is_control)
+                    || import.library == 0
+                    || !origins.insert((&import.project, import.library))
+                {
+                    return Err("Invalid or duplicate library import origin".into());
+                }
+                let mut targets = HashSet::new();
+                for (&source, &target) in &import.definitions {
+                    if source == 0
+                        || target == 0
+                        || !targets.insert(target)
+                        || (check.resources.contains(&target)
+                            && !self.definitions.iter().any(|d| d.id == target))
+                    {
+                        return Err("Invalid library import definition correspondence".into());
+                    }
+                    // Deleted targets remain reserved; an unrelated new source must not acquire them.
+                    check.maximum_id = check.maximum_id.max(target);
+                }
+            }
+            let mut source_nodes = HashSet::new();
+            for source in &library.sources {
+                text(&source.notes, 1_000_000)?;
+                if !owners.insert(source.definition)
+                    || !source_nodes.insert(source.node)
+                    || !self.definitions.iter().any(|d| d.id == source.definition)
+                {
+                    return Err("Invalid or duplicate component source ownership".into());
+                }
+                let node = library
+                    .content
+                    .nodes
+                    .iter()
+                    .find(|n| n.id == source.node)
+                    .ok_or("Source placement is missing")?;
+                if !matches!(&node.content, NodeContent::Instance { definition, overrides } if *definition == source.definition && overrides.is_empty())
+                    || !node.properties.is_empty()
+                {
+                    return Err("Source placement cannot override canonical content".into());
+                }
+            }
+            let mut siblings = HashSet::new();
+            for node in &library.content.nodes {
+                if node.id == 0 || !siblings.insert(node.id) {
+                    return Err("Duplicate or zero library node ID".into());
+                }
+                if source_nodes.contains(&node.id) {
+                    point(node.origin)?;
+                    if node.crop.is_some_and(|crop| !crop.valid()) {
+                        return Err("Invalid source crop".into());
+                    }
+                    check.maximum_id = check.maximum_id.max(node.id);
+                } else {
+                    check.nodes(std::slice::from_ref(node), 0)?;
+                }
+            }
+            if !library.content.paint_order.is_empty() {
+                library.content.paint_paths()?;
+            }
+        }
+        if require_owners && owners.len() != self.definitions.len() {
+            return Err("Every component requires a library source placement".into());
+        }
         let mut heights = HashMap::new();
         for d in &self.definitions {
             check.definition_height(d.id, &mut HashSet::new(), &mut heights)?;
@@ -104,6 +305,17 @@ impl Project {
             check.nodes_height(&page.content.nodes, &mut HashSet::new(), &mut heights)?;
             for alt in &page.alternates {
                 check.nodes_height(&alt.content.nodes, &mut HashSet::new(), &mut heights)?;
+            }
+        }
+        for library in &self.libraries {
+            for node in &library.content.nodes {
+                if !library.sources.iter().any(|s| s.node == node.id) {
+                    check.nodes_height(
+                        std::slice::from_ref(node),
+                        &mut HashSet::new(),
+                        &mut heights,
+                    )?;
+                }
             }
         }
         if self.next_id <= check.maximum_id || self.next_id == u64::MAX {
@@ -135,7 +347,10 @@ impl Check<'_> {
             }
             self.maximum_id = self.maximum_id.max(n.id);
             point(n.origin)?;
-            self.properties(&n.properties)?;
+            self.properties(
+                &n.properties,
+                matches!(n.content, NodeContent::Group { .. }),
+            )?;
             if let Some(c) = n.crop
                 && (![c.x, c.y, c.width, c.height]
                     .iter()
@@ -177,14 +392,19 @@ impl Check<'_> {
                     self.maximum_id = self.maximum_id.max(*definition);
                     let mut paths = HashSet::new();
                     for o in overrides {
-                        if o.path.is_empty()
-                            || o.path.len() > MAX_DEPTH
-                            || o.path.contains(&0)
-                            || !paths.insert(&o.path)
+                        if o.path.len() > MAX_DEPTH || o.path.contains(&0) || !paths.insert(&o.path)
                         {
                             return Err("Invalid or duplicate override path".into());
                         }
-                        self.properties(&o.patch.properties)?;
+                        if o.path.is_empty()
+                            && (o.patch.locked.is_some()
+                                || o.patch.origin.is_some()
+                                || o.patch.size.is_some()
+                                || !o.patch.properties.is_empty())
+                        {
+                            return Err("Root overrides support only crop and markup".into());
+                        }
+                        self.properties(&o.patch.properties, false)?;
                         if let Some(CropOverride::Region(c)) = o.patch.crop
                             && !c.valid()
                         {
@@ -202,7 +422,7 @@ impl Check<'_> {
         }
         Ok(())
     }
-    fn properties(&self, p: &Properties) -> Result<(), String> {
+    fn properties(&self, p: &Properties, group: bool) -> Result<(), String> {
         if p.len() > 256 {
             return Err("Too many control properties".into());
         }
@@ -212,6 +432,11 @@ impl Check<'_> {
                 return Err("Empty property name".into());
             }
             match value {
+                Value::Text(s) if group && key == GROUP_NAME => text(s, 10_000)?,
+                Value::Text(s) if group && key == GROUP_NOTES => text(s, 1_000_000)?,
+                _ if group && (key == GROUP_NAME || key == GROUP_NOTES) => {
+                    return Err("Invalid group metadata".into());
+                }
                 Value::Number(n) if !n.is_finite() => {
                     return Err("Non-finite property value".into());
                 }
@@ -219,7 +444,9 @@ impl Check<'_> {
                     return Err("Invalid font size".into());
                 }
                 Value::Text(s) | Value::Choice(s) => text(s, 100_000)?,
-                Value::Link(Link::Page(id)) if !self.pages.contains(id) => {
+                Value::Link(Link::Page(id))
+                    if !self.pages.contains(id) && !self.project.removed_pages.contains(id) =>
+                {
                     return Err("Link points to a missing page".into());
                 }
                 Value::Link(Link::Url(s)) => {
@@ -231,7 +458,7 @@ impl Check<'_> {
                     }
                 }
                 Value::Icon(icon) if !icon.valid() => return Err("Invalid control icon".into()),
-                Value::Icon(IconSource::Asset(id)) if !self.assets.contains(id) => {
+                Value::Icon(IconSource::Asset(id)) if !self.assets.contains(id) && !self.project.removed_assets.contains(id) => {
                     return Err("Missing control icon asset".into());
                 }
                 Value::Icons(icons)
@@ -241,7 +468,7 @@ impl Check<'_> {
                 }
                 Value::Icons(icons) => {
                     if icons.iter().flatten().any(
-                        |icon| matches!(icon, IconSource::Asset(id) if !self.assets.contains(id)),
+                        |icon| matches!(icon, IconSource::Asset(id) if !self.assets.contains(id) && !self.project.removed_assets.contains(id)),
                     ) {
                         return Err("Missing row icon asset".into());
                     }
@@ -256,12 +483,13 @@ impl Check<'_> {
                         }
                         if let Link::Page(id) = link
                             && !self.pages.contains(id)
+                            && !self.project.removed_pages.contains(id)
                         {
                             return Err("Row link points to a missing page".into());
                         }
                     }
                 }
-                Value::Asset(id) if !self.assets.contains(id) => {
+                Value::Asset(id) if !self.assets.contains(id) && !self.project.removed_assets.contains(id) => {
                     return Err("Missing image asset".into());
                 }
                 _ => {}

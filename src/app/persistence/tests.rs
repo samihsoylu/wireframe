@@ -27,6 +27,208 @@ fn named(app: &mut WireframeApp, ctx: &egui::Context, path: &std::path::Path) {
     assert!(app.error.is_none(), "{:?}", app.error);
     assert!(!app.editor.dirty());
 }
+
+#[test]
+fn named_save_restores_navigator_focus_before_the_next_outdent_and_arrow() {
+    use std::sync::{Condvar, Mutex};
+    struct Gate(Arc<(Mutex<bool>, Condvar)>);
+    impl Gate {
+        fn release(&self) {
+            *self.0.0.lock().unwrap() = true;
+            self.0.1.notify_all();
+        }
+    }
+    impl Drop for Gate {
+        fn drop(&mut self) {
+            self.release();
+        }
+    }
+    fn frame(
+        ctx: &egui::Context,
+        app: &mut WireframeApp,
+        events: Vec<egui::Event>,
+    ) -> egui::FullOutput {
+        let mut input = egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::Pos2::ZERO,
+                egui::vec2(1200., 850.),
+            )),
+            events,
+            ..Default::default()
+        };
+        app.raw_input_hook(ctx, &mut input);
+        ctx.run_ui(input, |ui| app.ui(ui, &mut eframe::Frame::_new_kittest()))
+    }
+    fn key(key: egui::Key, modifiers: egui::Modifiers) -> egui::Event {
+        egui::Event::Key {
+            key,
+            physical_key: Some(key),
+            pressed: true,
+            repeat: false,
+            modifiers,
+        }
+    }
+    for (thumbnails, key_on_completion, busy_frames) in [
+        (false, false, 3),
+        (true, false, 3),
+        (false, true, 3),
+        (true, true, 3),
+        (false, true, 0),
+        (true, true, 0),
+    ] {
+        let (dir, ctx, mut app) = fixture();
+        ctx.enable_accesskit();
+        app.thumbnails = thumbnails;
+        let first = app.editor.page;
+        app.editor.add_page();
+        let second = app.editor.page;
+        app.editor.rename_page(second, "Second").unwrap();
+        app.editor.add_page();
+        let third = app.editor.page;
+        app.editor.switch_page(second);
+        let path = dir.path().join("Navigation.wireframe");
+        ProjectStore.save(&path, &app.editor.document).unwrap();
+        app.file = Some(path.clone());
+        app.editor.mark_saved();
+        let gate = Gate(Arc::new((Mutex::new(false), Condvar::new())));
+        let wait = gate.0.clone();
+        let p = app.persistence.as_mut().unwrap();
+        let copy = p.copies.open_named(&path).unwrap();
+        p.id = Some(copy.id().to_owned());
+        p.session = Some(
+            ProjectSession::start(
+                p.copies.clone(),
+                copy,
+                false,
+                Arc::new(move || {
+                    let (lock, ready) = &*wait;
+                    let mut released = lock.lock().unwrap();
+                    while !*released {
+                        released = ready.wait(released).unwrap();
+                    }
+                }),
+            )
+            .unwrap(),
+        );
+        let mut point = egui::Pos2::ZERO;
+        for _ in 0..3 {
+            let out = frame(&ctx, &mut app, vec![]);
+            let node = &out
+                .platform_output
+                .accesskit_update
+                .as_ref()
+                .unwrap()
+                .nodes
+                .iter()
+                .find(|(_, n)| n.label() == Some("Second"))
+                .unwrap()
+                .1;
+            let b = node.bounds().unwrap();
+            point = egui::pos2(((b.x0 + b.x1) / 2.) as f32, ((b.y0 + b.y1) / 2.) as f32);
+            out.drop_without_applying_deltas();
+        }
+        for pressed in [true, false] {
+            frame(
+                &ctx,
+                &mut app,
+                vec![
+                    egui::Event::PointerMoved(point),
+                    egui::Event::PointerButton {
+                        pos: point,
+                        button: egui::PointerButton::Primary,
+                        pressed,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ],
+            )
+            .drop_without_applying_deltas();
+        }
+        assert!(app.navigator.focused(&ctx));
+        frame(
+            &ctx,
+            &mut app,
+            vec![key(egui::Key::Tab, egui::Modifiers::NONE)],
+        )
+        .drop_without_applying_deltas();
+        assert_eq!(
+            app.editor.document.live_page(second).unwrap().parent,
+            Some(first)
+        );
+        let saved = app.editor.document.clone();
+        frame(
+            &ctx,
+            &mut app,
+            vec![key(egui::Key::S, egui::Modifiers::COMMAND)],
+        )
+        .drop_without_applying_deltas();
+        assert!(app.save_busy());
+        for _ in 0..busy_frames {
+            frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+        }
+        gate.release();
+        if key_on_completion {
+            // Deliver the next key on the first UI pass after completion, while
+            // egui still remembers the previous pass's saving modal.
+            drain(&mut app, &ctx);
+        } else {
+            let deadline = Instant::now() + Duration::from_secs(12);
+            while app.save_busy() {
+                frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+                assert!(Instant::now() < deadline, "Save timed out");
+                std::thread::sleep(Duration::from_millis(5));
+            }
+            assert!(
+                app.navigator.focused(&ctx),
+                "Save must retain page keyboard ownership"
+            );
+        }
+        assert!(app.error.is_none(), "{:?}", app.error);
+        assert_eq!(ProjectStore.load(&path).unwrap(), saved);
+        frame(
+            &ctx,
+            &mut app,
+            vec![key(egui::Key::Tab, egui::Modifiers::SHIFT)],
+        )
+        .drop_without_applying_deltas();
+        assert_eq!(app.editor.document.live_page(second).unwrap().parent, None);
+        frame(
+            &ctx,
+            &mut app,
+            vec![key(egui::Key::ArrowDown, egui::Modifiers::NONE)],
+        )
+        .drop_without_applying_deltas();
+        assert_eq!(app.editor.page, third);
+        frame(
+            &ctx,
+            &mut app,
+            vec![key(egui::Key::Z, egui::Modifiers::COMMAND)],
+        )
+        .drop_without_applying_deltas();
+        assert_eq!(app.editor.document, saved);
+        app.on_exit(None);
+    }
+}
+#[test]
+fn save_focus_does_not_override_a_dialog_new_owner_or_replaced_session() {
+    let (_dir, ctx, mut app) = fixture();
+    let previous = egui::Id::new("previous-page");
+    let next = egui::Id::new("new-owner");
+    app.save_navigator_focus = Some(previous);
+    app.error = Some("Save failed".into());
+    app.preserve_save_navigator_focus(&ctx);
+    assert_eq!(ctx.memory(|m| m.focused()), None);
+    assert_eq!(app.navigator.focus_to, None);
+    assert_eq!(app.save_navigator_focus, None);
+    app.error = None;
+    app.save_navigator_focus = Some(previous);
+    ctx.memory_mut(|m| m.request_focus(next));
+    app.preserve_save_navigator_focus(&ctx);
+    assert_eq!(ctx.memory(|m| m.focused()), Some(next));
+    assert_eq!(app.navigator.focus_to, None);
+    app.save_navigator_focus = Some(previous);
+    app.reset_session_identity();
+    assert_eq!(app.save_navigator_focus, None);
+}
 #[test]
 fn ui_named_save_automatic_edit_and_close_flush_use_the_worker() {
     let (dir, ctx, mut app) = fixture();
@@ -86,6 +288,7 @@ fn manual_quit_retains_local_edits_and_mode_then_reopen_recovers() {
     drop(app);
     let mut reopened = WireframeApp::workspace(&ctx, Some(dir.path().join("recovery.wireframe")));
     reopened.enable_persistence(&ctx, dir.path().to_owned());
+    discovery::tests::drain_recoveries(&mut reopened);
     assert!(!reopened.persistence.as_ref().unwrap().automatic);
     assert_eq!(reopened.persistence.as_ref().unwrap().offers.len(), 1);
     assert!(reopened.load(path));
@@ -175,6 +378,7 @@ fn named_open_preserves_conflicting_local_work_for_recovery() {
     assert!(app.load(path.clone()));
     assert_eq!(app.editor.document, external);
     app.refresh_recoveries(true);
+    discovery::tests::drain_recoveries(&mut app);
     let p = app.persistence.as_ref().unwrap();
     assert_eq!(p.offers.len(), 1);
     assert_eq!(p.copies.resume(&p.offers[0].id).unwrap().project(), &local);
@@ -244,6 +448,7 @@ fn save_as_archived_destination_is_visible_and_restores_as_a_separate_project() 
     named(&mut app, &ctx, &path);
     let written = ProjectStore.load(&path).unwrap();
     app.refresh_recoveries(true);
+    discovery::tests::drain_recoveries(&mut app);
     let archive = app
         .persistence
         .as_ref()

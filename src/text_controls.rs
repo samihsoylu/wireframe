@@ -180,3 +180,48 @@ pub fn cloud_layout_with(
         })
         .collect()
 }
+
+/// Label text direction is independent of device or icon orientation.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum LabelOrientation {
+    #[default]
+    Upright,
+    Left,
+    Right,
+    Diagonal,
+}
+impl LabelOrientation {
+    pub fn from_properties(properties: &crate::document::Properties) -> Self {
+        match properties.get("text_orientation") {
+            Some(crate::document::Value::Choice(value)) => match value.as_str() {
+                "left" => Self::Left,
+                "right" => Self::Right,
+                "diagonal" => Self::Diagonal,
+                _ => Self::Upright,
+            },
+            _ => Self::Upright,
+        }
+    }
+    pub fn radians(self) -> f32 {
+        match self {
+            Self::Upright => 0.,
+            Self::Left => -std::f32::consts::FRAC_PI_2,
+            Self::Right => std::f32::consts::FRAC_PI_2,
+            Self::Diagonal => -std::f32::consts::PI / 12.,
+        }
+    }
+    pub fn size(self, text_width: f32, text_height: f32, vertical_padding: f32) -> (f32, f32) {
+        let (w, h) = match self {
+            Self::Upright => (text_width, text_height + vertical_padding),
+            Self::Left | Self::Right => (text_height + vertical_padding, text_width),
+            Self::Diagonal => {
+                let (s, c) = self.radians().abs().sin_cos();
+                (
+                    (text_width * c + text_height * s).round(),
+                    (text_width * s + text_height * c).round(),
+                )
+            }
+        };
+        (w.max(1.), h.max(1.))
+    }
+}

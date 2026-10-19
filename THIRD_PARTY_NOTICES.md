@@ -48,6 +48,7 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | bytemuck-1.25.2 | Zlib OR Apache-2.0 OR MIT | [files](licenses/bytemuck-1.25.2/) |
 | bytemuck_derive-1.12.1 | Zlib OR Apache-2.0 OR MIT | [files](licenses/bytemuck_derive-1.12.1/) |
 | byteorder-lite-0.1.0 | Unlicense OR MIT | [files](licenses/byteorder-lite-0.1.0/) |
+| bytes-1.12.1 | MIT | [files](licenses/bytes-1.12.1/) |
 | calloop-0.13.0 | MIT | [files](licenses/calloop-0.13.0/) |
 | calloop-0.14.5 | MIT | [files](licenses/calloop-0.14.5/) |
 | calloop-wayland-source-0.3.0 | MIT | [files](licenses/calloop-wayland-source-0.3.0/) |
@@ -71,7 +72,7 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | core-graphics-types-0.2.0 | MIT OR Apache-2.0 | [files](licenses/core-graphics-types-0.2.0/) |
 | core-text-22.0.0 | MIT OR Apache-2.0 | [files](licenses/core-text-22.0.0/) |
 | core_maths-0.1.1 | MIT | [files](licenses/core_maths-0.1.1/) |
-| cosmic-text-0.19.0 | MIT OR Apache-2.0 | [files](licenses/cosmic-text-0.19.0/) |
+| cosmic-text-0.19.0 | (MIT OR Apache-2.0) AND GPL-3.0-only | [files](licenses/cosmic-text-0.19.0/) |
 | cpufeatures-0.3.1 | MIT OR Apache-2.0 | [files](licenses/cpufeatures-0.3.1/) |
 | crc32fast-1.5.2 | MIT OR Apache-2.0 | [files](licenses/crc32fast-1.5.2/) |
 | crossbeam-utils-0.8.23 | MIT OR Apache-2.0 | [files](licenses/crossbeam-utils-0.8.23/) |
@@ -83,21 +84,22 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | dirs-sys-0.5.0 | MIT OR Apache-2.0 | [files](licenses/dirs-sys-0.5.0/) |
 | dispatch-0.2.0 | MIT | [files](licenses/dispatch-0.2.0/) |
 | dispatch2-0.3.1 | Zlib OR Apache-2.0 OR MIT | [files](licenses/dispatch2-0.3.1/) |
+| displaydoc-0.2.7 | MIT OR Apache-2.0 | [files](licenses/displaydoc-0.2.7/) |
 | dlib-0.5.3 | MIT | [files](licenses/dlib-0.5.3/) |
 | document-features-0.2.12 | MIT OR Apache-2.0 | [files](licenses/document-features-0.2.12/) |
 | downcast-rs-1.2.1 | MIT/Apache-2.0 | [files](licenses/downcast-rs-1.2.1/) |
 | dpi-0.1.2 | Apache-2.0 AND MIT | [files](licenses/dpi-0.1.2/) |
 | ecolor-0.36.2 | MIT OR Apache-2.0 | [files](licenses/ecolor-0.36.2/) |
 | eframe-0.36.2 | MIT OR Apache-2.0 | [files](licenses/eframe-0.36.2/) |
-| egui-0.36.2 | MIT OR Apache-2.0 | [files](licenses/egui-0.36.2/) |
-| egui-winit-0.36.2 | MIT OR Apache-2.0 | [files](licenses/egui-winit-0.36.2/) |
+| egui-0.36.2 | (MIT OR Apache-2.0) AND GPL-3.0-only | [files](licenses/egui-0.36.2/) |
+| egui-winit-0.36.2 | (MIT OR Apache-2.0) AND GPL-3.0-only | [files](licenses/egui-winit-0.36.2/) |
 | egui_glow-0.36.2 | MIT OR Apache-2.0 | [files](licenses/egui_glow-0.36.2/) |
 | either-1.19.0 | MIT OR Apache-2.0 | [files](licenses/either-1.19.0/) |
 | emath-0.36.2 | MIT OR Apache-2.0 | [files](licenses/emath-0.36.2/) |
 | endi-1.1.1 | MIT | [files](licenses/endi-1.1.1/) |
 | enumflags2-0.7.12 | MIT OR Apache-2.0 | [files](licenses/enumflags2-0.7.12/) |
 | enumflags2_derive-0.7.12 | MIT OR Apache-2.0 | [files](licenses/enumflags2_derive-0.7.12/) |
-| epaint-0.36.2 | MIT OR Apache-2.0 | [files](licenses/epaint-0.36.2/) |
+| epaint-0.36.2 | (MIT OR Apache-2.0) AND GPL-3.0-only | [files](licenses/epaint-0.36.2/) |
 | epaint_default_fonts-0.36.2 | (MIT OR Apache-2.0) AND OFL-1.1 AND Ubuntu-font-1.0 | [files](licenses/epaint_default_fonts-0.36.2/) |
 | equivalent-1.0.2 | Apache-2.0 OR MIT | [files](licenses/equivalent-1.0.2/) |
 | errno-0.3.14 | MIT OR Apache-2.0 | [files](licenses/errno-0.3.14/) |
@@ -121,6 +123,7 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | foreign-types-0.5.0 | MIT/Apache-2.0 | [files](licenses/foreign-types-0.5.0/) |
 | foreign-types-macros-0.2.4 | MIT/Apache-2.0 | [files](licenses/foreign-types-macros-0.2.4/) |
 | foreign-types-shared-0.3.1 | MIT/Apache-2.0 | [files](licenses/foreign-types-shared-0.3.1/) |
+| form_urlencoded-1.2.2 | MIT OR Apache-2.0 | [files](licenses/form_urlencoded-1.2.2/) |
 | futures-core-0.3.34 | MIT OR Apache-2.0 | [files](licenses/futures-core-0.3.34/) |
 | futures-io-0.3.34 | MIT OR Apache-2.0 | [files](licenses/futures-io-0.3.34/) |
 | futures-lite-2.6.1 | Apache-2.0 OR MIT | [files](licenses/futures-lite-2.6.1/) |
@@ -128,6 +131,7 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | futures-task-0.3.34 | MIT OR Apache-2.0 | [files](licenses/futures-task-0.3.34/) |
 | futures-util-0.3.34 | MIT OR Apache-2.0 | [files](licenses/futures-util-0.3.34/) |
 | gethostname-1.1.0 | Apache-2.0 | [files](licenses/gethostname-1.1.0/) |
+| getrandom-0.2.17 | MIT OR Apache-2.0 | [files](licenses/getrandom-0.2.17/) |
 | getrandom-0.3.4 | MIT OR Apache-2.0 | [files](licenses/getrandom-0.3.4/) |
 | getrandom-0.4.3 | MIT OR Apache-2.0 | [files](licenses/getrandom-0.4.3/) |
 | gif-0.14.2 | MIT OR Apache-2.0 | [files](licenses/gif-0.14.2/) |
@@ -145,8 +149,24 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | hashbrown-0.16.1 | MIT OR Apache-2.0 | [files](licenses/hashbrown-0.16.1/) |
 | hashbrown-0.17.1 | MIT OR Apache-2.0 | [files](licenses/hashbrown-0.17.1/) |
 | hex-0.4.3 | MIT OR Apache-2.0 | [files](licenses/hex-0.4.3/) |
+| http-1.5.0 | MIT OR Apache-2.0 | [files](licenses/http-1.5.0/) |
+| httparse-1.10.1 | MIT OR Apache-2.0 | [files](licenses/httparse-1.10.1/) |
 | hybrid-array-0.4.15 | MIT OR Apache-2.0 | [files](licenses/hybrid-array-0.4.15/) |
+| i_float-5.0.0 | MIT | [files](licenses/i_float-5.0.0/) |
+| i_key_sort-0.11.0 | MIT | [files](licenses/i_key_sort-0.11.0/) |
+| i_overlay-9.0.0 | MIT OR Apache-2.0 | [files](licenses/i_overlay-9.0.0/) |
+| i_shape-5.0.0 | MIT | [files](licenses/i_shape-5.0.0/) |
+| i_tree-0.19.1 | MIT | [files](licenses/i_tree-0.19.1/) |
 | iana-time-zone-0.1.65 | MIT OR Apache-2.0 | [files](licenses/iana-time-zone-0.1.65/) |
+| icu_collections-2.3.0 | Unicode-3.0 | [files](licenses/icu_collections-2.3.0/) |
+| icu_locale_core-2.3.0 | Unicode-3.0 | [files](licenses/icu_locale_core-2.3.0/) |
+| icu_normalizer-2.3.0 | Unicode-3.0 | [files](licenses/icu_normalizer-2.3.0/) |
+| icu_normalizer_data-2.3.0 | Unicode-3.0 | [files](licenses/icu_normalizer_data-2.3.0/) |
+| icu_properties-2.3.0 | Unicode-3.0 | [files](licenses/icu_properties-2.3.0/) |
+| icu_properties_data-2.3.0 | Unicode-3.0 | [files](licenses/icu_properties_data-2.3.0/) |
+| icu_provider-2.3.1 | Unicode-3.0 | [files](licenses/icu_provider-2.3.1/) |
+| idna-1.1.0 | MIT OR Apache-2.0 | [files](licenses/idna-1.1.0/) |
+| idna_adapter-1.2.2 | Apache-2.0 OR MIT | [files](licenses/idna_adapter-1.2.2/) |
 | image-0.25.10 | MIT OR Apache-2.0 | [files](licenses/image-0.25.10/) |
 | image-webp-0.2.4 | MIT OR Apache-2.0 | [files](licenses/image-webp-0.2.4/) |
 | imagesize-0.14.0 | MIT | [files](licenses/imagesize-0.14.0/) |
@@ -163,6 +183,7 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | linebender_resource_handle-0.1.1 | Apache-2.0 OR MIT | [files](licenses/linebender_resource_handle-0.1.1/) |
 | linux-raw-sys-0.4.15 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | [files](licenses/linux-raw-sys-0.4.15/) |
 | linux-raw-sys-0.12.1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | [files](licenses/linux-raw-sys-0.12.1/) |
+| litemap-0.8.3 | Unicode-3.0 | [files](licenses/litemap-0.8.3/) |
 | litrs-1.0.1 | MIT OR Apache-2.0 | [files](licenses/litrs-1.0.1/) |
 | lock_api-0.4.14 | MIT OR Apache-2.0 | [files](licenses/lock_api-0.4.14/) |
 | log-0.4.34 | MIT OR Apache-2.0 | [files](licenses/log-0.4.34/) |
@@ -171,6 +192,7 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | miniz_oxide-0.8.9 | MIT OR Zlib OR Apache-2.0 | [files](licenses/miniz_oxide-0.8.9/) |
 | miniz_oxide-0.9.1 | MIT OR Zlib OR Apache-2.0 | [files](licenses/miniz_oxide-0.9.1/) |
 | moxcms-0.8.1 | BSD-3-Clause OR Apache-2.0 | [files](licenses/moxcms-0.8.1/) |
+| nix-0.31.3 | MIT | [files](licenses/nix-0.31.3/) |
 | nohash-hasher-0.2.0 | Apache-2.0 OR MIT | [files](licenses/nohash-hasher-0.2.0/) |
 | num-traits-0.2.19 | MIT OR Apache-2.0 | [files](licenses/num-traits-0.2.19/) |
 | objc-sys-0.3.5 | MIT | [files](licenses/objc-sys-0.3.5/) |
@@ -204,6 +226,7 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | polling-3.11.0 | Apache-2.0 OR MIT | [files](licenses/polling-3.11.0/) |
 | pollster-0.4.0 | Apache-2.0/MIT | [files](licenses/pollster-0.4.0/) |
 | polycool-0.4.0 | MIT OR Apache-2.0 | [files](licenses/polycool-0.4.0/) |
+| potential_utf-0.1.6 | Unicode-3.0 | [files](licenses/potential_utf-0.1.6/) |
 | proc-macro-crate-3.5.0 | MIT OR Apache-2.0 | [files](licenses/proc-macro-crate-3.5.0/) |
 | proc-macro2-1.0.107 | MIT OR Apache-2.0 | [files](licenses/proc-macro2-1.0.107/) |
 | profiling-1.0.18 | MIT OR Apache-2.0 | [files](licenses/profiling-1.0.18/) |
@@ -216,14 +239,18 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | read-fonts-0.37.0 | MIT OR Apache-2.0 | [files](licenses/read-fonts-0.37.0/) |
 | read-fonts-0.39.2 | MIT OR Apache-2.0 | [files](licenses/read-fonts-0.39.2/) |
 | read-fonts-0.41.0 | MIT OR Apache-2.0 | [files](licenses/read-fonts-0.41.0/) |
-| resvg-0.48.1 | Apache-2.0 OR MIT | [files](licenses/resvg-0.48.1/) |
+| resvg-0.48.1 | (Apache-2.0 OR MIT) AND GPL-3.0-only | [files](licenses/resvg-0.48.1/) |
 | rfd-0.17.2 | MIT | [files](licenses/rfd-0.17.2/) |
 | rgb-0.8.53 | MIT | [files](licenses/rgb-0.8.53/) |
+| ring-0.17.14 | Apache-2.0 AND ISC | [files](licenses/ring-0.17.14/) |
 | roxmltree-0.20.0 | MIT OR Apache-2.0 | [files](licenses/roxmltree-0.20.0/) |
 | roxmltree-0.21.1 | MIT OR Apache-2.0 | [files](licenses/roxmltree-0.21.1/) |
 | rustc-hash-2.1.3 | Apache-2.0 OR MIT | [files](licenses/rustc-hash-2.1.3/) |
 | rustix-0.38.44 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | [files](licenses/rustix-0.38.44/) |
 | rustix-1.1.5 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | [files](licenses/rustix-1.1.5/) |
+| rustls-0.23.46 | Apache-2.0 OR ISC OR MIT | [files](licenses/rustls-0.23.46/) |
+| rustls-pki-types-1.15.1 | MIT OR Apache-2.0 | [files](licenses/rustls-pki-types-1.15.1/) |
+| rustls-webpki-0.103.15 | ISC | [files](licenses/rustls-webpki-0.103.15/) |
 | ryu-1.0.23 | Apache-2.0 OR BSL-1.0 | [files](licenses/ryu-1.0.23/) |
 | scoped-tls-1.0.1 | MIT/Apache-2.0 | [files](licenses/scoped-tls-1.0.1/) |
 | scopeguard-1.2.0 | MIT OR Apache-2.0 | [files](licenses/scopeguard-1.2.0/) |
@@ -254,6 +281,7 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | static_assertions-1.1.0 | MIT OR Apache-2.0 | [files](licenses/static_assertions-1.1.0/) |
 | strict-num-0.1.1 | MIT | [files](licenses/strict-num-0.1.1/) |
 | subsetter-0.2.6 | MIT OR Apache-2.0 | [files](licenses/subsetter-0.2.6/) |
+| subtle-2.6.1 | BSD-3-Clause | [files](licenses/subtle-2.6.1/) |
 | svgtypes-0.16.1 | Apache-2.0 OR MIT | [files](licenses/svgtypes-0.16.1/) |
 | swash-0.2.10 | Apache-2.0 OR MIT | [files](licenses/swash-0.2.10/) |
 | syn-2.0.119 | MIT OR Apache-2.0 | [files](licenses/syn-2.0.119/) |
@@ -266,8 +294,9 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | thiserror-impl-1.0.69 | MIT OR Apache-2.0 | [files](licenses/thiserror-impl-1.0.69/) |
 | thiserror-impl-2.0.21 | MIT OR Apache-2.0 | [files](licenses/thiserror-impl-2.0.21/) |
 | tiff-0.11.3 | MIT | [files](licenses/tiff-0.11.3/) |
-| tiny-skia-0.12.0 | BSD-3-Clause | [files](licenses/tiny-skia-0.12.0/) |
+| tiny-skia-0.12.0 | BSD-3-Clause AND GPL-3.0-only | [files](licenses/tiny-skia-0.12.0/) |
 | tiny-skia-path-0.12.0 | BSD-3-Clause | [files](licenses/tiny-skia-path-0.12.0/) |
+| tinystr-0.8.4 | Unicode-3.0 | [files](licenses/tinystr-0.8.4/) |
 | tinyvec-1.13.3 | Zlib OR Apache-2.0 OR MIT | [files](licenses/tinyvec-1.13.3/) |
 | toml_datetime-1.1.2+spec-1.1.0 | MIT OR Apache-2.0 | [files](licenses/toml_datetime-1.1.2+spec-1.1.0/) |
 | toml_edit-0.25.17+spec-1.1.0 | MIT OR Apache-2.0 | [files](licenses/toml_edit-0.25.17+spec-1.1.0/) |
@@ -276,15 +305,23 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | tracing-attributes-0.1.31 | MIT | [files](licenses/tracing-attributes-0.1.31/) |
 | tracing-core-0.1.36 | MIT | [files](licenses/tracing-core-0.1.36/) |
 | ttf-parser-0.25.1 | MIT OR Apache-2.0 | [files](licenses/ttf-parser-0.25.1/) |
+| typed-path-0.12.3 | MIT OR Apache-2.0 | [files](licenses/typed-path-0.12.3/) |
 | typenum-1.20.1 | MIT OR Apache-2.0 | [files](licenses/typenum-1.20.1/) |
 | unicode-bidi-0.3.18 | MIT OR Apache-2.0 | [files](licenses/unicode-bidi-0.3.18/) |
 | unicode-general-category-1.1.0 | Apache-2.0 | [files](licenses/unicode-general-category-1.1.0/) |
 | unicode-ident-1.0.27 | (MIT OR Apache-2.0) AND Unicode-3.0 | [files](licenses/unicode-ident-1.0.27/) |
 | unicode-linebreak-0.1.5 | Apache-2.0 | [files](licenses/unicode-linebreak-0.1.5/) |
+| unicode-normalization-0.1.25 | MIT OR Apache-2.0 | [files](licenses/unicode-normalization-0.1.25/) |
 | unicode-script-0.5.8 | MIT OR Apache-2.0 | [files](licenses/unicode-script-0.5.8/) |
 | unicode-segmentation-1.13.3 | MIT OR Apache-2.0 | [files](licenses/unicode-segmentation-1.13.3/) |
 | unicode-vo-0.1.0 | MIT/Apache-2.0 | [files](licenses/unicode-vo-0.1.0/) |
+| untrusted-0.9.0 | ISC | [files](licenses/untrusted-0.9.0/) |
+| ureq-3.4.2 | MIT OR Apache-2.0 | [files](licenses/ureq-3.4.2/) |
+| ureq-proto-0.6.5 | MIT OR Apache-2.0 | [files](licenses/ureq-proto-0.6.5/) |
+| url-2.5.8 | MIT OR Apache-2.0 | [files](licenses/url-2.5.8/) |
 | usvg-0.48.1 | Apache-2.0 OR MIT | [files](licenses/usvg-0.48.1/) |
+| utf8-zero-0.8.1 | MIT OR Apache-2.0 | [files](licenses/utf8-zero-0.8.1/) |
+| utf8_iter-1.0.4 | Apache-2.0 OR MIT | [files](licenses/utf8_iter-1.0.4/) |
 | uuid-1.28.0 | Apache-2.0 OR MIT | [files](licenses/uuid-1.28.0/) |
 | vello_common-0.1.0 | Apache-2.0 OR MIT | [files](licenses/vello_common-0.1.0/) |
 | vello_cpu-0.1.0 | Apache-2.0 OR MIT | [files](licenses/vello_cpu-0.1.0/) |
@@ -301,6 +338,7 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | wayland-scanner-0.31.11 | MIT | [files](licenses/wayland-scanner-0.31.11/) |
 | wayland-sys-0.31.11 | MIT | [files](licenses/wayland-sys-0.31.11/) |
 | web-time-1.1.0 | MIT OR Apache-2.0 | [files](licenses/web-time-1.1.0/) |
+| webpki-roots-1.0.9 | CDLA-Permissive-2.0 | [files](licenses/webpki-roots-1.0.9/) |
 | weezl-0.1.12 | MIT OR Apache-2.0 | [files](licenses/weezl-0.1.12/) |
 | windows-0.62.2 | MIT OR Apache-2.0 | [files](licenses/windows-0.62.2/) |
 | windows-collections-0.3.2 | MIT OR Apache-2.0 | [files](licenses/windows-collections-0.3.2/) |
@@ -327,6 +365,7 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | winit-0.30.13 | Apache-2.0 | [files](licenses/winit-0.30.13/) |
 | winnow-1.0.4 | MIT | [files](licenses/winnow-1.0.4/) |
 | write-fonts-0.48.1 | MIT OR Apache-2.0 | [files](licenses/write-fonts-0.48.1/) |
+| writeable-0.6.4 | Unicode-3.0 | [files](licenses/writeable-0.6.4/) |
 | x11-dl-2.21.0 | MIT | [files](licenses/x11-dl-2.21.0/) |
 | x11rb-0.13.2 | MIT OR Apache-2.0 | [files](licenses/x11rb-0.13.2/) |
 | x11rb-protocol-0.13.2 | MIT OR Apache-2.0 | [files](licenses/x11rb-protocol-0.13.2/) |
@@ -351,6 +390,11 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | zerocopy-derive-0.8.62 | BSD-2-Clause OR Apache-2.0 OR MIT | [files](licenses/zerocopy-derive-0.8.62/) |
 | zerofrom-0.1.8 | Unicode-3.0 | [files](licenses/zerofrom-0.1.8/) |
 | zerofrom-derive-0.1.8 | Unicode-3.0 | [files](licenses/zerofrom-derive-0.1.8/) |
+| zeroize-1.9.1 | Apache-2.0 OR MIT | [files](licenses/zeroize-1.9.1/) |
+| zerotrie-0.2.5 | Unicode-3.0 | [files](licenses/zerotrie-0.2.5/) |
+| zerovec-0.11.8 | Unicode-3.0 | [files](licenses/zerovec-0.11.8/) |
+| zerovec-derive-0.11.6 | Unicode-3.0 | [files](licenses/zerovec-derive-0.11.6/) |
+| zip-9.0.3 | MIT | [files](licenses/zip-9.0.3/) |
 | zmij-1.0.23 | MIT | [files](licenses/zmij-1.0.23/) |
 | zune-core-0.5.3 | MIT OR Apache-2.0 OR Zlib | [files](licenses/zune-core-0.5.3/) |
 | zune-jpeg-0.5.15 | MIT OR Apache-2.0 OR Zlib | [files](licenses/zune-jpeg-0.5.15/) |
@@ -358,11 +402,15 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | zvariant_derive-5.15.0 | MIT | [files](licenses/zvariant_derive-5.15.0/) |
 | zvariant_utils-4.2.0 | MIT | [files](licenses/zvariant_utils-4.2.0/) |
 
+## Maintained dependency extensions
+
+The local egui, egui-winit, resvg and tiny-skia copies retain upstream notices and add GPL-3.0-only native gesture routing or regional rendering code. See [maintained changes](vendor/README.md) and the source inventories in each vendor directory. Ordinary APIs remain available; typed smart-zoom and application-command events preserve native input order, and the regional API is used for streaming image export.
+
 ## Canvas fonts
 
 Comic Neue regular, bold, italic and bold italic are redistributed unchanged under OFL-1.1. Copyright 2014 The Comic Neue Project Authors. See [font license](assets/fonts/comic-neue/OFL.txt) and [provenance](assets/fonts/comic-neue/PROVENANCE.json).
 
-Wireframe Draft regular, bold, italic and bold italic are modified derivatives of Comic Neue Bold and Bold Italic, redistributed under OFL-1.1 with the original copyright retained. See [license](assets/fonts/wireframe-draft/OFL.txt), [modifications](assets/fonts/wireframe-draft/MODIFICATIONS.txt) and [reproducible build](docs/PROJECT-FONTS.md).
+Wireframe Draft regular, bold, italic and bold italic are modified derivatives of Comic Neue Regular, Bold, Italic and Bold Italic, redistributed under OFL-1.1 with the original copyright retained. See [license](assets/fonts/wireframe-draft/OFL.txt), [modifications](assets/fonts/wireframe-draft/MODIFICATIONS.txt) and [reproducible build](docs/PROJECT-FONTS.md).
 
 Unicode emoji property data is covered by [Unicode License V3](assets/unicode/LICENSE.txt); pinned sources and regeneration instructions are in [Unicode data](assets/unicode/README.md).
 

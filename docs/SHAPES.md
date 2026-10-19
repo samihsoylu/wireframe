@@ -1,0 +1,15 @@
+# Shapes
+
+Shape is one library entry with ten variants: ellipse, rectangle, rounded rectangle, dashed rectangle, diamond, star, parallelogram, triangle, torn bottom and torn top. New controls start as a 32 × 32 ellipse with centered text. Existing ellipse node identities remain readable and can select other variants. Rectangle remains its own control family.
+
+The inspector exposes variant, fill and border colors, opacity, text formatting/alignment, icon/size/rotation and a whole-control link. Shape opacity applies to its fill and border together; text and icon contrast use the effective background. Captions support explicit lines and rich formatting. The text block and optional icon are positioned together, with eight-unit horizontal padding and a three-unit icon gap. Text is hidden when its measured height does not fit. The single UTF-16-unit caption exception can use the full width without horizontal padding.
+
+Only triangles expose Rotate 90°. Quarter turns change their direction inside the existing frame; width and height are not swapped. Other shapes retain orientation when a stored rotation exists. Older arbitrary numeric rotations are rendered at the nearest quarter turn without rewriting the stored value. Reset rotation restores the default or inherited component value. Shape/color/text changes use ordinary document history, component overrides and storage.
+
+Clean outlines use one-unit ink. Sketch ink grows from two to four units according to the smaller dimension. Dimensions below ten use zero border thickness. Rounded corners use one-eighth of the smaller dimension, capped at ten; dashed rectangles use a ten-unit corner radius and alternating eight-unit strokes/gaps. Torn outlines begin at width 65 and height 40; smaller frames retain a rectangular outline. Their icons and captions are clipped by the matching top/bottom edge mask.
+
+Geometry and positioned drawing are separate. Original parametric contours and the shared SVG/raster/PDF pipeline avoid imported artwork. Concave shapes use triangulated fill rather than a convex fill shortcut. Top-edge masks extend the existing mask path; old browser/bottom-mask behavior is preserved.
+
+Automated evidence covers distinct full-size variants, bounded geometry and complete filled areas across small and large sizes, triangle orientation, real inspector Rotate/Reset input, text-fit rules, palette/opacity/icon editing, save/reopen and history. The older renderer centered captions even though the unused catalog alignment default was left; the corrected default keeps that displayed centering without a document migration. Existing explicit alignment values remain intact.
+
+Native contour, typography and physical-display comparison remains open. Tiny torn-shape caption/icon masking below the visible-tear threshold remains a specific comparison item; current small rectangular fallbacks omit that content mask. The original star and sketch contours are approximations, not a claim of exact native artwork identity. This implementation checkpoint does not close G01's visual acceptance gate.

@@ -26,7 +26,11 @@ fn editing_emphasis_tracks_distance_from_each_unrelated_branch() {
             };
         }
         project.pages[0].content.nodes = vec![root, button(7, 210.)];
-        let mut e = Editor::new(project);
+        project.next_id = 31;
+        let mut e = {
+            project.organize_components().unwrap();
+            Editor::new(project)
+        };
         let before = e.document.clone();
         let canonical = e.rendered_scene(e.page).unwrap().svg();
         let mut scenes = vec![e.editing_scene().unwrap().svg()];
@@ -85,7 +89,11 @@ fn distant_unrelated_branches_keep_the_minimum_editing_emphasis() {
     }
     let mut project = Project::default();
     project.pages[0].content.nodes = vec![active, other, button(300)];
-    let mut e = Editor::new(project);
+    project.next_id = 301;
+    let mut e = {
+        project.organize_components().unwrap();
+        Editor::new(project)
+    };
     for (id, page_opacity) in (10..16).zip([0.4, 0.2, 0.4 / 3., 0.1, 0.1, 0.1]) {
         assert!(e.enter(id));
         let layers = e.editing_layers().unwrap();
@@ -164,7 +172,13 @@ fn fixture(instance: bool) -> (Editor, Id) {
         page.content = Content::default();
         project.pages.push(page);
     }
-    (Editor::new(project), id)
+    (
+        {
+            project.organize_components().unwrap();
+            Editor::new(project)
+        },
+        id,
+    )
 }
 
 #[test]
@@ -309,7 +323,10 @@ fn entering_empty_containers_hides_only_the_active_placeholder() {
         Node::group(3, Point::new(300., 0.), vec![empty(4, 0.)]),
         instance,
     ];
-    let mut editor = Editor::new(project);
+    let mut editor = {
+        project.organize_components().unwrap();
+        Editor::new(project)
+    };
     let before = editor.document.clone();
     let canonical = editor.rendered_scene(editor.page).unwrap().svg();
     for path in [vec![2], vec![3, 4], vec![30]] {
@@ -351,7 +368,10 @@ fn empty_context_visibility_tracks_insert_delete_undo_and_redo() {
         ..Project::default()
     };
     project.pages[0].content.nodes = vec![Node::group(2, Point::new(80., 90.), vec![])];
-    let mut editor = Editor::new(project);
+    let mut editor = {
+        project.organize_components().unwrap();
+        Editor::new(project)
+    };
     assert!(editor.enter(2));
     let hidden = editor.editing_scene().unwrap().svg();
     assert_eq!(editor.editing_layers().unwrap()[0].opacity, 0.);

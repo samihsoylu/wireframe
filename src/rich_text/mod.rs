@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 //! Source-preserving rich text. Parsing and drawing use the same styled spans.
+mod links;
 pub mod painting;
+pub use links::replace_source_link_target;
 mod positioned;
 mod source_lines;
 pub mod structured;
@@ -55,8 +57,10 @@ impl RichText {
             budget: text.len().saturating_mul(32).max(1),
             bullets,
             boundary: true,
+            target_ranges: None,
+            links: None,
         };
-        parser.segment(text, Style::default(), 0);
+        parser.segment(text, Style::default(), 0, 0);
         parser.output
     }
     pub fn display_text(&self, soft_breaks: bool) -> String {
@@ -82,6 +86,8 @@ struct Parser {
     budget: usize,
     bullets: bool,
     boundary: bool,
+    target_ranges: Option<Vec<std::ops::Range<usize>>>,
+    links: Option<Vec<SourceLink>>,
 }
 impl Parser {
     fn push(&mut self, text: &str, style: &Style) {
@@ -129,12 +135,12 @@ impl Parser {
         }
         None
     }
-    fn segment(&mut self, text: &str, style: Style, depth: usize) {
+    fn segment(&mut self, text: &str, style: Style, depth: usize, offset: usize) {
         self.boundary = true;
-        self.segment_inner(text, style, depth);
+        self.segment_inner(text, style, depth, offset);
         self.boundary = true;
     }
-    fn segment_inner(&mut self, text: &str, style: Style, depth: usize) {
+    fn segment_inner(&mut self, text: &str, style: Style, depth: usize, offset: usize) {
         if depth >= 24 {
             self.output.complexity_limited = true;
             self.push(text, &style);
@@ -205,7 +211,7 @@ impl Parser {
                             '-' => child.disabled = true,
                             _ => {}
                         }
-                        self.segment(inner, child, depth + 1);
+                        self.segment(inner, child, depth + 1, offset + i + ch.len_utf8());
                         i += end + 2 * ch.len_utf8();
                         continue;
                     }
@@ -226,10 +232,21 @@ impl Parser {
                     if rest[length..].starts_with('(')
                         && let Some(close) = self.find(&rest[length + 1..], ")", false)
                     {
-                        child.target = Some(rest[length + 1..length + 1 + close].into());
+                        child.target =
+                            Some(links::decode_target(&rest[length + 1..length + 1 + close]));
+                        if let Some(ranges) = &mut self.target_ranges {
+                            ranges.push(offset + i + length + 1..offset + i + length + 1 + close);
+                        }
                         length += close + 2;
                     }
-                    self.segment(inner, child, depth + 1);
+                    if let Some(links) = &mut self.links {
+                        links.push(SourceLink {
+                            range: offset + i..offset + i + length,
+                            label: offset + i + 1..offset + i + 1 + end,
+                            target: child.target.clone(),
+                        });
+                    }
+                    self.segment(inner, child, depth + 1, offset + i + 1);
                     i += length;
                     continue;
                 }
@@ -264,7 +281,12 @@ impl Parser {
                         let close = format!("{{{name}}}");
                         let after = &rest[open_end + 1..];
                         if let Some(end) = self.find(after, &close, true) {
-                            self.segment(&after[..end], child, depth + 1);
+                            self.segment(
+                                &after[..end],
+                                child,
+                                depth + 1,
+                                offset + i + open_end + 1,
+                            );
                             i += open_end + 1 + end + close.len();
                             continue;
                         }
@@ -275,4 +297,64 @@ impl Parser {
             i += ch.len_utf8();
         }
     }
+}
+
+/// Rewrite only parsed link targets, retaining every other source byte,
+/// including escaped markup and nested formatting. Replacements must be valid
+/// target text (callers use canonical resource identifiers).
+pub fn rewrite_link_targets(
+    text: &str,
+    mut replace: impl FnMut(&str) -> Option<String>,
+) -> Result<String, String> {
+    let mut parser = Parser {
+        output: RichText {
+            source: text.into(),
+            ..RichText::default()
+        },
+        budget: text.len().saturating_mul(32).max(1),
+        bullets: false,
+        boundary: true,
+        target_ranges: Some(vec![]),
+        links: None,
+    };
+    parser.segment(text, Style::default(), 0, 0);
+    if parser.output.complexity_limited {
+        return Err("Text formatting is too complex to rewrite safely".into());
+    }
+    let mut ranges = parser.target_ranges.unwrap();
+    ranges.sort_by_key(|r| r.start);
+    ranges.dedup();
+    let mut result = text.to_owned();
+    for range in ranges.into_iter().rev() {
+        if let Some(value) = replace(&text[range.clone()]) {
+            result.replace_range(range, &value);
+        }
+    }
+    Ok(result)
+}
+
+/// Source locations from the same parser used to display rich text. Consumers
+/// can hide typed destinations without reinterpreting escaped or nested markup.
+#[derive(Clone, Debug)]
+pub struct SourceLink {
+    pub range: std::ops::Range<usize>,
+    pub label: std::ops::Range<usize>,
+    pub target: Option<String>,
+}
+pub fn source_links(text: &str) -> Result<Vec<SourceLink>, String> {
+    let mut parser = Parser {
+        output: RichText::default(),
+        budget: text.len().saturating_mul(32).max(1),
+        bullets: false,
+        boundary: true,
+        target_ranges: None,
+        links: Some(vec![]),
+    };
+    parser.segment(text, Style::default(), 0, 0);
+    if parser.output.complexity_limited {
+        return Err("Text formatting is too complex to edit safely".into());
+    }
+    let mut links = parser.links.unwrap();
+    links.sort_by_key(|link| (link.range.start, std::cmp::Reverse(link.range.end)));
+    Ok(links)
 }

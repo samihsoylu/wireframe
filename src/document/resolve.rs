@@ -16,6 +16,75 @@ pub struct ResolvedNode<'a> {
     pub locked: bool,
 }
 impl Project {
+    /// Resolve a library's owning sources as canonical groups. Unlike ordinary
+    /// instances, these placements retain source locks and add no semantic depth.
+    pub fn resolve_library(&self, id: Id) -> Result<Vec<Resolution>, String> {
+        let library = self
+            .libraries
+            .iter()
+            .find(|l| l.id == id && !l.trashed)
+            .ok_or("Component library no longer exists")?;
+        let mut budget = MAX_NODES;
+        library
+            .content
+            .nodes
+            .iter()
+            .map(|node| {
+                let mut misses = vec![];
+                let root = if let Some(owner) = library.sources.iter().find(|s| s.node == node.id) {
+                    let definition = self
+                        .definitions
+                        .iter()
+                        .find(|d| d.id == owner.definition)
+                        .ok_or("Component source no longer exists")?;
+                    let mut definitions = vec![definition.id];
+                    let mut path = vec![node.id];
+                    let children = definition
+                        .content
+                        .nodes
+                        .iter()
+                        .map(|child| {
+                            self.expand(
+                                child,
+                                &mut definitions,
+                                &mut path,
+                                &mut budget,
+                                &mut misses,
+                                0,
+                            )
+                        })
+                        .collect::<Result<Vec<_>, _>>()?;
+                    let mut root = Node::group(node.id, node.origin, children);
+                    root.locked = node.locked;
+                    root.markup = node.markup;
+                    root.crop = node.crop;
+                    if definition.content.nodes.is_empty() {
+                        root.properties
+                            .insert(EMPTY_COMPONENT.into(), Value::Bool(true));
+                    }
+                    root
+                } else {
+                    self.expand(node, &mut vec![], &mut vec![], &mut budget, &mut misses, 0)?
+                };
+                Ok(Resolution {
+                    root,
+                    orphan_overrides: misses,
+                })
+            })
+            .collect()
+    }
+    /// Read-only Trash artwork. Only this library is made available in the
+    /// preview; dependencies retained in other libraries remain unavailable.
+    pub fn resolve_library_preview(&self, id: Id) -> Result<Vec<Resolution>, String> {
+        let mut preview = self.clone();
+        preview
+            .libraries
+            .iter_mut()
+            .find(|l| l.id == id)
+            .ok_or("Component library no longer exists")?
+            .trashed = false;
+        preview.resolve_library(id)
+    }
     /// Expand inherited definitions first, then apply the outer instance's overrides.
     pub fn resolve(&self, node: &Node) -> Result<Resolution, String> {
         self.resolve_all(std::slice::from_ref(node))
@@ -78,7 +147,11 @@ impl Project {
                 if definitions.contains(definition) {
                     return Err("Cyclic component definition".into());
                 }
-                let Some(source) = self.definitions.iter().find(|d| d.id == *definition) else {
+                let Some(source) = self
+                    .definitions
+                    .iter()
+                    .find(|d| d.id == *definition && self.definition_available(*definition))
+                else {
                     misses.extend(overrides.iter().map(|o| (path.clone(), o.path.clone())));
                     result.crop = None;
                     result.properties =
@@ -104,6 +177,10 @@ impl Project {
                     .map(|c| self.expand(c, definitions, path, budget, misses, depth + 1))
                     .collect::<Result<Vec<_>, _>>()?;
                 definitions.pop();
+                clear_inherited_locks(&mut children);
+                let (crop, markup) = self.source_appearance(*definition);
+                result.crop = node.crop.or(crop);
+                result.markup = node.markup || markup;
                 if children.is_empty() {
                     result.crop = None;
                     result
@@ -111,7 +188,22 @@ impl Project {
                         .insert(EMPTY_COMPONENT.into(), Value::Bool(true));
                 }
                 for patch in overrides {
+                    if patch.path.is_empty() {
+                        if let Some(crop) = patch.patch.crop {
+                            result.crop = crop.value();
+                        }
+                        if let Some(markup) = patch.patch.markup {
+                            result.markup = markup;
+                        }
+                        continue;
+                    }
                     if let Some(target) = find_mut(&mut children, &patch.path) {
+                        if let Some(markup) = patch.patch.markup {
+                            target.markup = markup;
+                        }
+                        if let Some(locked) = patch.patch.locked {
+                            target.locked = locked;
+                        }
                         target.properties.extend(patch.patch.properties.clone());
                         if let Some(crop) = patch.patch.crop {
                             target.crop = crop.value();
@@ -131,11 +223,22 @@ impl Project {
                         misses.push((path.clone(), patch.path.clone()));
                     }
                 }
+                if children.is_empty() {
+                    result.crop = None;
+                }
                 NodeContent::Group { children }
             }
         };
         path.pop();
         Ok(result)
+    }
+}
+fn clear_inherited_locks(nodes: &mut [Node]) {
+    for node in nodes {
+        node.locked = false;
+        if let NodeContent::Group { children } = &mut node.content {
+            clear_inherited_locks(children);
+        }
     }
 }
 fn find_mut<'a>(nodes: &'a mut [Node], path: &[Id]) -> Option<&'a mut Node> {

@@ -80,8 +80,28 @@ pub fn preserve_unreadable_recovery(path: &Path) -> Result<PathBuf, String> {
     Ok(reserved.to_path_buf())
 }
 
-/// One process owns recovery at a time. The OS releases the lock on exit/crash.
-pub fn acquire_recovery(path: &Path) -> Result<fs::File, String> {
+/// An acquired OS lock released when its application owner finishes.
+/// Closing alone can leave a lock held by a descriptor inherited during spawn.
+pub struct ExclusiveFileLock {
+    pub(crate) file: fs::File,
+}
+impl ExclusiveFileLock {
+    pub(crate) fn acquire(file: fs::File) -> Result<Self, fs::TryLockError> {
+        file.try_lock()?;
+        Ok(Self { file })
+    }
+}
+impl Drop for ExclusiveFileLock {
+    fn drop(&mut self) {
+        // Release this open file description before closing our descriptor.
+        // A transient child-process copy must not extend application ownership.
+        let _ = self.file.unlock();
+    }
+}
+
+/// One process owns recovery at a time. The guard releases on drop; the OS also
+/// releases ownership after crash once all inherited descriptors have closed.
+pub fn acquire_recovery(path: &Path) -> Result<ExclusiveFileLock, String> {
     let lock = fs::OpenOptions::new()
         .create(true)
         .truncate(false)
@@ -89,10 +109,12 @@ pub fn acquire_recovery(path: &Path) -> Result<fs::File, String> {
         .write(true)
         .open(path.with_extension("lock"))
         .map_err(|e| e.to_string())?;
-    lock.try_lock().map_err(|_| {
-        "Recovery is in use by another Wireframe window. Save this project manually.".to_owned()
-    })?;
-    Ok(lock)
+    ExclusiveFileLock::acquire(lock).map_err(|error| match error {
+        fs::TryLockError::WouldBlock => {
+            "Recovery is in use by another Wireframe window. Save this project manually.".to_owned()
+        }
+        fs::TryLockError::Error(error) => error.to_string(),
+    })
 }
 
 /// Storage boundary used by the desktop workspace and failure-injection tests.
@@ -100,7 +122,7 @@ pub trait ProjectRepository {
     fn load(&self, path: &Path) -> Result<crate::document::Project, String>;
     fn save(&self, path: &Path, project: &crate::document::Project) -> Result<(), String>;
 }
-/// Reads either document version and saves recursive version-2 projects.
+/// Reads supported document versions and saves the current recursive format.
 pub struct ProjectStore;
 impl ProjectStore {
     pub fn load(&self, path: &Path) -> Result<crate::document::Project, String> {
@@ -124,5 +146,25 @@ impl ProjectRepository for ProjectStore {
     }
     fn save(&self, path: &Path, project: &crate::document::Project) -> Result<(), String> {
         ProjectStore::save(self, path, project)
+    }
+}
+
+#[cfg(test)]
+mod lock_tests {
+    use super::*;
+
+    #[test]
+    fn recovery_owner_drop_releases_inherited_descriptor_without_unlocking_successor() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("recovery.wireframe");
+        let first = acquire_recovery(&path).unwrap();
+        let inherited_descriptor = first.file.try_clone().unwrap();
+        assert!(acquire_recovery(&path).is_err());
+        drop(first);
+        let next = acquire_recovery(&path).expect("the prior owner has finished");
+        drop(inherited_descriptor);
+        assert!(acquire_recovery(&path).is_err());
+        drop(next);
+        assert!(acquire_recovery(&path).is_ok());
     }
 }

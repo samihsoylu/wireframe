@@ -29,6 +29,8 @@ struct State {
     scroll: Vec2,
     preferred_x: Option<f32>,
     composition: Option<Composition>,
+    caret_active: bool,
+    caret_interaction: f64,
     ax_runs: Vec<accessibility::Run>,
 }
 
@@ -44,6 +46,8 @@ impl Default for State {
             scroll: Vec2::ZERO,
             preferred_x: None,
             composition: None,
+            caret_active: false,
+            caret_interaction: 0.,
             ax_runs: vec![],
         }
     }
@@ -101,6 +105,26 @@ impl State {
 
 pub fn forget(ctx: &egui::Context, id: Id) {
     ctx.data_mut(|d| d.remove::<State>(id));
+}
+
+/// Local history for a field's current model value. An external replacement
+/// starts fresh history on its next draw, so stale draft history is excluded.
+#[derive(Clone, Copy, Default)]
+pub struct HistoryState {
+    pub undo: bool,
+    pub redo: bool,
+    pub composing: bool,
+}
+pub fn history_state(ctx: &egui::Context, id: Id, value: &str) -> HistoryState {
+    ctx.data_mut(|d| {
+        d.get_temp::<State>(id)
+            .filter(|state| state.draft.text() == value)
+            .map_or(HistoryState::default(), |state| HistoryState {
+                undo: state.draft.can_undo(),
+                redo: state.draft.can_redo(),
+                composing: state.composition.is_some(),
+            })
+    })
 }
 
 /// A source-aware input field. Single-line mode does not soft-wrap and leaves
@@ -217,10 +241,19 @@ pub fn multiline(ui: &mut Ui, value: &mut String, rows: usize, autofocus: bool) 
 fn editing_events(ui: &Ui, response: &Response) -> Vec<(usize, Event)> {
     let had_focus = ui.memory(|m| m.had_focus_last_frame(response.id));
     let has_focus = response.has_focus();
-    if !ui.is_enabled() || !ui.input(|i| i.focused) || (!had_focus && !has_focus) {
+    if !ui.is_enabled() || (!had_focus && !has_focus) {
         return vec![];
     }
     let events = ui.input(|i| i.events.clone());
+    // RawInput reports the final window state. A focus transition in the event
+    // stream establishes the state before it, so earlier text is not erased.
+    let mut window_focused = events
+        .iter()
+        .find_map(|event| match event {
+            Event::WindowFocused(focused) => Some(!focused),
+            _ => None,
+        })
+        .unwrap_or_else(|| ui.input(|i| i.focused));
     let boundary = events.iter().any(|event| {
         matches!(
             event,
@@ -257,11 +290,11 @@ fn editing_events(ui: &Ui, response: &Response) -> Vec<(usize, Event)> {
                 active = has_focus && !had_focus;
                 false
             }
-            Event::WindowFocused(false) => {
-                active = false;
+            Event::WindowFocused(focused) => {
+                window_focused = *focused;
                 false
             }
-            _ => active,
+            _ => active && window_focused,
         })
         .collect()
 }
@@ -319,6 +352,7 @@ fn input(ui: &mut Ui, options: TextInput<'_>) -> Response {
         .layout(&mut engine, size, inner.width(), scale, multiline)
         .err();
     let old_value = value.clone();
+    let old_selection = state.draft.selection();
     let mut reveal = fresh;
     let mut interrupt_ime = false;
     if response.clicked() {
@@ -500,6 +534,11 @@ fn input(ui: &mut Ui, options: TextInput<'_>) -> Response {
     if *value != old_value {
         response.mark_changed();
     }
+    let caret_active = response.has_focus() && ui.is_enabled() && ui.input(|i| i.focused);
+    if caret_active && (!state.caret_active || reveal || state.draft.selection() != old_selection) {
+        state.caret_interaction = ui.input(|i| i.time);
+    }
+    state.caret_active = caret_active;
     response
         .widget_info(|| egui::WidgetInfo::text_edit(ui.is_enabled(), &old_value, &*value, hint));
     if ui.is_enabled() {
@@ -594,11 +633,11 @@ fn input(ui: &mut Ui, options: TextInput<'_>) -> Response {
                 Color32::WHITE,
             );
         }
-        if response.has_focus()
-            && let Some(c) = layout.caret_rect(caret)
-        {
+        if caret_active && let Some(c) = layout.caret_rect(caret) {
             let screen = c.translate(offset);
-            painter.line_segment([screen.left_top(), screen.left_bottom()], (1., color));
+            if caret_visible(ui, state.caret_interaction) {
+                painter.line_segment([screen.left_top(), screen.left_bottom()], (1., color));
+            }
             ui.ctx().output_mut(|o| {
                 o.ime = Some(egui::output::IMEOutput {
                     purpose: egui::IMEPurpose::Normal,
@@ -630,6 +669,23 @@ fn input(ui: &mut Ui, options: TextInput<'_>) -> Response {
     accessibility::update(ui, &response, &mut state, inner, multiline, hint);
     ui.ctx().data_mut(|d| d.insert_temp(id, state));
     response
+}
+
+fn caret_visible(ui: &Ui, interaction: f64) -> bool {
+    let cursor = &ui.visuals().text_cursor;
+    let on = f64::from(cursor.on_duration);
+    let off = f64::from(cursor.off_duration);
+    let cycle = on + off;
+    if !cursor.blink || !cycle.is_finite() || on <= 0. || off <= 0. {
+        return true;
+    }
+    let elapsed = (ui.input(|i| i.time) - interaction).max(0.);
+    let phase = elapsed % cycle;
+    let visible = phase < on;
+    let next = if visible { on - phase } else { cycle - phase };
+    ui.ctx()
+        .request_repaint_after(std::time::Duration::from_secs_f64(next));
+    visible
 }
 
 fn key_event(state: &mut State, key: Key, m: egui::Modifiers) -> bool {

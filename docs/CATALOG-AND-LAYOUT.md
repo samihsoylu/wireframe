@@ -1,29 +1,25 @@
 # Catalog and shared layout checkpoint
 
-The catalog defines 86 insertable control families with stable product IDs, names, search aliases, categories, default requested sizes, automatic sizing policy and resize axes. Groups and component instances are structural nodes rather than library entries. This inventory is not a claim that all 86 families are rendered or available in the desktop interface.
+The catalog defines 86 insertable control families with stable product IDs, names, search aliases, categories, default requested sizes, automatic sizing policy and resize axes. Groups and component instances are structural nodes rather than library entries. All 86 families have default render coverage; availability and meaningful property variants have separate interface and family contracts.
+
+## Current release audit
+
+All 86 schemas validate default nodes. The current shared pipeline renders all 172 Sketch/Clean default variants to SVG and to 344 PNGs at standard/double resolution, with no layout or export failures and no document mutation. All eight fitted overview sheets were visually inspected. Browser, Cover Flow and Window retain generic measurement warnings despite successful dedicated rendering; those warnings are not automatic-layout failures. See [ON/OFF switch](SWITCH.md). Fitted previews and default export success do not establish native canvas sharpness, every property variant or exact visual equivalence.
+
+The Shape family now has dedicated geometry, captions/icons, colors/opacity, inspector and insertion/category routing; see [Shapes](SHAPES.md). Triangle quarter-turns are implemented. Other shapes intentionally ignore rotation, so the initial ellipse/45-degree comparison was not a valid defect test. Native visual fidelity and tiny torn-content masking remain open.
+
+Arrow geometry, captions, color, heads and three-point editing are implemented in [Arrows](ARROWS.md). Horizontal-rule styles and inspector routing are implemented in [Rules](RULES.md). Whole-control, row and inline Page/Back/Web Address editing, destination creation and transfer preservation are implemented in [Link regions](LINK-REGIONS.md). Native appearance and interaction remain explicit acceptance work. Image source, crop and rotation use a separate inspector and must not be classified as missing solely from the common property loop.
 
 ## Property rules
 
-The implemented common property set has typed values, context defaults, enum/range checks and per-control inspector visibility. Choice controls distinguish six checkbox/radio states from four button states; input and dropdown states differ. Shape variants are separate from control identity. Geometry remains in the node rather than an untyped property map.
+The catalog supplies typed values, context defaults, enum/range checks and per-control visibility. Geometry remains in the node. Ordinary edits store differences from current defaults; component patches compare against inherited effective values. Reset removes explicit values. Unknown stored fields survive decoding; unsupported new edits fail. Legacy checked flags affect checkbox, radio and switch states. Existing ellipse/line/panel IDs remain recognized.
 
-Ordinary edits store differences from current defaults. Component patches compare against inherited effective values, so an override equal to a global default can still differ from its source. Reset removes the explicit value. Unknown stored fields survive decoding; unsupported new edits fail. Legacy checked flags affect only checkbox, radio and switch states. Existing ellipse/line/panel IDs remain recognized.
+Document validation rejects known property type and state errors before saving. Schema presence and inspector visibility do not by themselves prove that a renderer consumes the field. G01 requires checking meaningful variants against each family's contract. Family documents retain their detailed requirements; this audit does not supersede them.
 
-Known property type/state errors are now rejected by document validation before saving. The schema is still incomplete for specialized device, icon, chart, menu and other control-specific fields. Common fields retained for legacy compatibility can be hidden from the inspector. Completing the remaining field contracts is part of per-family implementation, not a completed acceptance claim.
+## Layout and evidence boundary
 
-## Layout
+The layout engine expands components and resolves sparse properties without mutating project data. Requested dimensions, uncropped bounds, clipped bounds and inherited clipping remain separate. Ancestor positions, locks and markup propagate through groups; migrated paint order remains stable. One expansion budget covers the whole page.
 
-The layout engine expands components and resolves sparse properties without mutating project data. It keeps requested dimensions, uncropped bounds, clipped bounds and inherited clipping separate. Ancestor positions, locks and markup propagate through nested groups. Migrated explicit paint order remains stable. Expansion has one shared budget across the whole page, preventing many individually valid instances from multiplying work without a limit.
+Text measurement and positioned drawing are shared by canvas and exports. See [rich text](RICH-TEXT.md), [inspector and states](INSPECTOR-AND-STATES.md) and [outlines](OUTLINES.md) for their contracts. Fixed controls can retain an old measurement warning despite having a dedicated renderer; inspect each warning rather than treating it as either automatic failure or acceptance. Unsupported automatic layout is an error.
 
-Text measurement uses the canvas font system's glyph advances and wrapping through a narrow TextMeasurer interface. The app supplies bundled canvas font faces; geometry tests and native specimens do not establish final typography. Rich text, basic buttons, choices, inputs, simple shapes and structured table cells have initial sizing logic. See RICH-TEXT.md. Image intrinsic dimensions/rotation, most specialized automatic layouts and broader native visual comparisons remain outstanding.
-
-Unsupported automatic layout returns an explicit error. For unsupported controls with fixed dimensions, layout retains those dimensions and records a warning. Neither behavior counts as an implemented renderer. The desktop interface now edits the recursive project and uses derived control views and resolved properties for the shared scene. See RECURSIVE-EDITOR.md.
-
-## Verification
-
-68 tests pass across the app, legacy workflows, recursive document/workspace, catalog/layout and text. New cases cover IDs/defaults and migration coverage, search ranking, sparse edits versus inherited overrides, state distinctions, hidden inspector fields, failed schema validation, per-axis resize policy, real glyph widths/wrapping, nested override layout and clipping, and explicit unsupported-layout outcomes. Clippy passes with warnings denied. Five saved native test documents still migrate read-only with their source bytes unchanged.
-
-The shared text/table scene is integrated; continue control-specific measurement/rendering and visual comparisons. Representative native version-2 editing and save/reopen are verified; full visual fidelity, control coverage and Windows/Linux runtime acceptance remain outstanding.
-
-Typed text/table properties and six-state choice rendering are integrated; see INSPECTOR-AND-STATES.md for the current field boundary and native evidence.
-
-Rectangle outline variants, fill opacity and border color use the typed inspector. Stable Sketch form contours and their scoped acceptance are documented in OUTLINES.md.
+The release checklist owns completion. Automated defaults and variant comparisons are source-level evidence; they do not close native appearance, interaction, platform or packaging gates. The remaining family work must be followed by the integrated scenario pass on a coherent candidate.

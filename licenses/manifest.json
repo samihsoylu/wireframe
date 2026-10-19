@@ -421,6 +421,15 @@
     ]
   },
   {
+    "name": "bytes",
+    "version": "1.12.1",
+    "license": "MIT",
+    "repository": "https://github.com/tokio-rs/bytes",
+    "files": [
+      "bytes-1.12.1/LICENSE"
+    ]
+  },
+  {
     "name": "calloop",
     "version": "0.13.0",
     "license": "MIT",
@@ -646,14 +655,12 @@
   {
     "name": "cosmic-text",
     "version": "0.19.0",
-    "license": "MIT OR Apache-2.0",
+    "license": "(MIT OR Apache-2.0) AND GPL-3.0-only",
     "repository": "https://github.com/pop-os/cosmic-text",
     "files": [
       "cosmic-text-0.19.0/LICENSE-APACHE",
       "cosmic-text-0.19.0/LICENSE-MIT",
-      "cosmic-text-0.19.0/fonts/FiraMono-LICENSE",
-      "cosmic-text-0.19.0/fonts/Inter-LICENSE",
-      "cosmic-text-0.19.0/fonts/NotoSans-LICENSE"
+      "cosmic-text-0.19.0/LICENSE-WIREFRAME"
     ]
   },
   {
@@ -767,6 +774,16 @@
     ]
   },
   {
+    "name": "displaydoc",
+    "version": "0.2.7",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/yaahc/displaydoc",
+    "files": [
+      "displaydoc-0.2.7/LICENSE-APACHE",
+      "displaydoc-0.2.7/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "dlib",
     "version": "0.5.3",
     "license": "MIT",
@@ -828,21 +845,23 @@
   {
     "name": "egui",
     "version": "0.36.2",
-    "license": "MIT OR Apache-2.0",
+    "license": "(MIT OR Apache-2.0) AND GPL-3.0-only",
     "repository": "https://github.com/emilk/egui",
     "files": [
-      "egui-0.36.2/upstream-LICENSE-MIT",
-      "egui-0.36.2/upstream-LICENSE-APACHE"
+      "egui-0.36.2/LICENSE-WIREFRAME",
+      "egui-0.36.2/upstream-LICENSE-APACHE",
+      "egui-0.36.2/upstream-LICENSE-MIT"
     ]
   },
   {
     "name": "egui-winit",
     "version": "0.36.2",
-    "license": "MIT OR Apache-2.0",
+    "license": "(MIT OR Apache-2.0) AND GPL-3.0-only",
     "repository": "https://github.com/emilk/egui/tree/main/crates/egui-winit",
     "files": [
-      "egui-winit-0.36.2/upstream-LICENSE-MIT",
-      "egui-winit-0.36.2/upstream-LICENSE-APACHE"
+      "egui-winit-0.36.2/LICENSE-WIREFRAME",
+      "egui-winit-0.36.2/upstream-LICENSE-APACHE",
+      "egui-winit-0.36.2/upstream-LICENSE-MIT"
     ]
   },
   {
@@ -907,11 +926,12 @@
   {
     "name": "epaint",
     "version": "0.36.2",
-    "license": "MIT OR Apache-2.0",
+    "license": "(MIT OR Apache-2.0) AND GPL-3.0-only",
     "repository": "https://github.com/emilk/egui/tree/main/crates/epaint",
     "files": [
-      "epaint-0.36.2/upstream-LICENSE-MIT",
-      "epaint-0.36.2/upstream-LICENSE-APACHE"
+      "epaint-0.36.2/LICENSE-WIREFRAME",
+      "epaint-0.36.2/upstream-LICENSE-APACHE",
+      "epaint-0.36.2/upstream-LICENSE-MIT"
     ]
   },
   {
@@ -1144,6 +1164,16 @@
     ]
   },
   {
+    "name": "form_urlencoded",
+    "version": "1.2.2",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/servo/rust-url",
+    "files": [
+      "form_urlencoded-1.2.2/LICENSE-APACHE",
+      "form_urlencoded-1.2.2/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "futures-core",
     "version": "0.3.34",
     "license": "MIT OR Apache-2.0",
@@ -1211,6 +1241,16 @@
     "repository": "https://codeberg.org/swsnr/gethostname.rs.git",
     "files": [
       "gethostname-1.1.0/LICENSE"
+    ]
+  },
+  {
+    "name": "getrandom",
+    "version": "0.2.17",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-random/getrandom",
+    "files": [
+      "getrandom-0.2.17/LICENSE-APACHE",
+      "getrandom-0.2.17/LICENSE-MIT"
     ]
   },
   {
@@ -1377,6 +1417,26 @@
     ]
   },
   {
+    "name": "http",
+    "version": "1.5.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/hyperium/http",
+    "files": [
+      "http-1.5.0/LICENSE-APACHE",
+      "http-1.5.0/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "httparse",
+    "version": "1.10.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/seanmonstar/httparse",
+    "files": [
+      "httparse-1.10.1/LICENSE-APACHE",
+      "httparse-1.10.1/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "hybrid-array",
     "version": "0.4.15",
     "license": "MIT OR Apache-2.0",
@@ -1387,6 +1447,52 @@
     ]
   },
   {
+    "name": "i_float",
+    "version": "5.0.0",
+    "license": "MIT",
+    "repository": "https://github.com/iShape-Rust/iFloat",
+    "files": [
+      "i_float-5.0.0/LICENSE"
+    ]
+  },
+  {
+    "name": "i_key_sort",
+    "version": "0.11.0",
+    "license": "MIT",
+    "repository": "https://github.com/iShape-Rust/iKeySort",
+    "files": [
+      "i_key_sort-0.11.0/upstream-LICENSE"
+    ]
+  },
+  {
+    "name": "i_overlay",
+    "version": "9.0.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/iShape-Rust/iOverlay",
+    "files": [
+      "i_overlay-9.0.0/upstream-LICENSE-MIT",
+      "i_overlay-9.0.0/upstream-LICENSE-APACHE"
+    ]
+  },
+  {
+    "name": "i_shape",
+    "version": "5.0.0",
+    "license": "MIT",
+    "repository": "https://github.com/iShape-Rust/i_shape",
+    "files": [
+      "i_shape-5.0.0/LICENSE"
+    ]
+  },
+  {
+    "name": "i_tree",
+    "version": "0.19.1",
+    "license": "MIT",
+    "repository": "https://github.com/iShape-Rust/iTree",
+    "files": [
+      "i_tree-0.19.1/LICENSE"
+    ]
+  },
+  {
     "name": "iana-time-zone",
     "version": "0.1.65",
     "license": "MIT OR Apache-2.0",
@@ -1394,6 +1500,89 @@
     "files": [
       "iana-time-zone-0.1.65/LICENSE-APACHE",
       "iana-time-zone-0.1.65/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "icu_collections",
+    "version": "2.3.0",
+    "license": "Unicode-3.0",
+    "repository": "https://github.com/unicode-org/icu4x",
+    "files": [
+      "icu_collections-2.3.0/LICENSE"
+    ]
+  },
+  {
+    "name": "icu_locale_core",
+    "version": "2.3.0",
+    "license": "Unicode-3.0",
+    "repository": "https://github.com/unicode-org/icu4x",
+    "files": [
+      "icu_locale_core-2.3.0/LICENSE"
+    ]
+  },
+  {
+    "name": "icu_normalizer",
+    "version": "2.3.0",
+    "license": "Unicode-3.0",
+    "repository": "https://github.com/unicode-org/icu4x",
+    "files": [
+      "icu_normalizer-2.3.0/LICENSE"
+    ]
+  },
+  {
+    "name": "icu_normalizer_data",
+    "version": "2.3.0",
+    "license": "Unicode-3.0",
+    "repository": "https://github.com/unicode-org/icu4x",
+    "files": [
+      "icu_normalizer_data-2.3.0/LICENSE"
+    ]
+  },
+  {
+    "name": "icu_properties",
+    "version": "2.3.0",
+    "license": "Unicode-3.0",
+    "repository": "https://github.com/unicode-org/icu4x",
+    "files": [
+      "icu_properties-2.3.0/LICENSE"
+    ]
+  },
+  {
+    "name": "icu_properties_data",
+    "version": "2.3.0",
+    "license": "Unicode-3.0",
+    "repository": "https://github.com/unicode-org/icu4x",
+    "files": [
+      "icu_properties_data-2.3.0/LICENSE"
+    ]
+  },
+  {
+    "name": "icu_provider",
+    "version": "2.3.1",
+    "license": "Unicode-3.0",
+    "repository": "https://github.com/unicode-org/icu4x",
+    "files": [
+      "icu_provider-2.3.1/LICENSE"
+    ]
+  },
+  {
+    "name": "idna",
+    "version": "1.1.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/servo/rust-url/",
+    "files": [
+      "idna-1.1.0/LICENSE-APACHE",
+      "idna-1.1.0/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "idna_adapter",
+    "version": "1.2.2",
+    "license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/hsivonen/idna_adapter",
+    "files": [
+      "idna_adapter-1.2.2/LICENSE-APACHE",
+      "idna_adapter-1.2.2/LICENSE-MIT"
     ]
   },
   {
@@ -1557,6 +1746,15 @@
     ]
   },
   {
+    "name": "litemap",
+    "version": "0.8.3",
+    "license": "Unicode-3.0",
+    "repository": "https://github.com/unicode-org/icu4x",
+    "files": [
+      "litemap-0.8.3/LICENSE"
+    ]
+  },
+  {
     "name": "litrs",
     "version": "1.0.1",
     "license": "MIT OR Apache-2.0",
@@ -1639,6 +1837,15 @@
     "files": [
       "moxcms-0.8.1/LICENSE-APACHE.md",
       "moxcms-0.8.1/LICENSE.md"
+    ]
+  },
+  {
+    "name": "nix",
+    "version": "0.31.3",
+    "license": "MIT",
+    "repository": "https://github.com/nix-rust/nix",
+    "files": [
+      "nix-0.31.3/LICENSE"
     ]
   },
   {
@@ -1957,6 +2164,15 @@
     ]
   },
   {
+    "name": "potential_utf",
+    "version": "0.1.6",
+    "license": "Unicode-3.0",
+    "repository": "https://github.com/unicode-org/icu4x",
+    "files": [
+      "potential_utf-0.1.6/LICENSE"
+    ]
+  },
+  {
     "name": "proc-macro-crate",
     "version": "3.5.0",
     "license": "MIT OR Apache-2.0",
@@ -2079,11 +2295,12 @@
   {
     "name": "resvg",
     "version": "0.48.1",
-    "license": "Apache-2.0 OR MIT",
+    "license": "(Apache-2.0 OR MIT) AND GPL-3.0-only",
     "repository": "https://github.com/linebender/resvg",
     "files": [
       "resvg-0.48.1/LICENSE-APACHE",
-      "resvg-0.48.1/LICENSE-MIT"
+      "resvg-0.48.1/LICENSE-MIT",
+      "resvg-0.48.1/LICENSE-WIREFRAME"
     ]
   },
   {
@@ -2103,6 +2320,20 @@
     "repository": "https://github.com/kornelski/rust-rgb",
     "files": [
       "rgb-0.8.53/LICENSE"
+    ]
+  },
+  {
+    "name": "ring",
+    "version": "0.17.14",
+    "license": "Apache-2.0 AND ISC",
+    "repository": "https://github.com/briansmith/ring",
+    "files": [
+      "ring-0.17.14/LICENSE",
+      "ring-0.17.14/LICENSE-BoringSSL",
+      "ring-0.17.14/LICENSE-other-bits",
+      "ring-0.17.14/src/polyfill/once_cell/LICENSE-APACHE",
+      "ring-0.17.14/src/polyfill/once_cell/LICENSE-MIT",
+      "ring-0.17.14/third_party/fiat/LICENSE"
     ]
   },
   {
@@ -2155,6 +2386,36 @@
       "rustix-1.1.5/LICENSE-APACHE",
       "rustix-1.1.5/LICENSE-Apache-2.0_WITH_LLVM-exception",
       "rustix-1.1.5/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "rustls",
+    "version": "0.23.46",
+    "license": "Apache-2.0 OR ISC OR MIT",
+    "repository": "https://github.com/rustls/rustls",
+    "files": [
+      "rustls-0.23.46/LICENSE-APACHE",
+      "rustls-0.23.46/LICENSE-ISC",
+      "rustls-0.23.46/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "rustls-pki-types",
+    "version": "1.15.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rustls/pki-types",
+    "files": [
+      "rustls-pki-types-1.15.1/LICENSE-APACHE",
+      "rustls-pki-types-1.15.1/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "rustls-webpki",
+    "version": "0.103.15",
+    "license": "ISC",
+    "repository": "https://github.com/rustls/webpki",
+    "files": [
+      "rustls-webpki-0.103.15/LICENSE"
     ]
   },
   {
@@ -2453,6 +2714,15 @@
     ]
   },
   {
+    "name": "subtle",
+    "version": "2.6.1",
+    "license": "BSD-3-Clause",
+    "repository": "https://github.com/dalek-cryptography/subtle",
+    "files": [
+      "subtle-2.6.1/LICENSE"
+    ]
+  },
+  {
     "name": "svgtypes",
     "version": "0.16.1",
     "license": "Apache-2.0 OR MIT",
@@ -2573,10 +2843,11 @@
   {
     "name": "tiny-skia",
     "version": "0.12.0",
-    "license": "BSD-3-Clause",
+    "license": "BSD-3-Clause AND GPL-3.0-only",
     "repository": "https://github.com/linebender/tiny-skia",
     "files": [
-      "tiny-skia-0.12.0/LICENSE"
+      "tiny-skia-0.12.0/LICENSE",
+      "tiny-skia-0.12.0/LICENSE-WIREFRAME"
     ]
   },
   {
@@ -2586,6 +2857,15 @@
     "repository": "https://github.com/linebender/tiny-skia/tree/master/path",
     "files": [
       "tiny-skia-path-0.12.0/LICENSE"
+    ]
+  },
+  {
+    "name": "tinystr",
+    "version": "0.8.4",
+    "license": "Unicode-3.0",
+    "repository": "https://github.com/unicode-org/icu4x",
+    "files": [
+      "tinystr-0.8.4/LICENSE"
     ]
   },
   {
@@ -2669,6 +2949,16 @@
     ]
   },
   {
+    "name": "typed-path",
+    "version": "0.12.3",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/chipsenkbeil/typed-path",
+    "files": [
+      "typed-path-0.12.3/LICENSE-APACHE",
+      "typed-path-0.12.3/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "typenum",
     "version": "1.20.1",
     "license": "MIT OR Apache-2.0",
@@ -2719,6 +3009,16 @@
     ]
   },
   {
+    "name": "unicode-normalization",
+    "version": "0.1.25",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/unicode-rs/unicode-normalization",
+    "files": [
+      "unicode-normalization-0.1.25/LICENSE-APACHE",
+      "unicode-normalization-0.1.25/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "unicode-script",
     "version": "0.5.8",
     "license": "MIT OR Apache-2.0",
@@ -2749,6 +3049,45 @@
     ]
   },
   {
+    "name": "untrusted",
+    "version": "0.9.0",
+    "license": "ISC",
+    "repository": "https://github.com/briansmith/untrusted",
+    "files": [
+      "untrusted-0.9.0/LICENSE.txt"
+    ]
+  },
+  {
+    "name": "ureq",
+    "version": "3.4.2",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/algesten/ureq",
+    "files": [
+      "ureq-3.4.2/LICENSE-APACHE",
+      "ureq-3.4.2/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "ureq-proto",
+    "version": "0.6.5",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/algesten/ureq-proto",
+    "files": [
+      "ureq-proto-0.6.5/LICENSE-APACHE.txt",
+      "ureq-proto-0.6.5/LICENSE-MIT.txt"
+    ]
+  },
+  {
+    "name": "url",
+    "version": "2.5.8",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/servo/rust-url",
+    "files": [
+      "url-2.5.8/LICENSE-APACHE",
+      "url-2.5.8/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "usvg",
     "version": "0.48.1",
     "license": "Apache-2.0 OR MIT",
@@ -2756,6 +3095,26 @@
     "files": [
       "usvg-0.48.1/LICENSE-APACHE",
       "usvg-0.48.1/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "utf8-zero",
+    "version": "0.8.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/algesten/utf8-zero",
+    "files": [
+      "utf8-zero-0.8.1/LICENSE-APACHE",
+      "utf8-zero-0.8.1/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "utf8_iter",
+    "version": "1.0.4",
+    "license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/hsivonen/utf8_iter",
+    "files": [
+      "utf8_iter-1.0.4/LICENSE-APACHE",
+      "utf8_iter-1.0.4/LICENSE-MIT"
     ]
   },
   {
@@ -2907,6 +3266,15 @@
     "files": [
       "web-time-1.1.0/LICENSE-APACHE",
       "web-time-1.1.0/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "webpki-roots",
+    "version": "1.0.9",
+    "license": "CDLA-Permissive-2.0",
+    "repository": "https://github.com/rustls/webpki-roots",
+    "files": [
+      "webpki-roots-1.0.9/LICENSE"
     ]
   },
   {
@@ -3168,6 +3536,15 @@
     ]
   },
   {
+    "name": "writeable",
+    "version": "0.6.4",
+    "license": "Unicode-3.0",
+    "repository": "https://github.com/unicode-org/icu4x",
+    "files": [
+      "writeable-0.6.4/LICENSE"
+    ]
+  },
+  {
     "name": "x11-dl",
     "version": "2.21.0",
     "license": "MIT",
@@ -3392,6 +3769,52 @@
     "repository": "https://github.com/unicode-org/icu4x",
     "files": [
       "zerofrom-derive-0.1.8/LICENSE"
+    ]
+  },
+  {
+    "name": "zeroize",
+    "version": "1.9.1",
+    "license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/RustCrypto/utils",
+    "files": [
+      "zeroize-1.9.1/LICENSE-APACHE",
+      "zeroize-1.9.1/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "zerotrie",
+    "version": "0.2.5",
+    "license": "Unicode-3.0",
+    "repository": "https://github.com/unicode-org/icu4x",
+    "files": [
+      "zerotrie-0.2.5/LICENSE"
+    ]
+  },
+  {
+    "name": "zerovec",
+    "version": "0.11.8",
+    "license": "Unicode-3.0",
+    "repository": "https://github.com/unicode-org/icu4x",
+    "files": [
+      "zerovec-0.11.8/LICENSE"
+    ]
+  },
+  {
+    "name": "zerovec-derive",
+    "version": "0.11.6",
+    "license": "Unicode-3.0",
+    "repository": "https://github.com/unicode-org/icu4x",
+    "files": [
+      "zerovec-derive-0.11.6/LICENSE"
+    ]
+  },
+  {
+    "name": "zip",
+    "version": "9.0.3",
+    "license": "MIT",
+    "repository": "https://github.com/zip-rs/zip2",
+    "files": [
+      "zip-9.0.3/LICENSE"
     ]
   },
   {

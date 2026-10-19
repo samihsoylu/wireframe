@@ -34,6 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     p.pages[0].content.nodes = vec![paragraph, table];
     p.pages.push(Page {
+        trashed: false,
         id: 4,
         name: "Linked page".into(),
         notes: String::new(),

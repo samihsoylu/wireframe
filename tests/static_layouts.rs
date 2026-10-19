@@ -160,7 +160,9 @@ fn rule_pattern_clipping_color_opacity_and_history() {
                 .iter()
                 .all(|i| i.opacity == 0.4 && i.clip == Some(Bounds::new(20., 30., 10., 100.)))
         );
-        assert!(scene.items.iter().all(|i|matches!(&i.drawing,Drawing::Primitive(Primitive::Line{color,..})if *color==[255,0,0])));
+        assert!(scene.items.iter().all(
+            |i| matches!(&i.drawing,Drawing::Primitive(Primitive::Mesh{fill,..})if *fill==[255,0,0])
+        ));
     }
     for kind in [Kind::FormattingToolbar, Kind::VerticalRule] {
         let axis = Axis::for_kind(kind).unwrap();

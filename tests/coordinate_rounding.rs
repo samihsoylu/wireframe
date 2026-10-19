@@ -41,7 +41,10 @@ fn fixture(instance: bool) -> Editor {
     } else {
         p.pages[0].content.nodes = vec![outer];
     }
-    Editor::new(p)
+    {
+        p.organize_components().unwrap();
+        Editor::new(p)
+    }
 }
 fn resize(e: &mut Editor, id: Id, w: f32, h: f32) {
     e.select(id, false);
@@ -163,7 +166,10 @@ fn explicit_resize_rounds_half_ties_but_loading_and_moving_keep_fractions() {
         ..Project::default()
     };
     p.pages[0].content.nodes = vec![leaf(3, -11.5, -1.5, 20., 30.)];
-    let mut e = Editor::new(p);
+    let mut e = {
+        p.organize_components().unwrap();
+        Editor::new(p)
+    };
     resize(&mut e, 3, 11.5, 30.);
     assert_eq!(
         e.selected_views()[0].bounds,

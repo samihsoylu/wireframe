@@ -2,6 +2,7 @@
 // Copyright 2026 Wireframe contributors
 
 use super::{Affinity, Caret, Selection};
+use crate::fonts::InterfaceRole;
 use cosmic_text::{Attrs, Buffer, Family, FontSystem, Metrics, Shaping, SwashCache, Weight, Wrap};
 use eframe::egui::{self, Color32, ColorImage, Pos2, Rect, Vec2};
 use std::{
@@ -11,7 +12,8 @@ use std::{
 };
 use unicode_segmentation::UnicodeSegmentation;
 
-pub(crate) fn shared_engine(ctx: &egui::Context) -> Arc<Mutex<Engine>> {
+/// Reuse the UI font/shaping engine for editable fields and read-only text.
+pub fn shared_engine(ctx: &egui::Context) -> Arc<Mutex<Engine>> {
     let id = egui::Id::new("unicode-input-engine");
     ctx.data_mut(|d| d.get_temp::<Arc<Mutex<Engine>>>(id))
         .unwrap_or_else(|| {
@@ -24,6 +26,8 @@ pub(crate) fn shared_engine(ctx: &egui::Context) -> Arc<Mutex<Engine>> {
 pub struct Engine {
     fonts: FontSystem,
     raster: SwashCache,
+    interface_bases: BTreeMap<InterfaceRole, cosmic_text::fontdb::ID>,
+    interface_instances: BTreeMap<(InterfaceRole, u32), String>,
 }
 
 impl Default for Engine {
@@ -36,10 +40,59 @@ impl Default for Engine {
         {
             fonts.db_mut().load_font_data(data.font.to_vec());
         }
+        let mut interface_bases = BTreeMap::new();
+        for role in [
+            InterfaceRole::Regular,
+            InterfaceRole::Medium,
+            InterfaceRole::Bold,
+        ] {
+            if let Some(font) = crate::fonts::interface::system_font(role) {
+                let ids = fonts
+                    .db_mut()
+                    .load_font_source(cosmic_text::fontdb::Source::Binary(font.bytes.clone()));
+                if let Some(id) = ids.into_iter().find(|id| {
+                    fonts
+                        .db()
+                        .face(*id)
+                        .is_some_and(|face| face.index == font.index)
+                }) {
+                    interface_bases.insert(role, id);
+                }
+            }
+        }
         Self {
             fonts,
             raster: SwashCache::new(),
+            interface_bases,
+            interface_instances: BTreeMap::new(),
         }
+    }
+}
+
+impl Engine {
+    fn interface_family(
+        &mut self,
+        size: f32,
+        role: InterfaceRole,
+    ) -> Result<Option<String>, String> {
+        let Some(&base) = self.interface_bases.get(&role) else {
+            return Ok(None);
+        };
+        let key = (role, size.to_bits());
+        if let Some(family) = self.interface_instances.get(&key) {
+            return Ok(Some(family.clone()));
+        }
+        if self.interface_instances.len() >= 128 {
+            return Err("Too many interface font sizes".into());
+        }
+        let font =
+            crate::fonts::interface::system_font(role).ok_or("Interface font unavailable")?;
+        let family = format!("wireframe-interface-{role:?}-{:08x}", size.to_bits());
+        self.fonts
+            .add_font_instance(base, family.clone(), font.axes_at(size), size)
+            .ok_or("Could not create interface font instance")?;
+        self.interface_instances.insert(key, family.clone());
+        Ok(Some(family))
     }
 }
 
@@ -115,6 +168,26 @@ impl Layout {
         scale: f32,
         wrap: bool,
     ) -> Result<Self, String> {
+        Self::with_style(
+            engine,
+            source,
+            font_size,
+            width,
+            scale,
+            wrap,
+            InterfaceRole::Regular,
+        )
+    }
+
+    pub fn with_style(
+        engine: &mut Engine,
+        source: &str,
+        font_size: f32,
+        width: f32,
+        scale: f32,
+        wrap: bool,
+        role: InterfaceRole,
+    ) -> Result<Self, String> {
         if source.len() > 1024 * 1024 {
             return Err("Text exceeds the editor's 1 MiB layout limit".into());
         }
@@ -128,6 +201,7 @@ impl Layout {
         {
             return Err("Invalid text editor dimensions".into());
         }
+        let interface_family = engine.interface_family(font_size, role)?;
         let mut buffer = Buffer::new(
             &mut engine.fonts,
             Metrics::new(font_size * scale, font_size * 1.4 * scale),
@@ -137,8 +211,14 @@ impl Layout {
         buffer.set_text(
             source,
             &Attrs::new()
-                .family(Family::Name("Ubuntu"))
-                .weight(Weight::LIGHT),
+                .family(Family::Name(
+                    interface_family.as_deref().unwrap_or("Ubuntu"),
+                ))
+                .weight(if interface_family.is_some() {
+                    Weight::NORMAL
+                } else {
+                    Weight::LIGHT
+                }),
             Shaping::Advanced,
             None,
         );

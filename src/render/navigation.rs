@@ -80,6 +80,7 @@ impl Scene {
                 let bounds = layer.clip.map_or(hit, |clip| intersect(hit, clip));
                 if bounds.w > 0. && bounds.h > 0. {
                     self.links.push(LinkRegion {
+                        quad: None,
                         hint: bounds,
                         target: link.target(),
                         bounds,

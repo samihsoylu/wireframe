@@ -318,7 +318,7 @@ fn interrupted_acknowledgement_does_not_overwrite_external_changes() {
         let status = copy.named_status().unwrap();
         match change {
             "modified" => {
-                assert!(matches!(status, NamedStatus::Changed(p) if p == project("Outside edit")))
+                assert!(matches!(status, NamedStatus::Changed(p) if *p == project("Outside edit")))
             }
             "missing" => assert!(matches!(status, NamedStatus::Missing)),
             "unreadable" => assert!(matches!(status, NamedStatus::Unreadable(_))),

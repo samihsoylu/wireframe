@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 
+mod zoom;
+pub use zoom::{Gesture, MAX_ZOOM, MIN_ZOOM, View, ZOOM_STEPS, next_zoom};
+
 /// Scroll requests in viewport points, independent of document zoom.
 pub fn edge_delta(point: [f32; 2], size: [f32; 2]) -> [f32; 2] {
     std::array::from_fn(|axis| {

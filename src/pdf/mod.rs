@@ -298,7 +298,22 @@ fn draw_item(
             result
         }
         Drawing::Image { bounds, data } => vectors::image(surface, *bounds, &data.png),
-        Drawing::Glyph(g) => fonts.draw(surface, g, scene.font.as_deref()),
+        Drawing::Glyph(g) => {
+            if !g.rotation.is_finite() {
+                return Err("Invalid text rotation".into());
+            }
+            if g.rotation == 0. {
+                return fonts.draw(surface, g, scene.font.as_deref());
+            }
+            surface.push_transform(&Transform::from_rotate_at(
+                g.rotation.to_degrees(),
+                g.x,
+                g.baseline,
+            ));
+            let result = fonts.draw(surface, g, scene.font.as_deref());
+            surface.pop();
+            result
+        }
         Drawing::BeginMask(_)
         | Drawing::EndMask
         | Drawing::BeginOpacity(_)

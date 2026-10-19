@@ -66,6 +66,11 @@ fn accessibility_keeps_full_names_and_noneditable_roles() {
             ..Default::default()
         },
         |ui| {
+            ids.push(
+                ui_text::label_styled(ui, &source, 100., ui_text::CaptionStyle::panel_heading())
+                    .id
+                    .accesskit_id(),
+            );
             ids.push(ui_text::label(ui, &source, 100.).id.accesskit_id());
             ids.push(
                 ui_text::selectable(ui, true, &source, 100.)
@@ -223,4 +228,41 @@ fn shaped_combo_retains_value_role_popup_selection_and_escape() {
     )]);
     assert!(!egui::ComboBox::is_open(&ctx, id));
     assert_eq!(selected, 0);
+}
+
+#[test]
+fn styled_headings_keep_grapheme_truncation_and_regular_caption_ink() {
+    let mut engine = ENGINE.lock().unwrap_or_else(|e| e.into_inner());
+    let source = "Components café 👩‍💻 שלום";
+    let regular = ui_text::prepare(&mut engine, source, 13., 400., 2., Color32::BLACK).unwrap();
+    for style in [
+        ui_text::CaptionStyle::panel_heading(),
+        ui_text::CaptionStyle::selected_page(),
+    ] {
+        for width in [1., 20., 80., 400.] {
+            let heading =
+                ui_text::prepare_styled(&mut engine, source, style, width, 2., Color32::BLACK)
+                    .unwrap();
+            assert!(heading.ink_width <= width);
+            if heading.truncated {
+                let prefix = heading.displayed.strip_suffix('…').unwrap();
+                assert!(source.starts_with(prefix));
+                assert!(
+                    prefix.is_empty()
+                        || source
+                            .grapheme_indices(true)
+                            .any(|(i, g)| i + g.len() == prefix.len())
+                );
+            } else {
+                assert_eq!(heading.displayed, source);
+            }
+        }
+    }
+    assert_eq!(
+        ui_text::prepare(&mut engine, source, 13., 400., 2., Color32::BLACK)
+            .unwrap()
+            .image
+            .pixels,
+        regular.image.pixels
+    );
 }

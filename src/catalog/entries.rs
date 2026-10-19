@@ -904,6 +904,8 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         DefaultValue::ButtonFill
     } else if c.id == "circle_button" {
         DefaultValue::Literal(Value::Color([204, 204, 204, 255]))
+    } else if c.id == "toggle" {
+        DefaultValue::Literal(Value::Color([106, 168, 79, 255]))
     } else {
         DefaultValue::Fill
     };
@@ -995,6 +997,38 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         fill,
         ink,
     ];
+    if c.id == "arrow" {
+        c.properties.extend([
+            choice("shape", "Shape", &["curve", "lines"], "curve"),
+            choice("stroke", "Stroke", &["solid", "dashed", "dotted"], "solid"),
+            boolean("start_head", "Start arrowhead", true),
+            boolean("end_head", "End arrowhead", true),
+            number("label_position", "Label position", 5., 0., 10., true),
+            number("background_opacity", "Opacity", 1., 0., 1., false),
+            boolean("legacy_horizontal", "Legacy horizontal geometry", false),
+        ]);
+        let mut color = prop(
+            "border_color",
+            "Color",
+            PropertyType::Color,
+            Value::Color([0, 0, 0, 255]),
+        );
+        color.default = DefaultValue::FormInk;
+        c.properties.push(color);
+        for key in [
+            "start_x",
+            "start_y",
+            "end_x",
+            "end_y",
+            "bend_along",
+            "bend_across",
+        ] {
+            let mut field = number(key, key, 0., -1_000_000., 1_000_000., false);
+            field.nullable = true;
+            field.default = DefaultValue::Literal(Value::Null);
+            c.properties.push(field);
+        }
+    }
     // Preserved for old files. New choice editing uses the richer state property.
     let mut checked = boolean("checked", "Checked", false);
     checked.visible = false;
@@ -1006,13 +1040,22 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         "align",
         "Alignment",
         &["left", "center", "right"],
-        if matches!(c.family, Family::Button) || matches!(c.id, "alert" | "sticky_note" | "tooltip")
+        if matches!(c.family, Family::Button)
+            || matches!(c.id, "alert" | "sticky_note" | "tooltip" | "shape")
         {
             "center"
         } else {
             "left"
         },
     ));
+    if c.id == "label" {
+        c.properties.push(choice(
+            "text_orientation",
+            "Orientation",
+            &["upright", "left", "right", "diagonal"],
+            "upright",
+        ));
+    }
     let states: &'static [&'static str] = match c.id {
         "button" | "circle_button" => &["normal", "selected", "focused", "disabled"],
         "checkbox" | "radio" => &[
@@ -1036,7 +1079,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         }
         "pointed_button" | "icon_label" | "label" | "link" | "numeric_stepper" | "paragraph"
         | "vertical_slider" | "horizontal_slider" | "tree" => &["normal", "disabled"],
-        "toggle" => &["off", "on"],
+        "toggle" => &["on", "off"],
         _ => &[],
     };
     if let Some(first) = states.first() {
@@ -1097,17 +1140,34 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         c.properties
             .push(choice("date_mode", "Kind", &["month", "year"], "month"));
     }
-    if c.id == "vertical_rule" {
+    if matches!(c.id, "vertical_rule" | "horizontal_rule") {
         c.properties.push(choice(
             "stroke",
             "Stroke",
-            &["solid", "dashed", "dotted"],
+            if c.id == "horizontal_rule" {
+                &[
+                    "solid",
+                    "dashed",
+                    "dotted",
+                    "breakline_top",
+                    "breakline_bottom",
+                ]
+            } else {
+                &["solid", "dashed", "dotted"]
+            },
             "solid",
         ));
         c.properties
             .push(number("background_opacity", "Opacity", 1., 0., 1., false));
     }
-    if matches!(c.id, "date_chooser" | "numeric_stepper" | "vertical_rule") {
+    if c.id == "horizontal_rule" {
+        c.properties
+            .push(boolean("legacy_rule_frame", "Legacy line frame", false));
+    }
+    if matches!(
+        c.id,
+        "date_chooser" | "numeric_stepper" | "vertical_rule" | "horizontal_rule"
+    ) {
         let mut border = prop(
             "border_color",
             "Border color",
@@ -1116,6 +1176,19 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         );
         border.default = DefaultValue::FormInk;
         c.properties.push(border);
+    }
+    if c.id == "progress" {
+        c.properties.push(choice(
+            "progress_style",
+            "Style",
+            &["standard", "thin"],
+            "standard",
+        ));
+        c.properties
+            .push(boolean("indeterminate", "Indeterminate", false));
+        if let Some(fill) = c.properties.iter_mut().find(|p| p.key == "fill") {
+            fill.default = DefaultValue::Literal(Value::Color([204, 204, 204, 255]));
+        }
     }
     if c.id == "text_input" {
         c.properties.push(choice(
@@ -1159,7 +1232,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             "solid",
         ));
     }
-    if c.id == "rectangle" {
+    if matches!(c.id, "rectangle" | "shape") {
         if let Some(border) = c.properties.iter_mut().find(|p| p.key == "border") {
             *border = choice(
                 "border",
@@ -1178,7 +1251,11 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
         c.properties.push(border);
         c.properties.push(number(
             "background_opacity",
-            "Fill opacity",
+            if c.id == "shape" {
+                "Opacity"
+            } else {
+                "Fill opacity"
+            },
             1.,
             0.,
             1.,
@@ -1393,6 +1470,7 @@ fn configure(mut c: ControlSpec) -> ControlSpec {
             | "icon"
             | "icon_label"
             | "circle_button"
+            | "shape"
             | "pointed_button"
             | "multiline_button"
             | "menu_bar"

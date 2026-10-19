@@ -1,0 +1,31 @@
+# Page versions
+
+Implementation contract. The document/editor core now supports alternate surfaces, independent notes, shared names, create/rename/discard/promotion/merge, per-page selection and version-aware Undo. PDF and image export planning resolve independent notes. UI controls, preference persistence, active-version export helpers and page/version presentation history are connected. Scoped macOS native checks cover independent edits/notes, shared rename/Undo/Redo, promotion/merge/Undo, project selection, Active PNG/PDF, Current PDF notes and restart persistence. Current native checks also verify explicit page/Back links, exact-version history and remembered selections after cold reopen. Nested/cropped link compositions, remaining version-editing edge cases and broader platform acceptance remain open.
+
+A page has a stable identity, official content and independent alternate content. Named versions can span several pages; each page can have at most one content version in a particular named version. A version owns its controls, paint order and notes. Assets, component definitions and project fonts retain their established shared ownership.
+
+## Editing and navigation
+
+Remember the selected version separately for every page. Selecting a page restores its selected version; deleting that version falls back to official. Version selection is view state, separate from document edits and Undo history, and persists in local per-project preferences. Clear stale control selection/context safely when changing surfaces. Keep thumbnail, canvas, inspector, notes, history and exports on the same resolved surface.
+
+A project-wide named-version choice affects pages containing that version and leaves other pages on their previous selection. Creating an alternate clones the current content and notes without coupling later edits. Renaming a shared named version changes its label wherever used. Choosing an existing name moves that page's alternate into the existing named version, provided the page has no version there; retain the other pages and content. Offer Undo/Redo for document mutations and truthful errors for conflicts.
+
+Promotion copies the chosen alternate into official while retaining the alternate and a recoverable former official version. Merge appends imported controls with fresh IDs and the established horizontal placement rule, preserves appearance/assets/link targets, and combines nonempty notes with a newline, `--`, and another newline. Both operations are atomic document history entries. Merge selects imported controls on official; undoing merge leaves official selected after restoring its preceding content. Do not make view selection changes create document history entries.
+
+Presentation page navigation uses remembered versions. Back/Forward history identifies both page and version; directional and alternate traversal are implemented. Native macOS checks on the current candidate verify a page link opening the remembered alternate, Back links restoring exact same-page and cross-page versions, Forward restoration, branch truncation, unchanged document/history and cold-reopened version choices. See [presentation](PRESENTATION.md) for the full contract and evidence limits. Deleted-page/version recovery and reorder stability are covered by application tests. The normal UI requires exiting presentation before those document operations, and re-entry starts fresh history; defensive stale-history tests do not imply an observed concurrent native deletion workflow.
+
+## Export and persistence
+
+Current exports the active version. Active selects exactly one remembered version per page. Official, All and explicitly Chosen retain their distinct meanings. Every export resolves content and notes from the same version while maintaining stable parent-page link identity. Preserve scope, clipping, paint order, dynamic values, naming, conflict handling and cancellation behavior.
+
+Do not put view preferences into document content or mark a project dirty for navigation. Reopening restores valid version selections and safely ignores stale identities. Save/recovery acknowledgement must correspond to the actual saved revision; a UI action or toast alone is not persistence proof.
+
+Existing version2 files retain page/alternate IDs, labels, control trees, notes, assets, fonts and links through migration. Legacy alternate labels do not prove shared identity: preserve ambiguous cases without silently combining content. Keep migration deterministic and round-trip tested. Existing embedded fonts must remain unchanged.
+
+## Acceptance
+
+Use the landing/contact/phone/tablet scenarios to create, edit, rename, move, promote and merge versions; navigate away/back; exercise Undo/Redo; save/reopen; and export Current/Active/Official/All/Chosen with correct notes. Include nested groups/components, clipping, control ID collisions, stale selection and schema migration regressions. Check that official and alternate edits stay isolated and shared definition edits retain their intended scope.
+
+Stored alternate/export tests alone do not establish this workflow. Retained native evidence covers the sampled version operations; external `version-route-current/report.md` adds current native link/history, document-preservation and cold-reopen acceptance. No runtime changes were needed for that pass. Nested/cropped link compositions, remaining editing variants, broader platform verification and final optimized-package acceptance remain separate requirements.
+
+The current source/evidence audit checks version and component isolation separately from resource lifecycle. Existing failed-merge coverage starts with committed edits. Generic component/version operations may finish a pending model edit before an internal failure; native active-draft rejection behavior is not established by that test or by the resource-specific draft-preservation correction. Do not claim a universal failure-preserves-draft guarantee.

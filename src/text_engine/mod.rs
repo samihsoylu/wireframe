@@ -11,7 +11,7 @@ mod cache;
 mod portable;
 mod raster;
 pub(crate) mod sfnt;
-pub use raster::{Raster, paint};
+pub use raster::{Raster, paint, paint_rotated};
 #[cfg(target_os = "macos")]
 mod font_source;
 #[cfg(target_os = "macos")]

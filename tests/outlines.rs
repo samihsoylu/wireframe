@@ -4,6 +4,39 @@ use wireframe::{
     catalog, document::*, model::Kind, render::Drawing, scene::Primitive, workspace::Editor,
 };
 
+#[test]
+fn sketch_square_border_keeps_visible_ink_across_wide_fields() {
+    for width in [70., 180., 500.] {
+        let mut e = Editor::default();
+        e.document.settings.sketch = true;
+        e.add(Kind::TextArea, 20., 20.);
+        let id = e.nodes()[0].id;
+        e.set_control_property(id, "text", Value::Text(String::new()))
+            .unwrap();
+        e.set_control_property(id, "vertical_scrollbar", Value::Bool(false))
+            .unwrap();
+        e.selected_mut(|c| {
+            c.bounds.w = width;
+            c.bounds.h = 80.;
+        });
+        let scene = e.rendered_scene(e.page).unwrap();
+        let image = image::load_from_memory(&scene.png().unwrap())
+            .unwrap()
+            .to_rgb8();
+        // Integrate a text-free top band rather than requiring particular
+        // antialiased pixels or counting the stroke twice at corners.
+        let mut ink = 0.;
+        for x in 34..(24 + width as u32 - 10) {
+            for y in 24..30 {
+                ink += (255 - image.get_pixel(x, y).0[0]) as f32 / 255.;
+            }
+        }
+        let mean = ink / (width - 20.);
+        assert!((2.3..2.8).contains(&mean), "{width}: {mean}");
+        assert_eq!(image.get_pixel(24 + width as u32 / 2, 64).0, [255; 3]);
+    }
+}
+
 fn rectangle(sketch: bool, border: &str, w: f32, h: f32) -> Editor {
     let mut p = Project::default();
     p.settings.sketch = sketch;

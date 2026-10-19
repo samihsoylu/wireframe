@@ -15,6 +15,272 @@ fn fixture() -> (tempfile::TempDir, WorkingCopies, PathBuf) {
     ProjectStore.save(&named, &project("Saved")).unwrap();
     (dir, copies, named)
 }
+
+#[test]
+fn line_recovery_migration_preserves_clean_status_dirty_changes_and_input_bytes() {
+    for changed in [false, true] {
+        let (_dir, copies, named) = fixture();
+        let mut old = project("Line project");
+        old.format_version = 13;
+        old.next_id = 101;
+        old.pages[0].content.nodes.push(document::Node::control(
+            100,
+            "line",
+            document::Point::new(20., 30.),
+            document::Size::fixed(180., 60.),
+        ));
+        let bytes = serde_json::to_vec_pretty(&old).unwrap();
+        fs::write(&named, &bytes).unwrap();
+        let copy = copies.open_named(&named).unwrap();
+        let id = copy.id().to_owned();
+        let path = copy.local_path().to_owned();
+        let mut envelope: serde_json::Value =
+            serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        drop(copy);
+        envelope["project"] = serde_json::from_slice(&bytes).unwrap();
+        envelope["named"]["base_content"] = serde_json::to_value(fingerprint(&bytes)).unwrap();
+        if changed {
+            envelope["project"]["title"] = "Unsaved line project".into();
+        }
+        let record = serde_json::to_vec(&envelope).unwrap();
+        fs::write(&path, &record).unwrap();
+        let resumed = copies.resume(&id).unwrap();
+        assert_eq!(resumed.has_local_changes().unwrap(), changed);
+        let node = &resumed.project().pages[0].content.nodes[0];
+        assert_eq!(
+            node.properties["legacy_rule_frame"],
+            document::Value::Bool(true)
+        );
+        assert_eq!(node.origin, document::Point::new(20., 30.));
+        assert!(
+            matches!(&node.content, document::NodeContent::Control {size,..} if *size == document::Size::fixed(180.,60.))
+        );
+        assert_eq!(fs::read(&named).unwrap(), bytes);
+        assert_eq!(fs::read(&path).unwrap(), record);
+    }
+}
+
+#[test]
+fn horizontal_arrow_recovery_migrates_without_changing_clean_or_dirty_state() {
+    for changed in [false, true] {
+        let (_dir, copies, named) = fixture();
+        let mut old = project("Arrow project");
+        old.format_version = 12;
+        old.next_id = 101;
+        old.pages[0].content.nodes.push(
+            crate::catalog::get("arrow")
+                .unwrap()
+                .create(100, document::Point::new(20., 30.)),
+        );
+        let bytes = serde_json::to_vec_pretty(&old).unwrap();
+        fs::write(&named, &bytes).unwrap();
+        let copy = copies.open_named(&named).unwrap();
+        let id = copy.id().to_owned();
+        let path = copy.local_path().to_owned();
+        let mut envelope: serde_json::Value =
+            serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        drop(copy);
+        envelope["project"] = serde_json::from_slice(&bytes).unwrap();
+        envelope["named"]["base_content"] = serde_json::to_value(fingerprint(&bytes)).unwrap();
+        if changed {
+            envelope["project"]["title"] = "Unsaved arrow project".into();
+        }
+        let record = serde_json::to_vec(&envelope).unwrap();
+        fs::write(&path, &record).unwrap();
+        let resumed = copies.resume(&id).unwrap();
+        assert_eq!(resumed.has_local_changes().unwrap(), changed);
+        let node = &resumed.project().pages[0].content.nodes[0];
+        let arrow = crate::arrows::node_geometry(node).unwrap().0;
+        assert_eq!(arrow.start, document::Point::new(0., 50.));
+        assert_eq!(arrow.end, document::Point::new(150., 50.));
+        assert_eq!(node.properties["start_head"], document::Value::Bool(false));
+        assert_eq!(fs::read(&named).unwrap(), bytes);
+        assert_eq!(fs::read(&path).unwrap(), record);
+    }
+}
+
+#[test]
+fn old_recovery_keeps_clean_status_and_unsaved_edits() {
+    for (version, changed) in [
+        (3, false),
+        (3, true),
+        (4, false),
+        (4, true),
+        (5, false),
+        (5, true),
+        (6, false),
+        (6, true),
+        (7, false),
+        (7, true),
+        (8, false),
+        (8, true),
+        (9, false),
+        (9, true),
+        (10, false),
+        (10, true),
+        (11, false),
+        (11, true),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let copies = WorkingCopies::new(dir.path().join("copies")).unwrap();
+        let named = dir.path().join("Existing.wireframe");
+        let mut old = project("Version three");
+        old.format_version = version;
+        old.next_id = 101;
+        old.pages[0].content.nodes.push(
+            crate::catalog::get("toggle")
+                .unwrap()
+                .create(100, document::Point::default()),
+        );
+        let bytes = serde_json::to_vec_pretty(&old).unwrap();
+        fs::write(&named, &bytes).unwrap();
+        let copy = copies.open_named(&named).unwrap();
+        let id = copy.id().to_owned();
+        let path = copy.local_path().to_owned();
+        let mut envelope: serde_json::Value =
+            serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        drop(copy);
+        envelope["project"] = serde_json::from_slice(&bytes).unwrap();
+        envelope["named"]["base_content"] = serde_json::to_value(fingerprint(&bytes)).unwrap();
+        if changed {
+            envelope["project"]["title"] = "Unsaved change".into();
+        }
+        let record = serde_json::to_vec(&envelope).unwrap();
+        fs::write(&path, &record).unwrap();
+        let resumed = copies.resume(&id).unwrap();
+        assert_eq!(resumed.project().format_version, document::FORMAT_VERSION);
+        assert_eq!(
+            resumed.project().pages[0].content.nodes[0].properties["checked"],
+            document::Value::Bool(false)
+        );
+        assert_eq!(resumed.has_local_changes().unwrap(), changed);
+        assert_eq!(
+            resumed.project().title,
+            if changed {
+                "Unsaved change"
+            } else {
+                "Version three"
+            }
+        );
+        assert_eq!(fs::read(&path).unwrap(), record);
+        assert_eq!(fs::read(&named).unwrap(), bytes);
+    }
+}
+
+#[test]
+fn legacy_component_recovery_migrates_clean_fingerprint_without_touching_files() {
+    for (version, changed) in [
+        (5, false),
+        (5, true),
+        (6, false),
+        (6, true),
+        (7, false),
+        (7, true),
+        (8, false),
+        (8, true),
+        (9, false),
+        (9, true),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let copies = WorkingCopies::new(dir.path().join("copies")).unwrap();
+        let named = dir.path().join("Components.wireframe");
+        let mut editor = crate::workspace::Editor::default();
+        editor.add(crate::model::Kind::Button, 30., 40.);
+        editor.create_component("Shared".into()).unwrap();
+        let mut old = editor.document;
+        if version == 5 {
+            old.libraries.clear();
+            old.default_library = None;
+        } else {
+            old.libraries[0].content.nodes[0].markup = true;
+        }
+        old.format_version = version;
+        let bytes = serde_json::to_vec_pretty(&old).unwrap();
+        fs::write(&named, &bytes).unwrap();
+        let copy = copies.open_named(&named).unwrap();
+        let id = copy.id().to_owned();
+        let path = copy.local_path().to_owned();
+        let mut envelope: serde_json::Value =
+            serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        drop(copy);
+        envelope["project"] = serde_json::from_slice(&bytes).unwrap();
+        envelope["named"]["base_content"] = serde_json::to_value(fingerprint(&bytes)).unwrap();
+        if changed {
+            envelope["project"]["title"] = "Unsaved change".into();
+        }
+        let record = serde_json::to_vec(&envelope).unwrap();
+        fs::write(&path, &record).unwrap();
+        let resumed = copies.resume(&id).unwrap();
+        assert_eq!(resumed.has_local_changes().unwrap(), changed);
+        assert_eq!(resumed.project().definitions, old.definitions);
+        if version == 5 {
+            assert_eq!(resumed.project().pages, old.pages);
+        } else {
+            let root = resumed
+                .project()
+                .resolve(&resumed.project().pages[0].content.nodes[0])
+                .unwrap()
+                .root;
+            assert_eq!(root.markup, version >= 7);
+            assert!(resumed.project().libraries[0].content.nodes[0].markup);
+        }
+        assert_eq!(resumed.project().libraries.len(), 1);
+        assert_eq!(fs::read(&path).unwrap(), record);
+        assert_eq!(fs::read(&named).unwrap(), bytes);
+    }
+}
+
+#[test]
+fn local_component_locks_survive_recovery_and_named_save() {
+    let (_dir, copies, named) = fixture();
+    let mut editor = crate::workspace::Editor::default();
+    editor.add(crate::model::Kind::TextInput, 30., 40.);
+    let root = *editor.selection.iter().next().unwrap();
+    editor.create_component("Field".into()).unwrap();
+    assert!(editor.enter(root));
+    let child = editor.nodes()[0].id;
+    editor.select(child, false);
+    editor.lock(true);
+    let mut copy = copies.open_named(&named).unwrap();
+    copy.checkpoint(&editor.document).unwrap();
+    let id = copy.id().to_owned();
+    drop(copy);
+    let mut resumed = copies.resume(&id).unwrap();
+    assert_eq!(resumed.project(), &editor.document);
+    resumed.save_named(&editor.document).unwrap();
+    let mut reopened = crate::workspace::Editor::new(ProjectStore.load(&named).unwrap());
+    assert!(reopened.enter(root));
+    assert!(reopened.own_locked(child));
+    assert!(!reopened.document.definitions[0].content.nodes[0].locked);
+}
+#[test]
+fn library_import_correspondence_survives_recovery_and_named_reopen() {
+    let (_dir, copies, named) = fixture();
+    let mut editor = crate::workspace::Editor::default();
+    editor.add(crate::model::Kind::Button, 30., 40.);
+    let definition = editor.create_component("Imported action".into()).unwrap();
+    let historical = editor.document.allocate_id().unwrap();
+    editor.document.libraries[0]
+        .imports
+        .push(document::LibraryImport {
+            project: "foreign-project".into(),
+            library: 90,
+            definitions: std::collections::BTreeMap::from([(91, definition), (92, historical)]),
+        });
+    let mut copy = copies.open_named(&named).unwrap();
+    copy.checkpoint(&editor.document).unwrap();
+    let id = copy.id().to_owned();
+    drop(copy);
+    let mut resumed = copies.resume(&id).unwrap();
+    assert!(resumed.has_local_changes().unwrap());
+    assert_eq!(resumed.project(), &editor.document);
+    resumed.save_named(&editor.document).unwrap();
+    assert!(!resumed.has_local_changes().unwrap());
+    drop(resumed);
+    assert_eq!(copies.resume(&id).unwrap().project(), &editor.document);
+    assert_eq!(ProjectStore.load(&named).unwrap(), editor.document);
+}
+
 #[test]
 fn independent_projects_and_unnamed_work_survive_release_and_resume() {
     let (_dir, copies, named) = fixture();
@@ -82,7 +348,7 @@ fn external_changes_are_available_for_selection_but_never_overwritten() {
     copy.checkpoint(&project("Local")).unwrap();
     ProjectStore.save(&named, &project("External")).unwrap();
     assert!(
-        matches!(copy.named_status().unwrap(),NamedStatus::Changed(p) if p==project("External"))
+        matches!(copy.named_status().unwrap(),NamedStatus::Changed(p) if *p==project("External"))
     );
     assert_eq!(
         copy.save_named(&project("Local")),
@@ -524,4 +790,302 @@ fn missing_fingerprint_fields_are_not_treated_as_new_file_reservations() {
             "Missing {field} must be rejected"
         );
     }
+}
+
+// Exact pretty-printed version-2 project bytes, before independent alternate notes.
+const V2_PROJECT: &[u8] = br#"{
+  "format_version": 2,
+  "title": "Existing work",
+  "next_id": 3,
+  "settings": {
+    "sketch": true,
+    "font_size": 13.0
+  },
+  "pages": [
+    {
+      "id": 1,
+      "name": "Page",
+      "notes": "Official notes",
+      "parent": null,
+      "content": {
+        "nodes": []
+      },
+      "alternates": [
+        {
+          "id": 2,
+          "name": "Compact",
+          "content": {
+            "nodes": []
+          }
+        }
+      ]
+    }
+  ],
+  "definitions": [],
+  "assets": []
+}"#;
+
+#[test]
+fn version_two_recovery_records_migrate_without_losing_edits_or_changing_clean_status() {
+    for changed in [false, true] {
+        let dir = tempfile::tempdir().unwrap();
+        let copies = WorkingCopies::new(dir.path().join("copies")).unwrap();
+        let named = dir.path().join("Existing.wireframe");
+        fs::write(&named, V2_PROJECT).unwrap();
+        let copy = copies.open_named(&named).unwrap();
+        let id = copy.id().to_owned();
+        let path = copy.local_path().to_owned();
+        let mut value: serde_json::Value =
+            serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        drop(copy);
+        value["version"] = 1.into();
+        value["project"] = serde_json::from_slice(V2_PROJECT).unwrap();
+        value["named"]["base_content"] = serde_json::to_value(fingerprint(V2_PROJECT)).unwrap();
+        if changed {
+            value["project"]["title"] = "Unsaved changes".into();
+        }
+        let original = serde_json::to_vec(&value).unwrap();
+        fs::write(&path, &original).unwrap();
+        let resumed = copies.resume(&id).unwrap();
+        assert_eq!(resumed.project().format_version, document::FORMAT_VERSION);
+        assert_eq!(
+            resumed.project().pages[0].alternates[0].notes,
+            "Official notes"
+        );
+        assert_eq!(
+            resumed.project().title,
+            if changed {
+                "Unsaved changes"
+            } else {
+                "Existing work"
+            }
+        );
+        assert_eq!(resumed.has_local_changes().unwrap(), changed);
+        assert_eq!(fs::read(&path).unwrap(), original);
+        assert_eq!(fs::read(&named).unwrap(), V2_PROJECT);
+        drop(resumed);
+        let listed = copies.list().unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!(
+            listed[0].summary.as_ref().unwrap().has_local_changes,
+            changed
+        );
+    }
+}
+
+#[test]
+fn version_two_pending_save_migrates_its_content_baseline_after_reconciling_raw_bytes() {
+    for changed in [false, true] {
+        let dir = tempfile::tempdir().unwrap();
+        let copies = WorkingCopies::new(dir.path().join("copies")).unwrap();
+        let named = dir.path().join("Existing.wireframe");
+        fs::write(&named, V2_PROJECT).unwrap();
+        let copy = copies.open_named(&named).unwrap();
+        let id = copy.id().to_owned();
+        let path = copy.local_path().to_owned();
+        let mut value: serde_json::Value =
+            serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        drop(copy);
+        value["version"] = 1.into();
+        value["project"] = serde_json::from_slice(V2_PROJECT).unwrap();
+        value["named"]["base"] = serde_json::to_value([0u8; 32]).unwrap();
+        value["named"]["base_content"] = serde_json::to_value([0u8; 32]).unwrap();
+        value["named"]["pending"] = serde_json::to_value(fingerprint(V2_PROJECT)).unwrap();
+        if changed {
+            value["project"]["title"] = "Newer local changes".into();
+        }
+        fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
+        let copy = copies.resume(&id).unwrap();
+        assert_eq!(copy.has_local_changes().unwrap(), changed);
+        assert!(matches!(
+            copy.named_status().unwrap(),
+            NamedStatus::Unchanged
+        ));
+        assert!(copy.record.named.as_ref().unwrap().pending.is_none());
+        assert_eq!(copy.record.version, VERSION);
+        assert_eq!(fs::read(&named).unwrap(), V2_PROJECT);
+        drop(copy);
+        assert_eq!(
+            copies.resume(&id).unwrap().has_local_changes().unwrap(),
+            changed
+        );
+    }
+}
+
+#[test]
+fn version_two_archives_restore_independently_and_future_embedded_documents_are_preserved() {
+    let dir = tempfile::tempdir().unwrap();
+    let copies = WorkingCopies::new(dir.path().join("copies")).unwrap();
+    let name = "previous-working-legacy.json";
+    let archive = copies.root.join(name);
+    let value = serde_json::json!({"version":1,"named":null,"project":serde_json::from_slice::<serde_json::Value>(V2_PROJECT).unwrap()});
+    let bytes = serde_json::to_vec(&value).unwrap();
+    fs::write(&archive, &bytes).unwrap();
+    assert!(copies.list_archives().unwrap()[0].summary.is_ok());
+    let restored = copies.restore_archive(name).unwrap();
+    assert_eq!(
+        restored.project().pages[0].alternates[0].notes,
+        "Official notes"
+    );
+    assert!(restored.named_path().unwrap().is_none());
+    assert_eq!(fs::read(&archive).unwrap(), bytes);
+    let id = restored.id().to_owned();
+    let path = restored.local_path().to_owned();
+    let mut future: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    drop(restored);
+    future["project"]["format_version"] = 99.into();
+    let bytes = serde_json::to_vec(&future).unwrap();
+    fs::write(&path, &bytes).unwrap();
+    assert!(matches!(
+        copies.resume(&id),
+        Err(CopyError::UnsupportedVersion(99))
+    ));
+    assert_eq!(fs::read(&path).unwrap(), bytes);
+}
+
+#[test]
+fn retained_pages_survive_working_copy_restart_and_named_save() {
+    let (_dir, copies, named) = fixture();
+    let mut editor = crate::workspace::Editor::default();
+    editor.add(crate::model::Kind::Button, 40., 50.);
+    editor.create_version("Compact").unwrap();
+    editor.set_notes("Hidden alternate notes".into());
+    editor.commit();
+    editor.add_page();
+    editor.document.pages[0].trashed = true;
+    editor.document.pages[1].parent = Some(1);
+    editor.document.validate().unwrap();
+    let mut copy = copies.open_named(&named).unwrap();
+    copy.checkpoint(&editor.document).unwrap();
+    let id = copy.id().to_owned();
+    drop(copy);
+    let mut resumed = copies.resume(&id).unwrap();
+    assert!(resumed.has_local_changes().unwrap());
+    assert_eq!(resumed.project(), &editor.document);
+    resumed.save_named(&editor.document).unwrap();
+    assert!(!resumed.has_local_changes().unwrap());
+    assert_eq!(ProjectStore.load(&named).unwrap(), editor.document);
+    drop(resumed);
+    let reopened = copies.open_named(&named).unwrap();
+    assert!(!reopened.has_local_changes().unwrap());
+    assert_eq!(reopened.project(), &editor.document);
+}
+
+#[test]
+fn retained_libraries_survive_recovery_save_and_restore_without_rewriting_instances() {
+    let (_dir, copies, named) = fixture();
+    let mut editor = crate::workspace::Editor::default();
+    editor.add(crate::model::Kind::Button, 40., 50.);
+    let source = editor.create_component("Action".into()).unwrap();
+    let library = editor.document.component_source(source).unwrap().0.id;
+    editor
+        .edit_source_notes(source, "Preserved source notes")
+        .unwrap();
+    let original = editor.document.clone();
+    editor.trash_libraries(&[library]).unwrap();
+    let mut copy = copies.open_named(&named).unwrap();
+    copy.checkpoint(&editor.document).unwrap();
+    let id = copy.id().to_owned();
+    drop(copy);
+    let mut resumed = copies.resume(&id).unwrap();
+    assert!(resumed.has_local_changes().unwrap());
+    assert_eq!(resumed.project(), &editor.document);
+    resumed.save_named(&editor.document).unwrap();
+    assert!(!resumed.has_local_changes().unwrap());
+    drop(resumed);
+    let reopened = copies.open_named(&named).unwrap();
+    assert!(!reopened.has_local_changes().unwrap());
+    assert_eq!(reopened.project(), &editor.document);
+    assert_eq!(ProjectStore.load(&named).unwrap(), editor.document);
+    let mut restored = crate::workspace::Editor::new(reopened.project().clone());
+    assert!(!restored.document.definition_available(source));
+    restored.restore_libraries(&[library]).unwrap();
+    assert_eq!(restored.document, original);
+}
+
+#[test]
+fn permanently_removed_destinations_survive_recovery_and_named_reopen() {
+    let (_dir, copies, named) = fixture();
+    let mut editor = crate::workspace::Editor::default();
+    editor.add_page();
+    editor.add(crate::model::Kind::Button, 40., 50.);
+    editor.document.pages[1].content.nodes[0].properties.insert(
+        "link".into(),
+        document::Value::Link(document::Link::Page(1)),
+    );
+    editor.trash_pages(&[1]).unwrap();
+    editor.permanently_remove_pages(&[1]).unwrap();
+    let expected = editor.document;
+    let mut copy = copies.open_named(&named).unwrap();
+    copy.checkpoint(&expected).unwrap();
+    let id = copy.id().to_owned();
+    drop(copy);
+    let mut resumed = copies.resume(&id).unwrap();
+    assert!(resumed.has_local_changes().unwrap());
+    assert_eq!(resumed.project(), &expected);
+    resumed.save_named(&expected).unwrap();
+    assert!(!resumed.has_local_changes().unwrap());
+    assert_eq!(ProjectStore.load(&named).unwrap(), expected);
+    drop(resumed);
+    let reopened = copies.open_named(&named).unwrap();
+    assert!(!reopened.has_local_changes().unwrap());
+    assert_eq!(reopened.project(), &expected);
+}
+
+#[test]
+fn asset_retention_migration_preserves_old_clean_and_dirty_recovery_baselines() {
+    for changed in [false, true] {
+        let (_dir, copies, named) = fixture();
+        let mut old = project("Image project");
+        old.format_version = 14;
+        old.next_id = 11;
+        old.assets.push(document::Asset {
+            id: 10,
+            trashed: false,
+            name: "Photo".into(),
+            media_type: "image/png".into(),
+            bytes: vec![1, 2, 3],
+        });
+        let bytes = serde_json::to_vec_pretty(&old).unwrap();
+        assert!(!String::from_utf8_lossy(&bytes).contains("trashed"));
+        fs::write(&named, &bytes).unwrap();
+        let copy = copies.open_named(&named).unwrap();
+        let id = copy.id().to_owned();
+        let path = copy.local_path().to_owned();
+        let mut envelope: serde_json::Value =
+            serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        drop(copy);
+        envelope["project"] = serde_json::from_slice(&bytes).unwrap();
+        envelope["named"]["base_content"] = serde_json::to_value(fingerprint(&bytes)).unwrap();
+        if changed {
+            envelope["project"]["title"] = "Unsaved image project".into();
+        }
+        let record = serde_json::to_vec(&envelope).unwrap();
+        fs::write(&path, &record).unwrap();
+        let resumed = copies.resume(&id).unwrap();
+        assert_eq!(resumed.has_local_changes().unwrap(), changed);
+        assert_eq!(resumed.project().format_version, document::FORMAT_VERSION);
+        assert!(!resumed.project().assets[0].trashed);
+        assert_eq!(resumed.project().assets, old.assets);
+        assert_eq!(fs::read(&named).unwrap(), bytes);
+        assert_eq!(fs::read(&path).unwrap(), record);
+    }
+}
+
+#[test]
+fn dropped_owner_releases_lock_even_while_a_duplicate_descriptor_survives() {
+    let (_dir, copies, named) = fixture();
+    let copy = copies.open_named(&named).unwrap();
+    let id = copy.id().to_owned();
+    // A process spawn can temporarily inherit the same open file description.
+    let inherited_descriptor = copy._lock.file.try_clone().unwrap();
+    assert!(matches!(copies.resume(&id), Err(CopyError::Busy)));
+    drop(copy);
+    let reopened = copies.resume(&id).expect("the original owner has finished");
+    assert_eq!(reopened.project().title, "Saved");
+    drop(inherited_descriptor);
+    // Closing the old descriptor cannot release a new owner's separate lock.
+    assert!(matches!(copies.resume(&id), Err(CopyError::Busy)));
+    drop(reopened);
+    assert!(copies.resume(&id).is_ok());
 }

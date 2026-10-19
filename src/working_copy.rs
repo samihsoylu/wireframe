@@ -14,7 +14,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const VERSION: u32 = 1;
+mod migration;
+
+const VERSION: u32 = 2;
 const MAX_RECORD_BYTES: usize = document::MAX_FILE_BYTES + 1024 * 1024;
 type Fingerprint = [u8; 32];
 fn fingerprint(bytes: &[u8]) -> Fingerprint {
@@ -140,7 +142,7 @@ pub struct CopyEntry {
 /// authorizes overwriting either candidate or silently discarding local edits.
 pub enum NamedStatus {
     Unchanged,
-    Changed(Project),
+    Changed(Box<Project>),
     Missing,
     Unreadable(String),
 }
@@ -152,7 +154,7 @@ pub struct WorkingCopies {
 pub struct WorkingCopy {
     path: PathBuf,
     id: String,
-    _lock: fs::File,
+    _lock: crate::storage::ExclusiveFileLock,
     record: Record,
     preserved: Option<PathBuf>,
 }
@@ -213,13 +215,10 @@ fn decode_record(path: &Path) -> Result<Record, CopyError> {
     }
     let header: Header =
         serde_json::from_slice(&bytes).map_err(|e| CopyError::Invalid(e.to_string()))?;
-    if header.version != VERSION {
+    if header.version != 1 && header.version != VERSION {
         return Err(CopyError::UnsupportedVersion(header.version));
     }
-    let record: Record =
-        serde_json::from_slice(&bytes).map_err(|e| CopyError::Invalid(e.to_string()))?;
-    record.project.encode().map_err(CopyError::Invalid)?;
-    Ok(record)
+    migration::decode(&bytes)
 }
 fn read_record(path: &Path, id: &str) -> Result<Record, CopyError> {
     let record = decode_record(path)?;
@@ -276,13 +275,18 @@ fn normalize_named(path: &Path) -> Result<PathBuf, CopyError> {
     }
 }
 impl WorkingCopies {
+    /// The same normalized identity used by named working-copy ownership.
+    /// This can access the filesystem and belongs on the file-opening worker.
+    pub fn named_id(path: &Path) -> Result<String, CopyError> {
+        Ok(NativePath::capture(&normalize_named(path)?).key())
+    }
     pub fn new(root: impl AsRef<Path>) -> Result<Self, CopyError> {
         fs::create_dir_all(root.as_ref())?;
         Ok(Self {
             root: fs::canonicalize(root.as_ref())?,
         })
     }
-    fn acquire(&self, id: &str) -> Result<(PathBuf, fs::File), CopyError> {
+    fn acquire(&self, id: &str) -> Result<(PathBuf, crate::storage::ExclusiveFileLock), CopyError> {
         if !valid_id(id) {
             return Err(CopyError::Invalid("Invalid working copy identifier".into()));
         }
@@ -292,7 +296,11 @@ impl WorkingCopies {
             .read(true)
             .write(true)
             .open(self.root.join(format!("{id}.lock")))?;
-        lock.try_lock().map_err(|_| CopyError::Busy)?;
+        let lock =
+            crate::storage::ExclusiveFileLock::acquire(lock).map_err(|error| match error {
+                fs::TryLockError::WouldBlock => CopyError::Busy,
+                fs::TryLockError::Error(error) => error.into(),
+            })?;
         Ok((self.root.join(format!("{id}.json")), lock))
     }
     pub fn create_unnamed(&self, project: &Project) -> Result<WorkingCopy, CopyError> {
@@ -667,7 +675,8 @@ impl WorkingCopy {
             let mut record = self.record.clone();
             let named = record.named.as_mut().unwrap();
             named.base = Some(pending);
-            named.base_content = Some(pending);
+            let project = document::decode(&bytes).map_err(CopyError::Invalid)?;
+            named.base_content = Some(fingerprint(&project.encode().map_err(CopyError::Invalid)?));
             named.pending = None;
             write_record(&self.path, &record)?;
             self.record = record;
@@ -687,7 +696,7 @@ impl WorkingCopy {
             return Ok(NamedStatus::Unchanged);
         }
         Ok(match document::decode(&bytes) {
-            Ok(p) => NamedStatus::Changed(p),
+            Ok(p) => NamedStatus::Changed(Box::new(p)),
             Err(e) => NamedStatus::Unreadable(e),
         })
     }

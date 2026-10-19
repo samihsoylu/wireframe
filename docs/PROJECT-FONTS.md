@@ -2,7 +2,7 @@
 
 New projects use **Wireframe Draft**, a four-style drawing font derived from Comic Neue under the SIL Open Font License. Its font files are saved inside each new project, so later font updates do not change that document.
 
-Choose **Font and colors…** in the toolbar. Select the regular, bold, italic and bold italic TTF or OTF files, then choose **Apply font**. The name can be edited before applying. Optional font notices are saved with the project and included in its SVG and PDF exports.
+Choose **Font and colors…** in the **File** menu. Select the regular, bold, italic and bold italic TTF or OTF files, then choose **Apply font**. The name can be edited before applying. Optional font notices are saved with the project and included in its SVG and PDF exports.
 
 Each project has one font family. All four faces are required, so each style has an explicit face. Font files may be chosen separately, including the same file for more than one role when desired. Files must contain a single outline font face and be no larger than 4 MB each; collections are unsupported. Invalid files are rejected before they enter the project.
 
@@ -22,7 +22,13 @@ The original Comic Neue sources and their license remain in `assets/fonts/comic-
 
 Use an isolated Python environment with `scripts/font-requirements.txt`, then run `python scripts/build_fonts.py --check` to verify every generated file byte for byte. Omit `--check` to regenerate the family. This optional asset build is separate from the normal Rust build, which embeds the committed font files.
 
-The builder preserves accented base-letter outlines through shared components, gives detached bold marks clearance and keeps attached marks in place. Four distinct faces retain the source character coverage. Font metadata, clipping bounds, canonical accent shaping and constrained wrapping are checked during acceptance. Native Windows/Linux text rendering remains a separate acceptance requirement.
+The builder preserves accented base-letter outlines through shared components, gives detached bold marks clearance and keeps attached marks in place. Four distinct faces retain the source character coverage. Revision 1.004 gives plus and multiplication a consistent lowercase-height design and refines letter, digit, punctuation and word-space advances for each role. Ordinary and nonbreaking spaces retain equal widths. The math outlines come from the retained Comic Neue Regular/Italic sources, with a separate bold expansion. Other outlines and inherited positioning remain unchanged. Revision 1.003 added uppercase/lowercase G with breve (U+011E/U+011F), using the existing licensed base letters and case-appropriate accents. It retains the revision 1.002 correction for lowercase t with cedilla (U+0163) and uppercase T with cedilla (U+0162). A composition rule handles canonically equivalent breve sequences, including an intervening below-letter mark, before the inherited accent-context rules. Other above-letter accents remain order-sensitive. Pair positioning, combining-mark anchors and applicable context coverage are inherited from the corresponding same-case letters. Existing glyph outlines and advances are unchanged. This revision applies when creating a project or explicitly choosing the current drawing font; opening or saving an existing project preserves its embedded font bytes. Font metadata, clipping bounds, canonical accent shaping and constrained wrapping are checked during acceptance. Native Windows/Linux text rendering remains a separate acceptance requirement.
+
+## Scoped revision 1.003 acceptance
+
+CoreText and portable shaping checks cover both breve forms in four roles, adjacent letters, additional marks and accent ordering. Native macOS checks cover a contact-name edit, Undo/Redo, Save, process restart/reopen and matching PNG/PDF exports. The older project fixture remains byte-identical after native Save, retaining its earlier embedded fonts. Broader font metrics, physical-display appearance and native Windows/Linux rendering remain separate acceptance work.
+
+Revision 1.004 adds native and portable checks for operator size and ordinary/nonbreaking-space raster equality across four styles and three sizes. The generator reproduces all outputs byte-for-byte. A native-created project embeds the new four faces, while saving the prior-revision scenario leaves its complete file unchanged. Remaining narrow-field wrapping differences stay under review; this update does not imply exact typeface parity or native Windows/Linux acceptance.
 
 ## Canvas pixel alignment
 

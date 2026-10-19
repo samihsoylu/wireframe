@@ -45,6 +45,44 @@ pub struct Grid {
     pub columns: Vec<Column>,
 }
 impl Grid {
+    /// Use the same cells as rendering, excluding choice markers and column
+    /// specifications, while retaining source offsets through escaped commas.
+    pub fn source_links(text: &str) -> Result<Vec<super::SourceLink>, String> {
+        let mut result = vec![];
+        let mut line_start = 0;
+        let lines: Vec<_> = text.split('\n').collect();
+        for (row, line) in lines.iter().enumerate() {
+            if row + 1 == lines.len() && parse_columns(line).is_some() {
+                break;
+            }
+            for range in cell_ranges(line) {
+                let raw = &line[range.clone()];
+                let trimmed = raw.trim();
+                let start = line_start + range.start + raw.len() - raw.trim_start().len();
+                let mut decoded = String::new();
+                let mut offsets = vec![];
+                let mut chars = trimmed.char_indices().peekable();
+                while let Some((mut i, mut c)) = chars.next() {
+                    if c == '\\' && chars.peek().is_some_and(|(_, c)| *c == ',') {
+                        (i, c) = chars.next().unwrap();
+                    }
+                    decoded.push(c);
+                    offsets.extend((0..c.len_utf8()).map(|byte| start + i + byte));
+                }
+                if let CellContent::Text(cell) = parse_cell(&decoded, row == 0).content {
+                    for mut link in super::source_links(&cell.source)? {
+                        link.range = offsets[link.range.start]..offsets[link.range.end - 1] + 1;
+                        // The opening bracket is unchanged by comma decoding. Include
+                        // a leading escape in the original label span.
+                        link.label = link.range.start + 1..offsets[link.label.end - 1] + 1;
+                        result.push(link);
+                    }
+                }
+            }
+            line_start += line.len() + 1;
+        }
+        Ok(result)
+    }
     pub fn parse(text: &str) -> Self {
         let mut lines: Vec<_> = text.split('\n').collect();
         let widths = lines.last().and_then(|s| parse_columns(s));
@@ -74,6 +112,30 @@ impl Grid {
             rows,
             columns,
         }
+    }
+    /// Inspector choices share the table grammar, omit headers and size rows,
+    /// and retain choice markers while removing first-row sorting suffixes.
+    pub fn selectable_labels(text: &str, header: bool) -> Vec<String> {
+        let mut lines: Vec<_> = text.split('\n').collect();
+        if lines.last().is_some_and(|s| parse_columns(s).is_some()) {
+            lines.pop();
+        }
+        lines
+            .iter()
+            .enumerate()
+            .skip(usize::from(header))
+            .filter_map(|(row, line)| {
+                let label = split_cells(line)
+                    .into_iter()
+                    .map(|source| match parse_cell(&source, row == 0).content {
+                        CellContent::Text(text) => text.source,
+                        CellContent::Choice(_) => source,
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                (!label.is_empty()).then_some(label)
+            })
+            .collect()
     }
     /// Unweighted columns scale proportionally. With positive weights, zero-weight
     /// columns keep intrinsic width and positive weights divide the remainder.
@@ -116,21 +178,24 @@ impl Grid {
     }
 }
 fn split_cells(line: &str) -> Vec<String> {
+    cell_ranges(line)
+        .into_iter()
+        .map(|range| line[range].replace("\\,", ",").trim().to_owned())
+        .collect()
+}
+fn cell_ranges(line: &str) -> Vec<std::ops::Range<usize>> {
     let mut result = vec![];
-    let mut cell = String::new();
-    let mut chars = line.chars().peekable();
-    while let Some(ch) = chars.next() {
-        if ch == '\\' && chars.peek() == Some(&',') {
+    let mut start = 0;
+    let mut chars = line.char_indices().peekable();
+    while let Some((i, c)) = chars.next() {
+        if c == '\\' && chars.peek().is_some_and(|(_, c)| *c == ',') {
             chars.next();
-            cell.push(',');
-        } else if ch == ',' || ch == '\t' {
-            result.push(cell.trim().into());
-            cell.clear();
-        } else {
-            cell.push(ch);
+        } else if matches!(c, ',' | '\t') {
+            result.push(start..i);
+            start = i + c.len_utf8();
         }
     }
-    result.push(cell.trim().into());
+    result.push(start..line.len());
     result
 }
 fn parse_cell(text: &str, first: bool) -> Cell {

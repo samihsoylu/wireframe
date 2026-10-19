@@ -1,6 +1,6 @@
 # Revision-aware save scheduling
 
-The save coordinator establishes the ordering contract for automatic named-file saving. It is a library component; the desktop workspace still uses manual named saves and its existing single recovery slot. Integration with per-project working copies and the UI is the next step.
+The save coordinator establishes the ordering contract for automatic named-file saving. The desktop integrates this library component through `ProjectSession`, which owns per-project working copies and performs background I/O. The app submits document snapshots, consumes acknowledgements and retains its editor history. The former single recovery slot remains a migration and fallback path.
 
 Each project session has three revisions: the current edited document, the last durable local checkpoint, and the last completed named-file write. New document changes, including Undo and Redo, advance the current revision. A successful local write acknowledges its own revision. New local revisions restart a five-second automatic-save delay; duplicate acknowledgements leave the deadline unchanged. A loaded project starts clean; a restored local edit is registered as a new edited revision and acknowledged locally.
 
@@ -16,6 +16,6 @@ The clock uses monotonic elapsed durations supplied by the caller. `next_deadlin
 
 Seventeen controlled tests cover scheduling, immutable revision acknowledgements, flush requests, retries, mode changes, duplicate and foreign completions, invalid checkpoint ordering and counter limits. Two disk tests use the actual project codec and atomic writer to verify older named writes cannot erase newer local snapshots, and a failed destination retains local data before a successful retry.
 
-Pending integration includes per-project path identity and locks, checkpoint retention, persisted automatic-save preferences, external modifications and fallback, UI status/errors, process restart and close/quit acceptance on all three platforms. These tests do not establish crash or power-loss guarantees, native automatic-save behavior, or product completion.
+Per-project identity and locks, checkpoint retention, persisted automatic-save preferences, external-change protection and UI status/error handling are integrated. See [project sessions](PROJECT-SESSION.md), [working copies](WORKING-COPIES.md) and [recovery](RECOVERY.md) for their implementation and verification boundaries. Coordinator tests prove ordering, not native platform behavior or crash/power-loss guarantees. Native restart, close and failure checks retain their recorded platform and candidate scope; Windows native testing remains on hold.
 
 A caller can end a failed explicit flush request without cancelling an issued write. The background session uses this after reporting failure so later manual edits cannot revive that request. See docs/PROJECT-SESSION.md for the worker integration.

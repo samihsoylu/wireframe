@@ -131,12 +131,18 @@ fn list_selection_tracks_complete_text_edits_in_inspector_and_canvas() {
     assert_eq!(e.document, before);
     e.select(id, false);
     e.lock(true);
-    let before = e.document.clone();
-    assert!(
-        e.set_control_property(id, "text", Value::Text("Locked".into()))
-            .is_err()
+    let origin = e.nodes().iter().find(|n| n.id == id).unwrap().origin;
+    e.set_control_property(id, "text", Value::Text("Locked".into()))
+        .unwrap();
+    assert!(e.own_locked(id));
+    assert_eq!(
+        e.nodes().iter().find(|n| n.id == id).unwrap().origin,
+        origin
     );
-    assert_eq!(e.document, before);
+    let edited = e.document.clone();
+    e.move_by(10., 10.);
+    e.delete();
+    assert_eq!(e.document, edited);
 }
 #[test]
 fn list_rows_share_export_geometry_contrast_clipping_and_scrollbar_positions() {

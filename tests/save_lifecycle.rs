@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 //! Exercise scheduling with real serialized projects and the atomic disk writer.
-//! The desktop UI does not use this coordinator yet.
+//! Desktop integration runs through ProjectSession; these tests isolate storage ordering.
 use std::{collections::BTreeMap, time::Duration};
 use wireframe::{document::Project, save_coordinator::SaveCoordinator, storage::ProjectStore};
 

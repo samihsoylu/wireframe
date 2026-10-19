@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 use eframe::egui;
+pub(crate) mod interface;
+pub use interface::InterfaceRole;
+
+pub fn panel_heading_font() -> egui::FontId {
+    egui::FontId::new(13., InterfaceRole::Medium.family())
+}
 mod project;
 pub use project::{MAX_FACE_BYTES, ProjectFont};
 pub const REGULAR: &[u8] = include_bytes!("../assets/fonts/comic-neue/ComicNeue-Regular.ttf");
@@ -69,6 +75,34 @@ pub fn install_project(context: &egui::Context, project: Option<&ProjectFont>) {
         let mut choices = vec![name];
         choices.extend(fallback.clone());
         fonts.families.insert(family, choices);
+    }
+    for role in [
+        InterfaceRole::Regular,
+        InterfaceRole::Medium,
+        InterfaceRole::Bold,
+    ] {
+        let name = match role {
+            InterfaceRole::Regular => "interface-system",
+            InterfaceRole::Medium => "interface-medium",
+            InterfaceRole::Bold => "interface-bold",
+        };
+        let mut choices = fonts.families[&egui::FontFamily::Proportional].clone();
+        // The bundled proportional faces omit navigation arrows. Keep the
+        // ordinary face first and use the already bundled symbol coverage last.
+        if !choices.iter().any(|name| name == "Hack") {
+            choices.push("Hack".into());
+        }
+        if let Some(interface) = interface::system_font(role) {
+            let mut data = egui::FontData::from_owned(interface.bytes.as_ref().clone());
+            data.index = interface.index;
+            data.tweak.coords = egui::epaint::text::VariationCoords::new(interface.axes.clone());
+            data.tweak.automatic_sizing = true;
+            fonts
+                .font_data
+                .insert(name.into(), std::sync::Arc::new(data));
+            choices.insert(0, name.into());
+        }
+        fonts.families.insert(role.family(), choices);
     }
     context.set_fonts(fonts);
 }

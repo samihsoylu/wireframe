@@ -263,6 +263,8 @@ fn wrapping_preserves_source_graphemes_even_when_glyph_metadata_expands() {
         for source in [
             "مرحبا بالعالم مرحبا بالعالم",
             "ABC שלום 123 שלום",
+            "Alpha Bravo\u{a0}\u{301} Charlie",
+            "Alpha Bravo \u{202f}\u{301} Charlie",
             "👩\u{200d}💻 a\u{301}\u{323} office ffi fi fl",
         ] {
             for width in [1., 30., 70., 200.] {
@@ -555,6 +557,112 @@ fn positioned_layout_reports_limits_without_legacy_fallback() {
         );
         assert!(invalid_size.error.is_some());
         assert!(invalid_size.runs.is_empty());
+    })
+    .drop_without_applying_deltas();
+}
+
+#[test]
+fn overflowing_separator_keeps_fitting_word_and_visible_link_width() {
+    let ctx = egui::Context::default();
+    wireframe::fonts::install(&ctx);
+    ctx.run_ui(Default::default(), |_| {
+        let m = EguiMeasurer {
+            context: &ctx,
+            regular: wireframe::fonts::family(false, false),
+            bold: wireframe::fonts::family(true, false),
+        };
+        for role in 0..4 {
+            let style = TextStyle {
+                size: 17.,
+                bold: role & 1 != 0,
+                italic: role & 2 != 0,
+            };
+            for (source, first) in [
+                ("Alpha Bravo Charlie", "Alpha Bravo"),
+                ("Alpha Bravo   Charlie", "Alpha Bravo"),
+                ("Alpha Bravo\u{a0}Charlie", "Alpha Bravo"),
+                ("Alpha Bravo\u{202f}Charlie", "Alpha Bravo"),
+                ("Alpha Bravo\u{2009}Charlie", "Alpha Bravo"),
+                ("Alpha Bravo\u{2003}Charlie", "Alpha Bravo"),
+                ("Alpha Bravo\tCharlie", "Alpha Bravo"),
+                ("Alpha Bravo \u{a0} Charlie", "Alpha Bravo"),
+                (
+                    "[Alpha Bravo\u{202f}Charlie](page:2)",
+                    "[Alpha Bravo](page:2)",
+                ),
+                ("Alpha Bravo{size:24}\u{a0}{size}Charlie", "Alpha Bravo"),
+                ("Alpha Bravo {size:24}\u{2003}{size}Charlie", "Alpha Bravo "),
+                ("[Alpha Bravo Charlie](page:2)", "[Alpha Bravo](page:2)"),
+                ("Alpha *Bravo* Charlie", "Alpha *Bravo*"),
+                ("Alpha Bravo{size:24} {size}Charlie", "Alpha Bravo"),
+                ("Alpha Bravo {size:24} {size}Charlie", "Alpha Bravo "),
+            ] {
+                let expected = m.rich_galley(&RichText::parse(first, false), style, None, true);
+                let width: f64 = expected.runs[0]
+                    .iter()
+                    .map(|r| r.positioned.as_ref().unwrap().width)
+                    .sum();
+                let text = RichText::parse(source, false);
+                let actual = m.rich_galley(&text, style, Some(width as f32 + 0.1), true);
+                assert!(actual.error.is_none(), "{:?}", actual.error);
+                assert_eq!(
+                    actual.rows.len(),
+                    2,
+                    "{source}; width={width}; job-width={}",
+                    actual.galley.job.wrap.max_width
+                );
+                let visible: String = actual.runs[0]
+                    .iter()
+                    .map(|r| r.positioned.as_ref().unwrap().source.as_str())
+                    .collect();
+                assert_eq!(
+                    visible,
+                    RichText::parse(first, false).display_text(true),
+                    "{source}"
+                );
+                assert_eq!(actual.rows[0].width, expected.rows[0].width, "{source}");
+                assert_eq!(
+                    actual
+                        .runs
+                        .iter()
+                        .flatten()
+                        .map(|r| r.text.as_str())
+                        .collect::<String>(),
+                    text.display_text(true)
+                );
+                for (a, b) in actual
+                    .links
+                    .iter()
+                    .filter(|l| l.row == 0)
+                    .zip(&expected.links)
+                {
+                    assert_eq!(a.rect, b.rect);
+                    assert_eq!(a.target, b.target);
+                }
+                assert_eq!(
+                    actual.links.iter().filter(|l| l.row == 0).count(),
+                    expected.links.len()
+                );
+                assert!(actual.links.iter().all(|l| l.rect.width() > 0.));
+            }
+            // A fitting trailing separator still contributes to alignment width.
+            let source = RichText::plain("Alpha Bravo Charlie");
+            let first = m.rich_galley(&RichText::plain("Alpha Bravo "), style, None, true);
+            let width: f64 = first.runs[0]
+                .iter()
+                .map(|r| r.positioned.as_ref().unwrap().width)
+                .sum();
+            let actual = m.rich_galley(&source, style, Some(width as f32 + 0.1), true);
+            assert_eq!(actual.rows.len(), 2);
+            assert_eq!(actual.rows[0].width, first.rows[0].width);
+            assert_eq!(
+                actual.runs[0]
+                    .iter()
+                    .map(|r| r.positioned.as_ref().unwrap().source.as_str())
+                    .collect::<String>(),
+                "Alpha Bravo "
+            );
+        }
     })
     .drop_without_applying_deltas();
 }

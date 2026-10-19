@@ -325,7 +325,7 @@ pub fn control_scene(c: &Control, sketch: bool) -> Vec<Primitive> {
                 );
             }
         }
-        Kind::Ellipse => {
+        Kind::Ellipse | Kind::Shape => {
             out.push(Primitive::Ellipse { b, fill: white });
             text(
                 &mut out,
@@ -638,11 +638,10 @@ pub fn png_svg(svg: &str) -> Result<Vec<u8>, String> {
 pub fn png_svg_with_attribution(svg: &str, attribution: Option<&str>) -> Result<Vec<u8>, String> {
     png_svg_with_fonts(svg, attribution, None)
 }
-pub fn png_svg_with_fonts(
+pub(crate) fn export_tree(
     svg: &str,
-    attribution: Option<&str>,
     font: Option<&crate::fonts::ProjectFont>,
-) -> Result<Vec<u8>, String> {
+) -> Result<resvg::usvg::Tree, String> {
     let mut options = resvg::usvg::Options::default();
     // Use the same bundled fonts as the canvas, including on minimal Linux systems.
     for font in eframe::egui::FontDefinitions::default().font_data.values() {
@@ -650,7 +649,14 @@ pub fn png_svg_with_fonts(
     }
     crate::fonts::install_export(options.fontdb_mut(), font);
     options.fontdb_mut().set_sans_serif_family("Ubuntu");
-    let tree = resvg::usvg::Tree::from_str(svg, &options).map_err(|e| e.to_string())?;
+    resvg::usvg::Tree::from_str(svg, &options).map_err(|e| e.to_string())
+}
+pub fn png_svg_with_fonts(
+    svg: &str,
+    attribution: Option<&str>,
+    font: Option<&crate::fonts::ProjectFont>,
+) -> Result<Vec<u8>, String> {
+    let tree = export_tree(svg, font)?;
     let size = tree.size().to_int_size();
     if size.width() > 8192
         || size.height() > 8192

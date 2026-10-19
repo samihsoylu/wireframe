@@ -11,7 +11,7 @@ pub(super) enum Profile {
     Rounded,
 }
 
-fn axis(v: f32, size: f32, target: f32, first: f32, last: f32) -> f32 {
+pub(super) fn axis(v: f32, size: f32, target: f32, first: f32, last: f32) -> f32 {
     if target < first + last {
         if v < first {
             v * target / (first + last)
@@ -114,7 +114,7 @@ pub(super) fn sketch(b: Bounds, profile: Profile, color: [u8; 3]) -> Primitive {
             [48., 34.],
             [5., 5., 5., 5.],
             contour(Bounds::new(0.25, 0.2, 47.5, 33.6), 1.4, 1.4, 1.1, 0.5),
-            contour(Bounds::new(2.05, 2., 43.9, 30.), 0.8, 0.7, 0.6, 0.35),
+            contour(Bounds::new(2.75, 2.75, 42.5, 28.5), 0.8, 0.7, 0.6, 0.35),
         ),
         Profile::Button => unreachable!(),
         Profile::Rounded => (
@@ -206,7 +206,7 @@ fn sketch_button(b: Bounds, color: [u8; 3]) -> Primitive {
     }
 }
 
-fn dash_mesh(path: &[[f32; 2]], width: f32, color: [u8; 3]) -> Primitive {
+pub(super) fn dash_mesh(path: &[[f32; 2]], width: f32, color: [u8; 3]) -> Primitive {
     let mut strokes: Vec<Vec<[f32; 2]>> = Vec::new();
     let mut stroke = Vec::new();
     let mut traveled = 0.;

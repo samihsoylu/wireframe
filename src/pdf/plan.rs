@@ -2,6 +2,7 @@
 // Copyright 2026 Wireframe contributors
 //! Project selection, page geometry and document decoration, independent of UI and I/O.
 use super::{Destination, Link, Page};
+pub use crate::export_plan::Selection;
 use crate::{
     document::{Id, Project},
     layout::{EguiMeasurer, TextMeasurer, TextStyle},
@@ -14,12 +15,6 @@ use crate::{
 use eframe::egui;
 use std::collections::BTreeSet;
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum Selection {
-    All,
-    Current(Id),
-    Set(BTreeSet<Id>),
-}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Paper {
     A3,
@@ -59,6 +54,8 @@ pub enum Orientation {
 pub struct Options {
     pub selection: Selection,
     pub include_alternates: bool,
+    /// Captured editor visibility or an explicit export override.
+    pub markup_visible: bool,
     pub paper: Option<Paper>,
     pub orientation: Orientation,
     pub margins: bool,
@@ -72,6 +69,7 @@ impl Default for Options {
         Self {
             selection: Selection::All,
             include_alternates: false,
+            markup_visible: true,
             paper: None,
             orientation: Orientation::BestFit,
             margins: true,
@@ -89,48 +87,30 @@ pub struct Entry {
     pub name: String,
     pub alternate: bool,
 }
+fn entry(value: crate::export_plan::Entry) -> Entry {
+    Entry {
+        id: value.id,
+        owner: value.owner,
+        name: value.display_name(),
+        alternate: value.alternate_name.is_some(),
+    }
+}
 pub fn entries(project: &Project) -> Vec<Entry> {
-    project
-        .pages
-        .iter()
-        .flat_map(|p| {
-            std::iter::once(Entry {
-                id: p.id,
-                owner: p.id,
-                name: p.name.clone(),
-                alternate: false,
-            })
-            .chain(p.alternates.iter().map(|a| Entry {
-                id: a.id,
-                owner: p.id,
-                name: format!("{} — {}", p.name, a.name),
-                alternate: true,
-            }))
-        })
+    crate::export_plan::entries(project)
+        .into_iter()
+        .map(entry)
         .collect()
 }
 fn selected(project: &Project, options: &Options) -> Result<Vec<Entry>, String> {
-    let all = entries(project);
-    let requested: Vec<_> = match &options.selection {
-        Selection::All => vec![],
-        Selection::Current(id) => vec![*id],
-        Selection::Set(ids) => ids.iter().copied().collect(),
-    };
-    if requested.iter().any(|id| !all.iter().any(|e| e.id == *id)) {
-        return Err("An export page is no longer available. Choose the pages again.".into());
-    }
-    let result: Vec<_> = all
-        .into_iter()
-        .filter(|e| match &options.selection {
-            Selection::All => !e.alternate || options.include_alternates,
-            Selection::Current(id) => e.id == *id,
-            Selection::Set(ids) => ids.contains(&e.id),
-        })
-        .collect();
-    if result.is_empty() || result.len() > 1000 {
+    if matches!(&options.selection, Selection::Set(ids) if ids.is_empty()) {
         return Err("Choose between 1 and 1000 pages to export.".into());
     }
-    Ok(result)
+    let chosen =
+        crate::export_plan::select(project, &options.selection, options.include_alternates)?;
+    if chosen.len() > 1000 {
+        return Err("Choose between 1 and 1000 pages to export.".into());
+    }
+    Ok(chosen.into_iter().map(entry).collect())
 }
 fn target(target: &str, chosen: &[Entry]) -> Option<Destination> {
     if target.starts_with("https://") || target.starts_with("http://") {
@@ -186,6 +166,9 @@ pub fn plan(project: &Project, options: &Options) -> Result<Vec<Page>, String> {
     project.validate()?;
     let chosen = selected(project, options)?;
     let mut snapshot = project.clone();
+    // Export surfaces can promote alternates and omit their owning pages.
+    // Import correspondence belongs to the source project, not this projection.
+    snapshot.page_imports.clear();
     snapshot.pages = chosen
         .iter()
         .map(|entry| {
@@ -202,18 +185,21 @@ pub fn plan(project: &Project, options: &Options) -> Result<Vec<Page>, String> {
                 owner.content.clone()
             };
             crate::document::Page {
+                trashed: false,
                 id: entry.id,
                 name: entry.name.clone(),
-                notes: owner.notes.clone(),
+                notes: project.surface_notes(entry.id).to_owned(),
                 parent: None,
                 content,
                 alternates: vec![],
             }
         })
         .collect();
-    let editor = Editor::new(snapshot);
+    let mut editor = Editor::new(snapshot);
+    editor.set_markup_visible(options.markup_visible);
+    // Page labels and notes use the bundled interface faces that the PDF
+    // encoder can resolve. Host UI fonts are not part of this export context.
     let ctx = egui::Context::default();
-    crate::fonts::install(&ctx);
     let mut result = Err("Could not initialize PDF text layout".into());
     let output = ctx.run_ui(egui::RawInput::default(), |ui| {
         let fonts = EguiMeasurer {
@@ -236,7 +222,7 @@ fn layout_pages(
 ) -> Result<Vec<Page>, String> {
     let mut pages = Vec::new();
     for (index, entry) in chosen.iter().enumerate() {
-        let scene = editor.rendered_scene(entry.id)?;
+        let scene = editor.export_scene(entry.id, &crate::workspace::SceneScope::Whole)?;
         let margin = if options.paper.is_some() || options.margins {
             10.
         } else {
@@ -261,9 +247,9 @@ fn layout_pages(
             size.swap(0, 1);
         }
         let width = (size[0] - 2. * margin).max(1.);
-        let owner = project.pages.iter().find(|p| p.id == entry.owner).unwrap();
-        let note = if options.notes && !owner.notes.trim().is_empty() {
-            owner.notes.as_str()
+        let notes = project.surface_notes(entry.id);
+        let note = if options.notes && !notes.trim().is_empty() {
+            notes
         } else {
             ""
         };
@@ -387,12 +373,27 @@ fn layout_pages(
                     b.w * scale,
                     b.h * scale,
                 );
+                let rotated_hint = options.paper.is_none() && link.quad.is_some();
                 let drawing = if options.paper.is_none() {
-                    Primitive::Rect {
-                        b,
-                        fill: [0, 102, 204],
-                        stroke: false,
-                        radius: 0.,
+                    if let Some(quad) = link.quad {
+                        Primitive::Polygon {
+                            points: quad
+                                .map(|p| {
+                                    [
+                                        origin[0] + (p[0] - scene.bounds.x) * scale,
+                                        origin[1] + (p[1] - scene.bounds.y) * scale,
+                                    ]
+                                })
+                                .to_vec(),
+                            fill: [0, 102, 204],
+                        }
+                    } else {
+                        Primitive::Rect {
+                            b,
+                            fill: [0, 102, 204],
+                            stroke: false,
+                            radius: 0.,
+                        }
                     }
                 } else {
                     let width = 8_f32.min(b.w);
@@ -414,7 +415,13 @@ fn layout_pages(
                 decoration.items.push(Item {
                     drawing: Drawing::Primitive(drawing),
                     opacity: if options.paper.is_none() { 0.15 } else { 1. },
-                    clip: Some(Bounds::new(0., 0., size[0], size[1])),
+                    // Each visible link fragment retains its full rotated quad.
+                    // Clip its hint so a later control cannot reveal covered text.
+                    clip: Some(if rotated_hint {
+                        crate::render::intersect(b, Bounds::new(0., 0., size[0], size[1]))
+                    } else {
+                        Bounds::new(0., 0., size[0], size[1])
+                    }),
                 });
             }
         }

@@ -4,21 +4,12 @@ use super::*;
 
 impl Editor {
     pub fn surface_id(&self) -> Id {
-        self.definition.unwrap_or(self.page)
+        self.definition
+            .or(self.library)
+            .unwrap_or_else(|| self.active_surface(self.page))
     }
     pub(super) fn surface(&self, id: Id) -> Option<(&str, &Content)> {
-        self.document
-            .pages
-            .iter()
-            .find(|p| p.id == id)
-            .map(|p| (p.name.as_str(), &p.content))
-            .or_else(|| {
-                self.document
-                    .definitions
-                    .iter()
-                    .find(|d| d.id == id)
-                    .map(|d| (d.name.as_str(), &d.content))
-            })
+        self.document.surface(id)
     }
     pub(super) fn active_content(&self) -> &Content {
         self.surface(self.surface_id())
@@ -33,6 +24,22 @@ impl Editor {
                 .iter_mut()
                 .find(|d| d.id == id)
                 .expect("Reconciled component")
+                .content
+        } else if let Some(id) = self.library {
+            &mut self
+                .document
+                .libraries
+                .iter_mut()
+                .find(|l| l.id == id)
+                .expect("Reconciled library")
+                .content
+        } else if let Some(id) = self.active_alternate(self.page) {
+            &mut self
+                .current_mut()
+                .alternates
+                .iter_mut()
+                .find(|a| a.id == id)
+                .expect("Reconciled alternate")
                 .content
         } else {
             &mut self.current_mut().content
@@ -89,7 +96,7 @@ impl Editor {
     }
     pub fn missing_component(&self, id: Id) -> bool {
         self.instance_definition(id)
-            .is_some_and(|definition| !self.document.definitions.iter().any(|d| d.id == definition))
+            .is_some_and(|definition| !self.document.definition_available(definition))
             || self.nodes().iter().any(|n| {
                 n.id == id && n.properties.get(MISSING_COMPONENT) == Some(&Value::Bool(true))
             })
@@ -100,29 +107,54 @@ impl Editor {
             .is_some_and(|r| matches!(r.root.content, NodeContent::Group { children } if children.is_empty()))
     }
     pub fn delete_definition(&mut self, id: Id) -> Result<(), String> {
+        self.delete_definitions(&[id])
+    }
+    /// Resource removal is one history entry even for a navigator selection.
+    pub fn delete_definitions(&mut self, definitions: &[Id]) -> Result<(), String> {
+        let ids: HashSet<_> = definitions.iter().copied().collect();
+        if ids.is_empty() || ids.len() != definitions.len() {
+            return Err("Select distinct component sources".into());
+        }
         self.component_change("Delete component", |e| {
-            let index = e
-                .document
-                .definitions
-                .iter()
-                .position(|d| d.id == id)
-                .ok_or("Component no longer exists")?;
-            e.document.definitions.remove(index);
+            if ids.iter().any(|id| !e.document.definition_available(*id)) {
+                return Err("Component no longer exists".into());
+            }
+            e.document.definitions.retain(|d| !ids.contains(&d.id));
+            for library in &mut e.document.libraries {
+                let nodes: HashSet<_> = library
+                    .sources
+                    .iter()
+                    .filter(|s| ids.contains(&s.definition))
+                    .map(|s| s.node)
+                    .collect();
+                library.sources.retain(|s| !ids.contains(&s.definition));
+                library.content.nodes.retain(|n| !nodes.contains(&n.id));
+                library
+                    .content
+                    .paint_order
+                    .retain(|path| !nodes.contains(&path[0]));
+            }
             e.reconcile();
             Ok(())
         })
     }
     pub fn edit_definition(&mut self, id: Id) -> Result<(), String> {
         self.commit();
-        if !self.document.definitions.iter().any(|d| d.id == id) {
+        if !self.document.definition_available(id) {
             return Err("Component no longer exists".into());
         }
         self.definition = Some(id);
+        if self.library.is_some() {
+            self.library = self.document.component_source(id).map(|(l, _)| l.id);
+        }
         self.context.clear();
         self.selection.clear();
         Ok(())
     }
     pub fn rename_definition(&mut self, id: Id, name: String) -> Result<(), String> {
+        if !self.document.definition_available(id) {
+            return Err("Component no longer exists".into());
+        }
         if name.trim().is_empty() {
             return Err("Give the component a name".into());
         }
@@ -151,7 +183,7 @@ impl Editor {
             .find(|n| n.id == id)
             .ok_or("Control no longer exists")?
             .clone();
-        if selected.locked {
+        if self.position_locked(id) {
             return Err("Unlock the control before making a component".into());
         }
         if matches!(selected.content, NodeContent::Instance { .. }) {
@@ -233,6 +265,37 @@ impl Editor {
                     })
                     .collect();
             }
+            e.document.organize_components()?;
+            if matches!(selected.content, NodeContent::Group { .. }) {
+                if let Some(Value::Text(notes)) = selected.properties.get(GROUP_NOTES) {
+                    e.document
+                        .libraries
+                        .iter_mut()
+                        .flat_map(|l| &mut l.sources)
+                        .find(|source| source.definition == definition)
+                        .unwrap()
+                        .notes = notes.clone();
+                }
+                let (library, source) = e.document.component_source(definition).unwrap();
+                let (library_id, source_id) = (library.id, source.node);
+                let placement = e
+                    .document
+                    .libraries
+                    .iter_mut()
+                    .find(|l| l.id == library_id)
+                    .unwrap()
+                    .content
+                    .nodes
+                    .iter_mut()
+                    .find(|n| n.id == source_id)
+                    .unwrap();
+                placement.crop = selected.crop;
+                placement.markup = selected.markup;
+                let node = e.nodes_mut().iter_mut().find(|n| n.id == id).unwrap();
+                node.crop = None;
+                node.markup = false;
+                node.properties.clear();
+            }
             Ok(definition)
         })
     }
@@ -242,7 +305,7 @@ impl Editor {
             return Err("Invalid component position".into());
         }
         self.component_change("Insert component", |e| {
-            if !e.document.definitions.iter().any(|d| d.id == definition) {
+            if !e.document.definition_available(definition) {
                 return Err("Component no longer exists".into());
             }
             let id = e.document.allocate_id()?;

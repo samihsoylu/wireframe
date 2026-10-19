@@ -176,10 +176,16 @@ fn component_image_edits_are_local_and_locked_import_is_rejected() {
     assert_eq!(decode(&e.document.encode().unwrap()).unwrap(), e.document);
     let (mut e, child) = fixture();
     e.lock(true);
-    let before = e.document.clone();
-    assert!(
-        e.import_image(child, image(), ImportChoice::KeepBoth)
-            .is_err()
+    let origin = e.nodes().iter().find(|n| n.id == child).unwrap().origin;
+    e.import_image(child, image(), ImportChoice::KeepBoth)
+        .unwrap();
+    assert!(e.own_locked(child));
+    assert_eq!(
+        e.nodes().iter().find(|n| n.id == child).unwrap().origin,
+        origin
     );
-    assert_eq!(before, e.document);
+    let edited = e.document.clone();
+    e.move_by(10., 10.);
+    e.delete();
+    assert_eq!(e.document, edited);
 }

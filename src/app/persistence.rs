@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
+mod discovery;
 use super::{Pending, WireframeApp};
 use eframe::egui;
 use serde::{Deserialize, Serialize};
@@ -28,11 +29,98 @@ pub(super) struct Persistence {
     id: Option<String>,
     busy: Option<SaveAction>,
     offers: Vec<CopySummary>,
+    discovery: Option<discovery::Scan>,
+    discovery_errors: Vec<String>,
     chooser: bool,
     failed: bool,
 }
+pub(super) struct PreparedOpen {
+    pub copy: WorkingCopy,
+    pub file: Option<PathBuf>,
+    pub saved: Option<wireframe::document::Project>,
+}
+impl PreparedOpen {
+    pub fn read(copies: &WorkingCopies, path: &std::path::Path) -> Result<Self, String> {
+        let mut copy = copies.open_named(path).map_err(|e| e.to_string())?;
+        let mut file = copy.named_path().map_err(|e| e.to_string())?;
+        match copy.named_status().map_err(|e| e.to_string())? {
+            NamedStatus::Changed(_) => copy.reload_named(copies).map_err(|e| e.to_string())?,
+            NamedStatus::Missing | NamedStatus::Unreadable(_) => {
+                copy = copies
+                    .create_unnamed(copy.project())
+                    .map_err(|e| e.to_string())?;
+                file = None;
+            }
+            NamedStatus::Unchanged => {}
+        }
+        let saved = file.as_ref().map(|p| ProjectStore.load(p)).transpose()?;
+        Ok(Self { copy, file, saved })
+    }
+}
+pub(super) struct OpenSource {
+    copies: WorkingCopies,
+    session: Option<ProjectSession>,
+    id: Option<String>,
+    document: wireframe::document::Project,
+}
+impl OpenSource {
+    pub fn finish(mut self, discard: bool) -> Result<(), String> {
+        if let Some(mut session) = self.session.take() {
+            session.observe(&self.document)?;
+            if discard {
+                session.discard()
+            } else {
+                session.finish()
+            }
+        } else if discard && let Some(id) = self.id {
+            self.copies
+                .resume(&id)
+                .and_then(|copy| copy.discard())
+                .map_err(|e| e.to_string())
+        } else {
+            Ok(())
+        }
+    }
+}
 impl WireframeApp {
+    pub(super) fn version_preferences_key(&self) -> Option<String> {
+        if let Some(persistence) = &self.persistence {
+            persistence.id.clone()
+        } else {
+            self.file.as_ref().map(|path| {
+                format!(
+                    "file:{}",
+                    path.canonicalize()
+                        .unwrap_or_else(|_| path.clone())
+                        .display()
+                )
+            })
+        }
+    }
+
+    pub(super) fn export_preferences_key(&mut self) -> Result<Option<String>, String> {
+        if self.persistence.is_some() {
+            self.ensure_session()?;
+            Ok(self.persistence.as_ref().and_then(|p| p.id.clone()))
+        } else {
+            Ok(self.file.as_ref().map(|path| {
+                format!(
+                    "file:{}",
+                    path.canonicalize()
+                        .unwrap_or_else(|_| path.clone())
+                        .display()
+                )
+            }))
+        }
+    }
     pub(super) fn enable_persistence(&mut self, ctx: &egui::Context, root: PathBuf) {
+        self.load_version_preferences(&root);
+        self.load_viewport_preferences(&root);
+        if let Err(error) = self.presentation_view.preferences.load(&root) {
+            self.error = Some(format!(
+                "Presentation settings could not be read. The file is unchanged.\n{error}"
+            ));
+        }
         let result = (|| {
             let copies =
                 WorkingCopies::new(root.join("working-copies")).map_err(|e| e.to_string())?;
@@ -64,6 +152,8 @@ impl WireframeApp {
                 id: None,
                 busy: None,
                 offers: vec![],
+                discovery: None,
+                discovery_errors: vec![],
                 chooser: false,
                 failed: false,
             })
@@ -116,6 +206,23 @@ impl WireframeApp {
     pub(super) fn save_busy(&self) -> bool {
         self.persistence.as_ref().is_some_and(|p| p.busy.is_some())
     }
+    pub(super) fn preserve_save_navigator_focus(&mut self, ctx: &egui::Context) {
+        if self.save_busy() {
+            // Disabled rows relinquish focus while the worker saves the file.
+            if self.save_navigator_focus.is_none() && self.navigator.focused(ctx) {
+                self.save_navigator_focus = ctx.memory(|m| m.focused());
+            }
+        } else if let Some(id) = self.save_navigator_focus.take()
+            && !self.canvas_input_blocked()
+            && ctx.memory(|m| m.focused()).is_none_or(|owner| owner == id)
+        {
+            // Restore before dispatching the next key. The previous save modal
+            // still blocks widgets for this pass, so the row also requests focus
+            // after construction, just like other navigator selection changes.
+            ctx.memory_mut(|m| m.request_focus(id));
+            self.navigator.focus_to = Some(self.editor.page);
+        }
+    }
     pub(super) fn recovery_chooser_open(&self) -> bool {
         self.persistence.as_ref().is_some_and(|p| p.chooser)
     }
@@ -123,7 +230,7 @@ impl WireframeApp {
         self.file.is_some() && self.persistence.as_ref().is_some_and(|p| p.automatic)
     }
     pub(super) fn observe_project(&mut self) {
-        if self.quit_allowed || self.persistence.is_none() {
+        if self.quit_allowed || self.persistence.is_none() || self.startup_open.is_some() {
             return;
         }
         if self.persistence.as_ref().unwrap().session.is_none() && !self.editor.dirty() {
@@ -297,6 +404,8 @@ impl WireframeApp {
     /// Drain local work before replacing the editor. Keep the record until an
     /// explicit discard, including when an earlier save completes during Undo.
     pub(super) fn finish_session(&mut self, discard: bool) -> bool {
+        self.remember_version_view();
+        self.remember_viewports(true);
         if self.persistence.is_none() {
             return true;
         }
@@ -327,67 +436,104 @@ impl WireframeApp {
         true
     }
     pub(super) fn reset_session_identity(&mut self) {
+        self.save_navigator_focus = None;
+        self.review.reset();
+        self.remember_version_view();
+        self.remember_viewports(true);
+        self.presentation_history.clear();
+        self.versions.rename = None;
+        self.page_rename = None;
+        self.page_inspector = Default::default();
+        self.trash = None;
+        self.navigator = Default::default();
+        self.thumbnails = true;
         if let Some(p) = &mut self.persistence {
             p.id = None;
             p.failed = false;
         }
     }
+    #[cfg(test)]
     pub(super) fn load_persistent(&mut self, path: PathBuf) -> bool {
         if !self.finish_session(false) {
             return false;
         }
-        let result = (|| {
-            let copies = self.persistence.as_ref().unwrap().copies.clone();
-            let mut copy = copies.open_named(&path).map_err(|e| e.to_string())?;
-            let mut file = copy.named_path().map_err(|e| e.to_string())?;
-            match copy.named_status().map_err(|e| e.to_string())? {
-                NamedStatus::Changed(_) => copy.reload_named(&copies).map_err(|e| e.to_string())?,
-                NamedStatus::Missing | NamedStatus::Unreadable(_) => {
-                    copy = copies
-                        .create_unnamed(copy.project())
-                        .map_err(|e| e.to_string())?;
-                    file = None;
-                }
-                NamedStatus::Unchanged => {}
-            }
-            let mut candidate = Editor::new(copy.project().clone());
-            if let Some(path) = &file {
-                let named = ProjectStore.load(path)?;
-                candidate.mark_saved_snapshot(&named);
-            } else {
-                candidate.mark_unsaved();
-            }
-            for page in &candidate.document.pages {
-                candidate.layout_page(page.id)?;
-            }
-            self.start_copy(copy)?;
-            self.editor = candidate;
-            self.file = file;
-            self.pan = egui::Vec2::ZERO;
-            self.zoom = 1.;
-            self.status = if self.editor.dirty() {
-                "Recovered local work"
-            } else {
-                "Project opened"
-            }
-            .into();
-            Ok::<_, String>(())
-        })();
-        if let Err(e) = result {
-            self.error = Some(e);
-            return false;
-        }
+        let copies = self.persistence.as_ref().unwrap().copies.clone();
         let show = self.persistence.as_ref().unwrap().chooser;
-        self.refresh_recoveries(show);
-        true
+        match PreparedOpen::read(&copies, &path)
+            .and_then(|prepared| self.accept_prepared_open(prepared))
+        {
+            Ok(()) => {
+                self.refresh_recoveries(show);
+                true
+            }
+            Err(e) => {
+                self.error = Some(e);
+                false
+            }
+        }
+    }
+    pub(super) fn open_source_id(&self) -> Option<String> {
+        self.persistence.as_ref().and_then(|p| p.id.clone())
+    }
+    pub(super) fn take_open_source(&mut self) -> Option<OpenSource> {
+        self.persistence.as_mut().map(|p| OpenSource {
+            copies: p.copies.clone(),
+            session: p.session.take(),
+            id: p.id.clone(),
+            document: self.editor.document.clone(),
+        })
+    }
+    pub(super) fn complete_open_source(&mut self, discarded: bool) {
+        if let Some(p) = &mut self.persistence {
+            if discarded {
+                p.id = None;
+            }
+            // Until adoption installs a new owner, explicit discard has released
+            // the old recovery record. If adoption fails, Save As must create a
+            // fresh source from the still-visible document, even if its old file
+            // vanished during handoff.
+            p.failed = discarded;
+        }
+    }
+    pub(super) fn startup_copies(&self) -> Option<WorkingCopies> {
+        self.persistence.as_ref().map(|p| p.copies.clone())
+    }
+    pub(super) fn accept_prepared_open(&mut self, prepared: PreparedOpen) -> Result<(), String> {
+        let mut candidate = Editor::new(prepared.copy.project().clone());
+        if let Some(named) = &prepared.saved {
+            candidate.mark_saved_snapshot(named);
+        } else {
+            candidate.mark_unsaved();
+        }
+        for page in candidate.document.live_pages() {
+            candidate.layout_page(page.id)?;
+        }
+        let preserved = prepared.copy.preserved_copy().is_some();
+        self.start_copy(prepared.copy)?;
+        self.review.reset();
+        self.editor = candidate;
+        self.file = prepared.file;
+        self.restore_version_view();
+        self.status = if self.editor.dirty() {
+            "Recovered local work"
+        } else {
+            "Project opened"
+        }
+        .into();
+        if preserved {
+            self.status
+                .push_str(" · Earlier local work was preserved under File → Recover work");
+        }
+        // A startup worker may have opened an entry that was already offered.
+        if let Some(p) = &mut self.persistence {
+            p.offers.retain(|entry| Some(&entry.id) != p.id.as_ref());
+            p.chooser &= !p.offers.is_empty();
+        }
+        Ok(())
     }
     pub(super) fn discard_then(&mut self, pending: Pending, ctx: &egui::Context) {
-        // Validate a requested file before discarding the visible document.
-        if let Pending::Open(path) = &pending
-            && let Err(e) = ProjectStore.load(path)
-        {
-            self.error = Some(e);
-            self.pending = Some(pending);
+        if let Pending::Open(path) = pending {
+            self.start_menu_open(path, true, ctx);
             return;
         }
         if self.finish_session(true) {
@@ -412,56 +558,14 @@ impl WireframeApp {
             self.error = Some(e);
         }
     }
-    pub(super) fn persistence_menu(&mut self, ui: &mut egui::Ui) {
-        if let Some(p) = &self.persistence {
-            let mut enabled = p.automatic;
-            if ui
-                .checkbox(&mut enabled, "Automatically save named projects")
-                .changed()
-            {
-                self.set_save_mode(enabled);
-            }
-            if ui.button("Recover work…").clicked() {
-                self.refresh_recoveries(true);
-                self.persistence.as_mut().unwrap().chooser = true;
-                ui.close();
-            }
-            ui.separator();
-        }
+    pub(super) fn automatic_save_setting(&self) -> Option<bool> {
+        self.persistence.as_ref().map(|p| p.automatic)
     }
-    fn refresh_recoveries(&mut self, show: bool) {
-        let Some(p) = &mut self.persistence else {
-            return;
-        };
-        p.offers.clear();
-        match p.copies.list().and_then(|mut entries| {
-            entries.extend(p.copies.list_archives()?);
-            Ok(entries)
-        }) {
-            Ok(entries) => {
-                for entry in entries {
-                    if p.id.as_deref() == Some(&entry.id) {
-                        continue;
-                    }
-                    match entry.summary {
-                        Ok(s)
-                            if s.has_local_changes
-                                || s.named_path.as_ref().is_some_and(|f| !f.exists()) =>
-                        {
-                            p.offers.push(s)
-                        }
-                        Ok(_) => {}
-                        Err(e) => {
-                            self.error = Some(format!(
-                                "A recovery record was retained but couldn't be read: {e}"
-                            ))
-                        }
-                    }
-                }
-            }
-            Err(e) => self.error = Some(e.to_string()),
+    pub(super) fn show_recoveries(&mut self) {
+        self.refresh_recoveries(true);
+        if let Some(p) = &mut self.persistence {
+            p.chooser = true;
         }
-        p.chooser = show && !p.offers.is_empty();
     }
     pub(super) fn restore_copy(&mut self, id: String) -> bool {
         if !self.finish_session(false) {
@@ -493,14 +597,14 @@ impl WireframeApp {
             } else {
                 editor.mark_unsaved();
             }
-            for page in &editor.document.pages {
+            for page in editor.document.live_pages() {
                 editor.layout_page(page.id)?;
             }
             self.start_copy(copy)?;
+            self.review.reset();
             self.editor = editor;
             self.file = file;
-            self.pan = egui::Vec2::ZERO;
-            self.zoom = 1.;
+            self.restore_version_view();
             self.status = "Recovered local work".into();
             Ok::<_, String>(())
         })();
@@ -531,9 +635,11 @@ impl WireframeApp {
                 return;
             }
         }
+        self.review.reset();
         self.editor = Editor::new(doc);
         self.editor.mark_unsaved();
         self.file = None;
+        self.restore_version_view();
         self.recovery_offer = None;
         if self.persistence.is_some() {
             self.clear_recovery();
@@ -541,6 +647,9 @@ impl WireframeApp {
     }
     pub(super) fn persistence_dialogs(&mut self, ctx: &egui::Context) {
         if self.save_busy() {
+            // Capture in the same pass that opens the modal: a fast save may
+            // finish before the next UI pass polls the worker.
+            self.preserve_save_navigator_focus(ctx);
             egui::Modal::new(egui::Id::new("saving")).show(ctx, |ui| {
                 ui.horizontal(|ui| {
                     ui.spinner();
@@ -555,17 +664,22 @@ impl WireframeApp {
         {
             let mut selected = None;
             let mut close = false;
-            egui::Modal::new(egui::Id::new("working-copies")).show(ctx, |ui| {
+            let response = egui::Modal::new(egui::Id::new("working-copies")).show(ctx, |ui| {
+                ui.set_width(440.);
                 ui.heading("Recover local work");
                 ui.label("Choose a project to resume. Other copies stay available under Recover work in the File menu.");
-                if self.persistence.as_ref().unwrap().offers.is_empty() {
+                let p = self.persistence.as_ref().unwrap();
+                if p.discovery.is_some() {
+                    ui.horizontal(|ui| { ui.spinner(); ui.label("Looking for local work…"); });
+                } else if p.offers.is_empty() && p.discovery_errors.is_empty() {
                     ui.label("No other local work is waiting to be recovered.");
                 }
                 egui::ScrollArea::vertical().max_height(320.).show(ui, |ui| {
+                    for error in &p.discovery_errors { ui.colored_label(egui::Color32::DARK_RED, error); }
                     for offer in &self.persistence.as_ref().unwrap().offers {
                         ui.push_id(&offer.id, |ui| {
                             ui.horizontal(|ui| {
-                                if ui.button("Restore").clicked() { selected = Some(offer.id.clone()); }
+                                if ui.add_enabled(self.persistence.as_ref().unwrap().discovery.is_none(), egui::Button::new("Restore")).clicked() { selected = Some(offer.id.clone()); }
                                 ui.vertical(|ui| {
                                     ui.label(&offer.title);
                                     ui.small(offer.named_path.as_ref().map_or_else(|| "Unsaved project".into(), |p| p.display().to_string()));
@@ -576,8 +690,13 @@ impl WireframeApp {
                 });
                 close = ui.button("Later").clicked();
             });
+            // Escape defers recovery just like Later; it never restores or
+            // removes a record, and an error above this picker owns its key.
+            close |= response.is_top_modal
+                && !response.any_popup_open
+                && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape));
             if close || selected.is_some() {
-                self.persistence.as_mut().unwrap().chooser = false;
+                self.dismiss_recoveries();
             }
             if let Some(id) = selected {
                 self.request(Pending::Restore(id), ctx);

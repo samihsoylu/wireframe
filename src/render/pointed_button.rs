@@ -73,6 +73,7 @@ impl Scene {
             let visible = clip.unwrap_or(b);
             if visible.w > 0. && visible.h > 0. {
                 self.links.push(LinkRegion {
+                    quad: None,
                     hint: visible,
                     target: link.target(),
                     bounds: visible,

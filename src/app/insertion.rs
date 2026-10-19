@@ -4,19 +4,7 @@
 use super::*;
 
 impl WireframeApp {
-    pub(super) fn default_insertion(&mut self, kind: Kind) -> Pos2 {
-        let size = self
-            .previews
-            .scene(
-                kind,
-                &self.editor.document.settings,
-                &self.editor.document.font,
-            )
-            .map(|scene| Vec2::new(scene.bounds.w, scene.bounds.h))
-            .unwrap_or_else(|_| {
-                let control = Control::new(0, kind, 0., 0.);
-                Vec2::new(control.bounds.w, control.bounds.h)
-            });
+    pub(super) fn insertion_for_size(&self, size: Vec2) -> Pos2 {
         let controls = self.editor.current().controls;
         let coordinate_key = |x: f32, y: f32| {
             let bits = |v: f32| if v == 0. { 0 } else { v.to_bits() };

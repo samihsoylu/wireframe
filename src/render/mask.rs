@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
-//! A transparent, piecewise-linear bottom mask shared by SVG and canvas meshes.
+//! A transparent, piecewise-linear edge mask shared by SVG and canvas meshes.
 use crate::model::Bounds;
 use eframe::egui::{
     self, Color32, Pos2, Vec2,
@@ -10,10 +10,17 @@ use eframe::egui::{
 pub struct BottomMask {
     pub bounds: Bounds,
     pub edge: Vec<[f32; 2]>,
+    /// True keeps the area above the edge; false keeps the area below it.
+    pub keep_above: bool,
 }
 impl BottomMask {
     pub fn polygon(&self) -> Vec<[f32; 2]> {
         let b = self.bounds;
+        if !self.keep_above {
+            let mut p = self.edge.clone();
+            p.extend([[b.x + b.w, b.y + b.h], [b.x, b.y + b.h]]);
+            return p;
+        }
         let mut p = vec![[b.x, b.y], [b.x + b.w, b.y]];
         p.extend(self.edge.iter().rev().copied());
         p
@@ -23,6 +30,7 @@ impl BottomMask {
     pub fn clip_mesh(&self, mesh: &Mesh, origin: Pos2, scale: f32) -> Mesh {
         let mut out = Mesh::with_texture(mesh.texture_id);
         let top = origin.y + self.bounds.y * scale;
+        let bottom = top + self.bounds.h * scale;
         for tri in mesh.indices.as_chunks::<3>().0 {
             let input = [
                 mesh.vertices[tri[0] as usize],
@@ -42,12 +50,12 @@ impl BottomMask {
                 }
                 let slope = (b.y - a.y) / (b.x - a.x);
                 let mut vertices = input.to_vec();
-                for (nx, ny, c) in [
-                    (1., 0., -a.x),
-                    (-1., 0., b.x),
-                    (0., 1., -top),
-                    (slope, -1., a.y - slope * a.x),
-                ] {
+                let vertical = if self.keep_above {
+                    [(0., 1., -top), (slope, -1., a.y - slope * a.x)]
+                } else {
+                    [(0., -1., bottom), (-slope, 1., slope * a.x - a.y)]
+                };
+                for (nx, ny, c) in [(1., 0., -a.x), (-1., 0., b.x), vertical[0], vertical[1]] {
                     vertices = clip_plane(&vertices, nx, ny, c);
                     if vertices.len() < 3 {
                         break;
@@ -119,10 +127,19 @@ pub fn finish(painter: &egui::Painter, start: usize, mask: &BottomMask, origin: 
     painter.ctx().graphics_mut(|g| {
         let Some(list) = g.get_mut(id) else { return };
         for p in primitives {
-            if let egui::epaint::Primitive::Mesh(mesh) = p.primitive {
-                let mesh = mask.clip_mesh(&mesh, origin, scale);
-                if !mesh.indices.is_empty() {
-                    list.add(p.clip_rect, egui::Shape::mesh(mesh));
+            match p.primitive {
+                egui::epaint::Primitive::Mesh(mesh) => {
+                    let mesh = mask.clip_mesh(&mesh, origin, scale);
+                    if !mesh.indices.is_empty() {
+                        list.add(p.clip_rect, egui::Shape::mesh(mesh));
+                    }
+                }
+                egui::epaint::Primitive::Callback(callback) => {
+                    if let Some(clipped) =
+                        super::compositor::masked_callback(&callback, mask, origin, scale)
+                    {
+                        list.add(p.clip_rect, egui::Shape::Callback(clipped));
+                    }
                 }
             }
         }

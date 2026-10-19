@@ -145,18 +145,18 @@ fn custom_icon_import_replace_history_and_invalid_targets_are_atomic() {
     assert_eq!(e.document, assigned);
     e.select(id, false);
     e.lock(true);
-    let locked = e.document.clone();
-    assert!(
-        e.import_image_at(target, prepared("Bad.png"), ImportChoice::KeepBoth)
-            .is_err()
+    let origin = e.nodes().iter().find(|n| n.id == id).unwrap().origin;
+    e.import_image_at(target, prepared("Good.png"), ImportChoice::KeepBoth)
+        .unwrap();
+    assert!(e.own_locked(id));
+    assert_eq!(
+        e.nodes().iter().find(|n| n.id == id).unwrap().origin,
+        origin
     );
-    assert_eq!(locked, e.document);
-    let mut invalid = assigned.clone();
-    invalid.pages[0].content.nodes[0].properties.insert(
-        "row_icons".into(),
-        Value::Icons(vec![Some(IconSource::Asset(9999))]),
-    );
-    assert!(invalid.validate().is_err());
+    let edited = e.document.clone();
+    e.move_by(10., 10.);
+    e.delete();
+    assert_eq!(e.document, edited);
 }
 #[test]
 fn custom_icons_copy_remap_component_overrides_and_storage_keep_assets() {

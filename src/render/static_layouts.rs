@@ -155,6 +155,7 @@ impl Scene {
                     let bounds = clip.map_or(b, |v| intersect(b, v));
                     if bounds.w > 0. && bounds.h > 0. {
                         self.links.push(LinkRegion {
+                            quad: None,
                             hint: bounds,
                             bounds,
                             target: link.target(),
@@ -192,11 +193,12 @@ impl Scene {
                     let rule = layouts::rule(b.h, stroke == "dotted", sketch);
                     for [a, z] in rule.segments {
                         self.primitive(
-                            Primitive::Line {
-                                points: vec![[b.x + 5., b.y + a], [b.x + 5., b.y + z]],
+                            rules::round_segment(
+                                [b.x + 5., b.y + a],
+                                [b.x + 5., b.y + z],
+                                rule.thickness,
                                 color,
-                                width: rule.thickness,
-                            },
+                            ),
                             clip,
                         );
                     }

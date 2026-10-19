@@ -15,12 +15,27 @@ fn shape(
     job: &LayoutJob,
     range: Range<usize>,
 ) -> Result<Vec<TextRun>, String> {
+    let visible_end = range.end;
+    shape_visible(ctx, job, range, visible_end)
+}
+fn shape_visible(
+    ctx: &egui::Context,
+    job: &LayoutJob,
+    range: Range<usize>,
+    visible_end: usize,
+) -> Result<Vec<TextRun>, String> {
+    let visible_len = visible_end - range.start;
     let line = source_lines::slice(job, range);
     let mut runs = Vec::new();
     let mut x = 0.;
     for section in &line.sections {
         let text = &line.text[section.byte_range.start.0..section.byte_range.end.0];
-        let shaped = text_engine::shape_cached(ctx, &section.format.font_id, text)?
+        // Retain source separators and their formatting, but do not paint an
+        // overflowing separator or include it in alignment and link extents.
+        let visible_len = visible_len
+            .saturating_sub(section.byte_range.start.0)
+            .min(text.len());
+        let shaped = text_engine::shape_cached(ctx, &section.format.font_id, &text[..visible_len])?
             .ok_or("The selected canvas font is unavailable")?;
         let width = shaped.width;
         runs.push(TextRun {
@@ -42,12 +57,19 @@ fn width(ctx: &egui::Context, job: &LayoutJob, range: Range<usize>) -> Result<f6
         .map(|r| r.positioned.as_ref().unwrap().width)
         .sum())
 }
-fn ranges(ctx: &egui::Context, job: &LayoutJob) -> Result<Vec<Range<usize>>, String> {
+struct LineRange {
+    source: Range<usize>,
+    visible_end: usize,
+}
+fn ranges(ctx: &egui::Context, job: &LayoutJob, max_width: f32) -> Result<Vec<LineRange>, String> {
     let mut rows = Vec::new();
     let mut offset = 0;
     for paragraph in job.text.split('\n') {
-        if paragraph.is_empty() || !job.wrap.max_width.is_finite() {
-            rows.push(offset..offset + paragraph.len());
+        if paragraph.is_empty() || !max_width.is_finite() {
+            rows.push(LineRange {
+                source: offset..offset + paragraph.len(),
+                visible_end: offset + paragraph.len(),
+            });
         } else {
             let boundaries: Vec<_> = paragraph
                 .grapheme_indices(true)
@@ -59,7 +81,7 @@ fn ranges(ctx: &egui::Context, job: &LayoutJob) -> Result<Vec<Range<usize>>, Str
                 let start = boundaries[first];
                 let fits = |end: usize| -> Result<bool, String> {
                     Ok(width(ctx, job, offset + start..offset + boundaries[end])?
-                        <= f64::from(job.wrap.max_width.max(0.)))
+                        <= f64::from(max_width.max(0.)))
                 };
                 // Bound shaping work to this line, including very narrow long paragraphs.
                 let mut lo = first;
@@ -80,6 +102,44 @@ fn ranges(ctx: &egui::Context, job: &LayoutJob) -> Result<Vec<Range<usize>>, Str
                     }
                 }
                 let fit = boundaries[lo.max(first + 1)];
+                // A whole word may fit even though its following separator does
+                // not. Keep that word instead of retreating to the previous one.
+                // Consume the overflowing whitespace run without shaping it,
+                // retaining source bytes and checking both grapheme boundaries.
+                if paragraph[fit..].starts_with(char::is_whitespace)
+                    && paragraph[start..fit].chars().any(|c| !c.is_whitespace())
+                {
+                    // Whitespace tokens do not cross formatting boundaries: a
+                    // fitting separator in an earlier span remains visible.
+                    let token_start = job
+                        .sections
+                        .iter()
+                        .find(|s| {
+                            s.byte_range.start.0 <= offset + fit
+                                && offset + fit < s.byte_range.end.0
+                        })
+                        .map_or(start, |s| {
+                            s.byte_range.start.0.saturating_sub(offset).max(start)
+                        });
+                    let visible_end = token_start
+                        + paragraph[token_start..fit]
+                            .trim_end_matches(char::is_whitespace)
+                            .len();
+                    let end = fit + paragraph[fit..].len()
+                        - paragraph[fit..]
+                            .trim_start_matches(char::is_whitespace)
+                            .len();
+                    if boundaries.binary_search(&visible_end).is_ok()
+                        && let Ok(next) = boundaries.binary_search(&end)
+                    {
+                        rows.push(LineRange {
+                            source: offset + start..offset + end,
+                            visible_end: offset + visible_end,
+                        });
+                        first = next;
+                        continue;
+                    }
+                }
                 let end = if fit < paragraph.len() {
                     paragraph[start..fit]
                         .split_word_bound_indices()
@@ -93,7 +153,10 @@ fn ranges(ctx: &egui::Context, job: &LayoutJob) -> Result<Vec<Range<usize>>, Str
                 } else {
                     fit
                 };
-                rows.push(offset + start..offset + end);
+                rows.push(LineRange {
+                    source: offset + start..offset + end,
+                    visible_end: offset + end,
+                });
                 first = boundaries
                     .binary_search(&end)
                     .map_err(|_| "Invalid line boundary")?;
@@ -108,6 +171,7 @@ pub(super) fn layout(
     galley: Arc<egui::Galley>,
     base: TextStyle,
     links: &[(Range<usize>, String)],
+    max_width: f32,
 ) -> Result<PaintedText, String> {
     let job = &galley.job;
     // Bound the entire layout as well as individual spans to avoid adversarial fragmentation.
@@ -119,8 +183,9 @@ pub(super) fn layout(
     let mut areas = Vec::new();
     let mut top = 0.;
     let mut widest: f32 = 0.;
-    for range in ranges(ctx, job)? {
-        let row_runs = shape(ctx, job, range.clone())?;
+    for line in ranges(ctx, job, max_width)? {
+        let range = line.source;
+        let row_runs = shape_visible(ctx, job, range.clone(), line.visible_end)?;
         let height = row_runs
             .iter()
             .map(|r| r.format.font_id.size)
@@ -136,9 +201,10 @@ pub(super) fn layout(
             let run_range = source..source + run.text.len();
             // A target belongs to a complete source formatting span. Line wrapping
             // may split it; a target never splits a shaped run or a bidi cluster.
-            if let Some((_, target)) = links
-                .iter()
-                .find(|(link, _)| link.start <= run_range.start && link.end >= run_range.end)
+            if run.width > 0.
+                && let Some((_, target)) = links
+                    .iter()
+                    .find(|(link, _)| link.start <= run_range.start && link.end >= run_range.end)
             {
                 areas.push(LinkArea {
                     target: target.clone(),

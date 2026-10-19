@@ -4,7 +4,7 @@ A local desktop workspace for turning rough ideas into clear wireframes. Built i
 
 ## Features
 
-- 84 controls for forms, text, shapes, navigation, devices, media, charts and layout.
+- 86 controls for forms, text, shapes, navigation, devices, media, charts and layout.
 - Pages, notes, searchable library and layers.
 - [Compact form controls](docs/SMALL-FORMS.md): numeric steppers, color pickers and linked help buttons.
 - [Text controls](docs/TEXT-CONTROLS.md): headings, subtitles, editable placeholders and rich tag clouds.
@@ -41,7 +41,7 @@ Editable documents use the versioned `.wireframe` JSON format. Files are validat
 
 ## Development status
 
-Native builds run on macOS and in a Linux X11 test environment. Windows verification and release packaging are in progress. See [current state](SESSION-SPEC.md) for actual checks and remaining work. The desktop editor supports nested groups and version-2 project saving. Double-click a group to edit its children; use Escape or Exit group to return. Basic rich text and table formatting appear on canvas, thumbnails and PNG/SVG exports. The text/table inspector includes styles, Reset, Auto-size and six checkbox/radio states. Create a reusable component from a selected control or group in the inspector. The Components sidebar inserts instances and opens the shared source; Detach component makes an independent group. Double-click an instance to edit its children locally; Reset resumes the source value. Deleting a component source retains missing-instance placeholders and can be undone in the current session. Empty sources and groups remain visible and editable; adding children populates them again. Image controls import embedded PNG/JPEG/GIF files and share their sources; instances can resize without changing their source. Final typography, full control coverage and asset editing remain under development.
+Earlier optimized packages are available for macOS arm64, Linux aarch64 and Windows x86-64 GNU; they predate recent source changes. Those macOS and Linux X11 packages passed scoped native editing, undo/redo, save and restart checks. Windows was cross-compiled and inspected; native Windows verification remains open. Final packages and current platform acceptance are tracked in the [release checklist](docs/RELEASE-CHECKLIST.md). See [current state](SESSION-SPEC.md) for actual checks and remaining work. The desktop editor supports nested groups and versioned project saving. Double-click a group to edit its children; use Escape or Exit group to return. Basic rich text and table formatting appear on canvas, thumbnails and PNG/SVG exports. The text/table inspector includes styles, Reset, Auto-size and six checkbox/radio states. Create a reusable component from a selected control or group in the inspector. The Components sidebar inserts instances and opens the shared source; Detach component makes an independent group. Double-click an instance to edit its children locally; Reset resumes the source value. Deleting a component source retains missing-instance placeholders and can be undone in the current session. Empty sources and groups remain visible and editable; adding children populates them again. Image controls import embedded PNG/JPEG/GIF files and share their sources; instances can resize without changing their source. Final typography, full control coverage and asset editing remain under development.
 
 ## License
 

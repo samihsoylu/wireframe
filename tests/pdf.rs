@@ -32,6 +32,7 @@ fn item(drawing: Drawing) -> Item {
 }
 fn mask() -> Drawing {
     Drawing::BeginMask(BottomMask {
+        keep_above: true,
         bounds: Bounds::new(0., 0., 100., 100.),
         edge: vec![[0., 80.], [50., 70.], [100., 90.]],
     })
@@ -45,6 +46,7 @@ fn failed_pdf_drawing_unwinds_clips_opacity_and_masks_without_panicking() {
         text: "😀".into(),
         x: 0.,
         baseline: 24.,
+        rotation: 0.,
         size: 24.,
         bold: false,
         italic: false,
@@ -96,6 +98,7 @@ fn failed_pdf_drawing_unwinds_clips_opacity_and_masks_without_panicking() {
         text: "Missing".into(),
         x: 0.,
         baseline: 20.,
+        rotation: 0.,
         size: 16.,
         bold: false,
         italic: false,

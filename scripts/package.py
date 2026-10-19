@@ -84,7 +84,7 @@ def main():
     staging.mkdir()
     if payload.is_dir():
         shutil.copytree(payload, staging / payload.name, dirs_exist_ok=True)
-    for path in ('LICENSE','README.md','THIRD_PARTY_NOTICES.md'):
+    for path in ('LICENSE','README.md','SESSION-SPEC.md','THIRD_PARTY_NOTICES.md'):
         shutil.copyfile(ROOT / path, staging / path)
     shutil.copytree(ROOT / 'licenses', staging / 'licenses', dirs_exist_ok=True)
     shutil.copytree(ROOT / 'assets', staging / 'assets', dirs_exist_ok=True)
@@ -92,10 +92,10 @@ def main():
     # Include this product's corresponding source and build scripts with every package.
     source = staging / 'source'
     source.mkdir(exist_ok=True)
-    for path in ('src','tests','scripts','assets'):
+    for path in ('src','tests','examples','scripts','assets','vendor','docs','licenses'):
         shutil.copytree(ROOT / path, source / path, dirs_exist_ok=True,
             ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
-    for path in ('Cargo.toml','Cargo.lock','LICENSE','README.md'):
+    for path in ('Cargo.toml','Cargo.lock','LICENSE','README.md','SESSION-SPEC.md','THIRD_PARTY_NOTICES.md'):
         shutil.copyfile(ROOT / path, source / path)
     if system == 'linux':
         archive = out / (name + '.tar.gz')

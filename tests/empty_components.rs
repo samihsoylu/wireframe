@@ -148,6 +148,7 @@ fn last_child_deletion_first_child_add_paste_and_insert_keep_layer_position() {
         name: "Empty source".into(),
         content: Content::default(),
     });
+    e.document.organize_components().unwrap();
     let inserted = e.insert_component(definition, 50., 60.).unwrap();
     assert_eq!(
         e.document.pages[0].content.paint_order,
@@ -223,7 +224,8 @@ fn empty_groups_are_selectable_editable_fixed_size_and_undoable_with_nested_clip
     );
     e.select(3, false);
     e.lock(true);
-    assert!(!e.enter(3));
+    assert!(e.enter(3));
+    e.leave();
     e.move_by(10., 10.);
     assert_eq!(e.current().controls[1].bounds.x, 60.);
     e.lock(false);
@@ -238,6 +240,7 @@ fn empty_groups_are_selectable_editable_fixed_size_and_undoable_with_nested_clip
         name: "Nested empty".into(),
         content: Content::default(),
     });
+    e.document.organize_components().unwrap();
     e.enter(3);
     let instance = e.insert_component(definition, 60., 60.).unwrap();
     e.leave();
@@ -303,6 +306,8 @@ fn retained_override_ids_above_allocator_cannot_attach_to_new_source_children() 
         overrides[0].path = vec![101, u64::MAX];
     }
     p.pages[0].alternates.push(Alternate {
+        version: None,
+        notes: String::new(),
         id: 30,
         name: "Other".into(),
         content: Content {
@@ -310,13 +315,15 @@ fn retained_override_ids_above_allocator_cannot_attach_to_new_source_children() 
             paint_order: vec![],
         },
     });
+    p.organize_components().unwrap();
     p.validate().unwrap();
     let original = decode(&p.encode().unwrap()).unwrap();
     assert_eq!(original, p);
     let mut e = Editor::new(original);
     e.edit_definition(10).unwrap();
     e.add(Kind::Label, 0., 0.);
-    assert_eq!(e.nodes()[0].id, 102);
+    assert_eq!(e.nodes()[0].id, p.next_id);
+    assert!(e.nodes()[0].id > 101);
     assert!(
         !e.rendered_scene(1)
             .unwrap()

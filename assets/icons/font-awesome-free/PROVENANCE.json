@@ -9,6 +9,10 @@
       "sha256": "a3a705d0e03c4fbdf1a61aece3d8fd462024b33794187ef7ee2a0764439170eb"
     },
     {
+      "url": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/af620534bfc3c2d4cbefcfeec29603bbe7809e64/metadata/categories.yml",
+      "sha256": "a6b6900adcad4303d259a334f2a76c5b93f4a5bf70de8e9b39fae1a4fb708d5f"
+    },
+    {
       "url": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/af620534bfc3c2d4cbefcfeec29603bbe7809e64/LICENSE.txt",
       "sha256": "9b914eae88817d63b576eab5aafde7068c7a1abae125d7cdfb034f1da43a9afc"
     }
@@ -17,5 +21,6 @@
   "attribution": "Font Awesome Free by Fonticons, Inc. https://fontawesome.com",
   "changes": "Metadata compacted and sorted; free variants selected. SVG path strings and dimensions unchanged.",
   "catalog_sha256": "de1174fe0f4b186a368b9599e9847af3c0dba18b5f92ccd12a5bb223c095a9c0",
+  "categories_sha256": "57af4a4799625c5c626be199cc4936954042e711e0df74396cc0f15f92867eb2",
   "icons": 2060
 }

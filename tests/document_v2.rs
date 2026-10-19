@@ -55,6 +55,7 @@ fn component_project() -> Project {
         .nodes
         .push(instance(4, 11, vec![text_patch(&[3, 2], "outer override")]));
     p.next_id = 20;
+    p.organize_components().unwrap();
     p
 }
 fn only_text(root: Node) -> String {
@@ -185,6 +186,8 @@ fn cycles_and_expansion_growth_fail_but_missing_references_remain_loadable() {
     assert_eq!(p, before);
     p.definitions[0].content.nodes.pop();
     p.definitions.remove(0);
+    let removed = p.libraries[0].sources.remove(0).node;
+    p.libraries[0].content.nodes.retain(|n| n.id != removed);
     p.validate().unwrap();
     assert!(p.resolve(&p.pages[0].content.nodes[0]).is_ok());
     let mut p = Project::default();
@@ -207,6 +210,7 @@ fn cycles_and_expansion_growth_fail_but_missing_references_remain_loadable() {
         });
     }
     p.next_id = 100;
+    p.organize_components().unwrap();
     p.validate().unwrap();
     assert!(
         p.resolve(&instance(4, 26, vec![]))
@@ -218,6 +222,7 @@ fn cycles_and_expansion_growth_fail_but_missing_references_remain_loadable() {
 fn assets_alternates_and_sparse_context_values_round_trip() {
     let mut p = component_project();
     p.assets.push(Asset {
+        trashed: false,
         id: 12,
         name: "sample".into(),
         media_type: "image/png".into(),
@@ -245,6 +250,8 @@ fn assets_alternates_and_sparse_context_values_round_trip() {
     p.pages[0].content.nodes.push(image);
     let alternate_content = p.pages[0].content.clone();
     p.pages[0].alternates.push(Alternate {
+        version: None,
+        notes: String::new(),
         id: 13,
         name: "Alternate".into(),
         content: alternate_content,

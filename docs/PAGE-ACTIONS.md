@@ -1,0 +1,82 @@
+# Page actions
+
+Status: Rename, Duplicate and context-targeted alternate creation have scoped macOS acceptance. Whole-page Cut/Copy/Paste is now implemented; see [clipboard contract](PAGE-CLIPBOARD.md). Full release acceptance remains incomplete. Existing controls must stay reachable until replacement workflows are accepted.
+
+## Required behavior
+
+- Rename opens a focused name editor with existing text selected, Cancel and Rename. Applying one name change creates one history step and updates the page identity's visible name across versions. Validate against document limits; confirm blank/collision rules before imposing extra restrictions.
+- Duplicate creates a new page after the source at the same hierarchy level, carrying official content, all alternate content/notes, version memberships and dependencies. Preserve control coordinates, lock/crop/style/override state, paint order and link destinations, including source self-links. Allocate new page/alternate surface identities while retaining shared definitions/assets and scoped child identities. Name copies using case-insensitive collision avoidance: base copy, base copy 2, and so on. A single explicitly targeted expanded page does not recursively duplicate descendants. A collapsed parent represents an explicit selection of its whole subtree; batch context actions must honor that selected scope. Immediate duplication selects the corresponding active version; the established redo behavior selects official.
+- Copy/paste transfers the whole page structure and required dependencies. Same-project paste uses numbered parenthetical collision names, follows the explicit navigator hierarchy insertion rules and leaves the current page unchanged. Existing links continue to their original destinations. Cross-project paste uses the existing combined page/image/library conflict review and retains the destination font/style; see the clipboard contract.
+- Cut is a reversible copy-and-remove transaction, separate from trash. Same-project paste can restore the cut page identity if it remains available. Repeated paste, Undo/Redo and intervening edits must not overwrite an existing identity.
+- Trash retains complete pages and alternates persistently, excludes them from normal navigation/presentation/export and exposes a recovery list. If the last live page is trashed, create a usable blank page. Undo restores the removed page and removes its untouched generated placeholder; explicit Restore keeps that blank page. Restore reconciles hierarchy/order and preserves links and dependencies.
+- Permanent removal must be a separate deliberate action. Preserve incoming destinations as explicit broken links when targets are permanently removed; do not silently clear them. Do not replace recoverable trash with immediate deletion.
+
+Resource changes validate the proposed graph before committing an unrelated pending edit. Stale selections, empty page selections, exhausted placeholder identities and live-page limits preserve the draft, Cancel and Redo. Successful page Trash and mixed Restore commit the draft and resource action as separate history steps. The resource requirement audit adds regression coverage for these boundaries; current Linux and native replay of this correction remain pending.
+
+## Integration boundaries
+
+Use document operations for data/history changes, shared commands for availability/routing, and dedicated view state for modal editing. Preserve pending text commits, pointer-gesture completion, recovery and native-dialog routing. Page actions must target the context page explicitly, including a noncurrent page; text-local Cut/Copy/Paste must retain priority when a text field owns focus.
+
+Stored trash is a document-model change. Include retained resources in ID reservation, dependency lifetime, validation and size limits. Validate active/retained parent/link graphs explicitly. Update the file version and migration policy so older readers cannot silently drop retained data. Continue accepting supported older documents. Define clipboard origin identity separately from a file path; Save As and reopen must not produce accidental cross-project identity reuse.
+
+## Acceptance
+
+Verify empty and populated pages; nested groups, locks/crops, component overrides, images and paint order; separate alternate notes/content; shared named versions; incoming/outgoing/self links; name collisions; hierarchy placement; first execution versus Undo/Redo view state; last-page trash and explicit Restore; save/restart/reopen; and resource/size-limit failures without partial mutation. Verify page-focused and text-focused native/fallback shortcuts separately. Check cross-project import only after its dependency/provenance contract is established. Passing single-page or same-project checks cannot close the full transfer/trash scope.
+
+## Current gaps
+
+Both navigator views expose Rename, Duplicate, version selection and Create alternate version. Rename opens a selected-name modal, and duplication retains complete versions, notes and dependencies with one history step. Existing inline inspector fields remain available. The rename modal rejects whitespace-only names and names over the document limit of 10000 bytes; exact blank-name and collision-policy parity has not been established. Ordinary numeric copy suffixes are covered; unusual malformed suffix behavior remains outside this checkpoint. Immediate Delete is not recoverable Trash. The clipboard currently transfers selected controls, not complete pages. Preserve those existing capabilities while adding the required workflows. Broader inspector/layout fidelity and native-platform acceptance remain separate work.
+
+## Verified increment
+
+Five document-operation tests cover full content preservation, shared assets/definitions, link destinations, version identity/view history, hierarchy placement, copy-name collisions and atomic failure at identity/page/name limits. Two UI tests cover modal text selection, apply/cancel, command blocking and noncurrent context targets. All 162 application tests, warnings-denied all-target Clippy and the optimized macOS build pass. Native macOS checks cover rename from an alternate, duplicate, Undo/Redo selection differences, cancellation, context creation on another page, save, process restart and byte-identical resave. Current native checks do not establish Linux/Windows or narrow-window acceptance. No release archive or installed application was replaced.
+
+## Hierarchy and retained-page contract
+
+Selection scope depends on navigator expansion: an expanded parent targets itself, while a collapsed parent selects itself and its descendants. The context menu states the item count and disables single-page rename/alternate creation for that multiple selection. A single-page operation API must not silently substitute for these batch actions when hierarchical navigation is added.
+
+Trashing an expanded parent leaves children live. Direct children adopt the nearest preceding page at the removed page's depth, searching successively shallower depths if necessary. Descendants retain their internal relationships. The removed page keeps its former parent and order. A collapsed subtree is removed bottom-to-top as one operation, retaining its internal relationships.
+
+Retained parent references and displayed hierarchy are distinct. Restoring a child whose parent remains in Trash preserves the stored parent identity but displays the child at the root. A later parent restoration can clear that child's retained parent during live-tree reconciliation. Trashing an expanded parent and then Undo restores the parent but leaves adopted children under their new parent. By contrast, Undo of a collapsed-subtree trash restores the original internal hierarchy. These are established behavior differences, not proof that generic full-document snapshot Undo matches every operation. Any deliberate change to them must be documented as a fidelity difference.
+
+Preserve canonical page order while resources are retained. Live navigation/export/presentation and editable surfaces must exclude trashed pages; validation, ID reservation, dependencies, named-version maintenance and whole-document persistence must include them. A live page may refer to a retained parent; display it using the live hierarchy without discarding that stored reference on load. Persistent parent and link graphs still require bounded validation. Version 5 now stores the retained flag and separates live navigation/surfaces from complete graph validation and persistence. The transaction model now implements Trash/Restore, hierarchy reconciliation and operation-specific history. The recovery-only dialog is now available. Collapsed selection routing is implemented in the hierarchical batch integration below. Permanent-removal model and confirmation UI are implemented in [permanent removal](PERMANENT-REMOVAL.md), with native acceptance still pending.
+
+## Trash and Restore transaction model
+
+The editor exposes `trash_pages(ids)` and `restore_pages(ids)` for an explicit page selection. These operations validate an off-screen candidate before applying one history step. They preserve all page content, alternate memberships, dependencies, link destinations and canonical order. The caller must supply the selected subtree when the navigator is collapsed; the API does not infer UI expansion state. Duplicate IDs are coalesced, and stale or wrong-state IDs reject the entire action.
+
+Trash removes selected pages from the live hierarchy bottom-to-top. Remaining children adopt the nearest preceding page at the removed parent's depth, then successively shallower depths. Restore normalizes the already-live hierarchy before making retained pages live. It preserves a restored child's hidden parent identity when that parent is still in Trash; a later parent restoration clears that live orphan's stored relationship. A restored child cannot attach to a live parent that follows it in canonical order.
+
+Trash/Restore history executes the inverse operation rather than replacing the full document snapshot. Ordinary history preserves parent relationships it did not change, so undoing an earlier text/name edit does not inadvertently reverse retained adoption. Failed history transitions keep the current document, view and history cursor. Last-live-page Trash creates an empty page; redo reuses its identity only if it remains available. Undo removes the generated page only if it is unchanged and removing it cannot leave dangling references. Explicit Restore keeps that page. Resource limits continue to apply to every transaction and history replay.
+
+The recovery-only dialog now uses this model. The existing immediate inspector Delete action remains alongside it pending completion of the replacement workflow. The later hierarchical and permanent-removal contracts supersede the earlier collapsed-scope and missing-model gaps. Native permanent-removal and current cross-platform acceptance remain open.
+
+### Transaction verification
+
+Ten operation tests cover established parent transitions, complete alternate/component/link preservation, last-page cleanup and clean-state restoration, repeated history replay, stale/duplicate targets, limits, allocator collisions and reordered parents. One test enumerates3720 ordered five-page forest/selection combinations. Final affected21 tests,32 recovery tests (one preexisting ignored) and warnings-denied all-target Clippy pass. A broader816-test selection also passes; the final allocator refinement was covered by refreshed affected/recovery checks. This is model verification, not native recovery-dialog or other-platform acceptance.
+
+## Recovery-only dialog
+
+The page context menu offers Move to Trash for its explicit target, including a noncurrent page. A toolbar Trash icon appears while retained pages exist. The dialog shows official thumbnails with complete canonical dependencies; normal hidden-page editing/export/navigation remains rejected even after thumbnail caching. Only visible cards materialize artwork.
+
+Mouse selection supports plain, command-toggle and Shift-range actions. Arrow keys move selection, Shift-arrows extend it, and Command-A selects all retained pages. Restore operates on the explicit canonical selection. Partial restoration selects the surviving item at the previous focused index, clamped to the remaining list. Restoring the last item closes the dialog. Close and Escape do not edit data. While open, the modal disables background controls and blocks canvas commands and dropped files. The footer stays visible across the checked window sizes.
+
+This increment provides Restore and Close only. Delete Permanently and Empty Trash await their complete history/link contract. The existing immediate inspector Delete remains available; hierarchical navigator batch selection and whole-page transfer remain separate gaps.
+
+Verification: 168 application tests and 17 affected model/preview tests pass. A final localized native-layout/accessibility correction was followed by all three dialog tests, warnings-denied all-target Clippy and an optimized build. Widget layout checks cover 860×650, 1100×850 and 1360×932 logical windows. Native macOS acceptance covers partial/full Restore, active-page preservation, Undo/Redo, noncurrent context Trash, saved content/alternate/dependency preservation, process restart, byte-identical resave and reopened Trash. No new Linux/Windows native acceptance or release replacement is claimed.
+
+## Current page during retained-page history
+
+Trash preserves a current page that remains live. If the current page is removed, select the next surviving page after it in canonical order; only select backward when there is no following survivor. This matches bottom-to-top batch removal with current identity preservation, including when earlier pages are removed in the same batch. Undo and explicit Restore preserve a still-live current page. If Undo removes an untouched generated blank, repair current selection from that blank's former position. A meaningful generated blank that remains in the document stays current. Normal reconciliation removes hidden alternate view entries.
+
+Eleven operation tests and 168 application tests pass for the correction, followed by final lint/build checks. Native macOS covers middle-page Trash from an alternate, unchanged current canvas after Undo/Redo, trailing-page fallback, and byte-identical saved documents after inverse operations. Previous model checks that expected a jump back to the original page on every Trash Undo have been superseded by this broader observation.
+
+## Hierarchical batch integration
+
+Explicit ordered page selection now drives duplicate and recoverable Trash from the navigator context menu and focused native/keyboard commands. Rename and alternate creation are disabled for multiple targets. The duplication operation validates the entire candidate before mutation, preserves complete content/version/dependency graphs, reserves new page/alternate IDs and normalizes the selected depth sequence before inserting after the anchor subtree. A descending selected depth resets the normalized depth to the minimum; this is reconstruction, not an unconditional original-parent remap. Single-page duplication remains at the effective source level after its descendants.
+
+Ten affected model tests, 172 application tests, all-target warnings-denied Clippy and the optimized build pass. Native checks verify four-page copy scope, history selection, nine-page range scope, eight-page Trash via Edit and exact document/byte preservation. Previous statements that collapsed navigator routing is pending are superseded by this checkpoint. Whole-page clipboard and current other-platform acceptance remain unfinished. Permanent-removal model and confirmation UI are implemented, while native acceptance remains pending. The immediate inspector Delete route remains separate pending replacement.
+
+## Permanent-removal research resolved
+
+[Permanent-removal contract](PERMANENT-REMOVAL.md) supersedes the earlier unknown link/history policy. Saved official and alternate links retain missing destinations, unrelated Undo survives, and obsolete target-specific history fails without resurrection. The permanent-removal contract now records implemented validation, sanitized history and confirmation UI. Native permanent-removal acceptance remains pending; reversible immediate-delete tests do not establish it.

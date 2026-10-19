@@ -28,7 +28,7 @@ impl<'a> Rasters<'a> {
         self.cache
             .entry((id, style))
             .or_insert_with(|| {
-                let asset = self.assets.iter().find(|a| a.id == id)?;
+                let asset = self.assets.iter().find(|a| a.id == id && !a.trashed)?;
                 let (w, h) = crate::images::dimensions(&asset.bytes).ok()?;
                 let pad = if matches!(style, Style::Image { sketch: true, .. }) {
                     4

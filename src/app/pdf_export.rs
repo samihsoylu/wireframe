@@ -41,7 +41,7 @@ impl WireframeApp {
                 ui.radio_value(&mut options.selection, Selection::All, "All pages");
                 ui.radio_value(
                     &mut options.selection,
-                    Selection::Current(self.editor.page),
+                    Selection::Current(self.editor.active_surface(self.editor.page)),
                     "Current page",
                 );
                 if ui
@@ -52,7 +52,8 @@ impl WireframeApp {
                     .clicked()
                     && !matches!(options.selection, Selection::Set(_))
                 {
-                    options.selection = Selection::Set([self.editor.page].into());
+                    options.selection =
+                        Selection::Set([self.editor.active_surface(self.editor.page)].into());
                 }
             });
             if matches!(options.selection, Selection::All) {
@@ -62,6 +63,32 @@ impl WireframeApp {
                 );
             }
             if let Selection::Set(ids) = &mut options.selection {
+                ui.horizontal_wrapped(|ui| {
+                    if ui.small_button("All").clicked() {
+                        *ids = entries.iter().map(|e| e.id).collect();
+                    }
+                    if ui.small_button("Official versions").clicked() {
+                        *ids = entries
+                            .iter()
+                            .filter(|e| !e.alternate)
+                            .map(|e| e.id)
+                            .collect();
+                    }
+                    if ui.small_button("Active").clicked() {
+                        *ids = self
+                            .editor
+                            .document
+                            .live_pages()
+                            .map(|p| self.editor.active_surface(p.id))
+                            .collect();
+                    }
+                    if ui.small_button("Current").clicked() {
+                        *ids = [self.editor.active_surface(self.editor.page)].into();
+                    }
+                    if ui.small_button("None").clicked() {
+                        ids.clear();
+                    }
+                });
                 egui::ScrollArea::vertical()
                     .max_height(180.)
                     .show(ui, |ui| {
@@ -138,27 +165,20 @@ impl WireframeApp {
             self.pdf_options = None;
         } else if export {
             let options = self.pdf_options.as_ref().unwrap().clone();
-            if let Some(mut path) = rfd::FileDialog::new()
-                .add_filter("PDF document", &["pdf"])
-                .set_file_name(format!("{}.pdf", self.editor.document.title))
-                .save_file()
-            {
+            if let Some(mut path) = self.menus.with_dialog(|| {
+                rfd::FileDialog::new()
+                    .add_filter("PDF document", &["pdf"])
+                    .set_file_name(format!("{}.pdf", self.editor.document.title))
+                    .save_file()
+            }) {
                 if !path
                     .extension()
                     .is_some_and(|e| e.eq_ignore_ascii_case("pdf"))
                 {
                     path.set_extension("pdf");
                 }
-                let same_project = self.file.as_ref().is_some_and(|p| {
-                    p == &path
-                        || p.canonicalize()
-                            .ok()
-                            .zip(path.canonicalize().ok())
-                            .is_some_and(|(a, b)| a == b)
-                });
-                if same_project {
-                    self.error =
-                        Some("Choose a PDF destination other than the open project file.".into());
+                if let Err(error) = self.ensure_export_destination(&path) {
+                    self.error = Some(error);
                     return;
                 }
                 self.end_pointer_gestures();

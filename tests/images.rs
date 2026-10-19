@@ -257,8 +257,10 @@ fn crop_validation_locks_and_legacy_patch_inheritance_are_preserved() {
     let mut c = e.current().controls[0].clone();
     c.locked = true;
     e.update_control(c);
+    let origin = e.nodes()[0].origin;
+    e.rotate_image(id).unwrap();
+    assert_eq!(e.nodes()[0].origin, origin);
     let before = e.document.clone();
-    assert!(e.rotate_image(id).is_err());
     assert!(e.crop_image(id, None).is_err());
     assert_eq!(e.document, before);
     let patch: Patch = serde_json::from_str("{\"properties\":{}}").unwrap();
@@ -653,10 +655,16 @@ fn invalid_imports_and_locked_controls_do_not_mutate_document_or_history() {
     assert_eq!(e.document, before);
     e.select(id, false);
     e.lock(true);
-    let locked = e.document.clone();
-    assert!(
-        e.import_image(id, prepare("test.png", 3, 2), ImportChoice::KeepBoth)
-            .is_err()
+    let origin = e.nodes().iter().find(|n| n.id == id).unwrap().origin;
+    e.import_image(id, prepare("test.png", 3, 2), ImportChoice::KeepBoth)
+        .unwrap();
+    assert!(e.own_locked(id));
+    assert_eq!(
+        e.nodes().iter().find(|n| n.id == id).unwrap().origin,
+        origin
     );
-    assert_eq!(e.document, locked);
+    let edited = e.document.clone();
+    e.move_by(10., 10.);
+    e.delete();
+    assert_eq!(e.document, edited);
 }

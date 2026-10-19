@@ -175,6 +175,8 @@ fn nested_preview_uses_world_origin_and_guards_reject_locked_empty_and_invalid_t
     e.context.clear();
     e.document.pages[0].content.nodes[0].locked = true;
     e.context = vec![2];
+    e.select(3, false);
+    e.lock(true);
     let before = e.document.clone();
     assert!(e.crop_group(3, Some(region()), Point::default()).is_err());
     assert_eq!(e.document, before);
@@ -239,6 +241,7 @@ fn component_fixture() -> Project {
         nodes: vec![instance],
         paint_order: vec![],
     };
+    p.organize_components().unwrap();
     p
 }
 
@@ -303,7 +306,9 @@ fn crop_reset_without_override_is_noop_and_locked_targets_are_unchanged() {
     assert_eq!(e.document, before);
     assert!(e.undo_name().is_none());
     e.crop_group(2, None, Point::default()).unwrap();
-    e.document.definitions[0].content.nodes[0].locked = true;
+    // Source locks no longer constrain instances; explicitly lock this local target.
+    e.select(2, false);
+    e.lock(true);
     let before = e.document.clone();
     let history = e.undo_name().map(str::to_owned);
     assert!(e.reset_local_crop(2).is_err());

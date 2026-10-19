@@ -3,6 +3,38 @@
 use super::*;
 
 impl Editor {
+    /// Whole-control, group and instance targets share the saved Link model.
+    pub fn node_link(&self, id: Id) -> Option<Link> {
+        self.nodes()
+            .iter()
+            .find(|n| n.id == id)
+            .and_then(|n| match n.properties.get("link") {
+                Some(Value::Link(link)) => Some(link.clone()),
+                _ => None,
+            })
+    }
+    /// Participates in the caller's begin/commit transaction, including local overrides.
+    pub fn set_node_link(&mut self, id: Id, target: Option<Link>) -> Result<(), String> {
+        if target.as_ref().is_some_and(|link| !link.valid()) {
+            return Err("Enter a valid web address or choose a page".into());
+        }
+        let before = self
+            .nodes()
+            .iter()
+            .find(|n| n.id == id)
+            .cloned()
+            .ok_or("Control no longer exists")?;
+        let mut after = before.clone();
+        after.properties.insert(
+            "link".into(),
+            target.map(Value::Link).unwrap_or(Value::Null),
+        );
+        if self.editing_instance() {
+            return self.write_local_node(id, &before, &after);
+        }
+        *self.nodes_mut().iter_mut().find(|n| n.id == id).unwrap() = after;
+        Ok(())
+    }
     pub(super) fn property_context(&self) -> catalog::Context {
         catalog::Context::default().with_settings(&self.document.settings)
     }
@@ -44,22 +76,14 @@ impl Editor {
             return None;
         }
         let snapshot = self.pending.as_ref().map(|(_, s)| s).filter(|s| {
-            s.page == self.page && s.definition == self.definition && s.context == self.context
+            s.page == self.page
+                && s.definition == self.definition
+                && s.alternate == self.active_alternate(self.page)
+                && s.context == self.context
         });
         let project = snapshot.map_or(&self.document, |s| &s.document);
         let surface = self.surface_id();
-        let content = project
-            .pages
-            .iter()
-            .find(|p| p.id == surface)
-            .map(|p| &p.content)
-            .or_else(|| {
-                project
-                    .definitions
-                    .iter()
-                    .find(|d| d.id == surface)
-                    .map(|d| &d.content)
-            })?;
+        let content = project.surface(surface)?.1;
         let resolved = project
             .resolve_all(&content.nodes)
             .ok()?
@@ -78,6 +102,13 @@ impl Editor {
     }
     /// Participates in the caller's begin/commit transaction for continuous input.
     pub fn set_control_property(&mut self, id: Id, key: &str, value: Value) -> Result<(), String> {
+        if key == "shape"
+            && self
+                .control_properties(id)
+                .is_some_and(|(spec, _)| spec.id == "arrow")
+        {
+            return self.change_arrow_mode(id, value);
+        }
         if key == "icons"
             && self
                 .control_properties(id)
@@ -98,9 +129,6 @@ impl Editor {
                 .find(|n| n.id == id)
                 .cloned()
                 .ok_or("Control no longer exists")?;
-            if before.locked {
-                return Err("Unlock the control before editing its properties".into());
-            }
             let mut edited = before.clone();
             let spec = catalog::get("app_bar").unwrap();
             spec.set_property(&mut edited, key, value.clone(), &self.property_context())
@@ -138,9 +166,6 @@ impl Editor {
                 .find(|n| n.id == id)
                 .cloned()
                 .ok_or("Control no longer exists")?;
-            if before.locked {
-                return Err("Unlock the control before editing its properties".into());
-            }
             let mut edited = before.clone();
             if matches!(&edited.content,NodeContent::Control {kind,..} if matches!(kind.as_str(),"tabs"|"vertical_tabs"))
             {
@@ -182,22 +207,44 @@ impl Editor {
             return self.set_local_property(id, key, value);
         }
         let context = self.property_context();
-        let node = self
-            .nodes_mut()
-            .iter_mut()
+        let before = self
+            .nodes()
+            .iter()
             .find(|n| n.id == id)
+            .cloned()
             .ok_or("Control no longer exists")?;
-        if node.locked {
-            return Err("Unlock the control before editing its properties".into());
-        }
-        let NodeContent::Control { kind, .. } = &node.content else {
+        let mut edited = before.clone();
+        let NodeContent::Control { kind, .. } = &edited.content else {
             return Err("Select a control to edit properties".into());
         };
         let spec = catalog::get(kind).ok_or("Unknown control type")?;
-        spec.set_property(node, key, value, &context)
-            .map_err(|e| e.to_string())
+        spec.set_property(&mut edited, key, value, &context)
+            .map_err(|e| e.to_string())?;
+        self.preserve_text_anchor(&before, &mut edited)?;
+        *self.nodes_mut().iter_mut().find(|n| n.id == id).unwrap() = edited;
+        Ok(())
     }
     pub fn reset_control_property(&mut self, id: Id, key: &str) -> Result<(), String> {
+        if key == "shape"
+            && self
+                .control_properties(id)
+                .is_some_and(|(spec, _)| spec.id == "arrow")
+        {
+            let snapshot = self.snapshot();
+            let result = (|| {
+                self.reset_property_value(id, key)?;
+                let mode = self
+                    .control_properties(id)
+                    .ok_or("Arrow no longer exists")?
+                    .1["shape"]
+                    .clone();
+                self.change_arrow_mode(id, mode)
+            })();
+            if result.is_err() {
+                self.restore(snapshot);
+            }
+            return result;
+        }
         if key == "icons"
             && let Some((spec, before)) = self.control_properties(id)
             && spec.id == "app_bar"
@@ -246,10 +293,13 @@ impl Editor {
             .iter_mut()
             .find(|n| n.id == id)
             .ok_or("Control no longer exists")?;
-        if node.locked {
-            return Err("Unlock the control before editing its properties".into());
-        }
-        spec.reset_property(node, key).map_err(|e| e.to_string())
+        let before = node.clone();
+        let mut edited = before.clone();
+        spec.reset_property(&mut edited, key)
+            .map_err(|e| e.to_string())?;
+        self.preserve_text_anchor(&before, &mut edited)?;
+        *self.nodes_mut().iter_mut().find(|n| n.id == id).unwrap() = edited;
+        Ok(())
     }
 
     /// Replace diagram labels and destinations together inside the caller's transaction.
@@ -264,9 +314,6 @@ impl Editor {
             .find(|n| n.id == id)
             .cloned()
             .ok_or("Control no longer exists")?;
-        if before.locked {
-            return Err("Unlock the control before editing".into());
-        }
         let mut edited = before.clone();
         let (text, links) = crate::site_map::from_project(&self.document);
         spec.set_property(
@@ -308,13 +355,9 @@ impl Editor {
             .ok_or("Control no longer exists")?;
         let original = edited.clone();
         let node = &mut edited;
-        if node.locked {
-            return Err("Unlock the control before resizing".into());
-        }
         let NodeContent::Control { size, .. } = &mut node.content else {
             unreachable!()
         };
-        let before = *size;
         use catalog::AutoSize;
         match spec.autosize {
             AutoSize::None => return Err("This control has no automatic size".into()),
@@ -322,18 +365,13 @@ impl Editor {
             AutoSize::Height => size.height = Dimension::Auto,
             _ => *size = Size::default(),
         }
+        self.preserve_text_anchor(&original, &mut edited)?;
         if self.editing_instance() {
             return self.write_local_node(id, &original, &edited);
         }
         *self.nodes_mut().iter_mut().find(|n| n.id == id).unwrap() = edited;
         if let Err(error) = self.layout_page(self.surface_id()) {
-            if let Some(Node {
-                content: NodeContent::Control { size, .. },
-                ..
-            }) = self.nodes_mut().iter_mut().find(|n| n.id == id)
-            {
-                *size = before;
-            }
+            *self.nodes_mut().iter_mut().find(|n| n.id == id).unwrap() = original;
             return Err(error);
         }
         Ok(())

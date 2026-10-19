@@ -362,37 +362,60 @@ impl Actor {
                 .unwrap()
                 .owns_destination(&path)
                 .map_err(|e| e.to_string())?;
-            let warning =
-                if same {
-                    let destination = self.copy.as_mut().unwrap();
+            let warning = if same {
+                let destination = self.copy.as_mut().unwrap();
+                destination
+                    .prepare_current_save_as()
+                    .map_err(|e| e.to_string())?;
+                if destination.save_named(&snapshot).is_err() {
+                    thread::sleep(Duration::from_secs(1));
                     destination
-                        .prepare_current_save_as()
+                        .save_named(&snapshot)
                         .map_err(|e| e.to_string())?;
-                    if destination.save_named(&snapshot).is_err() {
-                        thread::sleep(Duration::from_secs(1));
-                        destination
-                            .save_named(&snapshot)
-                            .map_err(|e| e.to_string())?;
+                }
+                None
+            } else {
+                let mut destination = self
+                    .copies
+                    .prepare_save_as(&path, &snapshot)
+                    .map_err(|e| e.to_string())?;
+                if destination.save_named(&snapshot).is_err() {
+                    thread::sleep(Duration::from_secs(1));
+                    destination.save_named(&snapshot).map_err(|e| {
+                        format!(
+                            "{e}. A local copy is retained at {}",
+                            destination.local_path().display()
+                        )
+                    })?;
+                }
+                // Complete the automatic save boundary before releasing the
+                // original. A failed original must not prevent recovery to
+                // the successfully written destination or authorize an
+                // overwrite of outside changes.
+                let mut warnings = Vec::new();
+                let source = self.copy.as_mut().unwrap();
+                if self.automatic {
+                    let result = source.named_path().and_then(|path| {
+                        if path.is_some() {
+                            source.save_named(&snapshot)
+                        } else {
+                            Ok(())
+                        }
+                    });
+                    if let Err(error) = result {
+                        warnings.push(format!(
+                            "The new file is saved. The original file could not be updated: {error}"
+                        ));
                     }
-                    None
-                } else {
-                    let mut destination = self
-                        .copies
-                        .prepare_save_as(&path, &snapshot)
-                        .map_err(|e| e.to_string())?;
-                    if destination.save_named(&snapshot).is_err() {
-                        thread::sleep(Duration::from_secs(1));
-                        destination.save_named(&snapshot).map_err(|e| {
-                            format!(
-                                "{e}. A local copy is retained at {}",
-                                destination.local_path().display()
-                            )
-                        })?;
-                    }
-                    let source = self.copy.replace(destination).unwrap();
-                    source.discard().err().map(|e| format!(
-                    "The new file is saved. The previous local copy could not be removed: {e}"))
-                };
+                }
+                let source = self.copy.replace(destination).unwrap();
+                if let Err(error) = source.discard() {
+                    warnings.push(format!(
+                            "The new file is saved. The previous local copy could not be removed: {error}"
+                        ));
+                }
+                (!warnings.is_empty()).then(|| warnings.join("\n"))
+            };
             self.coordinator = SaveCoordinator::new(self.automatic);
             self.retained = None;
             self.checkpoint_due = None;

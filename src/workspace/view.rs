@@ -10,13 +10,50 @@ use eframe::egui;
 pub(super) struct Cache {
     project: Option<Project>,
     pages: HashMap<Id, Result<Layout, String>>,
-    scenes: HashMap<Id, Result<crate::render::Scene, String>>,
+    scenes: HashMap<(Id, bool), Result<crate::render::Scene, String>>,
     editing_scene: Option<EditingScene>,
     clocks: HashMap<(Id, NodePath), (ClockLayout, crate::tablet::Clock)>,
     dates: HashMap<(Id, NodePath), (ClockLayout, crate::date_controls::Date)>,
 }
+/// Owned data for an export worker, including previously displayed dynamic
+/// values. Unseen controls use the time captured once for the whole export.
+pub struct ExportSnapshot {
+    pub(crate) document: Project,
+    markup_visible: bool,
+    clocks: HashMap<(Id, NodePath), (ClockLayout, crate::tablet::Clock)>,
+    dates: HashMap<(Id, NodePath), (ClockLayout, crate::date_controls::Date)>,
+    time: (crate::tablet::Clock, crate::date_controls::Date),
+}
+impl ExportSnapshot {
+    pub fn new(document: Project) -> Self {
+        Self {
+            document,
+            markup_visible: true,
+            clocks: HashMap::new(),
+            dates: HashMap::new(),
+            time: (
+                crate::tablet::Clock::now(),
+                crate::date_controls::Date::today(),
+            ),
+        }
+    }
+    /// Explicit export override, independent of subsequent editor preference changes.
+    pub fn with_markup(mut self, visible: bool) -> Self {
+        self.markup_visible = visible;
+        self
+    }
+    pub(crate) fn into_editor(self) -> Editor {
+        let mut editor = Editor::new(self.document);
+        editor.markup_visible = self.markup_visible;
+        editor.frozen_time = Some(self.time);
+        editor.cache.get_mut().clocks = self.clocks;
+        editor.cache.get_mut().dates = self.dates;
+        editor
+    }
+}
 struct EditingScene {
     surface: Id,
+    hide_markup: bool,
     context: NodePath,
     scene: Result<crate::render::Scene, String>,
 }
@@ -55,6 +92,13 @@ impl ClockOptions {
         }
     }
 }
+/// Persistent drawing scope; it never applies the editor's transient dimming.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SceneScope {
+    Whole,
+    Group(NodePath),
+    Selection(Vec<NodePath>),
+}
 #[derive(Clone)]
 pub struct Layer {
     pub control: Control,
@@ -63,6 +107,8 @@ pub struct Layer {
     pub clip: Option<Bounds>,
     /// Transient editing emphasis; stored/exported layers remain fully opaque.
     pub opacity: f32,
+    /// Only the covering control's own markup exempts it from blocking links.
+    pub local_markup: bool,
     /// Container targets applied above their final descendant in paint order.
     pub group_links: Vec<(Bounds, Link)>,
     pub path: NodePath,
@@ -71,7 +117,50 @@ pub struct Layer {
     pub date: Option<crate::date_controls::Date>,
 }
 impl Editor {
+    pub fn export_snapshot(&self) -> ExportSnapshot {
+        let cache = self.cache.borrow();
+        ExportSnapshot {
+            document: self.document.clone(),
+            markup_visible: self.markup_visible,
+            clocks: cache.clocks.clone(),
+            dates: cache.dates.clone(),
+            time: (self.render_clock(), self.render_date()),
+        }
+    }
+    fn render_clock(&self) -> crate::tablet::Clock {
+        self.frozen_time
+            .map_or_else(|| (self.clock)(), |time| time.0)
+    }
+    fn render_date(&self) -> crate::date_controls::Date {
+        self.frozen_time
+            .map_or_else(|| (self.date)(), |time| time.1)
+    }
     pub fn layout_page(&self, id: Id) -> Result<Layout, String> {
+        self.layout_surface(id, false)
+    }
+    fn surface_for_view(&self, id: Id, retained: bool) -> Option<(&str, &Content)> {
+        if retained {
+            self.document
+                .pages
+                .iter()
+                .find(|p| p.id == id && p.trashed)
+                .map(|p| (p.name.as_str(), &p.content))
+                .or_else(|| {
+                    self.document
+                        .libraries
+                        .iter()
+                        .find(|l| l.id == id && l.trashed)
+                        .map(|l| (l.name.as_str(), &l.content))
+                })
+        } else {
+            self.surface(id)
+        }
+    }
+    fn layout_surface(&self, id: Id, retained: bool) -> Result<Layout, String> {
+        // Check visibility before consulting a cache populated by Trash previews.
+        let (title, content) = self
+            .surface_for_view(id, retained)
+            .ok_or("Workspace no longer exists")?;
         let mut cache = self.cache.borrow_mut();
         if cache.project.as_ref() != Some(&self.document) {
             if cache.project.as_ref().and_then(|p| p.font.as_ref()) != self.document.font.as_ref() {
@@ -91,7 +180,6 @@ impl Editor {
         if let Some(layout) = cache.pages.get(&id) {
             return layout.clone();
         }
-        let (title, content) = self.surface(id).ok_or("Workspace no longer exists")?;
         let mut result = Err("Font layout did not run".into());
         let output = self.fonts.run_ui(egui::RawInput::default(), |ui| {
             let measurer = layout::EguiMeasurer {
@@ -99,24 +187,70 @@ impl Editor {
                 regular: crate::fonts::family(false, false),
                 bold: crate::fonts::family(true, false),
             };
-            result = layout::Engine {
+            let engine = layout::Engine {
                 project: &self.document,
                 measurer: &measurer,
                 context: Context::default(),
-            }
-            .layout_named(content, title);
+            };
+            result = if self.document.libraries.iter().any(|l| l.id == id) {
+                if retained {
+                    engine.layout_library_preview(id)
+                } else {
+                    engine.layout_library(id)
+                }
+            } else {
+                engine.layout_named(content, title)
+            };
         });
         output.drop_without_applying_deltas();
         cache.pages.insert(id, result.clone());
         result
     }
     pub fn rendered_scene(&self, id: Id) -> Result<crate::render::Scene, String> {
-        self.scene_view(id, None, false)
+        self.scene_view(id, None, false, None, false, false)
+    }
+    /// Presentation filters inherited markup before attaching group links, so
+    /// a hidden final child cannot remove its visible siblings' container link.
+    pub fn presentation_scene(&self, id: Id, markup: bool) -> Result<crate::render::Scene, String> {
+        self.scene_view(id, None, false, None, false, !markup)
+    }
+    pub fn presentation_extents(&self) -> Result<Vec<crate::presentation::PageExtent>, String> {
+        let mut result = vec![];
+        for page in self.document.live_pages() {
+            for id in std::iter::once(page.id).chain(page.alternates.iter().map(|a| a.id)) {
+                let extent = |markup| -> Result<Bounds, String> {
+                    let scene = self.presentation_scene(id, markup)?;
+                    Ok(if scene.items.is_empty() {
+                        Bounds::new(0., 0., 0., 0.)
+                    } else {
+                        scene.bounds
+                    })
+                };
+                result.push(crate::presentation::PageExtent {
+                    surface: id,
+                    with_markup: extent(true)?,
+                    without_markup: extent(false)?,
+                });
+            }
+        }
+        Ok(result)
+    }
+    /// Read-only official artwork for the recovery dialog. This does not make
+    /// a retained resource navigable, editable, presentable or exportable.
+    pub fn retained_preview(&self, id: Id) -> Result<crate::render::Scene, String> {
+        self.scene_view(id, None, false, None, true, false)
     }
     /// Reveal only the active group and its ancestor masks, without changing
     /// document geometry or the canonical export/presentation scene.
     pub fn editing_scene(&self) -> Result<crate::render::Scene, String> {
-        self.scene_view(self.surface_id(), None, !self.context.is_empty())
+        self.scene_view(
+            self.surface_id(),
+            None,
+            !self.context.is_empty(),
+            None,
+            false,
+            !self.markup_visible,
+        )
     }
     pub(super) fn rendered_scene_excluding(
         &self,
@@ -127,32 +261,79 @@ impl Editor {
             id,
             excluded,
             id == self.surface_id() && !self.context.is_empty(),
+            None,
+            false,
+            !self.markup_visible,
         )
+    }
+    /// Apply the editor's markup preference to the complete layout. Filtering
+    /// never moves group children, reveals crops, or reorders descendants.
+    pub fn export_scene(&self, id: Id, scope: &SceneScope) -> Result<crate::render::Scene, String> {
+        let layout = self.layout_page(id)?;
+        match scope {
+            SceneScope::Whole => {}
+            SceneScope::Group(path) => {
+                let node = find_layout(&layout.nodes, path)
+                    .ok_or("The export group is no longer available")?;
+                if node.kind.is_some() {
+                    return Err("Choose a group to export".into());
+                }
+            }
+            SceneScope::Selection(paths) => {
+                if paths.is_empty()
+                    || paths
+                        .iter()
+                        .any(|path| find_layout(&layout.nodes, path).is_none())
+                {
+                    return Err("The export selection is empty or no longer available".into());
+                }
+            }
+        }
+        self.scene_view(id, None, false, Some(scope), false, !self.markup_visible)
     }
     fn scene_view(
         &self,
         id: Id,
         excluded: Option<&[Id]>,
         editing: bool,
+        scope: Option<&SceneScope>,
+        retained: bool,
+        hide_markup: bool,
     ) -> Result<crate::render::Scene, String> {
-        self.layout_page(id)?;
+        self.layout_surface(id, retained)?;
+        let cacheable = excluded.is_none() && scope.is_none();
         if editing
-            && excluded.is_none()
+            && cacheable
             && let Some(cached) = &self.cache.borrow().editing_scene
             && cached.surface == id
             && cached.context == self.context
+            && cached.hide_markup == hide_markup
         {
             return cached.scene.clone();
         }
         if !editing
-            && excluded.is_none()
-            && let Some(scene) = self.cache.borrow().scenes.get(&id)
+            && cacheable
+            && let Some(scene) = self.cache.borrow().scenes.get(&(id, hide_markup))
         {
             return scene.clone();
         }
-        let mut layers = self.layers_in_context(id, if editing { &self.context } else { &[] })?;
+        let mut layers = self.layers_for_view(
+            id,
+            if editing { &self.context } else { &[] },
+            retained,
+            hide_markup,
+        )?;
         if let Some(path) = excluded {
             layers.retain(|l| !l.path.starts_with(path));
+        }
+        if let Some(scope) = scope {
+            layers.retain(|layer| match scope {
+                SceneScope::Whole => true,
+                SceneScope::Group(path) => layer.path.starts_with(path) && layer.path != *path,
+                SceneScope::Selection(paths) => {
+                    paths.iter().any(|path| layer.path.starts_with(path))
+                }
+            });
         }
         {
             let mut cache = self.cache.borrow_mut();
@@ -161,7 +342,7 @@ impl Editor {
                 .filter(|l| ClockOptions::for_layer(l).is_some())
                 .map(|l| l.path.clone())
                 .collect::<HashSet<_>>();
-            if excluded.is_none() {
+            if cacheable && !hide_markup {
                 cache
                     .clocks
                     .retain(|(surface, path), _| *surface != id || paths.contains(path));
@@ -185,9 +366,9 @@ impl Editor {
                     let record = cache
                         .dates
                         .entry(key)
-                        .or_insert_with(|| (signature.clone(), (self.date)()));
+                        .or_insert_with(|| (signature.clone(), self.render_date()));
                     if record.0 != signature {
-                        *record = (signature, (self.date)());
+                        *record = (signature, self.render_date());
                     }
                     layer.date = Some(record.1);
                     continue;
@@ -195,16 +376,18 @@ impl Editor {
                 let record = cache
                     .clocks
                     .entry(key)
-                    .or_insert_with(|| (signature.clone(), (self.clock)()));
+                    .or_insert_with(|| (signature.clone(), self.render_clock()));
                 // Location is deliberately absent: moving a control does not
                 // relayout its contents or change its displayed clock.
                 if record.0 != signature {
-                    *record = (signature, (self.clock)());
+                    *record = (signature, self.render_clock());
                 }
                 layer.clock = Some(record.1);
             }
         }
-        let (title, _) = self.surface(id).ok_or("Workspace no longer exists")?;
+        let (title, _) = self
+            .surface_for_view(id, retained)
+            .ok_or("Workspace no longer exists")?;
         let mut result = Err("Drawing did not run".into());
         let output = self.fonts.run_ui(egui::RawInput::default(), |ui| {
             let fonts = layout::EguiMeasurer {
@@ -223,16 +406,34 @@ impl Editor {
         output.drop_without_applying_deltas();
         if let Ok(scene) = &mut result {
             scene.font = self.document.font.clone();
+            if (scope.is_some() || hide_markup)
+                && !layers.iter().any(|layer| layer.control.kind == Kind::Arrow)
+            {
+                scene.bounds = layers
+                    .iter()
+                    .filter_map(|layer| {
+                        let b = layer.clip.map_or(layer.control.bounds, |clip| {
+                            crate::render::intersect(layer.control.bounds, clip)
+                        });
+                        (b.w > 0. && b.h > 0.).then_some(b)
+                    })
+                    .reduce(Bounds::union)
+                    .unwrap_or(Bounds::new(0., 0., 0., 0.));
+            }
         }
-        if excluded.is_none() {
+        if cacheable {
             if editing {
                 self.cache.borrow_mut().editing_scene = Some(EditingScene {
                     surface: id,
+                    hide_markup,
                     context: self.context.clone(),
                     scene: result.clone(),
                 });
             } else {
-                self.cache.borrow_mut().scenes.insert(id, result.clone());
+                self.cache
+                    .borrow_mut()
+                    .scenes
+                    .insert((id, hide_markup), result.clone());
             }
         }
         result
@@ -249,7 +450,16 @@ impl Editor {
                         .map(|n| &n.children)
                         .unwrap_or(&layout.nodes)
                 };
-                nodes.iter().map(control).collect()
+                let owner_locked = self.source_owner_locked();
+                nodes
+                    .iter()
+                    .filter(|node| self.markup_visible || !node.markup)
+                    .map(|node| {
+                        let mut c = control(node);
+                        c.locked |= owner_locked;
+                        c
+                    })
+                    .collect()
             })
             .unwrap_or_default();
         model::Page {
@@ -257,11 +467,7 @@ impl Editor {
             name: self
                 .surface(self.surface_id())
                 .map_or_else(|| page.name.clone(), |(name, _)| name.to_owned()),
-            notes: if self.definition.is_some() {
-                String::new()
-            } else {
-                page.notes.clone()
-            },
+            notes: self.document.surface_notes(self.surface_id()).to_owned(),
             controls,
         }
     }
@@ -269,13 +475,32 @@ impl Editor {
         self.layers_in_context(id, &[])
     }
     pub fn editing_layers(&self) -> Result<Vec<Layer>, String> {
-        self.layers_in_context(self.surface_id(), &self.context)
+        self.layers_for_view(
+            self.surface_id(),
+            &self.context,
+            false,
+            !self.markup_visible,
+        )
+    }
+    /// Visible editor artwork for framing another page without changing context.
+    pub fn visible_editor_layers(&self, id: Id) -> Result<Vec<Layer>, String> {
+        self.layers_for_view(id, &[], false, !self.markup_visible)
     }
     fn layers_in_context(&self, id: Id, context: &[Id]) -> Result<Vec<Layer>, String> {
-        let layout = self.layout_page(id)?;
+        self.layers_for_view(id, context, false, false)
+    }
+    fn layers_for_view(
+        &self,
+        id: Id,
+        context: &[Id],
+        retained: bool,
+        hide_markup: bool,
+    ) -> Result<Vec<Layer>, String> {
+        let layout = self.layout_surface(id, retained)?;
         let mut layers: Vec<Layer> = layout
             .leaves()
             .into_iter()
+            .filter(|(node, _)| !hide_markup || !node.markup)
             .map(|(node, _)| Layer {
                 frame: bounds(node.bounds),
                 control: {
@@ -307,6 +532,7 @@ impl Editor {
                     (0.4 / distance as f32).max(0.1)
                 },
                 group_links: vec![],
+                local_markup: node.local_markup,
                 path: node.path.clone(),
                 properties: node.properties.clone(),
                 clock: None,
@@ -349,13 +575,7 @@ impl Editor {
         Ok(model::Page {
             id,
             name: name.into(),
-            notes: self
-                .document
-                .pages
-                .iter()
-                .find(|p| p.id == id)
-                .map(|p| p.notes.clone())
-                .unwrap_or_default(),
+            notes: self.document.surface_notes(id).to_owned(),
             controls: self.layers(id)?.into_iter().map(|l| l.control).collect(),
         })
     }
@@ -364,7 +584,15 @@ impl Editor {
         if let Ok(layers) = self.editing_layers() {
             for layer in layers.into_iter().rev() {
                 if layer.path.starts_with(&self.context)
-                    && layer.control.bounds.contains(x, y)
+                    && if layer.control.kind == Kind::Arrow {
+                        let b = layer.control.bounds;
+                        let arrow =
+                            crate::arrows::Arrow::from_properties(&layer.properties, b.w, b.h);
+                        let offset = arrow.display_offset(&layer.properties);
+                        arrow.distance_to(Point::new(x - b.x + offset.x, y - b.y + offset.y)) < 15.
+                    } else {
+                        layer.control.bounds.contains(x, y)
+                    }
                     && layer.clip.is_none_or(|b| b.contains(x, y))
                     && let Some(id) = layer.path.get(self.context.len())
                     && let Some(control) = controls.iter().find(|c| c.id == *id)
@@ -461,6 +689,7 @@ pub(super) fn control(node: &LayoutNode) -> Control {
         "dropdown" => Kind::Dropdown,
         "search" => Kind::Search,
         "ellipse" => Kind::Ellipse,
+        "shape" => Kind::Shape,
         "line" | "horizontal_rule" => Kind::Line,
         "arrow" => Kind::Arrow,
         "image" => Kind::Image,
@@ -516,7 +745,7 @@ pub(super) fn control(node: &LayoutNode) -> Control {
         "progress" => Kind::Progress,
         "toggle" => Kind::Toggle,
         "link" => Kind::Link,
-        "rectangle" | "shape" | "" => Kind::Rectangle,
+        "rectangle" | "" => Kind::Rectangle,
         _ => {
             supported = false;
             Kind::Rectangle

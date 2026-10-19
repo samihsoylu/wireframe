@@ -18,6 +18,112 @@ fn fixture(kind: Kind) -> (Editor, u64) {
     (e, id)
 }
 #[test]
+fn auto_width_text_edits_keep_the_alignment_anchor_and_atomic_history() {
+    for kind in [Kind::Label, Kind::Heading, Kind::Subtitle] {
+        for align in ["left", "center", "right"] {
+            for through_property in [false, true] {
+                let (mut e, id) = fixture(kind);
+                e.set_control_property(id, "text", Value::Text("Some text".into()))
+                    .unwrap();
+                e.set_control_property(id, "align", Value::Choice(align.into()))
+                    .unwrap();
+                let before = e.document.clone();
+                let old = e.selected_views()[0].bounds;
+                e.edit("Edit text", |e| {
+                    if through_property {
+                        e.set_control_property(id, "text", Value::Text("Longer label text".into()))
+                            .unwrap();
+                    } else {
+                        let mut control = e.selected_views()[0].clone();
+                        control.text = "Longer label text".into();
+                        e.update_control(control);
+                    }
+                });
+                let after = e.document.clone();
+                let new = e.selected_views()[0].bounds;
+                let anchor = |b: Bounds| match align {
+                    "right" => b.x + b.w,
+                    "center" => b.x + (b.w / 2.).floor(),
+                    _ => b.x,
+                };
+                assert!(new.w > old.w);
+                assert_eq!(
+                    anchor(new),
+                    anchor(old),
+                    "{kind:?} {align}, property={through_property}"
+                );
+                assert_eq!(new.y, old.y);
+                e.undo();
+                assert!(e.document == before);
+                e.redo();
+                assert!(e.document == after);
+                assert!(document::decode(&after.encode().unwrap()).unwrap() == after);
+            }
+        }
+    }
+}
+#[test]
+fn fixed_text_width_stays_put_then_autosize_and_font_changes_keep_its_right_edge() {
+    let (mut e, id) = fixture(Kind::Label);
+    e.set_control_property(id, "align", Value::Choice("right".into()))
+        .unwrap();
+    if let NodeContent::Control { size, .. } = &mut e.document.pages[0].content.nodes[0].content {
+        size.width = Dimension::Fixed(200.);
+    }
+    let fixed = e.selected_views()[0].bounds;
+    e.set_control_property(id, "text", Value::Text("Longer label text".into()))
+        .unwrap();
+    assert_eq!(e.selected_views()[0].bounds, fixed);
+    let right = fixed.x + fixed.w;
+    e.auto_size_control(id).unwrap();
+    let automatic = e.selected_views()[0].bounds;
+    assert!(automatic.w < fixed.w);
+    assert_eq!(automatic.x + automatic.w, right);
+    e.set_control_property(id, "font_size", Value::Number(32.))
+        .unwrap();
+    let larger = e.selected_views()[0].bounds;
+    assert!(larger.w > automatic.w);
+    assert_eq!(larger.x + larger.w, right);
+    e.reset_control_property(id, "font_size").unwrap();
+    assert_eq!(e.selected_views()[0].bounds, automatic);
+}
+
+#[test]
+fn local_text_anchor_changes_and_reset_preserve_the_component_source() {
+    let (mut e, id) = fixture(Kind::Label);
+    e.set_control_property(id, "text", Value::Text("Some text".into()))
+        .unwrap();
+    e.set_control_property(id, "align", Value::Choice("right".into()))
+        .unwrap();
+    e.create_component("Aligned caption".into()).unwrap();
+    let instance = *e.selection.iter().next().unwrap();
+    let sources = e.document.definitions.clone();
+    assert!(e.enter(instance));
+    let child = e.current().controls[0].id;
+    let old = e.current().controls[0].bounds;
+    let before = e.document.clone();
+    e.edit("Local caption", |e| {
+        e.set_control_property(child, "text", Value::Text("Longer label text".into()))
+            .unwrap();
+    });
+    let new = e.current().controls[0].bounds;
+    assert!(new.w > old.w);
+    assert_eq!(new.x + new.w, old.x + old.w);
+    assert!(e.document.definitions == sources);
+    let after = e.document.clone();
+    e.undo();
+    assert!(e.document == before);
+    e.redo();
+    assert!(e.document == after);
+    e.edit("Reset caption", |e| {
+        e.reset_control_property(child, "text").unwrap()
+    });
+    assert_eq!(e.current().controls[0].bounds, old);
+    assert!(e.document.definitions == sources);
+    assert!(!e.explicit_control_properties(child).contains_key("text"));
+}
+
+#[test]
 fn placeholder_conversion_is_an_identity_preserving_undo_step() {
     for (kind, target, w, h) in [
         (Kind::TextBlock, Kind::Paragraph, 275., 80.),

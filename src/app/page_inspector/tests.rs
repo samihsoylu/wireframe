@@ -140,6 +140,26 @@ fn notes_submit_preserves_multiline_unicode_and_one_history_step() {
     );
     assert_eq!(app.editor.document, after);
 }
+
+#[test]
+fn formatted_notes_reopen_exact_markup_and_cancel_without_navigation_or_history() {
+    let (ctx, mut app) = setup();
+    let text = "*Welcome* שלום\n[Website](https://example.com)\n:star-solid: :unknown-icon:\n- literal item";
+    begin(&mut app, &ctx);
+    frame(&mut app, &ctx, vec![egui::Event::Paste(text.into())]);
+    frame(&mut app, &ctx, vec![key(Key::Enter, Modifiers::COMMAND)]);
+    let saved = app.editor.document.clone();
+    assert_eq!(app.editor.page_data().notes, text);
+    assert_eq!(app.editor.undo_name(), Some("Edit notes"));
+    click(&mut app, &ctx, text);
+    assert_eq!(app.page_inspector.draft.as_ref().unwrap().text, text);
+    frame(&mut app, &ctx, vec![key(Key::Escape, Modifiers::NONE)]);
+    assert_eq!(app.editor.document, saved);
+    app.editor.undo();
+    assert_eq!(app.editor.page_data().notes, "");
+    app.editor.redo();
+    assert_eq!(app.editor.document, saved);
+}
 #[test]
 fn text_then_new_page_and_pointer_departure_commit_to_old_owner() {
     let (ctx, mut app) = setup();

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 use super::*;
-use wireframe::text_entry::layout::{Layout, shared_engine};
+use wireframe::text_entry::layout::{notes::NotesLayout, shared_engine};
 
 #[derive(Default)]
 pub(super) struct PageInspector {
@@ -25,7 +25,7 @@ struct ReadNotes {
     width: f32,
     size: f32,
     scale: f32,
-    layout: Layout,
+    layout: NotesLayout,
     raster: Option<(Rect, egui::TextureHandle)>,
 }
 
@@ -266,7 +266,7 @@ impl WireframeApp {
         if !self.page_inspector.read.as_ref().is_some_and(|r| {
             r.text == text && r.width == width && r.size == size && r.scale == scale
         }) {
-            match Layout::new(&mut engine, text, size, width, scale) {
+            match NotesLayout::new(&mut engine, text, size, width, scale) {
                 Ok(layout) => {
                     self.page_inspector.read = Some(ReadNotes {
                         text: text.into(),
@@ -282,7 +282,7 @@ impl WireframeApp {
         }
         let read = self.page_inspector.read.as_mut().unwrap();
         let (rect, response) = ui.allocate_exact_size(
-            Vec2::new(width, read.layout.size.y.max(size * 1.4)),
+            Vec2::new(width, read.layout.size().y.max(size * 1.4)),
             Sense::click(),
         );
         response.widget_info(|| {
@@ -292,9 +292,7 @@ impl WireframeApp {
         if visible.is_positive() {
             let viewport = visible.translate(-rect.min.to_vec2());
             if !read.raster.as_ref().is_some_and(|(r, _)| *r == viewport)
-                && let Ok(image) = read
-                    .layout
-                    .raster(&mut engine, viewport, Color32::from_gray(30))
+                && let Ok(image) = read.layout.raster(&mut engine, viewport)
             {
                 read.raster = Some((
                     viewport,
@@ -310,6 +308,7 @@ impl WireframeApp {
                     Color32::WHITE,
                 );
             }
+            read.layout.paint_icons(ui.painter(), rect.min);
         }
         response.on_hover_cursor(egui::CursorIcon::Text)
     }

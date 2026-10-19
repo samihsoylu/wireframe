@@ -12,6 +12,8 @@ use std::{
 };
 use unicode_segmentation::UnicodeSegmentation;
 
+pub mod notes;
+
 /// Reuse the UI font/shaping engine for editable fields and read-only text.
 pub fn shared_engine(ctx: &egui::Context) -> Arc<Mutex<Engine>> {
     let id = egui::Id::new("unicode-input-engine");

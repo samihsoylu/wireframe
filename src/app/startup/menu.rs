@@ -44,6 +44,7 @@ impl WireframeApp {
                     .map(Prepared::Persistent),
                 None => ProjectStore
                     .load(&source)
+                    .and_then(prepare_editor)
                     .map(Box::new)
                     .map(Prepared::Plain),
             }
@@ -59,17 +60,11 @@ impl WireframeApp {
     }
 
     pub(super) fn validate_open(prepared: &Prepared) -> Result<(), String> {
-        let document = match prepared {
-            Prepared::Persistent(p) => Some(p.copy.project()),
-            Prepared::Plain(p) | Prepared::Current(Some(p)) => Some(p.as_ref()),
-            Prepared::Current(None) => None,
-            Prepared::Committed { .. } => return Err("Unexpected completed open request.".into()),
-        };
-        if let Some(document) = document {
-            let editor = Editor::new(document.clone());
-            for page in editor.document.live_pages() {
-                editor.layout_page(page.id)?;
-            }
+        // Persistent and plain candidates already own their checked editor.
+        // Only same-file Discard preflight carries a raw disk snapshot; its
+        // live owner must remain intact until this validation succeeds.
+        if let Prepared::Current(Some(document)) = prepared {
+            prepare_editor(document.as_ref().clone())?;
         }
         Ok(())
     }

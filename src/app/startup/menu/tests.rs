@@ -224,7 +224,9 @@ fn handoff_ignores_escape_and_defers_quit_until_ownership_is_settled() {
     assert!(app.startup_open.as_ref().unwrap().quit_after);
     sender
         .send(Ok(Prepared::Committed {
-            result: Ok(Box::new(Prepared::Plain(Box::new(project("Ready"))))),
+            result: Ok(Box::new(Prepared::Plain(Box::new(
+                prepare_editor(project("Ready")).unwrap(),
+            )))),
             discarded: false,
         }))
         .unwrap();
@@ -289,4 +291,50 @@ fn symlink_reopen_uses_existing_owner_instead_of_contending_with_it() {
     assert_eq!(app.open_source_id(), id);
     assert_eq!(app.file, Some(original.canonicalize().unwrap()));
     assert!(app.finish_session(false));
+}
+
+#[test]
+fn nonactive_page_layout_failure_keeps_source_and_rejects_discard() {
+    for discard in [false, true] {
+        let (dir, ctx, mut app, original) = persistent();
+        app.editor.add(Kind::Button, 20., 30.);
+        let changed = app.editor.document.clone();
+        let owner = app.open_source_id();
+        let original_bytes = std::fs::read(&original).unwrap();
+        let mut target = project("Layout failure on second page");
+        let mut second = target.pages[0].clone();
+        second.id = 2;
+        let mut label = wireframe::catalog::get("label")
+            .unwrap()
+            .create(3, wireframe::document::Point::default());
+        label.properties.insert(
+            "text".into(),
+            wireframe::document::Value::Text("W".repeat(2000)),
+        );
+        label
+            .properties
+            .insert("font_size".into(), wireframe::document::Value::Number(120.));
+        second.content.nodes.push(label);
+        target.pages.push(second);
+        target.next_id = 4;
+        target.validate().unwrap();
+        let path = dir.path().join("Unlayoutable.wireframe");
+        ProjectStore.save(&path, &target).unwrap();
+        let target_bytes = std::fs::read(&path).unwrap();
+        app.start_menu_open(path.clone(), discard, &ctx);
+        drain(&mut app);
+        assert!(
+            app.error.as_ref().unwrap().contains("Layout dimensions"),
+            "{:?}",
+            app.error
+        );
+        assert_eq!(app.editor.document, changed);
+        assert_eq!(app.open_source_id(), owner);
+        assert_eq!(std::fs::read(&original).unwrap(), original_bytes);
+        assert_eq!(std::fs::read(&path).unwrap(), target_bytes);
+        assert!(app.startup_copies().unwrap().open_named(&path).is_ok());
+        app.editor.undo();
+        assert!(app.editor.current().controls.is_empty());
+        assert!(app.finish_session(false));
+    }
 }

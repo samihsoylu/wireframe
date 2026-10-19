@@ -37,7 +37,7 @@ pub(super) struct Persistence {
 pub(super) struct PreparedOpen {
     pub copy: WorkingCopy,
     pub file: Option<PathBuf>,
-    pub saved: Option<wireframe::document::Project>,
+    pub editor: Editor,
 }
 impl PreparedOpen {
     pub fn read(copies: &WorkingCopies, path: &std::path::Path) -> Result<Self, String> {
@@ -54,7 +54,13 @@ impl PreparedOpen {
             NamedStatus::Unchanged => {}
         }
         let saved = file.as_ref().map(|p| ProjectStore.load(p)).transpose()?;
-        Ok(Self { copy, file, saved })
+        let mut editor = super::startup::prepare_editor(copy.project().clone())?;
+        if let Some(named) = &saved {
+            editor.mark_saved_snapshot(named);
+        } else {
+            editor.mark_unsaved();
+        }
+        Ok(Self { copy, file, editor })
     }
 }
 pub(super) struct OpenSource {
@@ -499,19 +505,10 @@ impl WireframeApp {
         self.persistence.as_ref().map(|p| p.copies.clone())
     }
     pub(super) fn accept_prepared_open(&mut self, prepared: PreparedOpen) -> Result<(), String> {
-        let mut candidate = Editor::new(prepared.copy.project().clone());
-        if let Some(named) = &prepared.saved {
-            candidate.mark_saved_snapshot(named);
-        } else {
-            candidate.mark_unsaved();
-        }
-        for page in candidate.document.live_pages() {
-            candidate.layout_page(page.id)?;
-        }
         let preserved = prepared.copy.preserved_copy().is_some();
         self.start_copy(prepared.copy)?;
         self.review.reset();
-        self.editor = candidate;
+        self.editor = prepared.editor;
         self.file = prepared.file;
         self.restore_version_view();
         self.status = if self.editor.dirty() {

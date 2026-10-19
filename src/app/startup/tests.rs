@@ -70,7 +70,7 @@ fn stalled_read_keeps_cancel_reachable_and_never_applies_a_late_result() {
                 ..Default::default()
             };
             finished.send(()).unwrap();
-            Ok(Prepared::Plain(Box::new(p)))
+            Ok(Prepared::Plain(Box::new(prepare_editor(p)?)))
         })
         .unwrap(),
     );

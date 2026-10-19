@@ -7,12 +7,21 @@ use std::sync::mpsc::{self, Receiver, TryRecvError};
 
 pub(super) enum Prepared {
     Persistent(Box<persistence::PreparedOpen>),
-    Plain(Box<Project>),
+    Plain(Box<Editor>),
     Current(Option<Box<Project>>),
     Committed {
         result: Result<Box<Prepared>, String>,
         discarded: bool,
     },
+}
+/// Prepare layout away from the UI and retain it for adoption rather than
+/// repeating font measurement after the source session has been released.
+pub(super) fn prepare_editor(document: Project) -> Result<Editor, String> {
+    let editor = Editor::new(document);
+    for page in editor.document.live_pages() {
+        editor.layout_page(page.id)?;
+    }
+    Ok(editor)
 }
 #[derive(Clone, Copy)]
 enum Phase {
@@ -38,7 +47,10 @@ impl Opening {
         std::thread::Builder::new()
             .name("wireframe-open".into())
             .spawn(move || {
-                let result = read();
+                let result = read().and_then(|prepared| {
+                    WireframeApp::validate_open(&prepared)?;
+                    Ok(prepared)
+                });
                 // If cancelled, sending drops the candidate and releases its lock.
                 let _ = sender.send(result);
                 wake.request_repaint();
@@ -64,6 +76,7 @@ impl WireframeApp {
                 .map(Prepared::Persistent),
             None => ProjectStore
                 .load(&source)
+                .and_then(prepare_editor)
                 .map(Box::new)
                 .map(Prepared::Plain),
         }) {
@@ -100,10 +113,7 @@ impl WireframeApp {
         };
         let job = self.startup_open.take().unwrap();
         if let Phase::MenuRead { discard } = job.phase {
-            match result.and_then(|prepared| {
-                Self::validate_open(&prepared)?;
-                Ok(prepared)
-            }) {
+            match result {
                 Ok(prepared) => self.begin_open_handoff(job.path, prepared, discard, &job.ctx),
                 Err(error) => {
                     if discard {
@@ -136,13 +146,9 @@ impl WireframeApp {
     fn adopt_open(&mut self, prepared: Prepared, path: &std::path::Path) -> Result<(), String> {
         match prepared {
             Prepared::Persistent(prepared) => self.accept_prepared_open(*prepared),
-            Prepared::Plain(document) => {
-                let candidate = Editor::new(*document);
-                for page in candidate.document.live_pages() {
-                    candidate.layout_page(page.id)?;
-                }
+            Prepared::Plain(editor) => {
                 self.review.reset();
-                self.editor = candidate;
+                self.editor = *editor;
                 self.file = Some(path.to_owned());
                 self.restore_version_view();
                 self.status = "Project opened".into();
@@ -168,7 +174,7 @@ impl WireframeApp {
                 ui.label(if matches!(job.phase, Phase::Handoff) {
                     "Finishing the current project…"
                 } else {
-                    "Waiting for the file…"
+                    "Reading and checking the project…"
                 });
             });
             ui.label("If your computer asks for file access, respond to that prompt to continue.");

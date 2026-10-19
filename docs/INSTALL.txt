@@ -1,0 +1,14 @@
+Install Wireframe on your Mac
+
+Drag Wireframe onto Applications, following the arrow.
+Eject this disk image, then open Wireframe from Applications.
+
+This app is not Developer ID signed or notarized. If macOS prevents the
+first launch and you trust the official download, try opening the app,
+then go to System Settings > Privacy & Security > Open Anyway.
+
+Official downloads: https://github.com/samihsoylu/wireframe/releases
+Help: https://github.com/samihsoylu/wireframe/blob/main/docs/INSTALL.md
+
+Source and licenses are included in the folder of that name. You do not
+need to copy that folder to Applications. Keep your .wireframe documents.

@@ -84,18 +84,19 @@ def main():
     staging.mkdir()
     if payload.is_dir():
         shutil.copytree(payload, staging / payload.name, dirs_exist_ok=True)
-    for path in ('LICENSE','README.md','SESSION-SPEC.md','THIRD_PARTY_NOTICES.md'):
+    for path in ('LICENSE','README.md','CHANGELOG.md','SESSION-SPEC.md','THIRD_PARTY_NOTICES.md'):
         shutil.copyfile(ROOT / path, staging / path)
     shutil.copytree(ROOT / 'licenses', staging / 'licenses', dirs_exist_ok=True)
     shutil.copytree(ROOT / 'assets', staging / 'assets', dirs_exist_ok=True)
     shutil.copytree(ROOT / 'docs', staging / 'docs', dirs_exist_ok=True)
+    shutil.copytree(ROOT / '.github', staging / '.github', dirs_exist_ok=True)
     # Include this product's corresponding source and build scripts with every package.
     source = staging / 'source'
     source.mkdir(exist_ok=True)
-    for path in ('src','tests','examples','scripts','assets','vendor','docs','licenses'):
+    for path in ('src','tests','examples','scripts','assets','vendor','docs','licenses','.github'):
         shutil.copytree(ROOT / path, source / path, dirs_exist_ok=True,
             ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
-    for path in ('Cargo.toml','Cargo.lock','LICENSE','README.md','SESSION-SPEC.md','THIRD_PARTY_NOTICES.md'):
+    for path in ('Cargo.toml','Cargo.lock','LICENSE','README.md','CHANGELOG.md','SESSION-SPEC.md','THIRD_PARTY_NOTICES.md'):
         shutil.copyfile(ROOT / path, source / path)
     if system == 'linux':
         archive = out / (name + '.tar.gz')
@@ -110,5 +111,13 @@ def main():
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     archive.with_suffix(archive.suffix + '.sha256').write_text(f'{digest}  {archive.name}\n')
     print(json.dumps({'archive':str(archive),'sha256':digest,'profile':profile}))
+    if system == 'darwin':
+        run('sh', 'scripts/package-dmg.sh', str(payload), str(out / (name + '.dmg')), str(archive))
+    elif system == 'windows':
+        # A portable EXE, accompanied by the source/license ZIP above.
+        portable = out / (name + '.exe')
+        shutil.copy2(binary, portable)
+        digest = hashlib.sha256(portable.read_bytes()).hexdigest()
+        portable.with_suffix('.exe.sha256').write_text(f'{digest}  {portable.name}\n')
 
 if __name__ == '__main__': main()

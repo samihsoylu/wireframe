@@ -1,48 +1,41 @@
 # Wireframe
 
-A local desktop workspace for turning rough ideas into clear wireframes. Built in Rust for macOS, Windows and Linux. No account or cloud service is required.
+Turn rough ideas into clear wireframes. Sketch a landing page, plan a mobile screen, or connect a few pages into a clickable walkthrough. Your projects stay on your computer, with no account required.
 
-## Features
+[Releases](https://github.com/samihsoylu/wireframe/releases) · [Getting started](docs/GETTING-STARTED.md) · [Report an issue](https://github.com/samihsoylu/wireframe/issues)
 
-- 86 controls for forms, text, shapes, navigation, devices, media, charts and layout.
-- Pages, notes, searchable library and layers.
-- [Compact form controls](docs/SMALL-FORMS.md): numeric steppers, color pickers and linked help buttons.
-- [Text controls](docs/TEXT-CONTROLS.md): headings, subtitles, editable placeholders and rich tag clouds.
-- Move, resize, align, nest groups, duplicate and lock controls.
-- Text-defined menus and menu bars with shortcuts, selection, row links and optional bar icons.
-- Tree panes with indented hierarchy rows, folder and status symbols, selection and row destinations.
-- Accordion panes with expandable sections, selected children, row destinations and automatic sizing.
-- Alert dialogs with divided or inline buttons, individual destinations and automatic sizing.
-- App bars with custom icons, project images, automatic contrast and per-icon destinations.
-- Browser frames with title/address text, content colors, scrollbars and transparent torn edges.
-- Window frames with rich titles, adjustable headers/footers, chrome buttons and resize handles.
-- Undo/redo, local project files and recovery copies.
-- Sketch and clean styles; PNG, SVG and multi-page PDF export with page selection, paper sizing, notes and clickable links.
-- [Project fonts](docs/PROJECT-FONTS.md): import four font faces, save them with the project, and use them on canvas and in exports.
-- Page links and presentation mode, including individual links on list rows, checkbox/radio group rows, button-bar segments, breadcrumbs, link bars and tabs.
-- Searchable offline icons and imported project images for Lists, Buttons, Dropdowns, circular buttons, Icons and Icon labels, with size/rotation controls, undoable assignments and self-contained exports.
-- Embedded PNG/JPEG/GIF images, shared sources and replacement with Undo.
-- Canvas image cropping and quarter-turn rotation, including local component edits.
-- Image carousels with embedded images, quarter-turn rotation, sketch filtering and an optional scroll indicator.
-- Callouts, sticky notes and tooltips with rich text, inline links and configurable pointers.
+**0.1.0 is in development.** Public installers have not been released yet. macOS, Windows and Linux are the intended platforms; Windows testing is currently on hold.
 
-- Static column, bar, line and pie charts with independent resizing and shared canvas/export rendering.
-- [Braces and markup strokes](docs/MARKUP.md) with directional rich text, fixed-color crosses and translucent scratch-out marks.
+## Make room for your ideas
 
-## Run from source
+- Build screens from 86 controls: buttons, forms, navigation, tables, charts, device frames and more.
+- Choose a rough sketch or a clean style. Add your own images, icons and project fonts.
+- Double-click controls to edit their text. Move, resize, align and group them, with Undo and Redo as you work.
+- Organize pages, reuse components, and add notes and review comments.
+- Link pages and present a clickable walkthrough, with a large pointer and optional link hints.
+- Share PNGs, SVGs or a multi-page PDF with clickable links.
+- Save editable `.wireframe` files locally. Recovery copies help you resume after an interrupted session.
 
-Requires Rust 1.95 or newer and platform build dependencies. Run `cargo run --release`. Use `cargo test` for behavioral and persistence checks.
+## Install
 
-On Linux, install a C toolchain, pkg-config, and the development packages for X11, Wayland and OpenGL. File dialogs use the desktop portal. At runtime, X11 sessions also need XKB support (including `libxkbcommon-x11-0` on Debian/Ubuntu), an OpenGL driver, and a running desktop portal with a matching backend. See [packaging checks](docs/PACKAGING.md) for the tested environment and limits.
+When 0.1.0 is available, choose the file for your computer from [Releases](https://github.com/samihsoylu/wireframe/releases):
 
-## Project files
+| Computer | Download | Install |
+|---|---|---|
+| Mac | `.dmg` for your Mac’s processor | Open it and drag **Wireframe → Applications**. |
+| Windows | `.exe` for your processor | Download and run Wireframe. A companion ZIP includes source and licenses. |
+| Linux | `.tar.gz` for your processor | Extract it and run `wireframe` from the extracted folder. |
 
-Editable documents use the versioned `.wireframe` JSON format. Files are validated before saving and replaced atomically. Projects remain on your computer. A local recovery copy is offered after an interrupted session.
+Each release will list its supported systems, changes and any known limitations. Only download an architecture that is listed for that release. See [installation help](docs/INSTALL.md), including the first-launch prompt on macOS.
 
-## Development status
+## Updates
 
-Earlier optimized packages are available for macOS arm64, Linux aarch64 and Windows x86-64 GNU; they predate recent source changes. Those macOS and Linux X11 packages passed scoped native editing, undo/redo, save and restart checks. Windows was cross-compiled and inspected; native Windows verification remains open. Final packages and current platform acceptance are tracked in the [release checklist](docs/RELEASE-CHECKLIST.md). See [current state](SESSION-SPEC.md) for actual checks and remaining work. The desktop editor supports nested groups and versioned project saving. Double-click a group to edit its children; use Escape or Exit group to return. Basic rich text and table formatting appear on canvas, thumbnails and PNG/SVG exports. The text/table inspector includes styles, Reset, Auto-size and six checkbox/radio states. Create a reusable component from a selected control or group in the inspector. The Components sidebar inserts instances and opens the shared source; Detach component makes an independent group. Double-click an instance to edit its children locally; Reset resumes the source value. Deleting a component source retains missing-instance placeholders and can be undone in the current session. Empty sources and groups remain visible and editable; adding children populates them again. Image controls import embedded PNG/JPEG/GIF files and share their sources; instances can resize without changing their source. Final typography, full control coverage and asset editing remain under development.
+For now, updates will be manual downloads from Releases. Built-in macOS updates using Sparkle are planned; Windows automatic updates can follow later. Wireframe does not currently check for or install updates automatically.
+
+## Build and contribute
+
+Built with Rust. See [development instructions](docs/DEVELOPMENT.md), [packaging](docs/PACKAGING.md), and the [release checklist](docs/RELEASE-CHECKLIST.md). Please include your operating system, app version and steps to reproduce when reporting a problem.
 
 ## License
 
-GNU General Public License v3.0 only (`GPL-3.0-only`). See [LICENSE](LICENSE). Copyright 2026 Wireframe contributors. Dependency licenses remain applicable; see [third-party notices](THIRD_PARTY_NOTICES.md).
+[GNU General Public License v3.0 only](LICENSE) (`GPL-3.0-only`), from the first commit. Copyright 2026 Wireframe contributors. [Third-party notices](THIRD_PARTY_NOTICES.md).

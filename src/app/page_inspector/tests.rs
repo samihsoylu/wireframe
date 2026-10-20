@@ -502,6 +502,60 @@ fn alternate_panel_preferences_reopen_per_project_and_survive_transient_reset() 
 }
 
 #[test]
+fn visible_alternate_divider_double_click_preserves_size_preferences_and_history() {
+    let dir = tempfile::tempdir().unwrap();
+    let (ctx, mut app) = setup();
+    app.file = Some(std::path::PathBuf::from("divider-viewport-study.wireframe"));
+    app.load_panel_preferences(dir.path());
+    let key = app.version_preferences_key();
+    app.page_inspector
+        .preferences
+        .remember(key.as_deref(), 300)
+        .unwrap();
+    let original = app.editor.document.clone();
+    let id = egui::Id::new(("page-alternates-panel", &key, 300_u16));
+    for _ in 0..3 {
+        frame(&mut app, &ctx, vec![]);
+    }
+    let initial = egui::containers::panel::PanelState::load(&ctx, id)
+        .unwrap()
+        .outer_rect;
+    assert!((initial.height() - 300.).abs() <= 1.);
+    let boundary = egui::pos2(initial.center().x, initial.min.y);
+    for _ in 0..2 {
+        for pressed in [true, false] {
+            frame(
+                &mut app,
+                &ctx,
+                vec![
+                    egui::Event::PointerMoved(boundary),
+                    egui::Event::PointerButton {
+                        pos: boundary,
+                        pressed,
+                        button: egui::PointerButton::Primary,
+                        modifiers: Modifiers::NONE,
+                    },
+                ],
+            );
+        }
+    }
+    assert!(ctx.input(|i| {
+        i.pointer
+            .button_double_clicked(egui::PointerButton::Primary)
+    }));
+    let after_click = egui::containers::panel::PanelState::load(&ctx, id)
+        .unwrap()
+        .outer_rect;
+    assert!((after_click.height() - 300.).abs() <= 1.);
+    assert_eq!(app.page_inspector.preferences.get(key.as_deref()), 300);
+    assert_eq!(app.editor.document, original);
+    assert!(app.editor.undo_name().is_none());
+    let mut reopened = preferences::Preferences::default();
+    reopened.load(dir.path()).unwrap();
+    assert_eq!(reopened.get(key.as_deref()), 300);
+}
+
+#[test]
 fn invalid_panel_settings_are_preserved_while_session_sizing_remains_available() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("panel-settings.json");

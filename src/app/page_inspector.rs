@@ -9,12 +9,22 @@ pub(super) struct PageInspector {
     draft: Option<Notes>,
     read: Option<ReadNotes>,
     preferences: preferences::Preferences,
+    alternate_layout: Option<AlternateLayout>,
 }
 impl PageInspector {
     pub(super) fn clear(&mut self) {
         self.draft = None;
         self.read = None;
+        self.alternate_layout = None;
     }
+}
+
+struct AlternateLayout {
+    project: Option<String>,
+    extent: f32,
+    height: f32,
+    preference_height: u16,
+    suspended: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -50,10 +60,41 @@ impl WireframeApp {
         let key = self.version_preferences_key();
         let height = self.page_inspector.preferences.get(key.as_deref());
         let id = egui::Id::new(("page-alternates-panel", &key, height));
-        // Keep the existing notes editor usable in a short window. Do not
-        // persist a temporary viewport clamp as the user's preferred height.
-        let maximum = (ui.available_height() - 160.).clamp(0., 400.);
+        let extent = ui.available_height();
+        // Keep the notes editor usable when there is insufficient room for
+        // both panes. Such a temporary clamp must not erase the preference.
+        let maximum = (extent - 160.).clamp(0., 400.);
         let range = 130_f32.min(maximum)..=maximum;
+        let mut resized = false;
+        // Library and window layout changes resize both panes proportionally.
+        // A changed preference rotates the panel ID; seed its current geometry
+        // rather than reviving an older rectangle cached under that ID.
+        if maximum >= 130.
+            && let Some(layout) = self
+                .page_inspector
+                .alternate_layout
+                .as_ref()
+                .filter(|layout| layout.project == key)
+                .filter(|layout| {
+                    layout.extent != extent
+                        || layout.suspended
+                        || layout.preference_height != height
+                })
+        {
+            let height = if layout.extent > 0. {
+                layout.height * extent / layout.extent
+            } else {
+                layout.height
+            }
+            .round()
+            .clamp(130., maximum);
+            let mut rect = ui.available_rect_before_wrap();
+            rect.min.y = rect.max.y - height;
+            ui.ctx().data_mut(|data| {
+                data.insert_persisted(id, egui::containers::panel::PanelState { outer_rect: rect });
+            });
+            resized = layout.extent != extent || layout.suspended;
+        }
         let fast_resize = chrome::prepare_panel_resize(
             ui,
             id,
@@ -80,7 +121,31 @@ impl WireframeApp {
         let released = ui
             .read_response(id.with("__resize"))
             .is_some_and(|response| response.drag_stopped());
-        if (fast_resize || released) && maximum >= 130. {
+        if maximum >= 130. {
+            self.page_inspector.alternate_layout = Some(AlternateLayout {
+                project: key.clone(),
+                extent,
+                height: panel.response.rect.height(),
+                preference_height: height,
+                suspended: false,
+            });
+        } else if let Some(layout) = self
+            .page_inspector
+            .alternate_layout
+            .as_mut()
+            .filter(|layout| layout.project == key)
+        {
+            layout.suspended = true;
+        } else {
+            self.page_inspector.alternate_layout = Some(AlternateLayout {
+                project: key.clone(),
+                extent: 0.,
+                height: height as f32,
+                preference_height: height,
+                suspended: true,
+            });
+        }
+        if (fast_resize || released || resized) && maximum >= 130. {
             let height = panel.response.rect.height().round().clamp(130., 400.) as u16;
             if let Err(error) = self
                 .page_inspector

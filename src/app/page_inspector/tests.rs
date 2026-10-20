@@ -570,6 +570,108 @@ fn alternate_divider_accepts_inside_grabs_and_ignores_adjacent_notes_and_heading
     }
 }
 
+fn alternate_layout_frame(app: &mut WireframeApp, ctx: &egui::Context, extent: f32) -> f32 {
+    let key = app.version_preferences_key();
+    let mut visible = 0.;
+    for _ in 0..3 {
+        ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(400., 1000.))),
+                ..Default::default()
+            },
+            |ui| {
+                ui.scope_builder(
+                    egui::UiBuilder::new()
+                        .max_rect(Rect::from_min_size(Pos2::ZERO, Vec2::new(300., extent))),
+                    |ui| {
+                        assert_eq!(ui.available_height(), extent);
+                        let height = app.page_inspector.preferences.get(key.as_deref());
+                        let id = egui::Id::new(("page-alternates-panel", &key, height));
+                        app.alternate_panel(ui);
+                        visible = egui::containers::panel::PanelState::load(ctx, id)
+                            .unwrap()
+                            .outer_rect
+                            .height();
+                    },
+                );
+            },
+        )
+        .drop_without_applying_deltas();
+    }
+    visible
+}
+
+#[test]
+fn alternate_divider_resizes_proportionally_and_persists_layout_changes() {
+    for steps in [
+        [(737., 400_u16), (857., 400), (737., 344)],
+        [(737., 300_u16), (857., 349), (737., 300)],
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let (ctx, mut app) = setup();
+        app.file = Some(dir.path().join("layout-size.wireframe"));
+        app.load_panel_preferences(dir.path());
+        let key = app.version_preferences_key();
+        app.page_inspector
+            .preferences
+            .remember(key.as_deref(), steps[0].1)
+            .unwrap();
+        let original = app.editor.document.clone();
+        for (extent, expected) in steps {
+            let visible = alternate_layout_frame(&mut app, &ctx, extent);
+            assert_eq!(visible, expected as f32, "extent {extent}");
+            assert_eq!(app.page_inspector.preferences.get(key.as_deref()), expected);
+            let mut reopened = preferences::Preferences::default();
+            reopened.load(dir.path()).unwrap();
+            assert_eq!(reopened.get(key.as_deref()), expected);
+            assert_eq!(app.editor.document, original);
+            assert!(app.editor.undo_name().is_none());
+        }
+    }
+}
+
+#[test]
+fn alternate_layout_keeps_project_sizes_independent_and_survives_unusable_heights() {
+    let dir = tempfile::tempdir().unwrap();
+    let (ctx, mut app) = setup();
+    app.load_panel_preferences(dir.path());
+    let first = dir.path().join("first.wireframe");
+    let second = dir.path().join("second.wireframe");
+    app.file = Some(first.clone());
+    let first_key = app.version_preferences_key();
+    app.page_inspector
+        .preferences
+        .remember(first_key.as_deref(), 300)
+        .unwrap();
+    assert_eq!(alternate_layout_frame(&mut app, &ctx, 737.), 300.);
+    assert_eq!(alternate_layout_frame(&mut app, &ctx, 200.), 40.);
+    assert_eq!(
+        app.page_inspector.preferences.get(first_key.as_deref()),
+        300
+    );
+    assert_eq!(alternate_layout_frame(&mut app, &ctx, 737.), 300.);
+    app.file = Some(second.clone());
+    let second_key = app.version_preferences_key();
+    app.page_inspector
+        .preferences
+        .remember(second_key.as_deref(), 200)
+        .unwrap();
+    assert_eq!(alternate_layout_frame(&mut app, &ctx, 857.), 200.);
+    app.file = Some(first);
+    assert_eq!(alternate_layout_frame(&mut app, &ctx, 737.), 300.);
+    app.page_inspector.clear();
+    assert_eq!(alternate_layout_frame(&mut app, &ctx, 737.), 300.);
+    app.file = Some(second);
+    app.page_inspector.clear();
+    assert_eq!(alternate_layout_frame(&mut app, &ctx, 200.), 40.);
+    assert_eq!(alternate_layout_frame(&mut app, &ctx, 857.), 200.);
+    let mut reopened = preferences::Preferences::default();
+    reopened.load(dir.path()).unwrap();
+    assert_eq!(reopened.get(first_key.as_deref()), 300);
+    assert_eq!(reopened.get(second_key.as_deref()), 200);
+    assert!(app.editor.undo_name().is_none());
+}
+
 #[test]
 fn visible_alternate_divider_double_click_preserves_size_preferences_and_history() {
     let dir = tempfile::tempdir().unwrap();

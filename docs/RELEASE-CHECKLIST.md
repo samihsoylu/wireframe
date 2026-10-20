@@ -1,5 +1,7 @@
 # Release completion checklist
 
+**Asset permission gate:** every distributed graphic, font and other asset must meet the [source, permission and notice requirements](ASSET-LICENSING.md). Unknown or unmet rights block inclusion and release. Check the actual packages and applicable exports, including assets supplied by dependencies.
+
 This is the working completion index. The user approved a release-focused completion contract while retaining the requested desktop scope and high-fidelity requirement. Deliver a packaged release passing fixed functional, visual, persistence and platform checks; explicitly document minor remaining discrepancies. Existing-format project import is the only explicit feature deferral. Product plans and subsystem specifications remain requirements; material discrepancies require matching evidence; minor residual differences may be documented under the approved release contract with their impact and evidence. Merely moving an item into a backlog does not close it.
 
 A gate is **open** until its required evidence applies to the release candidate. Historical checks below are reusable evidence, not blanket acceptance of the current build. There is no completion percentage. Retained review packages use runtime commit `95e5365`; subsequent runtime fixes, current checks and frozen archive identities are recorded separately below and in the session checkpoint.

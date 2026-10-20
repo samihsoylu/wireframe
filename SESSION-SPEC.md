@@ -6,6 +6,10 @@ Deliver a usable local Rust desktop wireframing app for macOS, Windows and Linux
 
 Single Engineer, no delegation or independent review claimed. Windows native testing is held and unverified. Existing-format project import is deferred. GPL-3.0-only has been present since first commit `87f11c1`. External research, reference names/source/artwork and fixtures stay outside product Git. Preserve user files, recovery owners and pending action-time permissions.
 
+**Asset permission rule — 21 October 2026:** every bundled asset must have a documented source and permission covering its intended use and redistribution, with required notices preserved. Unresolved permission blocks inclusion/release. Apply this to third-party and dependency assets as well as generated artwork; see [asset inventory and acceptance rule](docs/ASSET-LICENSING.md).
+
+**Current execution:** the broader divider/drag goal is active. The current measured reference-divider drag produced no movement; exact hit behavior remains unverified, so further coordinate retries are stopped pending event-route evidence. Off-center drop and supported modifier comparisons remain open. V01–V05 appearance repairs below are still open; the provenance check does not close them. Windows stays held.
+
 ## Public product and release requirements — 19 October 2026
 
 - Product history and release tooling are published to `git@github.com:samihsoylu/wireframe.git` on `main`, following explicit authorization. Public documentation leads with the user’s task, installation and limitations. Technical records remain separate.

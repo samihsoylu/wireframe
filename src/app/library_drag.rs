@@ -1057,6 +1057,109 @@ mod tests {
         assert_eq!(icon_preview_scale(press.preview.bounds), 46. / 24.);
         assert_eq!((press.preview.bounds.w, press.preview.bounds.h), (24., 24.));
     }
+
+    #[test]
+    fn off_center_library_drops_keep_viewport_and_nested_group_coordinates() {
+        // Expected anchors are in preview points, independently of canvas zoom:
+        // a 48-point circle fitted into 46 points, versus a 46-point icon
+        // normalized across the complete 68-by-46 provider.
+        for (item, anchor) in [
+            (
+                CatalogItem::Control(Kind::CircleButton),
+                Vec2::new(13. * 48. / 46., 16. * 48. / 46.),
+            ),
+            (
+                CatalogItem::Icon("star-regular"),
+                Vec2::new(24. * 46. / 68., 16.),
+            ),
+        ] {
+            for zoom in [0.5, 1., 2.] {
+                for nested in [false, true] {
+                    for edge in [false, true] {
+                        let ctx = egui::Context::default();
+                        let mut app = WireframeApp::workspace(&ctx, None);
+                        if nested {
+                            app.editor.add(Kind::Button, 100., 120.);
+                            app.editor.add(Kind::Button, 220., 180.);
+                            app.editor.select_all();
+                            app.editor.group();
+                            let inner = *app.editor.selection.iter().next().unwrap();
+                            app.editor.add(Kind::Button, 40., 60.);
+                            app.editor.select_all();
+                            app.editor.group();
+                            let outer = *app.editor.selection.iter().next().unwrap();
+                            assert!(app.editor.enter(outer));
+                            assert!(app.editor.enter(inner));
+                        }
+                        app.zoom = zoom;
+                        app.pan = Vec2::new(13., -17.);
+                        let before = app.editor.document.clone();
+                        let count = app.editor.nodes().len();
+                        let (tile, _) = frame_item(&ctx, &mut app, vec![], true, None, item);
+                        let press = tile.min + Vec2::new(17., 11.);
+                        frame_item(
+                            &ctx,
+                            &mut app,
+                            vec![egui::Event::PointerMoved(press), pointer(press, true)],
+                            true,
+                            None,
+                            item,
+                        );
+                        frame_item(
+                            &ctx,
+                            &mut app,
+                            vec![egui::Event::PointerMoved(tile.min + Vec2::new(24., 16.))],
+                            true,
+                            None,
+                            item,
+                        );
+                        assert_eq!(app.library_drag, Some(item));
+                        assert_eq!(app.editor.document, before);
+                        let target = if edge {
+                            app.canvas_rect.min + Vec2::splat(3.)
+                        } else {
+                            app.canvas_rect.min
+                                + Vec2::new(13., -17.)
+                                + Vec2::new(220., 210.) * zoom
+                        };
+                        frame_item(
+                            &ctx,
+                            &mut app,
+                            vec![egui::Event::PointerMoved(target), pointer(target, false)],
+                            true,
+                            None,
+                            item,
+                        );
+                        let root = if edge {
+                            Vec2::new(-13. / zoom, 17. / zoom)
+                        } else {
+                            Vec2::new(220., 210.) - anchor / zoom
+                        };
+                        let expected = root
+                            - if nested {
+                                Vec2::new(100., 120.)
+                            } else {
+                                Vec2::ZERO
+                            };
+                        assert_eq!(app.editor.nodes().len(), count + 1);
+                        let inserted = app.editor.nodes().last().unwrap().origin;
+                        assert!(
+                            (Vec2::new(inserted.x, inserted.y) - expected).length() < 0.001,
+                            "{item:?}, zoom {zoom}, nested {nested}, edge {edge}: {inserted:?}, expected {expected:?}"
+                        );
+                        let placed = app.editor.document.clone();
+                        let reopened =
+                            wireframe::document::decode(&placed.encode().unwrap()).unwrap();
+                        assert_eq!(reopened, placed);
+                        app.editor.undo();
+                        assert_eq!(app.editor.document, before);
+                        app.editor.redo();
+                        assert_eq!(app.editor.document, placed);
+                    }
+                }
+            }
+        }
+    }
     fn component_app(ctx: &egui::Context) -> (WireframeApp, CatalogItem) {
         let mut app = WireframeApp::workspace(ctx, None);
         app.editor.add(Kind::CircleButton, 0., 0.);

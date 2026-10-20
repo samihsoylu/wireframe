@@ -8,7 +8,9 @@ Single Engineer, no delegation or independent review claimed. Windows native tes
 
 **Asset permission rule — 21 October 2026:** every bundled asset must have a documented source and permission covering its intended use and redistribution, with required notices preserved. Unresolved permission blocks inclusion/release. Apply this to third-party and dependency assets as well as generated artwork; see [asset inventory and acceptance rule](docs/ASSET-LICENSING.md).
 
-**Current execution:** the broader divider/drag goal is active. The current measured reference-divider drag produced no movement; exact hit behavior remains unverified, so further coordinate retries are stopped pending event-route evidence. Off-center drop and supported modifier comparisons remain open. V01–V05 appearance repairs below are still open; the provenance check does not close them. Windows stays held.
+**Current execution:** the broader divider/drag goal is active. The user has demonstrated physical reference-divider resizing; the released lower-pane height was saved as 400 points. Restart samples changed window size/density and stored height (400→348→344), so they do not establish exact restoration under fixed geometry. Synthetic reference gestures remain unaccepted; further unchanged retries are stopped. A platform harness records a five-point thin-divider effective rectangle, separately from reference hit-area acceptance.
+
+One new automated test passes **24 off-center drop cases** across normal/icon entries, 50/100/200% zoom, root/nested groups, edge clamping, project encoding/decoding and exact Undo/Redo. Its expected coordinates are independent of the application's world/anchor helpers. Warnings-denied macOS binary/test lint and formatting pass. Runtime code is unchanged. Reference off-center drops, modifier gestures and fixed-geometry persistence/hit-area comparison remain open. V01–V05 appearance repairs below are still open. Windows stays held.
 
 ## Public product and release requirements — 19 October 2026
 

@@ -9,6 +9,7 @@ Current checkpoint: 20 October 2026, catalog correction and default appearance c
 - [ ] **Q3 — Android Alert tile:** close the specific insertion/recipe/save/Undo gap.
 - [ ] **Q4 — Remaining control variants:** reconcile later evidence for Dropdown icons/scrollbars, Date picker destinations and brace links before scheduling new checks.
 - [ ] **Q5 — Divider and dragging:** establish the remaining hit-area/persistence/off-center placement behavior without repeating the accepted smooth-preview check.
+  Physical reference-divider resizing is now demonstrated by the user, with a released 400-point value observed in preferences. Restart captures changed window geometry/density, so exact restoration remains open. A new automated test covers 24 normal/icon off-center drops through zoom, pan, nested groups and edge clamping, with file round-trip and Undo/Redo. These checks do not replace native reference off-center or modified-gesture acceptance.
 - [ ] **Q6 — Four workflows:** refresh only affected routes, then verify one current landing/contact/phone/tablet workflow candidate.
 - [ ] **Q7 — Release requirements:** classify every remaining requirement as evidenced, open or explicitly deferred; keep material discrepancies open.
 - [ ] **Q8 — Delivery:** refresh macOS/Linux packages and remaining installer/update checks after behavior/appearance closure.

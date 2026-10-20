@@ -2,6 +2,9 @@
 
 ## 0.1.0 — Unreleased
 
+- Find controls under consistent library names and alphabetical order, while keeping older Quick Add search terms.
+- Use a narrower 920-point editing window.
+
 - Create local wireframes using 86 controls in sketch or clean styles.
 - Edit, arrange, group and reuse controls with Undo and Redo.
 - Turn Labels and Text Inputs into multiline controls with Command/Ctrl-Return or Option/Alt-Return, keeping separate Undo steps.

@@ -6,7 +6,7 @@ use super::*;
 fn library_keeps_canvas_origin_fixed_for_empty_and_overflowing_categories() {
     let ctx = egui::Context::default();
     let mut app = WireframeApp::workspace(&ctx, None);
-    for width in [940., 1360., 1920.] {
+    for width in [920., 940., 1360., 1920.] {
         for category in [CatalogCategory::All, CatalogCategory::Assets] {
             app.categories = vec![category];
             let mut height = 0.;

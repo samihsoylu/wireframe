@@ -17,7 +17,7 @@ fn main() -> eframe::Result {
                 rgba: icon.into_raw(),
             })
             .with_inner_size([1360., 900.])
-            .with_min_inner_size([940., 620.])
+            .with_min_inner_size([920., 620.])
             .with_app_id("local.wireframe.desktop"),
         ..Default::default()
     };

@@ -61,6 +61,18 @@ impl CatalogPreset {
             Self::IosPointedButton => "Pointed button (iOS)",
         }
     }
+    pub fn catalog_name(self) -> &'static str {
+        match self {
+            Self::AndroidAlert => "Alert Box (Android)",
+            Self::AndroidHorizontalSlider => "H.Slider (Android)",
+            Self::IconList => "List with Icons",
+            Self::AndroidProgress => "Progress Bar (Android)",
+            Self::AndroidSearch => "Search Box (Android)",
+            Self::AndroidTextInput => "Text Input (Android)",
+            Self::AndroidVerticalSlider => "V.Slider (Android)",
+            Self::IosPointedButton => "Pointy Button (iOS)",
+        }
+    }
     pub(super) fn apply(self, node: &mut Node) {
         let p = &mut node.properties;
         let choice = |s: &str| Value::Choice(s.into());

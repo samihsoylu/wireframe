@@ -152,7 +152,21 @@ fn search_preserves_builtin_alias_matches_and_excludes_disabled_components() {
                 _ => None,
             })
             .collect();
-        assert_eq!(actual, expected, "{query}");
+        // Display labels can introduce valid new matches, while established
+        // alias results must retain their membership and relative ranking.
+        let retained: Vec<_> = actual
+            .iter()
+            .copied()
+            .filter(|kind| expected.contains(kind))
+            .collect();
+        assert_eq!(retained, expected, "{query}");
+        for kind in actual.iter().filter(|kind| !expected.contains(kind)) {
+            let display = kind.catalog_name().to_lowercase();
+            assert!(
+                query.split_whitespace().all(|word| display.contains(word)),
+                "{query}: {kind:?}"
+            );
+        }
     }
     e.edit_library_source(10).unwrap();
     assert!(

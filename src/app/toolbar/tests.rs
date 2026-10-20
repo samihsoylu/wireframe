@@ -244,7 +244,7 @@ fn toolbar_actions_do_not_overlap_at_supported_widths() {
         "Inspector",
         "Present",
     ];
-    for width in [860., 940., 1360., 1920.] {
+    for width in [860., 920., 940., 1360., 1920.] {
         let nodes = frame(&mut app, &ctx, width, vec![]);
         for (i, name) in names.iter().enumerate() {
             let a = nodes[*name];
@@ -268,7 +268,7 @@ fn toolbar_actions_do_not_overlap_at_supported_widths() {
 
 #[test]
 fn action_groups_keep_compact_frames_and_measured_spacing() {
-    for width in [860., 940., 1360., 1920.] {
+    for width in [860., 920., 940., 1360., 1920.] {
         for trash in [false, true] {
             let (ctx, mut app) = setup();
             if trash {
@@ -335,7 +335,7 @@ fn source_navigation_uses_the_main_action_row_without_overlap() {
         )
         .unwrap();
     app.editor.trash_pages(&[1]).unwrap();
-    for width in [860., 940., 1360., 1920.] {
+    for width in [860., 920., 940., 1360., 1920.] {
         for source_selected in [false, true] {
             if source_selected {
                 app.editor.edit_library_source(source).unwrap();

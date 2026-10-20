@@ -356,12 +356,12 @@ impl Editor {
             .into_iter()
             .map(|kind| CatalogEntry {
                 item: CatalogItem::Control(kind),
-                name: kind.name().into(),
+                name: kind.catalog_name().into(),
                 enabled: structure_allowed,
             })
             .chain(CatalogPreset::ALL.into_iter().map(|preset| CatalogEntry {
                 item: CatalogItem::Preset(preset),
-                name: preset.name().into(),
+                name: preset.catalog_name().into(),
                 enabled: structure_allowed,
             }))
             .chain(self.document.live_assets().filter_map(|asset| {
@@ -487,15 +487,30 @@ impl Editor {
                         {
                             return None;
                         }
-                        catalog::search_rank(spec, &query)?
+                        let display_rank = if query.is_empty() || name == query {
+                            Some(0)
+                        } else if name.starts_with(&query) {
+                            Some(2)
+                        } else if words.iter().all(|word| name.contains(word)) {
+                            Some(3)
+                        } else {
+                            None
+                        };
+                        // Keep established alias ranking for existing queries.
+                        catalog::search_rank(spec, &query).or(display_rank)?
                     }
                     CatalogItem::Preset(preset) => {
                         let spec = catalog::get(preset.kind().catalog_id())?;
-                        let searchable =
-                            format!("{} {}", name, spec.aliases.join(" ").to_lowercase());
-                        if query.is_empty() || name == query {
+                        let legacy_name = preset.name().to_lowercase();
+                        let searchable = format!(
+                            "{} {} {}",
+                            name,
+                            legacy_name,
+                            spec.aliases.join(" ").to_lowercase()
+                        );
+                        if query.is_empty() || name == query || legacy_name == query {
                             0
-                        } else if name.starts_with(&query) {
+                        } else if name.starts_with(&query) || legacy_name.starts_with(&query) {
                             2
                         } else if words.iter().all(|word| searchable.contains(word)) {
                             3
@@ -530,10 +545,10 @@ impl Editor {
                 };
                 let sort_name = match entry.item {
                     CatalogItem::Control(kind) => catalog::get(kind.catalog_id())?.name.to_owned(),
-                    CatalogItem::Preset(_)
-                    | CatalogItem::Component(_)
-                    | CatalogItem::Asset(_)
-                    | CatalogItem::Icon(_) => entry.name.clone(),
+                    CatalogItem::Preset(preset) => preset.name().to_owned(),
+                    CatalogItem::Component(_) | CatalogItem::Asset(_) | CatalogItem::Icon(_) => {
+                        entry.name.clone()
+                    }
                 };
                 Some((rank, sort_name, entry))
             })

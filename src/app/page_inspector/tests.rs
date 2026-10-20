@@ -502,6 +502,75 @@ fn alternate_panel_preferences_reopen_per_project_and_survive_transient_reset() 
 }
 
 #[test]
+fn alternate_divider_has_a_five_point_hit_area_and_restores_the_surrounding_style() {
+    for radius in [3., 7.] {
+        let (ctx, mut app) = setup();
+        let key = app.version_preferences_key();
+        let id = egui::Id::new(("page-alternates-panel", &key, 200_u16));
+        for _ in 0..3 {
+            ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(800., 800.))),
+                    ..Default::default()
+                },
+                |ui| {
+                    ui.style_mut().interaction.resize_grab_radius_side = radius;
+                    app.alternate_panel(ui);
+                    assert_eq!(ui.style().interaction.resize_grab_radius_side, radius);
+                    let handle = ui.read_response(id.with("__resize")).unwrap();
+                    assert_eq!(handle.rect.height(), 5.);
+                },
+            )
+            .drop_without_applying_deltas();
+        }
+    }
+}
+
+#[test]
+fn alternate_divider_accepts_inside_grabs_and_ignores_adjacent_notes_and_heading_drags() {
+    for offset in [-3., -2., 2., 3.] {
+        let (ctx, mut app) = setup();
+        app.file = Some(std::path::PathBuf::from("divider-hit-area.wireframe"));
+        let original = app.editor.document.clone();
+        let key = app.version_preferences_key();
+        let id = egui::Id::new(("page-alternates-panel", &key, 200_u16));
+        for _ in 0..3 {
+            frame(&mut app, &ctx, vec![]);
+        }
+        let rect = egui::containers::panel::PanelState::load(&ctx, id)
+            .unwrap()
+            .outer_rect;
+        let start = egui::pos2(rect.center().x, rect.min.y + offset);
+        let end = start - Vec2::new(0., 40.);
+        let button = |pos, pressed| egui::Event::PointerButton {
+            pos,
+            pressed,
+            button: egui::PointerButton::Primary,
+            modifiers: Modifiers::NONE,
+        };
+        frame(
+            &mut app,
+            &ctx,
+            vec![
+                egui::Event::PointerMoved(start),
+                button(start, true),
+                egui::Event::PointerMoved(end),
+                button(end, false),
+            ],
+        );
+        let height = app.page_inspector.preferences.get(key.as_deref());
+        assert_eq!(
+            height != 200,
+            offset.abs() < 2.5,
+            "offset {offset}, height {height}"
+        );
+        assert_eq!(app.editor.document, original);
+        assert!(app.editor.undo_name().is_none());
+        assert!(!app.notes_editing());
+    }
+}
+
+#[test]
 fn visible_alternate_divider_double_click_preserves_size_preferences_and_history() {
     let dir = tempfile::tempdir().unwrap();
     let (ctx, mut app) = setup();

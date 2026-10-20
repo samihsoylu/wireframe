@@ -1,6 +1,6 @@
 # Finishing checklist
 
-Current checkpoint: 20 October 2026, catalog correction and default appearance comparison. Unchanged behavior evidence retains its named runtime baseline. This is the short work queue; [the release contract](RELEASE-CHECKLIST.md) retains the full requirements. Windows native testing is on hold. A recorded check applies to its named candidate and behavior, not every possible variant.
+Current checkpoint: 21 October 2026, bounded divider correction; catalog appearance fixes remain open. Unchanged behavior evidence retains its named runtime baseline. This is the short work queue; [the release contract](RELEASE-CHECKLIST.md) retains the full requirements. Windows native testing is on hold. A recorded check applies to its named candidate and behavior, not every possible variant.
 
 ## Immediate priorities
 
@@ -9,7 +9,7 @@ Current checkpoint: 20 October 2026, catalog correction and default appearance c
 - [ ] **Q3 — Android Alert tile:** close the specific insertion/recipe/save/Undo gap.
 - [ ] **Q4 — Remaining control variants:** reconcile later evidence for Dropdown icons/scrollbars, Date picker destinations and brace links before scheduling new checks.
 - [ ] **Q5 — Divider and dragging:** establish the remaining hit-area/persistence/off-center placement behavior without repeating the accepted smooth-preview check.
-  Physical divider resizing is demonstrated by the user; native accessibility checks confirm 130–400-point clamping and saved limits. Same-process/fixed-geometry reopening changes 400→344 and then remains stable; native window resizing also changes the saved height. Reconcile these sizing differences before claiming parity. Automated checks cover 24 normal/icon off-center drops through zoom, pan, nested groups and edge clamping, file round-trip/Undo/Redo, plus visible-divider double-click preservation. These checks do not replace native off-center, hit-area or modified-gesture acceptance.
+  Physical divider resizing is demonstrated by the user; native accessibility checks confirm 130–400-point clamping and saved limits. Same-process/fixed-geometry reopening changes 400→344 and then remains stable; native window resizing also changes the saved height. Reconcile these sizing differences before claiming parity. The product's internal grab area is corrected from six to five points, with 17 affected inspector checks and native ±2-point accepted/±3-point ignored grabs; other panel targets and drawing history are preserved. Physical reference-edge acceptance remains open. Automated checks cover 24 normal/icon off-center drops through zoom, pan, nested groups and edge clamping, file round-trip/Undo/Redo, plus visible-divider double-click preservation. These checks do not replace native off-center or modified-gesture acceptance.
 - [ ] **Q6 — Four workflows:** refresh only affected routes, then verify one current landing/contact/phone/tablet workflow candidate.
 - [ ] **Q7 — Release requirements:** classify every remaining requirement as evidenced, open or explicitly deferred; keep material discrepancies open.
 - [ ] **Q8 — Delivery:** refresh macOS/Linux packages and remaining installer/update checks after behavior/appearance closure.

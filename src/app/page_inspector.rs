@@ -61,6 +61,10 @@ impl WireframeApp {
             range.clone(),
             !self.canvas_input_blocked(),
         );
+        // The internal separator has a five-point grab area. Keep the
+        // surrounding panels' resize targets independent of this one.
+        let surrounding_radius = ui.style().interaction.resize_grab_radius_side;
+        ui.style_mut().interaction.resize_grab_radius_side = 2.5;
         let panel = egui::Panel::bottom(id)
             .default_size((height as f32).min(maximum))
             .resizable(true)
@@ -72,6 +76,7 @@ impl WireframeApp {
                     .auto_shrink([false, false])
                     .show(ui, |ui| self.versions_panel(ui));
             });
+        ui.style_mut().interaction.resize_grab_radius_side = surrounding_radius;
         let released = ui
             .read_response(id.with("__resize"))
             .is_some_and(|response| response.drag_stopped());

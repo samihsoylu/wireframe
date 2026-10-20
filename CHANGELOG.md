@@ -4,6 +4,8 @@
 
 - Create local wireframes using 86 controls in sketch or clean styles.
 - Edit, arrange, group and reuse controls with Undo and Redo.
+- Turn Labels and Text Inputs into multiline controls with Command/Ctrl-Return or Option/Alt-Return, keeping separate Undo steps.
+- Accept single-line canvas text with Tab and insert tabs while editing multiline text.
 - Organize pages, alternate versions, notes and review comments.
 - Resize the notes and alternate-version panes, with sizes remembered for each project.
 - Format notes with styled text, colors, sizes and inline icons while keeping the original text editable.

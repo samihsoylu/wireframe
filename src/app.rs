@@ -6,6 +6,7 @@ mod arrangement;
 mod arrows;
 #[cfg(test)]
 mod canvas_action_tests;
+mod canvas_click;
 mod canvas_scroll;
 mod chrome;
 mod clipboard;
@@ -178,6 +179,7 @@ pub struct WireframeApp {
     library_anchor: Vec2,
     alignment_guides: Vec<snapping::Guide>,
     canvas_press: Option<Pos2>,
+    canvas_clicks: canvas_click::CanvasClicks,
     unlock_press: Option<selection::UnlockPress>,
     grid: bool,
     snap: bool,
@@ -233,6 +235,7 @@ impl WireframeApp {
         self.library_press = None;
         self.source_navigation.drag = None;
         self.canvas_press = None;
+        self.canvas_clicks = canvas_click::CanvasClicks::default();
         if let Some(press) = &mut self.unlock_press {
             press.cancelled = true;
         }
@@ -361,6 +364,7 @@ impl WireframeApp {
             library_anchor: Vec2::ZERO,
             alignment_guides: Vec::new(),
             canvas_press: None,
+            canvas_clicks: canvas_click::CanvasClicks::default(),
             unlock_press: None,
             grid: false,
             snap: false,
@@ -1644,12 +1648,17 @@ if ui.add_enabled(movable, egui::Button::new("Delete")).clicked(){self.editor.de
                         self.drag_scroll = None;
                         self.alignment_guides.clear();
                     }
-                    let arrow_handle = pointer.and_then(|pos| {
-                        self.arrow_handles()
-                            .into_iter()
-                            .find(|h| h.position.distance(pos) < 7.)
-                    });
-                    if response.double_clicked()
+                    let double_click = self.canvas_double_click(ui, &response);
+                    let arrow_handle =
+                        double_click
+                            .map(|(pos, _)| pos)
+                            .or(pointer)
+                            .and_then(|pos| {
+                                self.arrow_handles()
+                                    .into_iter()
+                                    .find(|h| h.position.distance(pos) < 7.)
+                            });
+                    if double_click.is_some()
                         && let Some(handle) = arrow_handle
                             .as_ref()
                             .filter(|h| h.kind == wireframe::arrows::Handle::Middle)
@@ -1729,41 +1738,22 @@ if ui.add_enabled(movable, egui::Button::new("Delete")).clicked(){self.editor.de
                             self.editor.selection.clear();
                         }
                     }
-                    let exit_group = response.double_clicked()
-                        && !self.present
+                    let exit_group = !self.present
                         && !self.editor.context.is_empty()
-                        && response.interact_pointer_pos().is_some_and(|pointer| {
+                        && double_click.is_some_and(|(pointer, _)| {
                             let point = self.world(pointer);
                             self.editor.hit(point.x, point.y).is_none()
                         });
-                    if response.double_clicked()
+                    if let Some((pointer, modifiers)) = double_click
                         && arrow_handle.is_none()
                         && !self.present
-                        && let Some(pointer) = response.interact_pointer_pos()
                         && let point = self.world(pointer)
                         && let Some(c) = self.editor.hit(point.x, point.y)
                         && self.editor.selection.contains(&c.id)
                         && !self.editor.enter(c.id)
                         && c.group.is_none()
                     {
-                        let command = ctx.input(|i| {
-                            i.events
-                                .iter()
-                                .rev()
-                                .find_map(|event| {
-                                    if let egui::Event::PointerButton {
-                                        button: egui::PointerButton::Primary,
-                                        modifiers,
-                                        ..
-                                    } = event
-                                    {
-                                        Some(modifiers.command)
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .unwrap_or(i.modifiers.command)
-                        });
+                        let command = modifiers.command;
                         if matches!(c.kind, Kind::Image | Kind::CoverFlow) {
                             self.image_source_request = Some(c.id);
                             ctx.request_repaint();

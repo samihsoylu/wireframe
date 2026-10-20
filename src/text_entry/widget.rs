@@ -136,6 +136,7 @@ pub struct TextInput<'a> {
     autofocus: bool,
     select_all_on_open: bool,
     submit_on_command_enter: bool,
+    capture_tab: bool,
     width: Option<f32>,
     id: Option<Id>,
     hint: &'a str,
@@ -149,6 +150,7 @@ impl<'a> TextInput<'a> {
             autofocus: false,
             select_all_on_open: false,
             submit_on_command_enter: false,
+            capture_tab: false,
             width: None,
             id: None,
             hint: "",
@@ -181,6 +183,12 @@ impl<'a> TextInput<'a> {
     /// Leave the command-Enter event for the enclosing form to submit.
     pub fn submit_on_command_enter(mut self, submit: bool) -> Self {
         self.submit_on_command_enter = submit;
+        self
+    }
+    /// Own Tab instead of navigating to another field. Multiline fields insert
+    /// a tab; single-line fields leave it for the enclosing form to accept.
+    pub fn capture_tab(mut self, insert: bool) -> Self {
+        self.capture_tab = insert;
         self
     }
     pub fn id_salt(mut self, salt: impl std::hash::Hash + std::fmt::Debug) -> Self {
@@ -238,7 +246,7 @@ pub fn multiline(ui: &mut Ui, value: &mut String, rows: usize, autofocus: bool) 
 // events. Route the text on either side of a pointer/Tab boundary separately,
 // so the old field keeps its final characters and the new field gets only the
 // input following the focus change. This also works in either widget order.
-fn editing_events(ui: &Ui, response: &Response) -> Vec<(usize, Event)> {
+fn editing_events(ui: &Ui, response: &Response, capture_tab: bool) -> Vec<(usize, Event)> {
     let had_focus = ui.memory(|m| m.had_focus_last_frame(response.id));
     let has_focus = response.has_focus();
     if !ui.is_enabled() || (!had_focus && !has_focus) {
@@ -261,12 +269,16 @@ fn editing_events(ui: &Ui, response: &Response) -> Vec<(usize, Event)> {
                 pressed: true,
                 button: egui::PointerButton::Primary,
                 ..
-            } | Event::Key {
-                key: Key::Tab,
-                pressed: true,
-                ..
             }
-        )
+        ) || (!capture_tab
+            && matches!(
+                event,
+                Event::Key {
+                    key: Key::Tab,
+                    pressed: true,
+                    ..
+                }
+            ))
     });
     let mut active = had_focus || (has_focus && !boundary);
     events
@@ -286,7 +298,7 @@ fn editing_events(ui: &Ui, response: &Response) -> Vec<(usize, Event)> {
                 key: Key::Tab,
                 pressed: true,
                 ..
-            } => {
+            } if !capture_tab => {
                 active = has_focus && !had_focus;
                 false
             }
@@ -307,6 +319,7 @@ fn input(ui: &mut Ui, options: TextInput<'_>) -> Response {
         autofocus,
         select_all_on_open,
         submit_on_command_enter,
+        capture_tab,
         width,
         id,
         hint,
@@ -423,7 +436,7 @@ fn input(ui: &mut Ui, options: TextInput<'_>) -> Response {
             state.scroll.x -= delta.x + delta.y;
         }
     }
-    let events = editing_events(ui, &response);
+    let events = editing_events(ui, &response, capture_tab);
     if response.has_focus() && ui.is_enabled() {
         ui.memory_mut(|m| {
             m.set_focus_lock_filter(
@@ -431,7 +444,7 @@ fn input(ui: &mut Ui, options: TextInput<'_>) -> Response {
                 egui::EventFilter {
                     horizontal_arrows: true,
                     vertical_arrows: true,
-                    tab: false,
+                    tab: capture_tab,
                     escape: true,
                 },
             )
@@ -472,6 +485,19 @@ fn input(ui: &mut Ui, options: TextInput<'_>) -> Response {
                 }
                 Event::Ime(event) => {
                     ime(&mut state, &event);
+                    true
+                }
+                Event::Key {
+                    key: Key::Tab,
+                    pressed: true,
+                    modifiers,
+                    ..
+                } if capture_tab
+                    && multiline
+                    && state.composition.is_none()
+                    && modifiers.matches_logically(egui::Modifiers::NONE) =>
+                {
+                    state.draft.insert("\t");
                     true
                 }
                 Event::Key {

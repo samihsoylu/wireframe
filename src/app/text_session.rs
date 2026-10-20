@@ -14,6 +14,7 @@ pub(super) struct TextEditView {
     position: Pos2,
     width: f32,
     multiline: bool,
+    select_all: bool,
     last_frame: Option<u64>,
     field_id: Option<egui::Id>,
     menu_active: bool,
@@ -53,8 +54,10 @@ impl WireframeApp {
             return false;
         }
         (key == Key::Escape && modifiers.matches_logically(Modifiers::NONE))
+            || (!view.multiline && key == Key::Tab && modifiers.matches_logically(Modifiers::NONE))
             || (key == Key::Enter
                 && (modifiers.matches_logically(Modifiers::COMMAND)
+                    || (!view.multiline && modifiers.matches_logically(Modifiers::ALT))
                     || (!view.multiline && modifiers.matches_logically(Modifiers::NONE))))
     }
 
@@ -122,6 +125,7 @@ impl WireframeApp {
             position: self.screen([control.bounds.x, control.bounds.y]),
             width: 750.,
             multiline: control.kind.multiline_text(),
+            select_all: true,
             last_frame: None,
             field_id: None,
             menu_active: false,
@@ -181,6 +185,7 @@ impl WireframeApp {
         );
         let before = value.clone();
         let mut submit = false;
+        let mut transform = false;
         let mut cancel = false;
         let popup = egui::Area::new(egui::Id::new("canvas-text-session"))
             .order(egui::Order::Foreground)
@@ -199,8 +204,9 @@ impl WireframeApp {
                             .id_salt("canvas-text-session-field")
                             .desired_width(f32::INFINITY)
                             .autofocus(true)
-                            .select_all_on_open(true)
-                            .submit_on_command_enter(true),
+                            .select_all_on_open(view.select_all)
+                            .submit_on_command_enter(true)
+                            .capture_tab(true),
                     );
                     view.field_id = Some(response.id);
                     if returning_from_menu {
@@ -212,8 +218,13 @@ impl WireframeApp {
                     submit = !menu_active
                         && (response.has_focus() || response.lost_focus())
                         && ui.input_mut(|i| {
-                            i.consume_key(Modifiers::COMMAND, Key::Enter)
-                                || (!view.multiline && i.consume_key(Modifiers::NONE, Key::Enter))
+                            let modified = i.consume_key(Modifiers::COMMAND, Key::Enter)
+                                || (!view.multiline && i.consume_key(Modifiers::ALT, Key::Enter));
+                            transform = !view.multiline && modified;
+                            modified
+                                || (!view.multiline
+                                    && (i.consume_key(Modifiers::NONE, Key::Enter)
+                                        || i.consume_key(Modifiers::NONE, Key::Tab)))
                         });
                     cancel = !menu_active
                         && ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape));
@@ -249,11 +260,37 @@ impl WireframeApp {
                     _ => false,
                 });
         if cancel || submit || outside {
+            if transform && !self.editor.can_transform_text(id) {
+                wireframe::text_entry::restore_focus(ctx, view.field_id.unwrap());
+                self.text_edit = Some((id, value));
+                self.text_edit_view = Some(view);
+                ctx.request_repaint();
+                return;
+            }
             if !cancel {
                 self.accept_text_draft(id, &value);
             }
             if let Some(id) = view.field_id {
                 wireframe::text_entry::forget(ctx, id);
+            }
+            if transform {
+                match self.editor.transform_text_control(id) {
+                    Ok(Some(new_id)) => {
+                        let quick = self.text_edit_return_to_quick;
+                        self.begin_text_edit(new_id);
+                        self.text_edit_return_to_quick = quick;
+                        if let Some((_, text)) = &mut self.text_edit {
+                            text.push('\n');
+                        }
+                        if let Some(view) = &mut self.text_edit_view {
+                            view.select_all = false;
+                        }
+                        ctx.request_repaint();
+                        return;
+                    }
+                    Ok(None) => {}
+                    Err(error) => self.editor.error = Some(error),
+                }
             }
             let quick = std::mem::take(&mut self.text_edit_return_to_quick);
             if !outside {
@@ -1325,5 +1362,230 @@ mod tests {
         assert!(app.text_edit.is_none());
         assert!(app.text_edit_view.is_none());
         assert_eq!(app.editor.document, original);
+    }
+    fn press(key: Key, modifiers: Modifiers) -> egui::Event {
+        egui::Event::Key {
+            key,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers,
+        }
+    }
+
+    #[test]
+    fn single_line_conversion_preserves_position_and_separate_text_history() {
+        for (kind, target, width, height) in [
+            (Kind::Label, Kind::Paragraph, 275., 80.),
+            (Kind::TextInput, Kind::TextArea, 200., 140.),
+        ] {
+            for modifiers in [Modifiers::COMMAND, Modifiers::ALT] {
+                for cancel in [true, false] {
+                    let ctx = egui::Context::default();
+                    let mut app = WireframeApp::workspace(&ctx, None);
+                    app.editor.add(kind, 400., 300.);
+                    let old_id = *app.editor.selection.iter().next().unwrap();
+                    let original = app.editor.document.clone();
+                    app.begin_text_edit(old_id);
+                    for _ in 0..3 {
+                        frame(&ctx, &mut app, vec![]);
+                    }
+                    frame(
+                        &ctx,
+                        &mut app,
+                        vec![egui::Event::Paste("Draft café".into())],
+                    );
+                    assert_eq!(app.editor.document, original);
+                    frame(&ctx, &mut app, vec![press(Key::Enter, modifiers)]);
+                    let converted = app.editor.document.clone();
+                    let view = app.editor.selected_views()[0].clone();
+                    assert_eq!(view.kind, target);
+                    assert_ne!(view.id, old_id);
+                    assert_eq!(view.bounds, Bounds::new(400., 300., width, height));
+                    assert_eq!(view.text, "Draft café");
+                    assert_eq!(app.text_edit.as_ref().unwrap().1, "Draft café\n");
+                    for _ in 0..3 {
+                        frame(&ctx, &mut app, vec![]);
+                    }
+                    frame(&ctx, &mut app, vec![egui::Event::Text("Tail".into())]);
+                    assert_eq!(app.text_edit.as_ref().unwrap().1, "Draft café\nTail");
+                    frame(
+                        &ctx,
+                        &mut app,
+                        vec![press(
+                            if cancel { Key::Escape } else { Key::Enter },
+                            if cancel {
+                                Modifiers::NONE
+                            } else {
+                                Modifiers::COMMAND
+                            },
+                        )],
+                    );
+                    assert!(app.text_edit.is_none());
+                    if cancel {
+                        assert_eq!(app.editor.document, converted);
+                    } else {
+                        assert_eq!(app.editor.selected_views()[0].text, "Draft café\nTail");
+                        app.editor.undo();
+                        assert_eq!(app.editor.document, converted);
+                    }
+                    app.editor.undo();
+                    assert_eq!(app.editor.selected_views()[0].id, old_id);
+                    assert_eq!(app.editor.selected_views()[0].kind, kind);
+                    assert_eq!(app.editor.selected_views()[0].text, "Draft café");
+                    app.editor.undo();
+                    assert_eq!(app.editor.document, original);
+                    app.editor.redo();
+                    app.editor.redo();
+                    assert_eq!(app.editor.document, converted);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn single_line_tab_and_modified_return_accept_nonconvertible_text() {
+        for (key, modifiers) in [
+            (Key::Tab, Modifiers::NONE),
+            (Key::Enter, Modifiers::ALT),
+            (Key::Enter, Modifiers::COMMAND),
+        ] {
+            let ctx = egui::Context::default();
+            let mut app = WireframeApp::workspace(&ctx, None);
+            app.editor.add(Kind::Button, 200., 150.);
+            let id = *app.editor.selection.iter().next().unwrap();
+            let original = app.editor.document.clone();
+            app.begin_text_edit(id);
+            for _ in 0..3 {
+                frame(&ctx, &mut app, vec![]);
+            }
+            frame(&ctx, &mut app, vec![egui::Event::Paste("Accepted".into())]);
+            frame(&ctx, &mut app, vec![press(key, modifiers)]);
+            assert!(app.text_edit.is_none(), "{key:?} {modifiers:?}");
+            assert_eq!(app.editor.selected_views()[0].text, "Accepted");
+            assert_eq!(app.editor.selected_views()[0].kind, Kind::Button);
+            app.editor.undo();
+            assert_eq!(app.editor.document, original);
+        }
+    }
+
+    #[test]
+    fn blocked_conversion_retains_the_provisional_draft_and_redo() {
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        app.editor.add(Kind::Label, 200., 150.);
+        let id = *app.editor.selection.iter().next().unwrap();
+        app.editor.lock(true);
+        app.editor.lock(false);
+        app.editor.undo();
+        let original = app.editor.document.clone();
+        let undo = app.editor.undo_name().map(str::to_owned);
+        let redo = app.editor.redo_name().map(str::to_owned);
+        assert!(redo.is_some());
+        app.begin_text_edit(id);
+        for _ in 0..3 {
+            frame(&ctx, &mut app, vec![]);
+        }
+        frame(
+            &ctx,
+            &mut app,
+            vec![egui::Event::Paste("Provisional".into())],
+        );
+        frame(&ctx, &mut app, vec![press(Key::Enter, Modifiers::COMMAND)]);
+        assert_eq!(app.text_edit.as_ref().unwrap().1, "Provisional");
+        assert_eq!(app.editor.document, original);
+        assert_eq!(app.editor.undo_name(), undo.as_deref());
+        frame(&ctx, &mut app, vec![press(Key::Escape, Modifiers::NONE)]);
+        assert_eq!(app.editor.document, original);
+        assert_eq!(app.editor.redo_name(), redo.as_deref());
+    }
+    #[test]
+    fn multiline_tab_inserts_text_without_leaving_the_editor() {
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        app.editor.add(Kind::TextArea, 200., 150.);
+        let id = *app.editor.selection.iter().next().unwrap();
+        let original = app.editor.document.clone();
+        app.begin_text_edit(id);
+        for _ in 0..3 {
+            frame(&ctx, &mut app, vec![]);
+        }
+        frame(
+            &ctx,
+            &mut app,
+            vec![
+                egui::Event::Text("Before".into()),
+                press(Key::Tab, Modifiers::NONE),
+                egui::Event::Text("After".into()),
+            ],
+        );
+        assert_eq!(app.text_edit.as_ref().unwrap().1, "Before\tAfter");
+        assert_eq!(app.editor.document, original);
+        frame(&ctx, &mut app, vec![press(Key::Enter, Modifiers::COMMAND)]);
+        assert_eq!(app.editor.selected_views()[0].text, "Before\tAfter");
+        app.editor.undo();
+        assert_eq!(app.editor.document, original);
+    }
+    #[test]
+    fn ordered_conversion_reopens_before_following_text_and_acceptance() {
+        for modifiers in [Modifiers::ALT, Modifiers::COMMAND] {
+            let ctx = egui::Context::default();
+            let mut app = WireframeApp::workspace(&ctx, None);
+            app.editor.add(Kind::Label, 400., 300.);
+            let id = *app.editor.selection.iter().next().unwrap();
+            app.begin_text_edit(id);
+            for _ in 0..3 {
+                application_frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+            }
+            application_frame(
+                &ctx,
+                &mut app,
+                vec![
+                    egui::Event::Paste("First".into()),
+                    press(Key::Enter, modifiers),
+                    egui::Event::Text("Second".into()),
+                    press(Key::Enter, Modifiers::COMMAND),
+                ],
+            )
+            .drop_without_applying_deltas();
+            for _ in 0..10 {
+                application_frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+            }
+            assert!(app.text_edit.is_none());
+            assert_eq!(app.editor.selected_views()[0].kind, Kind::Paragraph);
+            assert_eq!(app.editor.selected_views()[0].text, "First\nSecond");
+            app.editor.undo();
+            assert_eq!(app.editor.selected_views()[0].text, "First");
+            app.editor.undo();
+            assert_eq!(app.editor.selected_views()[0].id, id);
+            assert_eq!(app.editor.selected_views()[0].kind, Kind::Label);
+            assert_eq!(app.editor.selected_views()[0].text, "First");
+        }
+    }
+    #[test]
+    fn single_line_tab_returns_focus_to_canvas_for_following_commands() {
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        app.editor.add(Kind::Button, 200., 150.);
+        let id = *app.editor.selection.iter().next().unwrap();
+        app.begin_text_edit(id);
+        for _ in 0..3 {
+            application_frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+        }
+        application_frame(
+            &ctx,
+            &mut app,
+            vec![
+                egui::Event::Text("Tab text".into()),
+                press(Key::Tab, Modifiers::NONE),
+            ],
+        )
+        .drop_without_applying_deltas();
+        for _ in 0..4 {
+            application_frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+        }
+        assert!(app.text_edit.is_none());
+        assert_eq!(ctx.memory(|m| m.focused()), app.canvas_focus_id);
+        assert_eq!(app.editor.selected_views()[0].text, "Tab text");
     }
 }

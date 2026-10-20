@@ -3,6 +3,71 @@
 use super::*;
 use eframe::egui;
 impl Editor {
+    /// Conversion changes structure, so component instances and locked owners
+    /// keep their current draft until the user accepts or cancels it normally.
+    pub fn can_transform_text(&self, id: Id) -> bool {
+        self.selection.len() == 1
+            && self.selection.contains(&id)
+            && self.require_structure_edit().is_ok()
+            && !self.position_locked(id)
+    }
+
+    /// Replace a single-line text control with its multiline counterpart.
+    /// The caller commits the old draft first, making conversion its own Undo.
+    pub fn transform_text_control(&mut self, id: Id) -> Result<Option<Id>, String> {
+        if !self.can_transform_text(id) {
+            return Ok(None);
+        }
+        let source = self
+            .nodes()
+            .iter()
+            .find(|n| n.id == id)
+            .cloned()
+            .ok_or("Text target no longer exists")?;
+        let NodeContent::Control { kind, .. } = &source.content else {
+            return Ok(None);
+        };
+        let target = match kind.as_str() {
+            "text_input" => "text_area",
+            "label" => "paragraph",
+            _ => return Ok(None),
+        };
+        let spec = catalog::get(target).ok_or("Unknown text control")?;
+        let properties = catalog::get(kind)
+            .ok_or("Unknown text control")?
+            .effective(&source, &self.property_context())
+            .map_err(|e| e.to_string())?;
+        // Preflight ID exhaustion before opening the history operation.
+        let mut allocation = self.document.clone();
+        let new_id = allocation.allocate_id().map_err(|e| e.to_string())?;
+        let mut replacement = spec.create(new_id, source.origin);
+        replacement.markup = source.markup;
+        replacement.crop = source.crop;
+        for property in &spec.properties {
+            if let Some(value) = properties.get(property.key) {
+                replacement
+                    .properties
+                    .insert(property.key.into(), value.clone());
+            }
+        }
+        self.edit("Convert to multiline", |e| {
+            e.document
+                .allocate_id()
+                .expect("ID allocation was preflighted");
+            if let Some(node) = e.nodes_mut().iter_mut().find(|n| n.id == id) {
+                *node = replacement;
+            }
+            let context = e.context.clone();
+            for path in &mut e.active_content_mut().paint_order {
+                if path.starts_with(&context) && path.get(context.len()) == Some(&id) {
+                    path[context.len()] = new_id;
+                }
+            }
+            e.selection = std::collections::HashSet::from([new_id]);
+        });
+        Ok(Some(new_id))
+    }
+
     /// Automatic text width grows around its alignment anchor. Explicit moves
     /// and fixed-width controls retain their requested geometry.
     pub(super) fn preserve_text_anchor(

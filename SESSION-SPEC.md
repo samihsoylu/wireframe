@@ -16,6 +16,12 @@ Single Engineer, no delegation or independent review claimed. Windows native tes
 - **TODO: finish Sparkle release activation**: complete product signing-key verification, production HTTPS delivery and downloaded-app first-launch checks. The optional macOS bridge and isolated installed-upgrade checks are complete; ordinary builds remain offline for updates. [Updater implementation and acceptance tasks](docs/UPDATES.md).
 - Pushing source does not mean release acceptance. Do not publish a finished-release claim while material gates remain open.
 
+## Current direction: canvas editing fidelity
+
+The current behavior pass corrects single-line conversion shortcuts, separate text/conversion Undo steps, target default sizing, resumed multiline drafts, Tab handling and canvas double-click recognition. **95 distinct focused checks**, all-target warnings-denied lint, a final changed-target lint refresh and native macOS build pass. Native macOS replay confirms conversion, cancellation, separate Undo steps, exact parsed document restoration after Save, multiline tabs, image-source activation and canvas focus after single-line Tab. Nested conversion, component-instance rejection and ID-exhaustion checks also pass.
+
+The review app has exited; its fixture is restored and all546 pre-existing application-data files are byte-unchanged. Private evidence is retained outside product Git in `behavior-fixes-current`. The full G01–G17 scope remains incomplete. Physical modified gestures, coalesced-event timing during stalled frames, divider tracking-mode timing, off-center library placement across zoom, IME/accessibility and Linux replay of these corrections remain open. Preserve the existing smooth library preview. Unrelated packaging/release work remains held; Windows native testing and existing-format import retain their deferrals. The untracked `GAPS-TODO.md` remains untouched.
+
 ## Current candidate and completed checks
 
 Retained packaged candidate **95e5365** consolidates the earlier editing, resource and presentation work; the runtime corrections below postdate those archives. Local macOS ARM64 and Linux ARM64 review archives are built and verified, each with 1,759 corresponding-source files and 182 valid documentation links. Source/license and dependency checks pass; the GPL text is unchanged from the first commit. The package identities and logs are retained externally in `review-build-20261019`.

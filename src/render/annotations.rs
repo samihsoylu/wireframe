@@ -156,7 +156,7 @@ impl Scene {
                     layer.clip,
                 );
                 if sketch {
-                    // Independent low-contrast paper facets, each convex for the native mesh path.
+                    // Original softly rounded low-contrast facets, each remaining convex.
                     for (points, amount) in [
                         (
                             vec![[0.01, 0.02], [0.98, 0.03], [0.56, 0.22], [0.18, 0.18]],
@@ -176,6 +176,23 @@ impl Scene {
                         ),
                         (vec![[0.13, 0.70], [0.51, 0.66], [0.36, 0.77]], 0.07),
                     ] {
+                        let count = points.len();
+                        let mut softened = Vec::with_capacity(count * 8);
+                        for i in 0..count {
+                            let p = points[i];
+                            let a = points[(i + count - 1) % count];
+                            let z = points[(i + 1) % count];
+                            for step in 0..8 {
+                                let t = step as f32 / 8.;
+                                let u = 1. - t;
+                                softened.push([0, 1].map(|axis| {
+                                    u * u * (a[axis] + p[axis]) / 2.
+                                        + 2. * u * t * p[axis]
+                                        + t * t * (z[axis] + p[axis]) / 2.
+                                }));
+                            }
+                        }
+                        let points = softened;
                         self.primitive(
                             Primitive::Polygon {
                                 points: points

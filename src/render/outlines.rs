@@ -7,6 +7,7 @@ use super::*;
 #[derive(Clone, Copy)]
 pub(super) enum Profile {
     Square,
+    Segmented,
     Button,
     Rounded,
 }
@@ -115,6 +116,12 @@ pub(super) fn sketch(b: Bounds, profile: Profile, color: [u8; 3]) -> Primitive {
             [5., 5., 5., 5.],
             contour(Bounds::new(0.25, 0.2, 47.5, 33.6), 1.4, 1.4, 1.1, 0.5),
             contour(Bounds::new(2.75, 2.75, 42.5, 28.5), 0.8, 0.7, 0.6, 0.35),
+        ),
+        Profile::Segmented => (
+            [48., 34.],
+            [5., 5., 5., 5.],
+            contour(Bounds::new(0.25, 0.2, 47.5, 33.6), 1.4, 1.4, 1.1, 0.5),
+            contour(Bounds::new(2.75, 2.75, 40.9, 26.9), 0.8, 0.7, 0.6, 0.35),
         ),
         Profile::Button => unreachable!(),
         Profile::Rounded => (

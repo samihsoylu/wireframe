@@ -320,3 +320,20 @@ fn mesh_mask_preserves_texture_coordinates_and_canvas_order() {
     assert_eq!(edge.last(), Some(&[448., 161.]));
     assert!(edge.windows(2).all(|p| p[0][0] <= p[1][0]));
 }
+
+#[test]
+fn sketch_home_body_is_white_and_its_door_remains_open() {
+    let mut e = Editor::default();
+    e.add(Kind::Browser, 0., 0.);
+    let scene = e.rendered_scene(e.page).unwrap();
+    let png = image::load_from_memory(&scene.png().unwrap())
+        .unwrap()
+        .into_rgb8();
+    // Export padding is24; this samples the decorative home glyph, not text.
+    assert_eq!(png.get_pixel(130 + 24, 37 + 24).0, [255; 3]);
+    let door = png.get_pixel(130 + 24, 45 + 24).0;
+    assert!(
+        door.iter().all(|channel| *channel < 200),
+        "door must expose chrome: {door:?}"
+    );
+}

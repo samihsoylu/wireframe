@@ -73,12 +73,15 @@ impl Scene {
                 clip,
             );
         }
-        self.rectangle_frame(
-            Bounds::new(b.x, b.y, width, b.h),
-            normal,
-            if sketch { 3. } else { 1. },
-            clip,
-        );
+        let frame = Bounds::new(b.x, b.y, width, b.h);
+        if sketch {
+            self.primitive(
+                outlines::sketch(frame, outlines::Profile::Segmented, normal),
+                clip,
+            );
+        } else {
+            self.rectangle_frame(frame, normal, 1., clip);
+        }
         for (index, (&(x, w), text)) in columns.iter().zip(&bar.texts).enumerate() {
             let area = Bounds::new(b.x + x, b.y, w, b.h);
             let background = if selected == index as i32 {

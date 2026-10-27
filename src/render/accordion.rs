@@ -23,7 +23,7 @@ impl Scene {
         let layout = parsed.layout(&metrics, b.w, b.h, sketch, boolean(p, "vertical_scrollbar"));
         let a = crate::accordion::Appearance::new(sketch);
         let ink = if sketch { [0; 3] } else { [51; 3] };
-        let thickness = if sketch { 3. } else { 1. };
+
         self.primitive(
             Primitive::Rect {
                 b,
@@ -33,7 +33,17 @@ impl Scene {
             },
             clip,
         );
-        self.rectangle_frame(b, ink, thickness, clip);
+        let frame = |scene: &mut Scene, bounds| {
+            if sketch {
+                scene.primitive(
+                    outlines::sketch(bounds, outlines::Profile::Square, ink),
+                    clip,
+                );
+            } else {
+                scene.rectangle_frame(bounds, ink, 1., clip);
+            }
+        };
+        frame(self, b);
         for placement in layout.rows.iter().rev() {
             let row = &parsed.rows[placement.index];
             let local = placement.bounds;
@@ -53,7 +63,7 @@ impl Scene {
                     },
                     clip,
                 );
-                self.rectangle_frame(area, ink, thickness, clip);
+                frame(self, area);
             } else if row.selected {
                 let selected = Bounds::new(
                     area.x + 10.,

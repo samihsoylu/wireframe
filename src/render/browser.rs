@@ -2,6 +2,37 @@
 // Copyright 2026 Wireframe contributors
 use super::*;
 use crate::browser::{Browser, Chrome, Style, torn_edge};
+// Small original quadratic joins soften a closed Sketch command outline.
+fn rounded_command(points: &[[f32; 2]], radius: f32) -> Vec<[f32; 2]> {
+    let count = points.len().saturating_sub(1);
+    if count < 3 {
+        return points.to_vec();
+    }
+    let mut result = Vec::with_capacity(count * 6 + 1);
+    for i in 0..count {
+        let p = points[i];
+        let a = points[(i + count - 1) % count];
+        let b = points[(i + 1) % count];
+        let along = |q: [f32; 2]| {
+            let distance = (q[0] - p[0]).hypot(q[1] - p[1]);
+            let ratio = radius.min(distance / 3.) / distance.max(0.00001);
+            [p[0] + (q[0] - p[0]) * ratio, p[1] + (q[1] - p[1]) * ratio]
+        };
+        let a = along(a);
+        let b = along(b);
+        for step in 0..=5 {
+            let t = step as f32 / 5.;
+            let u = 1. - t;
+            result.push([
+                u * u * a[0] + 2. * u * t * p[0] + t * t * b[0],
+                u * u * a[1] + 2. * u * t * p[1] + t * t * b[1],
+            ]);
+        }
+    }
+    result.push(result[0]);
+    result
+}
+
 impl Scene {
     pub(super) fn browser(
         &mut self,
@@ -238,7 +269,7 @@ impl Scene {
                 );
                 self.primitive(
                     Primitive::Line {
-                        points: pts,
+                        points: rounded_command(&pts, 0.75 * sx.min(sy)),
                         color: ink,
                         width: 2.5,
                     },
@@ -268,15 +299,46 @@ impl Scene {
             }
         }
         if sketch {
-            for pts in [
-                vec![point(96., 29.), point(106., 43.)],
-                vec![point(106., 29.), point(96., 43.)],
+            // Two independent tapered lobes form the original Sketch stop mark.
+            for direction in [-1., 1.] {
+                let points = (0..48)
+                    .map(|i| {
+                        let t = i as f32 * std::f32::consts::TAU / 48.;
+                        let along = 11. * t.cos();
+                        let across = 2.2 * t.sin();
+                        point(
+                            101. + direction * (along * 0.62 - across * 0.78),
+                            36. + along * 0.78 + across * 0.62,
+                        )
+                    })
+                    .collect();
+                self.primitive(Primitive::Polygon { points, fill: ink }, clip);
+            }
+            for points in [
+                vec![point(120., 36.), point(130., 24.), point(140., 36.)],
+                vec![
+                    point(124., 35.),
+                    point(136., 35.),
+                    point(136., 41.),
+                    point(124., 41.),
+                ],
+                vec![
+                    point(124., 41.),
+                    point(128., 41.),
+                    point(128., 48.),
+                    point(124., 48.),
+                ],
+                vec![
+                    point(132., 41.),
+                    point(136., 41.),
+                    point(136., 48.),
+                    point(132., 48.),
+                ],
             ] {
                 self.primitive(
-                    Primitive::Line {
-                        points: pts,
-                        color: ink,
-                        width: 3.,
+                    Primitive::Polygon {
+                        points,
+                        fill: [255; 3],
                     },
                     clip,
                 );
@@ -303,12 +365,30 @@ impl Scene {
                 },
                 clip,
             );
-            let a = point(-77., 30.);
+            let a = point(-74., 30.);
+            let w = 57. * sx;
+            let h = 23. * sy;
+            let radius = (h / 2.).min(w / 2.);
+            let points: Vec<_> = (0..=64)
+                .map(|i| {
+                    let t = i as f32 * std::f32::consts::TAU / 64.;
+                    [
+                        a[0] + w / 2. + (w / 2. - radius) * t.cos().signum() + radius * t.cos(),
+                        a[1] + h / 2. + radius * t.sin(),
+                    ]
+                })
+                .collect();
             self.primitive(
-                Primitive::StyledEllipse {
-                    b: Bounds::new(a[0], a[1], 57. * sx, 22. * sy),
+                Primitive::Polygon {
+                    points: points.clone(),
                     fill: [255; 3],
-                    stroke: ink,
+                },
+                clip,
+            );
+            self.primitive(
+                Primitive::Line {
+                    points,
+                    color: ink,
                     width: 2.5,
                 },
                 clip,

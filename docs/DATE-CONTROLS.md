@@ -4,7 +4,7 @@ Calendar shows the local month, six weeks starting on Sunday, and today's highli
 
 Each Calendar captures a local date for its content layout. Moving it or editing another control retains that date. Changing its size, style or project font, or reopening the document, refreshes the snapshot. No date is stored in the project and no midnight timer is scheduled. `Editor::with_date` supplies a deterministic date for tests and repeatable renders.
 
-Date chooser is an illustrative text field with an original calendar icon. It supports arbitrary text, normal/focused/disabled states, border color and standard text formatting. It does not validate dates or open a calendar popup. Text macros remain literal. Soft line breaks increase its computed height. Only width can be resized; Auto-size restores the width needed by the text, with a 90-pixel minimum. A manually set width stays fixed when the text or font changes.
+Date chooser is an illustrative text field with the licensed catalog calendar-days-regular icon. It supports arbitrary text, normal/focused/disabled states, border color and standard text formatting. It does not validate dates or open a calendar popup. Text macros remain literal. Soft line breaks increase its computed height. Only width can be resized; Auto-size restores the width needed by the text, with a 90-pixel minimum. A manually set width stays fixed when the text or font changes.
 
 The icon remains 24×24. Very narrow fields hide the border but retain the icon, which can extend left of the control. Parent crops still clip it. The icon's openings are transparent, so they preserve underlying content. Canvas, thumbnails, library previews and PNG/SVG exports use the same geometry and renderer.
 

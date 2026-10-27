@@ -36,12 +36,14 @@ impl Scene {
         let ink = if sketch { [0; 3] } else { [51; 3] };
         // Disjoint clips keep the border hole transparent in every renderer.
         for visible in subtract(clip.unwrap_or(b), offset(layout.cutout)) {
-            self.rectangle_frame(
-                offset(layout.border),
-                ink,
-                if sketch { 3. } else { 1. },
-                Some(visible),
-            );
+            if sketch {
+                self.primitive(
+                    outlines::sketch(offset(layout.border), outlines::Profile::Square, ink),
+                    Some(visible),
+                );
+            } else {
+                self.rectangle_frame(offset(layout.border), ink, 1., Some(visible));
+            }
         }
         let mut paint = paint_options(p);
         paint.ink = Color32::from_rgb(ink[0], ink[1], ink[2]);

@@ -35,3 +35,11 @@ Revision 1.004 adds native and portable checks for operator size and ordinary/no
 Positioned glyphs are rasterized at canvas zoom times display pixels per point. The texture origin is rounded to a physical-pixel boundary, matching the GUI text convention and preventing a second smoothing pass from fractional texture placement. The resulting display adjustment is at most half a physical pixel per axis. Font shaping, control layout, caret/hit geometry, raster density and export positions are unchanged. Panning reuses the cached raster; no new glyph shaping is introduced.
 
 Headless paint tests cover five display densities and six zoom factors, including fractional scales, with one texel per output pixel, bounded translation and cache reuse. Hardware verification remains separate from this simulated scale matrix. Other font/capture differences are not ruled out by fixing texture placement.
+
+The opt-in macOS GPU clarity check compares actual OpenGL output with the positioned text raster at 100% canvas zoom, 1×/2× display density, four current project-font roles and integer/fractional origins. Run it with an explicit artifact directory:
+
+```sh
+WIREFRAME_RENDER_DIR=/tmp/wireframe-text-proof cargo test --locked --bin wireframe canvas_text_preserves_raster_coverage_at_actual_size -- --ignored
+```
+
+The 27 October check passed all 16 combinations on Apple M1 Max: every output channel matched the source raster composited on white exactly. This extends the earlier mesh-coordinate checks through the production OpenGL painter. It establishes no additional texture smoothing in these samples; it does not establish typeface equivalence, physical-display quality, rotated-text parity or other GPU/platform behavior.

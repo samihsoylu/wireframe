@@ -57,6 +57,8 @@ V02 starter checkpoint — 27 October: new-control recipes now provide neutral s
 
 V02 closure refresh — 27 October: current Clean/Sketch native fixtures show all six changed starters at 100% with no selection or overlap; current strip previews and six source preview checks pass. Data Grid now measures 346 × 192/195; its approximately eight-point width residual from the different reference content/font remains under V03. The January 2024 Calendar thumbnail is verified stale reference-cache artwork, not a fixed-date rule. The named neutral starter/preview scope is closed, with 53 distinct affected checks including retained results, scoped lint/build/signature and exact cleanup of all 546 baseline files. Private `appearance-finishing-current/starters/native/REPORT.md` retains scope and evidence.
 
+V03 isolation checkpoint — 27 October: the production OpenGL painter preserves source-raster coverage exactly in 16 default-font cases at 100%, 1×/2× density and integer/fractional origins. A 120-case same-backend font comparison isolates nonuniform source-face advances/contours rather than added texture smoothing. Global scale/filter changes are not justified. Targeted metrics/final residual assessment remain open; exact evidence is private in `appearance-finishing-current/typography`.
+
 ## Current appearance fixes — Q2
 
 The wide pair uses the same 1728-point width and 2x density. Narrow native frames measure 920 and 921 points; the remaining one-point frame difference is explicit. Both show unselected controls at 100%. Default fonts differ. Native image exports provide lossless detail; overview sheets are scaled and cannot establish sharpness by themselves.

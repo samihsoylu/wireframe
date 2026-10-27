@@ -345,3 +345,90 @@ fn nested_opacity_keeps_overlap_masks_clips_and_tile_boundaries() {
     )
     .unwrap();
 }
+
+#[test]
+#[ignore = "Opt-in OpenGL text clarity; requires WIREFRAME_RENDER_DIR"]
+fn canvas_text_preserves_raster_coverage_at_actual_size() {
+    use egui::emath::GuiRounding as _;
+    let root = std::path::PathBuf::from(std::env::var_os("WIREFRAME_RENDER_DIR").unwrap());
+    std::fs::create_dir_all(&root).unwrap();
+    let font = wireframe::fonts::default_project_font();
+    let mut gpu = Offscreen::new();
+    let mut evidence = Vec::new();
+    for density in [1., 2.] {
+        for (role, face) in font.faces().into_iter().enumerate() {
+            let text =
+                Arc::new(wireframe::text_engine::shape(face, "Button Aa 123 +", 13.).unwrap());
+            let raster = text.raster([0, 0, 0, 255], density).unwrap().unwrap();
+            for offset in [0., 0.3] {
+                let ctx = egui::Context::default();
+                let size = Vec2::new(180., 50.);
+                let baseline = egui::pos2(15. + offset, 28. + offset);
+                for frame in 0..2 {
+                    let mut input = egui::RawInput {
+                        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, size)),
+                        time: Some(frame as f64 * 0.1),
+                        max_texture_side: Some(gpu.max_texture_side()),
+                        ..Default::default()
+                    };
+                    input
+                        .viewports
+                        .get_mut(&egui::ViewportId::ROOT)
+                        .unwrap()
+                        .native_pixels_per_point = Some(density);
+                    let mut output = ctx.run_ui(input, |ui| {
+                        let painter = ui.ctx().layer_painter(egui::LayerId::background());
+                        wireframe::text_engine::paint(
+                            &painter,
+                            &text,
+                            [0, 0, 0, 255],
+                            baseline,
+                            1.,
+                        )
+                        .unwrap();
+                    });
+                    gpu.draw(&ctx, &mut output, size);
+                }
+                let name = format!("text-{density}x-role{role}-offset{offset}");
+                let path = root.join(format!("{name}.png"));
+                gpu.save(&path);
+                let actual = image::open(path).unwrap().into_rgba8();
+                let origin = (baseline + raster.bounds.min.to_vec2()).round_to_pixels(density);
+                let left = (origin.x * density).round() as u32;
+                let top = (origin.y * density).round() as u32;
+                let mut max_error = 0;
+                let mut changed = 0;
+                for y in 0..actual.height() {
+                    for x in 0..actual.width() {
+                        let alpha = if x >= left
+                            && y >= top
+                            && (x - left) < raster.pixels.size[0] as u32
+                            && (y - top) < raster.pixels.size[1] as u32
+                        {
+                            raster.pixels.pixels
+                                [(y - top) as usize * raster.pixels.size[0] + (x - left) as usize]
+                                .a()
+                        } else {
+                            0
+                        };
+                        let expected = 255 - alpha;
+                        let pixel = actual.get_pixel(x, y).0;
+                        for channel in &pixel[..3] {
+                            let error = channel.abs_diff(expected);
+                            max_error = max_error.max(error);
+                            changed += usize::from(error > 3);
+                        }
+                        assert_eq!(pixel[3], 255);
+                    }
+                }
+                evidence.push(serde_json::json!({"name":name,"max_channel_error":max_error,"channels_over_tolerance":changed,"renderer":gpu.renderer()}));
+                assert_eq!(changed, 0, "{name}: max channel error {max_error}");
+            }
+        }
+    }
+    std::fs::write(
+        root.join("text-coverage.json"),
+        serde_json::to_vec_pretty(&evidence).unwrap(),
+    )
+    .unwrap();
+}

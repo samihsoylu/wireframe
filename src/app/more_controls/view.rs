@@ -16,7 +16,7 @@ pub(in crate::app) enum Action {
 }
 pub(super) fn show(ctx: &egui::Context, browser: &mut Browser, destination: &Editor) -> Action {
     let mut action = Action::None;
-    egui::Modal::new(egui::Id::new("more-controls"))
+    let response = egui::Modal::new(egui::Id::new("more-controls"))
         .frame(
             egui::Frame::NONE
                 .corner_radius(10)
@@ -54,16 +54,19 @@ pub(super) fn show(ctx: &egui::Context, browser: &mut Browser, destination: &Edi
             } else {
                 list_view(ui, browser, &mut action);
             }
-            if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape)) {
-                action = if browser.review.is_some() {
-                    Action::CancelReview
-                } else if browser.preview.is_some() {
-                    Action::Back
-                } else {
-                    Action::Close
-                };
-            }
         });
+    if response.is_top_modal
+        && !response.any_popup_open
+        && ctx.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape))
+    {
+        action = if browser.review.is_some() {
+            Action::CancelReview
+        } else if browser.preview.is_some() {
+            Action::Back
+        } else {
+            Action::Close
+        };
+    }
     action
 }
 fn list_view(ui: &mut egui::Ui, browser: &mut Browser, action: &mut Action) {

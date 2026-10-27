@@ -27,7 +27,7 @@ fn frame(
         .filter_map(|(_, n)| {
             let b = n.bounds()?;
             Some((
-                n.label()?.to_owned(),
+                n.label().or_else(|| n.value())?.to_owned(),
                 Rect::from_min_max(
                     egui::pos2(b.x0 as f32, b.y0 as f32),
                     egui::pos2(b.x1 as f32, b.y1 as f32),
@@ -138,6 +138,52 @@ fn cancel_escape_and_canvas_shortcuts_do_not_mutate_the_destination() {
     assert!(app.more_controls.is_none());
     assert_eq!(app.editor.document, before);
 }
+#[test]
+fn browser_picker_escape_closes_only_the_popup_and_keeps_preview_history() {
+    let (ctx, mut app) = setup(0);
+    let before = app.editor.document.clone();
+    app.editor.add(Kind::Button, 50., 50.);
+    app.editor.undo();
+    let redo = app.editor.redo_name().map(str::to_owned);
+    assert!(redo.is_some());
+    let resource = app
+        .more_controls
+        .as_ref()
+        .unwrap()
+        .preview
+        .as_ref()
+        .unwrap()
+        .resource;
+    click(&ctx, &mut app, "Landing");
+    assert!(egui::Popup::is_any_open(&ctx));
+    let escape = || egui::Event::Key {
+        key: Key::Escape,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers::NONE,
+    };
+    frame(&ctx, &mut app, vec![escape()]);
+    frame(&ctx, &mut app, vec![]);
+    assert!(!egui::Popup::is_any_open(&ctx));
+    let browser = app.more_controls.as_ref().expect("browser stays open");
+    let preview = browser
+        .preview
+        .as_ref()
+        .expect("picker Escape retains preview");
+    assert_eq!(preview.resource, resource);
+    assert!(browser.review.is_none());
+    assert_eq!(app.editor.document, before);
+    assert_eq!(app.editor.redo_name(), redo.as_deref());
+
+    frame(&ctx, &mut app, vec![escape()]);
+    assert!(app.more_controls.as_ref().unwrap().preview.is_none());
+    frame(&ctx, &mut app, vec![escape()]);
+    assert!(app.more_controls.is_none());
+    assert_eq!(app.editor.document, before);
+    assert_eq!(app.editor.redo_name(), redo.as_deref());
+}
+
 #[test]
 fn review_stages_reuse_pages_and_libraries_without_empty_history() {
     let mut e = Editor::default();

@@ -28,6 +28,9 @@ fn fixture() -> (Editor, Id, Id) {
     e.switch_page(page);
     e.add(Kind::Accordion, 50., 50.);
     let id = *e.selection.iter().next().unwrap();
+    // Exercise nested-row behavior independently of the catalog starter.
+    e.set_control_property(id, "text", Value::Text(SOURCE.into()))
+        .unwrap();
     (e, id, dest)
 }
 fn set(e: &mut Editor, id: Id, key: &str, value: Value) {

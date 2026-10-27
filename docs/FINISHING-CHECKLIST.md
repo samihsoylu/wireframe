@@ -53,6 +53,8 @@ All 27 listed choices are implemented (26 control families plus the Android Aler
 
 V01 implementation checkpoint — 27 October: full-window centering with narrow-width containment, compact labels/gaps, More Controls sizing and a light native title bar are corrected. 25 affected library checks, scoped warnings-denied lint, formatting, native build/signature and 1360/minimum-width visual checks pass. Native Text selection and More Controls opening work without category scrolling. The exact 1728-point paired-size refresh remains open before full V01 closure. Private `appearance-finishing-current` retains evidence and cleanup (546 prior files exact). V02–V05 remain open.
 
+V02 starter checkpoint — 27 October: new-control recipes now provide neutral structures for Accordion, ordinary/Android Alert, Browser, ComboBox and Data Grid while retaining historical omitted-text defaults. 47 affected checks, scoped lint, formatting and native build pass; 12 exported specimens are retained privately. Both alerts now measure 200 × 102 with a single-line message. Calendar thumbnail semantics, final grid extent comparison and updated native specimens remain open; this is partial V02 closure.
+
 ## Current appearance fixes — Q2
 
 The wide pair uses the same 1728-point width and 2x density. Narrow native frames measure 920 and 921 points; the remaining one-point frame difference is explicit. Both show unselected controls at 100%. Default fonts differ. Native image exports provide lossless detail; overview sheets are scaled and cannot establish sharpness by themselves.

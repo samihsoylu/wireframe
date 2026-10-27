@@ -128,7 +128,7 @@ fn fixed_dimensions_history_component_overrides_and_saved_values() {
         e.selected_views()[0].bounds,
         Bounds::new(0., 0., 450., 400.)
     );
-    assert_eq!(p["text"], Value::Text(wireframe::browser::DEFAULT.into()));
+    assert_eq!(p["text"], Value::Text("Web page\nhttps://".into()));
     assert_eq!(spec.autosize, wireframe::catalog::AutoSize::None);
     for key in ["text", "border", "fill", "vertical_scrollbar", "value"] {
         assert!(spec.property(key).unwrap().visible);

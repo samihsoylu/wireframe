@@ -255,6 +255,27 @@ impl ControlSpec {
                 | "red_cross"
                 | "scratch_out"
         );
+        // Creation recipes are explicit saved values. Keep the historical
+        // fallback defaults for older controls with omitted properties.
+        let starter = match self.id {
+            "accordion" => Some("Section One\nSection Two\nSection Three\nSection Four"),
+            "alert" => Some("Notice\nMessage goes here\nCancel, OK"),
+            "browser" => Some("Web page\nhttps://"),
+            "dropdown" => Some("ComboBox"),
+            "table" => Some(concat!(
+                "Name\\r(role) ^,Age ^v,Label,Member v\n",
+                "Avery Stone\\rProject lead,40,North,(o)\n",
+                "Casey Reed\\rDeveloper,38,West,[x]\n",
+                "Jordan Lane\\rDesigner,41,East,[-]\n",
+                "Morgan Page\\rTeam member,:-),South,[x]\n",
+                "[Grid guide],,,[ ]",
+            )),
+            _ => None,
+        };
+        if let Some(text) = starter {
+            node.properties
+                .insert("text".into(), Value::Text(text.into()));
+        }
         if self.id == "phone" {
             node.properties
                 .insert("device_model".into(), Value::Choice("notched".into()));

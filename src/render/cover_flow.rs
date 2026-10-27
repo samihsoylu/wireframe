@@ -39,7 +39,26 @@ impl Scene {
             clip,
         };
         let ink = if sketch { [0; 3] } else { [103; 3] };
-        let stroke = if sketch { 3.5 } else { 0.8 };
+        let stroke = if sketch { 5.5 } else { 0.8 };
+        let mut outline = |points: Vec<[f32; 2]>| {
+            art.line(points.clone(), ink, stroke);
+            if sketch {
+                // Fill the butt-stroke corner gaps with original rounded joins.
+                // The drawing is opaque before control/group opacity is applied.
+                for point in points.iter().take(points.len().saturating_sub(1)) {
+                    art.ellipse(
+                        Bounds::new(
+                            point[0] - stroke / 2.,
+                            point[1] - stroke / 2.,
+                            stroke,
+                            stroke,
+                        ),
+                        ink,
+                        None,
+                    );
+                }
+            }
+        };
         // Independent perspective panels: the inward edges meet the center window.
         for (outer, inner, top, bottom) in [
             (5., 45., 8., 182.),
@@ -69,34 +88,30 @@ impl Scene {
                         }
                     })
                     .collect();
-                art.line(points, ink, stroke);
+                outline(points);
             }
         }
-        art.line(
-            if sketch {
-                vec![
-                    [170., 22.],
-                    [246., 23.],
-                    [323., 22.],
-                    [322.5, 100.],
-                    [324., 176.],
-                    [246., 177.],
-                    [169.5, 176.],
-                    [170.5, 99.],
-                    [170., 22.],
-                ]
-            } else {
-                vec![
-                    [169.5, 21.5],
-                    [323.5, 21.5],
-                    [323.5, 176.5],
-                    [169.5, 176.5],
-                    [169.5, 21.5],
-                ]
-            },
-            ink,
-            stroke,
-        );
+        outline(if sketch {
+            vec![
+                [170., 22.],
+                [246., 23.],
+                [323., 22.],
+                [322.5, 100.],
+                [324., 176.],
+                [246., 177.],
+                [169.5, 176.],
+                [170.5, 99.],
+                [170., 22.],
+            ]
+        } else {
+            vec![
+                [169.5, 21.5],
+                [323.5, 21.5],
+                [323.5, 176.5],
+                [169.5, 176.5],
+                [169.5, 21.5],
+            ]
+        });
         if let Some(bar) = l.scrollbar {
             self.horizontal_scrollbar(
                 translate(bar),

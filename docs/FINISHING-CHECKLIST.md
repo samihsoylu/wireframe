@@ -59,6 +59,8 @@ V02 closure refresh — 27 October: current Clean/Sketch native fixtures show al
 
 V03 isolation checkpoint — 27 October: the production OpenGL painter preserves source-raster coverage exactly in 16 default-font cases at 100%, 1×/2× density and integer/fractional origins. A 120-case same-backend font comparison isolates nonuniform source-face advances/contours rather than added texture smoothing. Global scale/filter changes are not justified. Targeted metrics/final residual assessment remain open; exact evidence is private in `appearance-finishing-current/typography`.
 
+V04 contour checkpoint — 27 October: Cover Flow stroke/join weight, Callout lower rim/nine deterministic contours and brace endpoint weight are corrected using original procedural artwork. 21 affected checks, scoped lint/build/signature and current native Sketch/Clean default galleries pass. All 546 baseline application-data files are exact after cleanup. Remaining named specimens: Accordion, Button/Button Bar, Browser/Field Set, chart contours and Comment. See private `appearance-finishing-current/contours`; V04 as a whole remains open.
+
 ## Current appearance fixes — Q2
 
 The wide pair uses the same 1728-point width and 2x density. Narrow native frames measure 920 and 921 points; the remaining one-point frame difference is explicit. Both show unselected controls at 100%. Default fonts differ. Native image exports provide lossless detail; overview sheets are scaled and cannot establish sharpness by themselves.

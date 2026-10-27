@@ -36,6 +36,12 @@ V03 is now isolated: a new opt-in hardware GPU check passes all 16 current-font/
 
 The GPU regression, warnings-denied binary/test lint, formatting and diff check pass. No user data/preferences changed. Private `appearance-finishing-current/typography/REPORT.md` retains exact identities, 16 lossless framebuffer images, metrics, original-size private comparisons and scope. V03 remains open for targeted metric decisions/final bounded-residual assessment; preserve accepted scenario wraps. Next: assess a narrowly targeted advance improvement against constrained wrapping, then continue V04/V05. V01 exact wide pairing, Q3–Q8 remain open; Windows held.
 
+## Sketch contour checkpoint — 27 October 2026
+
+V04 corrects three named original drawings: heavier Cover Flow stroke with sealed round joins, deterministic tilted Callout contours with a heavier lower rim and nine stable variants, and fuller brace endpoints. Clean drawing branches and all saved dimensions/properties remain intact. 21 distinct affected annotation/Cover Flow/markup checks pass, plus scoped warnings-denied lint, formatting, native debug build/signature. Current native Sketch/Clean galleries show all 11 controls at 100%, unselected with empty drawing history. The first thicker Cover Flow pass exposed white corner gaps; the final original join correction and native capture resolve those sampled seams. Private `appearance-finishing-current/contours/REPORT.md` retains exact identities, exports, native evidence and limits.
+
+Both app processes exited; all 546 prior application-data files are byte-exact after owned cleanup. No asset copied or added. Remaining V04 specimens: Accordion, Button/Button Bar, Browser/Field Set, charts and Comment. V05 remains open. Retain the current licensed font for V03: no observed new wrap failure justifies a global scale/filter/font revision; assess its measured residuals during final workflow comparison. V01 exact wide pairing and Q3–Q8 remain open; Windows held.
+
 ## Public product and release requirements — 19 October 2026
 
 - Product history and release tooling are published to `git@github.com:samihsoylu/wireframe.git` on `main`, following explicit authorization. Public documentation leads with the user’s task, installation and limitations. Technical records remain separate.

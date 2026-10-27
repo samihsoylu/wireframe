@@ -407,3 +407,43 @@ fn narrow_tooltip_does_not_emit_an_oversized_glyph_or_link() {
     );
     assert!(scene.links.is_empty());
 }
+
+#[test]
+fn sketch_callout_has_stable_varied_contours_and_a_heavier_lower_rim() {
+    use std::collections::HashSet;
+    let mut sketch_contours = HashSet::new();
+    let mut clean_contours = HashSet::new();
+    for id in 2..11 {
+        let mut e = Editor::default();
+        e.document.next_id = id;
+        e.add(Kind::Callout, 20., 30.);
+        let selected = *e.selection.iter().next().unwrap();
+        set(&mut e, selected, "text", Value::Text(String::new()));
+        set(&mut e, selected, "background_opacity", Value::Number(0.));
+        let before = e.document.clone();
+        let sketch = e.rendered_scene(e.page).unwrap();
+        assert_eq!(sketch.svg(), e.rendered_scene(e.page).unwrap().svg());
+        sketch_contours.insert(sketch.svg());
+        assert_eq!(e.document, before);
+        if id == 2 {
+            let png = image::load_from_memory(&sketch.png().unwrap())
+                .unwrap()
+                .into_rgb8();
+            let center = png.width() / 2;
+            let h = png.height() - 48;
+            let dark = |y| png.get_pixel(center, y).0.iter().all(|c| *c < 100);
+            let upper = (24..24 + h / 2).filter(|y| dark(*y)).count();
+            let lower = (24 + h / 2..24 + h).filter(|y| dark(*y)).count();
+            assert!(lower > upper, "lower rim {lower}, upper rim {upper}");
+            assert_eq!(
+                png.get_pixel(center, 24 + h / 2).0,
+                [255; 3],
+                "transparent center must stay open"
+            );
+        }
+        e.document.settings.sketch = false;
+        clean_contours.insert(e.rendered_scene(e.page).unwrap().svg());
+    }
+    assert_eq!(sketch_contours.len(), 9);
+    assert_eq!(clean_contours.len(), 1);
+}

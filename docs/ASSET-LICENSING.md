@@ -28,3 +28,5 @@ The 21 October 2026 source check inventoried all 45 tracked graphics/font files,
 User-imported images/fonts and installed system fonts used for fallback are separate from the bundled inventory. Their availability does not establish redistribution permission. Do not add them to product examples or release material without checking applicable rights; font embedding and exported outlines also need the relevant permissions.
 
 Before release, reconcile every asset in actual deliverables against this inventory, including dependency additions and generated installer material. Record unresolved permissions and exclude those assets from delivery. See also [Third-party notices](../THIRD_PARTY_NOTICES.md).
+
+The 27 October Sketch contour refinements (Cover Flow joins/weight, Callout rim and brace taper) are original procedural Rust geometry by Wireframe contributors under GPL-3.0-only. The editable source and Git revision identify the modified bytes; no third-party path/image/font asset was introduced. Reference comparisons and cache artwork remain outside product Git and deliverables.

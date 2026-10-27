@@ -24,6 +24,52 @@ fn round_outline(b: Bounds, radius: f32) -> Vec<[f32; 2]> {
     }
     out
 }
+// Original continuous oval ribbon: a slightly tilted hand-drawn contour
+// and a heavier lower rim. Shared edges avoid double opacity at joins.
+fn sketch_callout(b: Bounds, seed: f32) -> (Vec<[f32; 2]>, Option<Primitive>) {
+    const N: usize = 96;
+    let mut outer = Vec::with_capacity(N);
+    let mut inner = Vec::with_capacity(N);
+    let unit = (b.w.min(b.h) / 39.).clamp(0., 1.);
+    let rx = (b.w / 2. - 0.6 * unit).max(0.);
+    let ry = (b.h / 2. - 0.6 * unit).max(0.);
+    for i in 0..N {
+        let t = i as f32 * 2. * PI / N as f32;
+        let wobble = (t * 3. + seed * 0.71).sin() * 0.55 * unit;
+        let tilt = t.sin() * 1.25 * unit;
+        let point = [
+            b.x + b.w / 2. + (rx + wobble) * t.cos() + tilt,
+            b.y + b.h / 2. + (ry + wobble * 0.65) * t.sin(),
+        ];
+        let rim = (2.5 + seed * 0.07 + 2.6 * t.sin().max(0.)) * unit;
+        outer.push(point);
+        inner.push([
+            point[0] - t.cos() * rim.min(rx),
+            point[1] - t.sin() * rim.min(ry),
+        ]);
+    }
+    let mut indices = Vec::with_capacity(N * 6);
+    let points: Vec<_> = outer.into_iter().chain(inner.iter().copied()).collect();
+    for i in 0..N {
+        let next = (i + 1) % N;
+        for mut triangle in [[i, next, N + i], [next, N + next, N + i]] {
+            let [a, b, c] = triangle.map(|j| points[j]);
+            if (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]) < 0. {
+                triangle.swap(1, 2);
+            }
+            indices.extend(triangle.map(|j| j as u32));
+        }
+    }
+    (
+        inner,
+        Some(Primitive::Mesh {
+            points,
+            indices,
+            fill: [0; 3],
+        }),
+    )
+}
+
 fn tint(c: [u8; 3], amount: f32) -> [u8; 3] {
     c.map(|v| {
         (v as f32 + (255. - v as f32) * amount)
@@ -73,41 +119,21 @@ impl Scene {
         let opacity = number(p, "background_opacity", 1.);
         match family {
             Family::Callout => {
+                let (surface, outline) = if sketch {
+                    sketch_callout(b, (c.id % 9) as f32)
+                } else {
+                    (round_outline(b, 30.), None)
+                };
                 self.primitive(
                     Primitive::Polygon {
-                        points: round_outline(b, 30.),
+                        points: surface,
                         fill: c.fill,
                     },
                     clip,
                 );
                 self.items.last_mut().unwrap().opacity = opacity;
-                if sketch {
-                    // Nine stable, independent hand-drawn contours. Geometry remains deterministic.
-                    let seed = (c.id % 9) as f32;
-                    let mut contour = round_outline(
-                        Bounds::new(
-                            b.x + 1.6,
-                            b.y + 1.6,
-                            (b.w - 3.2).max(0.),
-                            (b.h - 3.2).max(0.),
-                        ),
-                        30.,
-                    );
-                    let len = contour.len() as f32;
-                    for (i, v) in contour.iter_mut().enumerate() {
-                        let t = i as f32 / len * 2. * PI;
-                        v[0] += (t * 3. + seed * 0.71).sin() * b.w.min(100.) * 0.012;
-                        v[1] += (t * 2. + seed * 0.53).cos() * b.h.min(100.) * 0.018;
-                    }
-                    contour.push(contour[0]);
-                    self.primitive(
-                        Primitive::Line {
-                            points: contour,
-                            color: ink,
-                            width: 2.8 + seed * 0.14,
-                        },
-                        clip,
-                    );
+                if let Some(outline) = outline {
+                    self.primitive(outline, clip);
                 }
             }
             Family::StickyNote => {

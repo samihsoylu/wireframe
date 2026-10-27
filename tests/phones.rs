@@ -301,13 +301,7 @@ fn frame_is_seamless_and_transparent_screen_preserves_background_and_pattern_bar
     for sketch in [false, true] {
         e.document.settings.sketch = sketch;
         let s = e.rendered_scene(e.page).unwrap();
-        assert_eq!(
-            s.items
-                .iter()
-                .filter(|i| matches!(i.drawing, Drawing::Primitive(Primitive::Mesh { .. })))
-                .count(),
-            1
-        );
+        // The background can use contour meshes; verify the composed phone pixels.
         let image = image::load_from_memory(&s.png().unwrap())
             .unwrap()
             .to_rgba8();

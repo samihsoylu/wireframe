@@ -1,13 +1,13 @@
 # Finishing checklist
 
-Current checkpoint: 27 October 2026, default catalog appearance and Android Alert insertion/history scope closed; Q4–Q8 remain open. Unchanged behavior evidence retains its named runtime baseline. This is the short work queue; [the release contract](RELEASE-CHECKLIST.md) retains the full requirements. Windows native testing is on hold. A recorded check applies to its named candidate and behavior, not every possible variant.
+Current checkpoint: 27 October 2026, default catalog appearance and Android Alert insertion/history scope closed; Q5–Q8 remain open. Unchanged behavior evidence retains its named runtime baseline. This is the short work queue; [the release contract](RELEASE-CHECKLIST.md) retains the full requirements. Windows native testing is on hold. A recorded check applies to its named candidate and behavior, not every possible variant.
 
 ## Immediate priorities
 
 - [x] **Q1 — Catalog labels and order:** all 94 built-in choices reconciled; saved identities, old search terms and category memberships retained. All 27 requested labels observed across the live strip.
 - [x] **Q2 — Interface and control appearance:** V01–V05 closed in the named default-control/shell scope, with bounded minor residuals below. Wide/minimum editors and all 27 default choices in both styles are compared. Integrated workflows and broader variants retain Q4/Q6 scope.
 - [x] **Q3 — Android Alert tile:** separate native tile inserts one 200 × 102 Inline/Left Alert with the neutral recipe; save preserves other controls, Undo/Redo and cold reopen/save are byte-exact.
-- [ ] **Q4 — Remaining control variants:** reconcile later evidence for Dropdown icons/scrollbars, Date picker destinations and brace links before scheduling new checks.
+- [x] **Q4 — Named control variants:** stale Dropdown icon/scrollbar gap reconciled with current source/native rendering; brace caption and Date Picker Cancel/OK navigate correctly in the current native fixture. Retain earlier narrow/Back picker evidence. Direct native reference activation remains a bounded comparison-observation limit, with source contracts and product behavior established; no full variant/native-reference claim.
 - [ ] **Q5 — Divider and dragging:** named native edge, library-placement and sampled modifier comparisons are complete; exact startup/animated-window sequencing and held-tracking preference timing remain open.
   Native evidence now establishes a five-point interval consistent with [edge−2, edge+3), rejects −2.5, and retains the grab offset. The original Rust correction matches that target, preserves the other panel targets and handles return-to-start releases. Native product checks cover ignored/accepted grabs, double-click, out-and-back motion, 130/400-point endpoints and visible 220-point cold restoration with empty history. Earlier proportional layout and independent-project evidence is retained; do not infer startup call order or tracking-mode timer behavior from it.
   All eight saved native normal/icon drops at 100/150%, through viewport scroll and root/entered-group coordinates, exactly match measured expectations. Corrections cover first-motion activation, full-resolution normal previews, inverted icon offset and whole-point placement. A valid held icon capture leaves document/history unchanged before release. The existing automated 24-case zoom/group/clamp/file/history matrix also passes.
@@ -15,7 +15,7 @@ Current checkpoint: 27 October 2026, default catalog appearance and Android Aler
 - [ ] **Q6 — Four workflows:** refresh only affected routes, then verify one current landing/contact/phone/tablet workflow candidate.
 - [ ] **Q7 — Release requirements:** classify every remaining requirement as evidenced, open or explicitly deferred; keep material discrepancies open.
 - [ ] **Q8 — Delivery:** refresh macOS/Linux packages and remaining installer/update checks after behavior/appearance closure.
-**Held — Q9 Windows:** unverified; excluded from the active work queue until requested. Five work packages remain active; completed checks are reused within their scope.
+**Held — Q9 Windows:** unverified; excluded from the active work queue until requested. Four work packages remain active; completed checks are reused within their scope.
 
 ## Visible controls: existing evidence
 
@@ -63,7 +63,9 @@ V04 contour checkpoint — 27 October: Cover Flow stroke/join weight, Callout lo
 
 V01/V05 refresh — 27 October: native title-bar zoom reaches the matching 1728-point wide view, closing V01 together with the retained minimum-width checks (one-point outer/client residual explicit). V05 now uses an original thin plus for new Circle Buttons, preserves saved solid pluses, and uses catalog Date/Clean Browser glyphs. 33 affected checks cover source/history, sizing/overflow, pixel mapping and SVG/PNG/PDF notices; scoped lint/build/signature and current native Clean/Sketch checks pass. All 546 baseline files are exact after owned cleanup. Sketch-command detail and remaining V03/V04 reconciliation stay open. Evidence: private `appearance-finishing-current/glyphs`.
 
-Final appearance/Q3 checkpoint — 27 October: 38 affected control tests, scoped lint/format/build/signature and both-style native seven-control galleries pass on the current source. Android tile insertion preserves existing controls; Undo is byte-exact baseline, Redo and cold reopen/save are byte-exact insertion. All review processes exited and all 546 prior application-data files are exact after owned cleanup. See private `appearance-finishing-current/container-finish/REPORT.md`. These scoped closures do not close Q4–Q8 or G01–G17.
+Final appearance/Q3 checkpoint — 27 October: 38 affected control tests, scoped lint/format/build/signature and both-style native seven-control galleries pass on the current source. Android tile insertion preserves existing controls; Undo is byte-exact baseline, Redo and cold reopen/save are byte-exact insertion. All review processes exited and all 546 prior application-data files are exact after owned cleanup. See private `appearance-finishing-current/container-finish/REPORT.md`. These scoped closures do not close Q5–Q8 or G01–G17.
+
+Q4 reconciliation — 27 October: one current native three-control fixture confirms Dropdown optional icon/scrollbar, brace caption navigation and separate Date Picker Cancel/OK destinations. Earlier narrow/Back picker acceptance is retained. No product code changed or suite was repeated. Process exited; all 546 prior data files are exact after owned cleanup. Private `appearance-finishing-current/variants/REPORT.md` retains artifacts, corrected input attempts and direct-reference observation limits. Broader variants remain explicit under Q6/Q7.
 
 ## Current appearance fixes — Q2
 

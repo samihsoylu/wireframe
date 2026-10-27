@@ -26,9 +26,11 @@ Authorized: complete V01–V05 appearance fixes, then Q3–Q8 behavior/release c
 
 **Q3 is closed:** native double-click on the separate Android Alert tile inserts one ordinary Alert with explicit Inline/Left and neutral text, at 200 × 102. Saved insertion preserves all seven existing controls. One-step Undo is byte-identical to baseline; Redo and cold-reopen/save are byte-identical to insertion, with empty history after restart. No behavior correction was needed. An initial artifact assertion used the wrong internal kind (`alert_dialog` instead of `alert`); corrected assertions pass. All review processes exited, owned files archived and all 546 baseline application-data files remain byte-exact. Current source identity, artifacts and cleanup are private in `appearance-finishing-current/container-finish/REPORT.md`.
 
-**Next:** Q4 reconcile retained Dropdown icon/scrollbar, Date picker destination and brace-link evidence, then Q5's exact startup/held-tracking questions, Q6 integrated workflows, Q7 requirement classification and Q8 fresh macOS/Linux delivery. Windows stays held; no release publication or new feature deferral.
+**Q4 is closed in its named scope:** current native three-control fixture shows Dropdown optional icon/scrollbar and verifies brace-caption plus Date Picker Cancel/OK navigation; retain earlier narrow/Back picker acceptance. Direct native reference activation remains a bounded comparison-observation limit, with retained source contracts and working product destinations. No runtime code changed or suite was repeated. All 546 baseline data files remain exact and the review process exited. Private `appearance-finishing-current/variants/REPORT.md` retains candidate/artifacts and corrected input attempts.
 
-The superseded untracked gap survey is archived and removed; its relevant release/CI/contributor/metadata suggestions remain in the finishing checklist. Q4–Q8 and overall release acceptance remain open.
+**Next:** Q5 exact startup/held-tracking questions, Q6 integrated workflows, Q7 requirement classification and Q8 fresh macOS/Linux delivery. Windows stays held; no release publication or new feature deferral.
+
+The superseded untracked gap survey is archived and removed; its relevant release/CI/contributor/metadata suggestions remain in the finishing checklist. Q5–Q8 and overall release acceptance remain open.
 
 ## Starter-content checkpoint — 27 October 2026
 

@@ -30,7 +30,9 @@ Authorized: complete V01–V05 appearance fixes, then Q3–Q8 behavior/release c
 
 **Q5 held-persistence result:** a valid guarded native reference344→364 and current product200→220 both retain the prior saved value through four-second holds and save after release. No timing correction is justified. The initial reference edge attempt did not move and is excluded. Exact native startup/animated-window ordering remains untraced; retain proportional layout/cold restoration evidence without inferring the call sequence. Both apps exited; reference preferences are restored and all546 product baseline files exact. Private `appearance-finishing-current/held-divider/REPORT.md` retains timestamped evidence and cleanup.
 
-**Next:** independent Q6 integrated workflows, Q7 requirement classification including the remaining Q5 startup-order uncertainty, then Q8 fresh macOS/Linux delivery. Windows stays held; no release publication or new feature deferral.
+**Q6 is closed for the current macOS integrated scope:** all four native scenarios remain readable with retained Desktop/Phone wraps, revised Browser commands in context, full headline selection/edit, exact saved Undo/Redo, five presentation routes and cold reopen/save. Retained paired reference captures/behavior are reconciled with explicit frame/navigator/phone-zoom and minor artwork limits; no pixel, IME or other-platform claim. Both processes exited; all546 baseline data files exact. Private `appearance-finishing-current/workflows/REPORT.md` and comparison.html retain candidate/artifacts.
+
+**Next:** Q7 requirement classification including remaining Q5 startup-order uncertainty, then Q8 fresh macOS/Linux delivery. Windows stays held; no release publication or new feature deferral.
 
 The superseded untracked gap survey is archived and removed; its relevant release/CI/contributor/metadata suggestions remain in the finishing checklist. Q5–Q8 and overall release acceptance remain open.
 

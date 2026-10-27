@@ -285,7 +285,8 @@ fn screen_borders_stay_crisp_and_straight_around_a_transparent_opening() {
     set(&mut e, back, "text", Value::Text(String::new()));
     set(&mut e, back, "fill", Value::Color([30, 170, 80, 255]));
     e.selected_mut(|c| c.bounds = Bounds::new(0., 0., 1000., 1000.));
-    e.add(Kind::Tablet, 0., 0.);
+    // Keep edge probes inside the flat fill, clear of the background's Sketch outline.
+    e.add(Kind::Tablet, 20., 20.);
     let id = *e.selection.iter().next().unwrap();
     set(&mut e, id, "status_bar", Value::Bool(false));
     set(&mut e, id, "transparent_background", Value::Bool(true));
@@ -305,9 +306,9 @@ fn screen_borders_stay_crisp_and_straight_around_a_transparent_opening() {
             );
             e.selected_mut(|c| {
                 c.bounds = if landscape {
-                    Bounds::new(0., 0., 916., 616.)
+                    Bounds::new(20., 20., 916., 616.)
                 } else {
-                    Bounds::new(0., 0., 616., 916.)
+                    Bounds::new(20., 20., 616., 916.)
                 }
             });
             for sketch in [false, true] {
@@ -324,7 +325,7 @@ fn screen_borders_stay_crisp_and_straight_around_a_transparent_opening() {
                         (true, false) => (915 - y, x),
                         (false, _) => (x, y),
                     };
-                    image.get_pixel(24 + x, 24 + y).0
+                    image.get_pixel(24 + 20 + x, 24 + 20 + y).0
                 };
                 for y in [200, 400, 700] {
                     for x in 0..40 {

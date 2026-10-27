@@ -31,7 +31,13 @@ fn values(e: &Editor, id: Id) -> Vec<Option<IconSource>> {
 
 #[test]
 fn public_catalog_is_complete_searchable_and_renderable_offline() {
-    assert_eq!(icons::all().len(), 2060);
+    let originals: Vec<_> = icons::all()
+        .iter()
+        .filter(|icon| icon.id.starts_with("wireframe-"))
+        .map(|icon| icon.id.as_str())
+        .collect();
+    assert_eq!(originals, ["wireframe-plus-regular"]);
+    assert_eq!(icons::all().len() - originals.len(), 2060);
     assert!(icons::all().windows(2).all(|pair| pair[0].id < pair[1].id));
     assert_eq!(icons::search("camera", "")[0].id, "camera-solid");
     assert!(

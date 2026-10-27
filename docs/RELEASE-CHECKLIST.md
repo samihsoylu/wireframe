@@ -46,7 +46,7 @@ This index supersedes stale next-step wording in the retained historical evidenc
 |---|---|---|
 | G01 | Implemented catalog; scoped native/default appearance evidence | Online image search and screenshot text extraction still need a first-release scope decision; neither is implemented or implicitly deferred. Preserve per-family variant/native limits. |
 | G02 | Evidenced in named creation/edit/history workflows | Current integrated edit/history passes; retain physical smart-zoom, held-scroll, composition and unobserved input boundaries. |
-| G03 | Named appearance/drawing corrections evidenced | Q2 defaults and current scenarios pass. Typeface/original artwork differences are bounded; exact Q5 startup/animation sequence, physical display and broader variants remain limits. |
+| G03 | Named appearance/drawing corrections evidenced | Q2 defaults and current scenarios pass. Typeface/original artwork differences are bounded; exact Q5 startup/animation sequence (passive attach is OS-denied; tooling unavailable), physical display and broader variants remain limits. |
 | G04 | Model/history and sampled native lifecycle evidenced | A disposable current-package fixture contains exactly one synthetic image and one component library in Trash. Native Empty Trash Cancel preserves both; final two-item deletion awaits action-time permission/execution. Reversible lifecycle evidence remains scoped. |
 | G05 | Scoped macOS/Linux atomic import evidence | Retain explicit mixed/source/failure and platform limits; no new import failure found. |
 | G06 | Offline browser implementation and scoped native evidence | Retain late-worker and keyboard-only/platform limits; no named implementation gap remains. |

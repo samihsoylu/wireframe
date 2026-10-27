@@ -528,7 +528,7 @@ fn alternate_divider_has_a_five_point_hit_area_and_restores_the_surrounding_styl
 
 #[test]
 fn alternate_divider_accepts_inside_grabs_and_ignores_adjacent_notes_and_heading_drags() {
-    for offset in [-3., -2., 2., 3.] {
+    for offset in [-3., -2.5, -2., 2., 2.5, 3.] {
         let (ctx, mut app) = setup();
         app.file = Some(std::path::PathBuf::from("divider-hit-area.wireframe"));
         let original = app.editor.document.clone();
@@ -560,14 +560,112 @@ fn alternate_divider_accepts_inside_grabs_and_ignores_adjacent_notes_and_heading
         );
         let height = app.page_inspector.preferences.get(key.as_deref());
         assert_eq!(
-            height != 200,
-            offset.abs() < 2.5,
+            height,
+            if (-2. ..3.).contains(&offset) {
+                240
+            } else {
+                200
+            },
             "offset {offset}, height {height}"
         );
         assert_eq!(app.editor.document, original);
         assert!(app.editor.undo_name().is_none());
         assert!(!app.notes_editing());
     }
+}
+
+#[test]
+fn held_divider_motion_keeps_the_grab_offset_and_saves_only_at_release() {
+    for offset in [-2., 2.] {
+        let (ctx, mut app) = setup();
+        let original = app.editor.document.clone();
+        let key = app.version_preferences_key();
+        let id = egui::Id::new(("page-alternates-panel", &key, 200_u16));
+        for _ in 0..3 {
+            frame(&mut app, &ctx, vec![]);
+        }
+        let initial = egui::containers::panel::PanelState::load(&ctx, id)
+            .unwrap()
+            .outer_rect;
+        let start = egui::pos2(initial.center().x, initial.top() + offset);
+        let button = |pos, pressed| egui::Event::PointerButton {
+            pos,
+            pressed,
+            button: egui::PointerButton::Primary,
+            modifiers: Modifiers::NONE,
+        };
+        frame(
+            &mut app,
+            &ctx,
+            vec![egui::Event::PointerMoved(start), button(start, true)],
+        );
+        frame(
+            &mut app,
+            &ctx,
+            vec![egui::Event::PointerMoved(start - Vec2::new(0., 10.))],
+        );
+        assert_eq!(
+            egui::containers::panel::PanelState::load(&ctx, id)
+                .unwrap()
+                .outer_rect
+                .height(),
+            210.
+        );
+        assert_eq!(app.page_inspector.preferences.get(key.as_deref()), 200);
+        let end = start - Vec2::new(0., 20.);
+        frame(
+            &mut app,
+            &ctx,
+            vec![egui::Event::PointerMoved(end), button(end, false)],
+        );
+        assert_eq!(app.page_inspector.preferences.get(key.as_deref()), 220);
+        assert_eq!(app.editor.document, original);
+        assert!(app.editor.undo_name().is_none());
+        assert!(!app.notes_editing());
+    }
+}
+
+#[test]
+fn divider_release_at_the_press_point_restores_the_initial_height() {
+    let (ctx, mut app) = setup();
+    let original = app.editor.document.clone();
+    let key = app.version_preferences_key();
+    let id = egui::Id::new(("page-alternates-panel", &key, 200_u16));
+    for _ in 0..3 {
+        frame(&mut app, &ctx, vec![]);
+    }
+    let rect = egui::containers::panel::PanelState::load(&ctx, id)
+        .unwrap()
+        .outer_rect;
+    let start = egui::pos2(rect.center().x, rect.top() + 2.);
+    let button = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: Modifiers::NONE,
+    };
+    frame(
+        &mut app,
+        &ctx,
+        vec![egui::Event::PointerMoved(start), button(start, true)],
+    );
+    frame(
+        &mut app,
+        &ctx,
+        vec![egui::Event::PointerMoved(start - Vec2::new(0., 20.))],
+    );
+    // Release can carry its final position without a separate move event.
+    frame(&mut app, &ctx, vec![button(start, false)]);
+    assert_eq!(
+        egui::containers::panel::PanelState::load(&ctx, id)
+            .unwrap()
+            .outer_rect
+            .height(),
+        200.
+    );
+    assert_eq!(app.page_inspector.preferences.get(key.as_deref()), 200);
+    assert_eq!(app.editor.document, original);
+    assert!(app.editor.undo_name().is_none());
 }
 
 fn alternate_layout_frame(app: &mut WireframeApp, ctx: &egui::Context, extent: f32) -> f32 {

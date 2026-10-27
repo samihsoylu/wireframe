@@ -178,7 +178,7 @@ pub struct WireframeApp {
     library_press: Option<library_drag::LibraryPress>,
     library_anchor: Vec2,
     alignment_guides: Vec<snapping::Guide>,
-    canvas_press: Option<Pos2>,
+    canvas_press: Option<(Pos2, Modifiers)>,
     canvas_clicks: canvas_click::CanvasClicks,
     unlock_press: Option<selection::UnlockPress>,
     grid: bool,
@@ -1227,17 +1227,17 @@ if ui.add_enabled(movable, egui::Button::new("Delete")).clicked(){self.editor.de
                                 pos,
                                 button: egui::PointerButton::Primary,
                                 pressed,
-                                ..
+                                modifiers,
                             } = event
                             {
                                 if pressed {
                                     self.canvas_press = (response.rect.contains(pos)
                                         && ctx.layer_id_at(pos) == Some(ui.layer_id()))
-                                    .then_some(pos);
-                                } else if let Some(start) = self.canvas_press.take()
+                                    .then_some((pos, modifiers));
+                                } else if let Some((start, modifiers)) = self.canvas_press.take()
                                     && start.distance(pos) > 6.
                                 {
-                                    completed = Some((start, pos));
+                                    completed = Some((start, pos, modifiers));
                                 }
                             }
                         }
@@ -1247,16 +1247,20 @@ if ui.add_enabled(movable, egui::Button::new("Delete")).clicked(){self.editor.de
                         None
                     };
                     let pointer = instant_drag
-                        .map(|(_, end)| end)
+                        .map(|(_, end, _)| end)
                         .or(response.interact_pointer_pos());
                     if self.drag.is_none()
                         && (response.drag_started() || instant_drag.is_some())
                         && let Some(pos) = instant_drag
-                            .map(|(start, _)| start)
+                            .map(|(start, _, _)| start)
                             .or(ui.input(|i| i.pointer.press_origin()))
                             .or(pointer)
                     {
                         let start = self.world(pos);
+                        let press_modifiers = instant_drag
+                            .map(|(_, _, modifiers)| modifiers)
+                            .or(self.canvas_press.map(|(_, modifiers)| modifiers))
+                            .unwrap_or_else(|| ui.input(|i| i.modifiers));
                         let space = ui.input(|i| {
                             i.key_down(Key::Space)
                                 || i.pointer.button_down(egui::PointerButton::Middle)
@@ -1306,7 +1310,11 @@ if ui.add_enabled(movable, egui::Button::new("Delete")).clicked(){self.editor.de
                                     .unwrap_or_else(|_| Targets::new(5.)),
                             });
                         } else {
-                            let hit = self.editor.hit(start.x, start.y).map(|c| (c.id, c.locked));
+                            let hit = self
+                                .editor
+                                .hit(start.x, start.y)
+                                .filter(|_| !press_modifiers.shift)
+                                .map(|c| (c.id, c.locked));
                             if let Some((id, locked)) = hit {
                                 if !self.editor.selection.contains(&id)
                                     && (!self.editor.own_locked(id)
@@ -1337,7 +1345,7 @@ if ui.add_enabled(movable, egui::Button::new("Delete")).clicked(){self.editor.de
                                     });
                                 }
                             } else if !self.present {
-                                let previous = if ui.input(|i| i.modifiers.shift) {
+                                let previous = if press_modifiers.shift {
                                     self.editor.selection.clone()
                                 } else {
                                     HashSet::new()
@@ -3516,6 +3524,54 @@ mod tests {
         app
     }
     #[test]
+    fn shift_at_canvas_press_selects_instead_of_moving_even_after_key_release() {
+        for (coalesced, held) in [(false, false), (false, true), (true, false), (true, true)] {
+            let ctx = egui::Context::default();
+            let mut app = alignment_fixture(&ctx);
+            let before = app.editor.document.clone();
+            let undo = app.editor.undo_name().map(str::to_owned);
+            let start = app.screen([225., 124.]);
+            let end = start + Vec2::new(80., 45.);
+            let press = egui::Event::PointerButton {
+                pos: start,
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                modifiers: Modifiers::SHIFT,
+            };
+            let mut events = vec![
+                egui::Event::ModifiersChanged(Modifiers::SHIFT),
+                egui::Event::PointerMoved(start),
+                press,
+            ];
+            if !coalesced {
+                frame(&ctx, &mut app, std::mem::take(&mut events));
+            }
+            let release_modifiers = if held {
+                Modifiers::SHIFT
+            } else {
+                Modifiers::NONE
+            };
+            events.extend([
+                egui::Event::ModifiersChanged(release_modifiers),
+                egui::Event::PointerMoved(end),
+                egui::Event::PointerButton {
+                    pos: end,
+                    button: egui::PointerButton::Primary,
+                    pressed: false,
+                    modifiers: release_modifiers,
+                },
+            ]);
+            frame(&ctx, &mut app, events);
+            assert!(
+                app.editor.document == before,
+                "coalesced={coalesced}, held={held}"
+            );
+            assert_eq!(app.editor.undo_name(), undo.as_deref());
+            assert!(app.drag.is_none());
+            assert!(app.text_edit.is_none());
+        }
+    }
+    #[test]
     fn option_drag_stationary_modifier_changes_release_and_cancel_preserve_history() {
         for ending in ["copy", "move", "escape", "focus"] {
             let ctx = egui::Context::default();
@@ -3612,15 +3668,21 @@ mod tests {
                 ..Modifiers::NONE
             };
             let mut events = vec![
-                egui::Event::ModifiersChanged(modifiers),
+                egui::Event::ModifiersChanged(Modifiers::NONE),
                 egui::Event::PointerMoved(start),
                 pointer(start, true),
+                egui::Event::ModifiersChanged(modifiers),
                 egui::Event::PointerMoved(end),
                 pointer(end, false),
                 egui::Event::ModifiersChanged(Modifiers::NONE),
             ];
             for event in &mut events {
-                if let egui::Event::PointerButton { modifiers: m, .. } = event {
+                if let egui::Event::PointerButton {
+                    pressed: false,
+                    modifiers: m,
+                    ..
+                } = event
+                {
                     *m = modifiers;
                 }
             }

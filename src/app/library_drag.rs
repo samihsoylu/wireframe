@@ -44,6 +44,16 @@ fn icon_preview_scale(bounds: Bounds) -> f32 {
     46. / bounds.w.max(bounds.h).max(1.)
 }
 
+fn control_preview_scale(item: CatalogItem) -> f32 {
+    // Built-in controls drag their full-resolution thumbnail, independently
+    // of canvas zoom. Icon and user-resource previews retain their own sizes.
+    if matches!(item, CatalogItem::Control(_) | CatalogItem::Preset(_)) {
+        2.
+    } else {
+        1.
+    }
+}
+
 #[derive(Clone)]
 pub(super) struct LibraryPress {
     item: CatalogItem,
@@ -60,16 +70,15 @@ impl LibraryPress {
     fn anchor(&self, point: Pos2) -> Vec2 {
         if matches!(self.item, CatalogItem::Icon(_)) {
             // Individual icons use the complete provider area, including padding.
-            // Keep the downward canvas Y convention; exact off-center source
-            // parity is still an open acceptance item.
+            // The preview offset retains the provider's inverted vertical axis.
             let local = point - self.provider_origin;
-            Vec2::new(local.x * 46. / 68., local.y)
+            Vec2::new(local.x * 46. / 68., 46. - local.y)
         } else {
-            self.image.anchor(point)
+            self.image.anchor(point) * control_preview_scale(self.item)
         }
     }
     fn activation(&self, point: Pos2) -> Option<Vec2> {
-        if point.distance(self.point) <= 6. {
+        if point == self.point {
             return None;
         }
         if self.image_area.contains(point) {
@@ -232,6 +241,9 @@ impl WireframeApp {
             };
             if released && let Some(pos) = pointer.filter(|p| self.canvas_rect.contains(*p)) {
                 let point = self.world((pos - self.library_anchor).max(self.canvas_rect.min));
+                // Placement uses whole document points, with half points
+                // rounded toward positive infinity on either side of zero.
+                let point = Pos2::new((point.x + 0.5).floor(), (point.y + 0.5).floor());
                 self.insert_catalog_at(item, point);
                 ctx.request_repaint();
             }
@@ -259,7 +271,7 @@ impl WireframeApp {
                     let scale = icon_preview_scale(bounds);
                     (scale, Vec2::new(bounds.x, bounds.y) * scale)
                 } else {
-                    (1., Vec2::ZERO)
+                    (control_preview_scale(press.item), Vec2::ZERO)
                 };
                 Self::paint_scene(
                     &painter,
@@ -428,19 +440,19 @@ mod tests {
         let (_, bounds) = frame_at(
             &ctx,
             &mut app,
-            vec![egui::Event::PointerMoved(start + Vec2::new(6., 0.))],
+            vec![egui::Event::PointerMoved(start)],
             true,
             Some(2.1),
         );
         assert!(
             app.library_drag.is_none(),
-            "movement at the threshold stays pending"
+            "an unchanged pointer stays pending"
         );
         assert!(!bounds.is_positive());
         let (_, bounds) = frame_at(
             &ctx,
             &mut app,
-            vec![egui::Event::PointerMoved(start + Vec2::new(7., 0.))],
+            vec![egui::Event::PointerMoved(start + Vec2::new(0.5, 0.))],
             true,
             Some(2.2),
         );
@@ -483,11 +495,11 @@ mod tests {
             assert_eq!(app.library_drag.is_some(), excursion);
             let target = app.canvas_rect.center();
             let anchor = if excursion {
-                Vec2::new(31. * 48. / 46., 24.)
+                Vec2::new(31. * 96. / 46., 48.)
             } else {
-                Vec2::splat(24.)
+                Vec2::splat(48.)
             };
-            let expected = app.world(target - anchor);
+            let expected = app.world(target - anchor).round();
             frame(
                 &ctx,
                 &mut app,
@@ -508,7 +520,7 @@ mod tests {
     #[test]
     fn held_preview_follows_pointer_without_editing_then_drops_once_at_zoomed_position() {
         let mut preview_size: Option<Vec2> = None;
-        for zoom in [0.5, 1., 2.] {
+        for (zoom, expected) in [(0.5, (120., 130.)), (1., (140., 165.)), (2., (150., 182.))] {
             let ctx = egui::Context::default();
             let mut app = WireframeApp::workspace(&ctx, None);
             app.editor.add(Kind::Label, 10., 20.);
@@ -524,7 +536,7 @@ mod tests {
                 vec![egui::Event::PointerMoved(start + Vec2::splat(1.))],
                 true,
             );
-            assert!(app.library_drag.is_none());
+            assert!(app.library_drag.is_some());
             let target = app.screen([160., 200.]);
             let (_, preview_bounds) = frame(
                 &ctx,
@@ -539,6 +551,7 @@ mod tests {
             assert_eq!(app.editor.document, before);
             assert_eq!(app.editor.selection, selection);
             assert!(preview_bounds.is_positive());
+            assert!(preview_bounds.width() > 90. && preview_bounds.width() < 110.);
             if let Some(size) = preview_size {
                 assert!((preview_bounds.size() - size).length() < 0.01);
             }
@@ -557,7 +570,7 @@ mod tests {
             assert!(app.library_drag.is_none());
             assert_eq!(app.editor.current().controls.len(), 2);
             let b = app.editor.current().controls[1].bounds;
-            assert_eq!((b.x, b.y), (160. + 6. / zoom, 200. - 9. / zoom));
+            assert_eq!((b.x, b.y), expected);
             frame(&ctx, &mut app, vec![], true);
             assert_eq!(app.editor.current().controls.len(), 2);
             app.editor.undo();
@@ -617,8 +630,7 @@ mod tests {
             assert_eq!(app.editor.current().controls.len(), 1);
             let b = app.editor.current().controls[0].bounds;
             if padding {
-                assert!((b.x - 171.47826).abs() < 0.001);
-                assert!((b.y - 176.).abs() < 0.001);
+                assert_eq!((b.x, b.y), (183., 152.));
             } else {
                 assert_eq!((b.x, b.y), (0., 0.));
             }
@@ -690,7 +702,7 @@ mod tests {
         let (source, _) = frame(&ctx, &mut app, vec![], true);
         let start = source.min + Vec2::new(34., 23.);
         let target = app.canvas_rect.center();
-        let expected = app.world(target - Vec2::splat(24.));
+        let expected = app.world(target - Vec2::splat(48.)).round();
         frame(
             &ctx,
             &mut app,
@@ -725,7 +737,7 @@ mod tests {
             );
             assert_eq!(app.editor.current().controls.len(), 1);
             let b = app.editor.current().controls[0].bounds;
-            assert_eq!((b.x, b.y), (160. - 24. / zoom, 200. - 24. / zoom));
+            assert_eq!((b.x, b.y), (160. - 48. / zoom, 200. - 48. / zoom));
             frame(&ctx, &mut app, vec![], true);
             assert_eq!(app.editor.current().controls.len(), 1);
             app.editor.undo();
@@ -807,9 +819,9 @@ mod tests {
                 vec![egui::Event::PointerMoved(start + Vec2::new(8., 4.))],
                 true,
             );
-            // 48-unit artwork is fitted to 46 points, with 11 points of left
-            // padding. Activation is at image-field coordinate (42, 27).
-            let anchor = Vec2::new(31. * 48. / 46., 27. * 48. / 46.);
+            // The full-resolution 96-point thumbnail is fitted to 46 points,
+            // with 11 points of left padding. Activation is at (42, 27).
+            let anchor = Vec2::new(31. * 96. / 46., 27. * 96. / 46.);
             assert!((app.library_anchor - anchor).length() < 0.001);
             let target = app.screen([160., 200.]);
             frame(
@@ -822,8 +834,8 @@ mod tests {
             assert!(app.editor.current().controls.is_empty());
             frame(&ctx, &mut app, vec![pointer(target, false)], true);
             let b = app.editor.current().controls[0].bounds;
-            assert!((b.x - (160. - anchor.x / zoom)).abs() < 0.001);
-            assert!((b.y - (200. - anchor.y / zoom)).abs() < 0.001);
+            let expected = Vec2::new(160. - anchor.x / zoom, 200. - anchor.y / zoom).round();
+            assert_eq!((b.x, b.y), (expected.x, expected.y));
             app.editor.undo();
             assert!(app.editor.current().controls.is_empty());
         }
@@ -1011,7 +1023,9 @@ mod tests {
                 (moved.min - preview.min - (target - start - Vec2::new(7., 0.))).length() < 1.5
             );
             assert_eq!(app.editor.document, before);
-            let expected = app.world((target - app.library_anchor).max(app.canvas_rect.min));
+            let expected = app
+                .world((target - app.library_anchor).max(app.canvas_rect.min))
+                .round();
             frame_item(
                 &ctx,
                 &mut app,
@@ -1043,7 +1057,97 @@ mod tests {
     }
 
     #[test]
-    fn icon_anchor_uses_full_provider_and_preserves_downward_y() {
+    fn measured_native_library_drop_positions_cover_zoom_scroll_and_group_space() {
+        // Inputs and integer results from eight accepted native drops. Anchor
+        // values were read from the corresponding drag payloads.
+        for (icon, zoom, scroll, nested, pointer_local, expected) in [
+            (false, 1., [0., 0.], false, [506., 286.], [478., 256.]),
+            (false, 1.5, [128., 35.], false, [706., 336.], [537., 227.]),
+            (true, 1.5, [128., 35.], false, [456., 386.], [380., 260.]),
+            (true, 1., [0., 0.], false, [556., 436.], [542., 404.]),
+            (true, 1., [0., 0.], true, [806., 486.], [412., 227.]),
+            (true, 1.5, [563., 314.], true, [706., 386.], [457., 219.]),
+            (false, 1.5, [563., 314.], true, [606., 436.], [380., 253.]),
+            (false, 1., [199., 81.], true, [756., 536.], [547., 360.]),
+        ] {
+            let ctx = egui::Context::default();
+            let mut app = WireframeApp::workspace(&ctx, None);
+            if nested {
+                app.editor.add(Kind::Button, 380., 227.);
+                app.editor.add(Kind::Button, 537., 380.);
+                app.editor.select_all();
+                app.editor.group();
+                let group = *app.editor.selection.iter().next().unwrap();
+                assert!(app.editor.enter(group));
+            }
+            app.zoom = zoom;
+            app.pan = -Vec2::from(scroll);
+            let item = if icon {
+                CatalogItem::Icon("0-solid")
+            } else {
+                CatalogItem::Control(Kind::CircleButton)
+            };
+            component_press(&ctx, &mut app, item);
+            let before = app.editor.document.clone();
+            app.library_drag = Some(item);
+            app.library_anchor = if icon {
+                Vec2::new(13.890201, 31.7)
+            } else {
+                Vec2::new(28.382559, 29.843485)
+            };
+            let target = app.canvas_rect.min + Vec2::from(pointer_local);
+            frame_item(
+                &ctx,
+                &mut app,
+                vec![egui::Event::PointerMoved(target), pointer(target, false)],
+                true,
+                None,
+                item,
+            );
+            let origin = app.editor.nodes().last().unwrap().origin;
+            assert_eq!([origin.x, origin.y], expected, "{icon}, {zoom}, {nested}");
+            let placed = app.editor.document.clone();
+            assert_eq!(
+                wireframe::document::decode(&placed.encode().unwrap()).unwrap(),
+                placed
+            );
+            app.editor.undo();
+            assert_eq!(app.editor.document, before);
+            app.editor.redo();
+            assert_eq!(app.editor.document, placed);
+        }
+    }
+
+    #[test]
+    fn measured_native_normal_activation_uses_the_full_resolution_thumbnail() {
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        component_press(&ctx, &mut app, CatalogItem::Control(Kind::CircleButton));
+        let mut press = app.library_press.clone().unwrap();
+        press.point = press.provider_origin + Vec2::new(24., 14.);
+        let anchor = press.activation(press.point + Vec2::new(0.6, 0.3)).unwrap();
+        assert!((anchor.x - 28.382559).abs() < 0.002);
+        assert!((anchor.y - 29.843485).abs() < 0.002);
+    }
+
+    #[test]
+    fn measured_native_icon_activation_preserves_its_inverted_vertical_offset() {
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        component_press(&ctx, &mut app, CatalogItem::Icon("0-solid"));
+        let mut press = app.library_press.clone().unwrap();
+        press.point = press.provider_origin + Vec2::new(20., 14.);
+        // Measured first dragged event and its serialized 46-point preview offset.
+        let activation = press.point + Vec2::new(0.5333333, 0.3);
+        let anchor = press
+            .activation(activation)
+            .expect("first motion activates");
+        assert!((anchor.x - 13.890201).abs() < 0.002);
+        assert!((anchor.y - 31.7).abs() < 0.002);
+    }
+
+    #[test]
+    fn icon_anchor_uses_full_provider_and_inverts_vertical_offset() {
         let ctx = egui::Context::default();
         let mut app = WireframeApp::workspace(&ctx, None);
         component_press(&ctx, &mut app, CatalogItem::Icon("star-regular"));
@@ -1051,7 +1155,7 @@ mod tests {
         for local in [Vec2::new(0., 0.), Vec2::new(12., 9.), Vec2::new(68., 46.)] {
             assert_eq!(
                 press.anchor(press.provider_origin + local),
-                Vec2::new(local.x * 46. / 68., local.y)
+                Vec2::new(local.x * 46. / 68., 46. - local.y)
             );
         }
         assert_eq!(icon_preview_scale(press.preview.bounds), 46. / 24.);
@@ -1061,19 +1165,23 @@ mod tests {
     #[test]
     fn off_center_library_drops_keep_viewport_and_nested_group_coordinates() {
         // Expected anchors are in preview points, independently of canvas zoom:
-        // a 48-point circle fitted into 46 points, versus a 46-point icon
+        // a 96-point circle thumbnail fitted into 46 points, versus a 46-point icon
         // normalized across the complete 68-by-46 provider.
         for (item, anchor) in [
             (
                 CatalogItem::Control(Kind::CircleButton),
-                Vec2::new(13. * 48. / 46., 16. * 48. / 46.),
+                Vec2::new(13. * 96. / 46., 16. * 96. / 46.),
             ),
             (
                 CatalogItem::Icon("star-regular"),
-                Vec2::new(24. * 46. / 68., 16.),
+                Vec2::new(24. * 46. / 68., 30.),
             ),
         ] {
-            for zoom in [0.5, 1., 2.] {
+            for (zoom, edge_expected) in [
+                (0.5, Vec2::new(-26., 34.)),
+                (1., Vec2::new(-13., 17.)),
+                (2., Vec2::new(-6., 9.)),
+            ] {
                 for nested in [false, true] {
                     for edge in [false, true] {
                         let ctx = egui::Context::default();
@@ -1131,11 +1239,11 @@ mod tests {
                             item,
                         );
                         let root = if edge {
-                            Vec2::new(-13. / zoom, 17. / zoom)
+                            edge_expected
                         } else {
                             Vec2::new(220., 210.) - anchor / zoom
                         };
-                        let expected = root
+                        let expected = root.round()
                             - if nested {
                                 Vec2::new(100., 120.)
                             } else {
@@ -1206,7 +1314,9 @@ mod tests {
             assert_eq!(app.editor.document, before);
             let target = app.canvas_rect.center();
             let anchor = app.library_anchor;
-            let expected = app.world((target - anchor).max(app.canvas_rect.min));
+            let expected = app
+                .world((target - anchor).max(app.canvas_rect.min))
+                .round();
             frame_item(
                 &ctx,
                 &mut app,

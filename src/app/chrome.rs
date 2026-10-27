@@ -5,6 +5,7 @@ use super::*;
 mod panel_resize;
 pub(super) use panel_resize::{
     Edge as PanelEdge, owns_pointer as panel_owns_pointer, prepare as prepare_panel_resize,
+    prepare_anchored as prepare_anchored_panel_resize,
 };
 #[cfg(target_os = "macos")]
 mod macos;

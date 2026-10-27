@@ -8,6 +8,7 @@ use std::ops::RangeInclusive;
 struct Press {
     start: Pos2,
     frame: u64,
+    rect: Rect,
 }
 
 #[derive(Clone, Copy)]
@@ -26,6 +27,29 @@ pub(in crate::app) fn prepare(
     edge: Edge,
     range: RangeInclusive<f32>,
     enabled: bool,
+) -> bool {
+    prepare_impl(ui, id, edge, range, enabled, false)
+}
+
+// An internal split tracks displacement from the grabbed point, including
+// movement delivered without a separate redraw before release.
+pub(in crate::app) fn prepare_anchored(
+    ui: &egui::Ui,
+    id: egui::Id,
+    edge: Edge,
+    range: RangeInclusive<f32>,
+    enabled: bool,
+) -> bool {
+    prepare_impl(ui, id, edge, range, enabled, true)
+}
+
+fn prepare_impl(
+    ui: &egui::Ui,
+    id: egui::Id,
+    edge: Edge,
+    range: RangeInclusive<f32>,
+    enabled: bool,
+    anchored: bool,
 ) -> bool {
     let key = id.with("wireframe-panel-press");
     let frame = ui.ctx().cumulative_frame_nr();
@@ -60,6 +84,10 @@ pub(in crate::app) fn prepare(
         for (index, event) in events.into_iter().enumerate() {
             if press.is_some() && matches!(event, egui::Event::PointerMoved(_)) {
                 consumed.push(index);
+                if anchored && let (Some(start), egui::Event::PointerMoved(pos)) = (press, &event) {
+                    resize_from_press(&mut panel, start, *pos, edge, &range);
+                    ui.ctx().data_mut(|d| d.insert_persisted(id, panel));
+                }
             }
             if let egui::Event::PointerButton {
                 pos,
@@ -70,13 +98,25 @@ pub(in crate::app) fn prepare(
             {
                 if pressed {
                     press = (handle.rect.contains(pos)
+                        && (!anchored || pos[axis] < handle.rect.max[axis])
                         && ui.ctx().layer_id_at(pos) == Some(handle.layer_id))
-                    .then_some(Press { start: pos, frame });
+                    .then_some(Press {
+                        start: pos,
+                        frame,
+                        rect: panel.outer_rect,
+                    });
                     if press.is_some() {
                         consumed.push(index);
                     }
                 } else if let Some(start) = press.take() {
                     consumed.push(index);
+                    if anchored {
+                        finished |=
+                            panel.outer_rect != start.rect || pos[axis] != start.start[axis];
+                        resize_from_press(&mut panel, start, pos, edge, &range);
+                        ui.ctx().data_mut(|d| d.insert_persisted(id, panel));
+                        continue;
+                    }
                     if (pos[axis] - start.start[axis]).abs() <= threshold {
                         continue;
                     }
@@ -133,6 +173,25 @@ pub(in crate::app) fn prepare(
         }
     });
     finished
+}
+
+fn resize_from_press(
+    panel: &mut PanelState,
+    press: Press,
+    pos: Pos2,
+    edge: Edge,
+    range: &RangeInclusive<f32>,
+) {
+    let axis = usize::from(matches!(edge, Edge::Top | Edge::Bottom));
+    let from_max = matches!(edge, Edge::Right | Edge::Bottom);
+    let delta = pos[axis] - press.start[axis];
+    let size = (press.rect.size()[axis] + if from_max { -delta } else { delta })
+        .clamp(*range.start(), *range.end());
+    if from_max {
+        panel.outer_rect.min[axis] = panel.outer_rect.max[axis] - size;
+    } else {
+        panel.outer_rect.max[axis] = panel.outer_rect.min[axis] + size;
+    }
 }
 
 pub(in crate::app) fn owns_pointer(ctx: &egui::Context) -> bool {

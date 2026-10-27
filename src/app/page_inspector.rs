@@ -95,20 +95,16 @@ impl WireframeApp {
             });
             resized = layout.extent != extent || layout.suspended;
         }
-        let fast_resize = chrome::prepare_panel_resize(
+        let fast_resize = chrome::prepare_anchored_panel_resize(
             ui,
             id,
             chrome::PanelEdge::Bottom,
             range.clone(),
             !self.canvas_input_blocked(),
         );
-        // The internal separator has a five-point grab area. Keep the
-        // surrounding panels' resize targets independent of this one.
-        let surrounding_radius = ui.style().interaction.resize_grab_radius_side;
-        ui.style_mut().interaction.resize_grab_radius_side = 2.5;
         let panel = egui::Panel::bottom(id)
             .default_size((height as f32).min(maximum))
-            .resizable(true)
+            .resizable(false)
             .size_range(range)
             .frame(egui::Frame::NONE.fill(chrome::PANEL))
             .show(ui, |ui| {
@@ -117,7 +113,22 @@ impl WireframeApp {
                     .auto_shrink([false, false])
                     .show(ui, |ui| self.versions_panel(ui));
             });
-        ui.style_mut().interaction.resize_grab_radius_side = surrounding_radius;
+        // The one-point divider's grab area extends two points above and
+        // three below its leading edge. Its drag retains that grab offset.
+        let rect = panel.response.rect;
+        let handle_rect = Rect::from_min_max(
+            egui::pos2(rect.left(), rect.top() - 2.),
+            egui::pos2(rect.right(), rect.top() + 3.),
+        );
+        let handle = ui.interact(handle_rect, id.with("__resize"), Sense::drag());
+        if handle.hovered() || handle.dragged() {
+            ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeVertical);
+            ui.painter().hline(
+                rect.x_range(),
+                rect.top(),
+                ui.style().interact(&handle).fg_stroke,
+            );
+        }
         let released = ui
             .read_response(id.with("__resize"))
             .is_some_and(|response| response.drag_stopped());

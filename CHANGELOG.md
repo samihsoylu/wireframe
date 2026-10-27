@@ -2,6 +2,9 @@
 
 ## 0.1.0 — Unreleased
 
+- Keep the preview open when Escape closes its page picker in More Controls.
+- Start with neutral control labels, refined sketch outlines and updated small icons.
+
 - Find controls under consistent library names and alphabetical order, while keeping older Quick Add search terms.
 - Use a narrower 920-point editing window.
 

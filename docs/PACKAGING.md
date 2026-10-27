@@ -56,6 +56,8 @@ Eight tests pass on macOS with Python 3.9 and 3.13. A separate fixture containin
 
 ## Current verification scope
 
+Runtime `2d21048` fixes Escape ownership in the More Controls preview page picker. Its full application tests/lint/optimized builds pass on macOS and Linux, and its current native macOS keyboard workflow passes. The frozen artifacts described below predate that fix; their replacement and affected packaged native checks are in progress.
+
 Frozen review source `a8e1dcb`, runtime `68c0576`, has current private macOS ARM64 ZIP/DMG and Debian ARM64 TAR.GZ artifacts. Each contains 1,800 exact corresponding-source files and 264 valid documentation links. Reader-copy links to nested source are repaired during staging; source-document bytes remain exact. Notices account for all 368 macOS/Linux normal/build dependencies. Archive identities and logs are retained externally in `appearance-finishing-current/delivery`; later documentation-only acceptance commits do not change those frozen artifacts.
 
 Complete resumed Rust matrices pass across all 220 targets on each platform: 1,796 macOS checks/four ignored and 1,780 Linux checks/one ignored. Retained unchanged completed targets and corrected/resumed targets are combined; neither is an uninterrupted successful full-suite invocation. Failed/interrupted attempts and three stale test corrections remain recorded. Warnings-denied all-target lint, optimized builds and seven Python configuration/packaging/updater checks pass on both platforms.

@@ -28,7 +28,9 @@ Authorized: complete V01–V05 appearance fixes, then Q3–Q8 behavior/release c
 
 **Q4 is closed in its named scope:** current native three-control fixture shows Dropdown optional icon/scrollbar and verifies brace-caption plus Date Picker Cancel/OK navigation; retain earlier narrow/Back picker acceptance. Direct native reference activation remains a bounded comparison-observation limit, with retained source contracts and working product destinations. No runtime code changed or suite was repeated. All 546 baseline data files remain exact and the review process exited. Private `appearance-finishing-current/variants/REPORT.md` retains candidate/artifacts and corrected input attempts.
 
-**Next:** Q5 exact startup/held-tracking questions, Q6 integrated workflows, Q7 requirement classification and Q8 fresh macOS/Linux delivery. Windows stays held; no release publication or new feature deferral.
+**Q5 held-persistence result:** a valid guarded native reference344→364 and current product200→220 both retain the prior saved value through four-second holds and save after release. No timing correction is justified. The initial reference edge attempt did not move and is excluded. Exact native startup/animated-window ordering remains untraced; retain proportional layout/cold restoration evidence without inferring the call sequence. Both apps exited; reference preferences are restored and all546 product baseline files exact. Private `appearance-finishing-current/held-divider/REPORT.md` retains timestamped evidence and cleanup.
+
+**Next:** independent Q6 integrated workflows, Q7 requirement classification including the remaining Q5 startup-order uncertainty, then Q8 fresh macOS/Linux delivery. Windows stays held; no release publication or new feature deferral.
 
 The superseded untracked gap survey is archived and removed; its relevant release/CI/contributor/metadata suggestions remain in the finishing checklist. Q5–Q8 and overall release acceptance remain open.
 

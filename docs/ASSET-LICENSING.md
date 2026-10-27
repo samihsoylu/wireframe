@@ -10,6 +10,7 @@ For every new or changed asset, record its author/source, version or revision, l
 | --- | --- | --- |
 | Application icon and PNG/ICNS/ICO variants | Original project SVG artwork; GPL-3.0-only | [Source and regeneration](../assets/app-icon/README.md) |
 | Toolbar graphics and control drawing geometry | Project-authored Rust vector drawing; GPL-3.0-only | [Toolbar source](../src/app/toolbar/icons.rs), [control rendering](../src/render) |
+| Thin Plus pictogram | Original geometric vector path by Wireframe contributors; GPL-3.0-only | [Editable path, dimensions and hash](../assets/icons/project/README.md) |
 | Icon catalog | Font Awesome Free 6.7.2, Fonticons, Inc.; SVG paths under CC BY 4.0 | [Pinned sources and hashes](../assets/icons/font-awesome-free/PROVENANCE.json), [license](../assets/icons/font-awesome-free/LICENSE.txt), [attribution](../THIRD_PARTY_NOTICES.md#bundled-icons) |
 | Comic Neue, four faces | Comic Neue Project Authors, from a pinned Google Fonts revision; OFL-1.1 | [Sources and hashes](../assets/fonts/comic-neue/PROVENANCE.json), [copyright and license](../assets/fonts/comic-neue/OFL.txt) |
 | Wireframe Draft, four faces | Modified Comic Neue, renamed and distributed under OFL-1.1 | [Modifications](../assets/fonts/wireframe-draft/MODIFICATIONS.txt), [input/output hashes](../assets/fonts/wireframe-draft/derivation.json), [retained license](../assets/fonts/wireframe-draft/OFL.txt), [rebuild](PROJECT-FONTS.md) |

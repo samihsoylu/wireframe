@@ -71,15 +71,14 @@ impl Scene {
                 b.x, b.y, b.w, b.h
             ));
         }
-        if self
-            .items
-            .iter()
-            .any(|item| matches!(item.drawing, Drawing::Icon { .. }))
-        {
-            out.push_str(&format!(
-                "<metadata>{}</metadata>",
-                escape(crate::icons::ATTRIBUTION)
-            ));
+        if let Some(attribution) = crate::icons::attribution(self.items.iter().filter_map(|item| {
+            if let Drawing::Icon { id, .. } = &item.drawing {
+                Some(id.as_str())
+            } else {
+                None
+            }
+        })) {
+            out.push_str(&format!("<metadata>{}</metadata>", escape(&attribution)));
         }
         for (i, item) in self.items.iter().enumerate() {
             match &item.drawing {
@@ -161,12 +160,14 @@ impl Scene {
         out
     }
     pub fn png(&self) -> Result<Vec<u8>, String> {
-        let attribution = self
-            .items
-            .iter()
-            .any(|item| matches!(item.drawing, Drawing::Icon { .. }))
-            .then_some(crate::icons::ATTRIBUTION);
-        crate::scene::png_svg_with_fonts(&self.svg(), attribution, self.font.as_deref())
+        let attribution = crate::icons::attribution(self.items.iter().filter_map(|item| {
+            if let Drawing::Icon { id, .. } = &item.drawing {
+                Some(id.as_str())
+            } else {
+                None
+            }
+        }));
+        crate::scene::png_svg_with_fonts(&self.svg(), attribution.as_deref(), self.font.as_deref())
     }
 }
 fn base64(bytes: &[u8]) -> String {

@@ -61,13 +61,15 @@ V03 isolation checkpoint — 27 October: the production OpenGL painter preserves
 
 V04 contour checkpoint — 27 October: Cover Flow stroke/join weight, Callout lower rim/nine deterministic contours and brace endpoint weight are corrected using original procedural artwork. 21 affected checks, scoped lint/build/signature and current native Sketch/Clean default galleries pass. All 546 baseline application-data files are exact after cleanup. Remaining named specimens: Accordion, Button/Button Bar, Browser/Field Set, chart contours and Comment. See private `appearance-finishing-current/contours`; V04 as a whole remains open.
 
+V01/V05 refresh — 27 October: native title-bar zoom reaches the matching 1728-point wide view, closing V01 together with the retained minimum-width checks (one-point outer/client residual explicit). V05 now uses an original thin plus for new Circle Buttons, preserves saved solid pluses, and uses catalog Date/Clean Browser glyphs. 33 affected checks cover source/history, sizing/overflow, pixel mapping and SVG/PNG/PDF notices; scoped lint/build/signature and current native Clean/Sketch checks pass. All 546 baseline files are exact after owned cleanup. Sketch-command detail and remaining V03/V04 reconciliation stay open. Evidence: private `appearance-finishing-current/glyphs`.
+
 ## Current appearance fixes — Q2
 
 The wide pair uses the same 1728-point width and 2x density. Narrow native frames measure 920 and 921 points; the remaining one-point frame difference is explicit. Both show unselected controls at 100%. Default fonts differ. Native image exports provide lossless detail; overview sheets are scaled and cannot establish sharpness by themselves.
 
 | Item | Observed difference | Closure check |
 |---|---|---|
-| V01 — Shell layout | Category group is left of the full window center; the last category needs scrolling at narrow widths. The native title bar uses a different appearance. | Check centered categories, compact labels, reachable final category and title-bar treatment in the same two window sizes. |
+| V01 — Shell layout — closed | Full-window centering, compact labels and light title bar are corrected. | Matching native 1728-point wide view and retained 920/921-point minimum view pass; Text and More Controls are reachable. |
 | V02 — Starter content — closed | Neutral creation recipes now preserve the named structures and compact alert geometry without changing old omitted-text defaults. Calendar discrepancy is stale reference-cache artwork. | Both-style native default specimens and current preview checks pass. Retain the quantified grid/font width residual under V03; broader variants remain Q4. |
 | V03 — Typography and clarity | Font shape, weight, text widths and raster appearance differ. | Isolate font metrics and canvas texture scaling using original-size native crops; verify the affected text and icons at 100%. |
 | V04 — Sketch contours | Cover Flow, Callout, brace and several container/icon contours differ in weight, shape or shadow. | Correct original drawing geometry and refresh the affected Sketch crops. |

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 //! Offline icon lookup, aspect fitting and shared vector/texture drawing.
-//! Artwork is Font Awesome Free, separately licensed CC BY 4.0.
+//! Font Awesome Free (CC BY 4.0) and original project pictograms (GPL-3.0-only).
 use crate::model::Bounds;
 use eframe::egui;
 use serde::Deserialize;
@@ -10,12 +10,37 @@ use std::sync::{LazyLock, OnceLock};
 mod paint;
 
 pub const ATTRIBUTION: &str = "Font Awesome Free 6.7.2 by Fonticons, Inc. — https://fontawesome.com — CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ — path data unchanged";
+const PROJECT_ATTRIBUTION: &str = concat!(
+    "Original Wireframe pictograms by Wireframe contributors — GPL-3.0-only\n",
+    include_str!("../LICENSE"),
+);
+
+pub fn attribution<'a>(ids: impl IntoIterator<Item = &'a str>) -> Option<String> {
+    let mut project = false;
+    let mut third_party = false;
+    for id in ids {
+        if id.starts_with("wireframe-") {
+            project = true;
+        } else {
+            third_party = true;
+        }
+    }
+    match (third_party, project) {
+        (false, false) => None,
+        (true, false) => Some(ATTRIBUTION.into()),
+        (false, true) => Some(PROJECT_ATTRIBUTION.into()),
+        (true, true) => Some(format!("{ATTRIBUTION}\n{PROJECT_ATTRIBUTION}")),
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Icon {
     pub id: String,
     pub label: String,
     pub style: String,
     pub keywords: Vec<String>,
+    #[serde(default)]
+    category_alias: Option<String>,
     pub width: u32,
     pub height: u32,
     pub paths: Vec<String>,
@@ -23,10 +48,16 @@ pub struct Icon {
     geometry: OnceLock<Option<paint::Geometry>>,
 }
 static CATALOG: LazyLock<Vec<Icon>> = LazyLock::new(|| {
-    serde_json::from_str(include_str!(
+    let mut icons: Vec<Icon> = serde_json::from_str(include_str!(
         "../assets/icons/font-awesome-free/catalog.json"
     ))
-    .expect("bundled icon catalog")
+    .expect("bundled icon catalog");
+    icons.extend(
+        serde_json::from_str::<Vec<Icon>>(include_str!("../assets/icons/project/catalog.json"))
+            .expect("original project pictograms"),
+    );
+    icons.sort_by(|a, b| a.id.cmp(&b.id));
+    icons
 });
 #[derive(Debug, Deserialize)]
 pub struct Category {
@@ -36,10 +67,11 @@ pub struct Category {
 }
 impl Category {
     pub fn contains(&self, icon: &Icon) -> bool {
-        let name = icon
-            .id
-            .strip_suffix(&format!("-{}", icon.style))
-            .unwrap_or(&icon.id);
+        let name = icon.category_alias.as_deref().unwrap_or_else(|| {
+            icon.id
+                .strip_suffix(&format!("-{}", icon.style))
+                .unwrap_or(&icon.id)
+        });
         self.icons
             .binary_search_by(|entry| entry.as_str().cmp(name))
             .is_ok()

@@ -58,9 +58,9 @@ fn circle_default_resize_autosize_history_and_strict_icon_fit() {
     assert_eq!(bounds(&e), Bounds::new(50., 50., 48., 48.));
     assert_eq!(
         e.control_properties(id).unwrap().1["icon"],
-        Value::Icon(IconSource::Catalog("plus-solid".into()))
+        Value::Icon(IconSource::Catalog("wireframe-plus-regular".into()))
     );
-    assert!(wireframe::icons::get("plus-solid").is_some());
+    assert!(wireframe::icons::get("wireframe-plus-regular").is_some());
     assert!(!has_text(&scene(&e)));
     choice(&mut e, id, "icon_size", "48");
     assert!(icon(&scene(&e)).is_none());

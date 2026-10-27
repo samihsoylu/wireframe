@@ -171,11 +171,9 @@ fn rendering_preserves_disabled_text_and_transparent_icon_apertures() {
     e.selected_mut(|c| c.bounds.w = 1.);
     let scene = e.rendered_scene(e.page).unwrap();
     assert!(scene.items.iter().all(|i| i.clip.is_none()));
-    for i in &scene.items {
-        if let Drawing::Primitive(wireframe::scene::Primitive::Rect { fill, .. }) = &i.drawing {
-            assert_eq!(*fill, [207; 3]);
-        }
-    }
+    assert!(scene.items.iter().any(|item| matches!(&item.drawing,
+        Drawing::Icon { id, color, .. } if id == "calendar-days-regular" && *color == [207,207,207,255]
+    )));
 }
 #[test]
 fn date_snapshot_is_per_control_and_refreshes_after_content_relayout() {

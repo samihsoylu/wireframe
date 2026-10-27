@@ -133,13 +133,15 @@ pub fn write_png(
             crate::fonts::notices(scene.font.as_deref()).into(),
         )
         .map_err(|e| e.to_string())?;
-    if scene
-        .items
-        .iter()
-        .any(|i| matches!(i.drawing, crate::render::Drawing::Icon { .. }))
-    {
+    if let Some(attribution) = crate::icons::attribution(scene.items.iter().filter_map(|item| {
+        if let crate::render::Drawing::Icon { id, .. } = &item.drawing {
+            Some(id.as_str())
+        } else {
+            None
+        }
+    })) {
         encoder
-            .add_itxt_chunk("Icon attribution".into(), crate::icons::ATTRIBUTION.into())
+            .add_itxt_chunk("Icon attribution".into(), attribution)
             .map_err(|e| e.to_string())?;
     }
     let mut writer = encoder.write_header().map_err(|e| e.to_string())?;

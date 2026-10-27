@@ -153,3 +153,94 @@ fn nested_icon_insertion_uses_local_coordinates_and_locked_context_disables_sear
     );
     assert_eq!(editor.document, before);
 }
+
+#[test]
+fn original_thin_plus_is_searchable_categorized_and_keeps_saved_solid_icons() {
+    let thin = icons::get("wireframe-plus-regular").unwrap();
+    let solid = icons::get("plus-solid").unwrap();
+    assert!(
+        icons::search("thin plus", "regular")
+            .iter()
+            .any(|icon| icon.id == thin.id)
+    );
+    for category in icons::categories() {
+        assert_eq!(
+            category.contains(thin),
+            category.contains(solid),
+            "{}",
+            category.id
+        );
+    }
+    let ink = |icon: &icons::Icon| {
+        icon.raster(24)
+            .unwrap()
+            .pixels
+            .iter()
+            .map(|p| u64::from(p.a()))
+            .sum::<u64>()
+    };
+    assert!(
+        ink(thin) < ink(solid),
+        "the new plus must have a visibly lighter stroke"
+    );
+    let mut e = Editor::default();
+    e.add(Kind::CircleButton, 0., 0.);
+    let id = *e.selection.iter().next().unwrap();
+    assert_eq!(
+        e.control_properties(id).unwrap().1["icon"],
+        Value::Icon(IconSource::Catalog(thin.id.clone()))
+    );
+    let new = e.document.clone();
+    assert_eq!(decode(&new.encode().unwrap()).unwrap(), new);
+    e.begin("Choose solid plus");
+    e.set_control_property(
+        id,
+        "icon",
+        Value::Icon(IconSource::Catalog(solid.id.clone())),
+    )
+    .unwrap();
+    e.commit();
+    let legacy = e.document.clone();
+    let reopened = decode(&legacy.encode().unwrap()).unwrap();
+    assert_eq!(reopened, legacy);
+    let old = Editor::new(reopened);
+    assert_eq!(
+        old.control_properties(id).unwrap().1["icon"],
+        Value::Icon(IconSource::Catalog("plus-solid".into()))
+    );
+    e.undo();
+    assert_eq!(e.document, new);
+    let new_svg = e.rendered_scene(e.page).unwrap().svg();
+    assert!(new_svg.contains("Original Wireframe pictograms"));
+    assert!(new_svg.contains("GNU GENERAL PUBLIC LICENSE"));
+    let scene = e.rendered_scene(e.page).unwrap();
+    let mut streamed = vec![];
+    wireframe::raster::write_png(&scene, Default::default(), &mut streamed, |_, _| Ok(())).unwrap();
+    for bytes in [scene.png().unwrap(), streamed] {
+        let reader = png::Decoder::new(std::io::Cursor::new(bytes))
+            .read_info()
+            .unwrap();
+        let notices = reader
+            .info()
+            .utf8_text
+            .iter()
+            .map(|chunk| chunk.get_text().unwrap())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(notices.contains("Original Wireframe pictograms"));
+        assert!(notices.contains("GNU GENERAL PUBLIC LICENSE"));
+    }
+    let pages = wireframe::pdf::plan(&e.document, &Default::default()).unwrap();
+    let pdf = wireframe::pdf::encode("Thin plus", &pages).unwrap();
+    assert!(String::from_utf8_lossy(&pdf).contains("Original Wireframe pictograms"));
+    assert!(String::from_utf8_lossy(&pdf).contains("GNU GENERAL PUBLIC LICENSE"));
+
+    e.redo();
+    assert_eq!(e.document, legacy);
+    assert!(
+        !e.rendered_scene(e.page)
+            .unwrap()
+            .svg()
+            .contains("Original Wireframe pictograms")
+    );
+}

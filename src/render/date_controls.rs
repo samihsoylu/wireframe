@@ -219,22 +219,16 @@ impl Scene {
             )?;
             self.links.truncate(prior);
         }
-        // Original calendar glyph: a filled frame, binding posts and nine apertures.
-        let i = translated(layout.icon, b);
-        for (x, y, w, h) in [
-            (1., 3., 22., 5.),
-            (1., 21., 22., 3.),
-            (1., 8., 3., 13.),
-            (20., 8., 3., 13.),
-            (8., 8., 2., 13.),
-            (14., 8., 2., 13.),
-            (4., 11., 16., 2.),
-            (4., 16., 16., 2.),
-            (6., 0., 2., 6.),
-            (16., 0., 2., 6.),
-        ] {
-            self.date_rect(Bounds::new(i.x + x, i.y + y, w, h), icon_color, clip);
-        }
+        self.items.push(Item {
+            opacity: 1.,
+            clip,
+            drawing: Drawing::Icon {
+                bounds: translated(layout.icon, b),
+                id: "calendar-days-regular".into(),
+                turns: 0,
+                color: [icon_color[0], icon_color[1], icon_color[2], 255],
+            },
+        });
         Ok(())
     }
 }

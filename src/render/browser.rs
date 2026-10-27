@@ -245,24 +245,26 @@ impl Scene {
                     clip,
                 );
             } else {
-                let color = [107; 3];
-                for pts in [
-                    vec![point(cx - 7. * dir, cy), point(cx + 7. * dir, cy)],
-                    vec![
-                        point(cx, cy - 6.),
-                        point(cx + 7. * dir, cy),
-                        point(cx, cy + 6.),
-                    ],
-                ] {
-                    self.primitive(
-                        Primitive::Line {
-                            points: pts,
-                            color,
-                            width: 3.5 * sx.min(sy),
-                        },
-                        clip,
-                    );
-                }
+                self.items.push(Item {
+                    opacity: 1.,
+                    clip,
+                    drawing: Drawing::Icon {
+                        bounds: Bounds::new(
+                            point(cx - 8., cy - 8.)[0],
+                            point(cx - 8., cy - 8.)[1],
+                            16. * sx,
+                            16. * sy,
+                        ),
+                        id: if dir < 0. {
+                            "arrow-left-solid"
+                        } else {
+                            "arrow-right-solid"
+                        }
+                        .into(),
+                        turns: 0,
+                        color: [107, 107, 107, 255],
+                    },
+                });
             }
         }
         if sketch {
@@ -313,41 +315,22 @@ impl Scene {
             );
             self.browser_magnifier(point(-68., 40.), 4. * sx, 4. * sy, ink, 1.8, clip);
         } else {
-            let center = point(73., 53.);
-            let pts = (0..=20)
-                .map(|i| {
-                    let angle = (55. + i as f32 * 14.).to_radians();
-                    [
-                        center[0] + 7. * sx * angle.cos(),
-                        center[1] + 7. * sy * angle.sin(),
-                    ]
-                })
-                .collect();
-            self.primitive(
-                Primitive::Line {
-                    points: pts,
-                    color: [107; 3],
-                    width: 3. * sx.min(sy),
-                },
-                clip,
-            );
-            self.primitive(
-                Primitive::Polygon {
-                    points: vec![point(73., 49.), point(82., 46.), point(82., 55.)],
-                    fill: [107; 3],
-                },
-                clip,
-            );
-            self.browser_magnifier(point(110., 51.), 5. * sx, 5. * sy, [107; 3], 1.8, clip);
-            for y in [47., 53., 59.] {
-                self.primitive(
-                    Primitive::Line {
-                        points: vec![point(-26., y), point(-14., y)],
-                        color: [107; 3],
-                        width: 3. * sy,
-                    },
+            for (id, x, y, size) in [
+                ("rotate-right-solid", 65., 45., 16.),
+                ("magnifying-glass-solid", 103., 44., 16.),
+                ("bars-solid", -27., 45., 16.),
+            ] {
+                let origin = point(x, y);
+                self.items.push(Item {
+                    opacity: 1.,
                     clip,
-                );
+                    drawing: Drawing::Icon {
+                        bounds: Bounds::new(origin[0], origin[1], size * sx, size * sy),
+                        id: id.into(),
+                        turns: 0,
+                        color: [107, 107, 107, 255],
+                    },
+                });
             }
         }
     }

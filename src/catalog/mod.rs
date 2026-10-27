@@ -289,7 +289,9 @@ impl ControlSpec {
         if self.id == "circle_button" {
             node.properties.insert(
                 "icon".into(),
-                Value::Icon(crate::document::IconSource::Catalog("plus-solid".into())),
+                Value::Icon(crate::document::IconSource::Catalog(
+                    "wireframe-plus-regular".into(),
+                )),
             );
         }
         if self.id == "pointed_button" {

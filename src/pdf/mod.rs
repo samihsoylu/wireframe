@@ -60,13 +60,16 @@ pub fn encode(title: &str, pages: &[Page]) -> Result<Vec<u8>, String> {
             notices.push('\n');
         }
     }
-    if pages.iter().any(|p| {
-        p.scene
-            .items
-            .iter()
-            .any(|i| matches!(i.drawing, Drawing::Icon { .. }))
-    }) {
-        notices.push_str(crate::icons::ATTRIBUTION);
+    if let Some(attribution) = crate::icons::attribution(pages.iter().flat_map(|page| {
+        page.scene.items.iter().filter_map(|item| {
+            if let Drawing::Icon { id, .. } = &item.drawing {
+                Some(id.as_str())
+            } else {
+                None
+            }
+        })
+    })) {
+        notices.push_str(&attribution);
     }
     doc.set_metadata(
         Metadata::new()

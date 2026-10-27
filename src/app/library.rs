@@ -104,6 +104,7 @@ impl WireframeApp {
                     ui.disable();
                 }
                 ui.spacing_mut().item_spacing.y = 0.;
+                let window_center = ui.available_rect_before_wrap().center().x;
                 ui.horizontal(|ui| {
                     let button_width = 108.;
                     let categories_width =
@@ -113,14 +114,17 @@ impl WireframeApp {
                         egui::Layout::top_down(egui::Align::Min),
                         |ui| {
                             if let Some((category, shift)) =
-                                category_row::show(ui, &self.categories)
+                                category_row::show(ui, &self.categories, window_center)
                             {
                                 self.select_catalog_category(category, shift);
                             }
                         },
                     );
                     if ui
-                        .add_sized([button_width, 24.], egui::Button::new("More Controls…"))
+                        .add_sized(
+                            [button_width, 24.],
+                            egui::Button::new(egui::RichText::new("More Controls…").size(11.)),
+                        )
                         .clicked()
                     {
                         self.open_more_controls();

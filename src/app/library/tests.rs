@@ -726,3 +726,60 @@ fn asset_context_menu_moves_image_to_shared_trash_without_inserting_a_control() 
     app.editor.undo();
     assert_eq!(app.editor.document, before);
 }
+
+#[test]
+fn library_categories_fit_minimum_window_and_center_in_wide_window() {
+    let ctx = egui::Context::default();
+    wireframe::fonts::install(&ctx);
+    ctx.enable_accesskit();
+    let mut app = WireframeApp::workspace(&ctx, None);
+    let before = app.editor.document.clone();
+    for width in [920., 1728.] {
+        for _ in 0..3 {
+            let output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(width, 700.))),
+                    ..Default::default()
+                },
+                |ui| app.library(ui),
+            );
+            let nodes = &output
+                .platform_output
+                .accesskit_update
+                .as_ref()
+                .unwrap()
+                .nodes;
+            let bounds = |label: &str| {
+                nodes
+                    .iter()
+                    .find_map(|(_, node)| {
+                        (node.label() == Some(label))
+                            .then(|| node.bounds())
+                            .flatten()
+                    })
+                    .unwrap_or_else(|| panic!("missing {label}"))
+            };
+            let first = bounds("All");
+            let last = bounds("Text");
+            let more = bounds("More Controls…");
+            output.drop_without_applying_deltas();
+            assert!(first.x0 >= 0.);
+            assert!(
+                last.x1 <= more.x0,
+                "categories overlap More Controls at {width}: {last:?} / {more:?}"
+            );
+            assert!(
+                more.x1 <= width as f64,
+                "More Controls outside window: {more:?}"
+            );
+            if width > 1000. {
+                let center = (first.x0 + last.x1) / 2.;
+                assert!(
+                    (center - width as f64 / 2.).abs() < 1.,
+                    "off-center at {width}: {center}"
+                );
+            }
+        }
+    }
+    assert_eq!(app.editor.document, before);
+}

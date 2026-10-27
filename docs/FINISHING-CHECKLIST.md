@@ -51,6 +51,8 @@ All 27 listed choices are implemented (26 control families plus the Android Aler
 | Field Set | Field Set | Recorded native behavior; source/tests | Q2 |
 | H.Curly Brace | H.Curly Brace | Recorded native behavior; source/tests | Q4 |
 
+V01 implementation checkpoint — 27 October: full-window centering with narrow-width containment, compact labels/gaps, More Controls sizing and a light native title bar are corrected. 25 affected library checks, scoped warnings-denied lint, formatting, native build/signature and 1360/minimum-width visual checks pass. Native Text selection and More Controls opening work without category scrolling. The exact 1728-point paired-size refresh remains open before full V01 closure. Private `appearance-finishing-current` retains evidence and cleanup (546 prior files exact). V02–V05 remain open.
+
 ## Current appearance fixes — Q2
 
 The wide pair uses the same 1728-point width and 2x density. Narrow native frames measure 920 and 921 points; the remaining one-point frame difference is explicit. Both show unselected controls at 100%. Default fonts differ. Native image exports provide lossless detail; overview sheets are scaled and cannot establish sharpness by themselves.
@@ -70,3 +72,7 @@ The default Arrow is straight in both products once the comparison fixture inclu
 Every new check must name its unanswered question, reused evidence, reason another observation is needed, candidate identity and closure condition. A completed check is repeated only after a specific relevant change or a demonstrated failure. Documentation-only updates do not trigger runtime suites. Historical text widths and visual differences are remeasured in the shared current comparison rather than treated as current defects automatically.
 
 Detailed evidence is retained privately. The complete product remains in progress; this list adds no new feature or platform deferrals.
+
+## Retained release follow-up
+
+The superseded 20 October untracked gap survey was removed on 27 October after reconciliation. Its acceptance work is retained in Q2–Q8 and the release contract. Windows CI/native work remains held under Q9; the old survey does not authorize it. Image search/text extraction first-release scope and production Sparkle activation still need decisions; no deferral is inferred. Preserve these additional suggestions for release triage: macOS/Linux CI, contributor and issue templates, repository description/topics (external changes require authorization), and optional app-module/legacy-code cleanup. These suggestions do not displace the finishing queue or authorize a refactor. The original survey is archived privately in `appearance-finishing-current/GAPS-TODO-20261020-archived.md`.

@@ -6,11 +6,12 @@ mod tests;
 
 const FONT_SIZE: f32 = 11.;
 const BUTTON_HEIGHT: f32 = 24.;
-const GAP: f32 = 4.;
+const GAP: f32 = 3.;
 
 pub(super) fn show(
     ui: &mut egui::Ui,
     selected: &[CatalogCategory],
+    window_center: f32,
 ) -> Option<(CatalogCategory, bool)> {
     let categories = CatalogCategory::visible(selected);
     let widths: Vec<f32> = categories
@@ -21,7 +22,7 @@ pub(super) fn show(
                 FontId::proportional(FONT_SIZE),
                 Color32::BLACK,
             );
-            (text.size().x * 2.).ceil() / 2. + 16.
+            (text.size().x * 2.).ceil() / 2. + 12.
         })
         .collect();
     let group_width = widths.iter().sum::<f32>() + GAP * categories.len().saturating_sub(1) as f32;
@@ -30,7 +31,11 @@ pub(super) fn show(
         .fill(chrome::HEADING)
         .inner_margin(egui::Margin::symmetric(6, 3))
         .show(ui, |ui| {
-            let leading = ((ui.available_width() - group_width) / 2.).max(0.);
+            // Center in the window when space permits; at narrow widths keep
+            // the whole group inside its reserved region, clear of More Controls.
+            let available = ui.available_rect_before_wrap();
+            let leading = (window_center - available.left() - group_width / 2.)
+                .clamp(0., (available.width() - group_width).max(0.));
             egui::ScrollArea::horizontal()
                 .id_salt("library-categories")
                 .auto_shrink([false, true])
@@ -83,7 +88,7 @@ fn button(
     }
     ui_text::paint(
         ui,
-        rect.shrink2(Vec2::new(8., 0.)),
+        rect.shrink2(Vec2::new(6., 0.)),
         category.name(),
         FONT_SIZE,
         if selected {

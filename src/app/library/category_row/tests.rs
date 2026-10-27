@@ -24,7 +24,7 @@ fn frame(
                 ui.disable();
             }
             let start = ui.cursor().top();
-            chosen = show(ui, selected);
+            chosen = show(ui, selected, width / 2.);
             height = ui.min_rect().bottom() - start;
         },
     );
@@ -90,7 +90,7 @@ fn centered_category_row_retains_metrics_and_spacing_at_wide_and_narrow_widths()
             assert_eq!(r.height(), 24.);
         }
         for pair in rects.windows(2) {
-            assert!((pair[1].left() - pair[0].right() - 4.).abs() < 0.1);
+            assert!((pair[1].left() - pair[0].right() - 3.).abs() < 0.1);
         }
         let center = (rects[0].left() + rects.last().unwrap().right()) / 2.;
         assert!(

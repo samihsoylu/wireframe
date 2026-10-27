@@ -264,6 +264,7 @@ impl WireframeApp {
     fn workspace(ctx: &egui::Context, mut recovery: Option<PathBuf>) -> Self {
         wireframe::fonts::install(ctx);
         ctx.options_mut(|options| options.input_options.zoom_modifier = Modifiers::COMMAND);
+        ctx.set_theme(egui::Theme::Light);
         ctx.set_visuals(egui::Visuals::light());
         ctx.global_style_mut(|s| {
             s.spacing.item_spacing = Vec2::new(8., 8.);

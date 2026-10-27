@@ -8,11 +8,13 @@ import os
 from pathlib import Path
 import platform
 import plistlib
+import re
 import shutil
 import subprocess
 import tarfile
 import tempfile
 import zipfile
+from urllib.parse import quote, unquote, urlsplit, urlunsplit
 import sparkle
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,6 +29,38 @@ def run(*args):
 def copy_payload(payload, destination):
     # Framework aliases must stay links, including links to directories.
     shutil.copytree(payload, destination, symlinks=True)
+
+def rewrite_documentation_links(staging):
+    """Keep reader copies usable when code lives in corresponding source."""
+    staging = staging.resolve()
+    documents = [staging / name for name in ('README.md', 'SESSION-SPEC.md', 'CHANGELOG.md')]
+    documents.extend((staging / 'docs').rglob('*.md'))
+    for document in documents:
+        if not document.is_file():
+            continue
+        def relocate(match):
+            target = match[1]
+            angled = target.startswith('<') and target.endswith('>')
+            url = urlsplit(target[1:-1] if angled else target)
+            if url.scheme or url.netloc or not url.path or url.path.startswith('/'):
+                return match[0]
+            destination = (document.parent / unquote(url.path)).resolve()
+            if destination.exists():
+                return match[0]
+            try:
+                relative = destination.relative_to(staging)
+            except ValueError:
+                return match[0]
+            source = staging / 'source' / relative
+            if not source.exists():
+                return match[0]
+            path = Path(os.path.relpath(source, document.parent)).as_posix()
+            target = urlunsplit(('', '', quote(path, safe='/@._-'), url.query, url.fragment))
+            return '](' + ('<' + target + '>' if angled else target) + ')'
+        text = document.read_text()
+        revised = re.sub(r'\]\(([^)\n]+)\)', relocate, text)
+        if revised != text:
+            document.write_text(revised)
 
 def write_archive(staging, archive, system, name):
     # A refused or interrupted archive must not replace a prior good artifact.
@@ -155,6 +189,7 @@ def main():
             ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
     for path in ('Cargo.toml','Cargo.lock','LICENSE','README.md','CHANGELOG.md','SESSION-SPEC.md','THIRD_PARTY_NOTICES.md'):
         shutil.copyfile(ROOT / path, source / path)
+    rewrite_documentation_links(staging)
     archive = out / (name + ('.tar.gz' if system == 'linux' else '.zip'))
     write_archive(staging, archive, system, name)
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()

@@ -98,5 +98,43 @@ class UpdaterTests(unittest.TestCase):
         self.assertEqual((bundle / 'Contents/MacOS/wireframe').read_bytes(), b'new binary')
 
 
+class DocumentationTests(unittest.TestCase):
+    def test_reader_links_resolve_without_rewriting_corresponding_source(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            staging = Path(temporary)
+            for name in ['src/app.rs', 'tests/fixture.md', 'vendor/NOTICE', 'src/with space.rs']:
+                path = staging / 'source' / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('source fixture')
+            docs = staging / 'docs'
+            docs.mkdir()
+            text = ('[code](../src/app.rs#paint) [fixture](../tests/fixture.md) '
+                    '[notice](../vendor/NOTICE) [space](<../src/with%20space.rs>)')
+            (docs / 'Assets.md').write_text(text)
+            source_doc = staging / 'source/docs/Assets.md'
+            source_doc.parent.mkdir()
+            source_doc.write_text(text)
+            (staging / 'README.md').write_text('[code](src/app.rs)')
+            package.rewrite_documentation_links(staging)
+            self.assertEqual((docs / 'Assets.md').read_text(), text.replace('../', '../source/'))
+            self.assertEqual((staging / 'README.md').read_text(), '[code](source/src/app.rs)')
+            self.assertEqual(source_doc.read_text(), text)
+            before = (docs / 'Assets.md').read_bytes()
+            package.rewrite_documentation_links(staging)
+            self.assertEqual((docs / 'Assets.md').read_bytes(), before)
+
+    def test_available_external_missing_and_outside_links_stay_intact(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            staging = Path(temporary) / 'package'
+            docs = staging / 'docs'
+            docs.mkdir(parents=True)
+            (staging / 'LICENSE').write_text('license fixture')
+            text = ('[license](../LICENSE) [web](https://example.org/src/app.rs) '
+                    '[anchor](#local) [missing](../src/missing.rs) [outside](../../other.md)')
+            (docs / 'Guide.md').write_text(text)
+            package.rewrite_documentation_links(staging)
+            self.assertEqual((docs / 'Guide.md').read_text(), text)
+
+
 if __name__ == '__main__':
     unittest.main()

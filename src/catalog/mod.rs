@@ -263,8 +263,8 @@ impl ControlSpec {
             "browser" => Some("Web page\nhttps://"),
             "dropdown" => Some("ComboBox"),
             "table" => Some(concat!(
-                "Name\\r(role) ^,Age ^v,Label,Member v\n",
-                "Avery Stone\\rProject lead,40,North,(o)\n",
+                "Name\\r(role) ^,Age ^v,Short name,Assigned v\n",
+                "Avery Stone\\rDelivery coordinator,40,North,(o)\n",
                 "Casey Reed\\rDeveloper,38,West,[x]\n",
                 "Jordan Lane\\rDesigner,41,East,[-]\n",
                 "Morgan Page\\rTeam member,:-),South,[x]\n",

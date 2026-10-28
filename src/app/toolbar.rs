@@ -58,8 +58,12 @@ impl WireframeApp {
     fn project_bar(&mut self, ui: &mut egui::Ui) {
         let (row, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 26.), Sense::hover());
         let menu_width = if self.menus.native() { 0. } else { 210. };
-        let title =
-            Rect::from_min_max(row.min, egui::pos2(row.max.x - menu_width - 12., row.max.y));
+        let style_width = 154.;
+        let style_right = row.max.x - menu_width;
+        let title = Rect::from_min_max(
+            row.min,
+            egui::pos2(style_right - style_width - 12., row.max.y),
+        );
         ui.scope_builder(
             egui::UiBuilder::new()
                 .max_rect(title)
@@ -70,6 +74,16 @@ impl WireframeApp {
                 }
                 ui_text::label(ui, &self.editor.document.title, ui.available_width());
             },
+        );
+        let style = Rect::from_min_max(
+            egui::pos2(style_right - style_width, row.min.y),
+            egui::pos2(style_right, row.max.y),
+        );
+        ui.scope_builder(
+            egui::UiBuilder::new()
+                .max_rect(style)
+                .layout(egui::Layout::left_to_right(egui::Align::Center)),
+            |ui| self.style_switcher(ui),
         );
         if self.menus.native() {
             return;
@@ -89,6 +103,31 @@ impl WireframeApp {
                 self.file_menu(ui);
             },
         );
+    }
+
+    fn style_switcher(&mut self, ui: &mut egui::Ui) {
+        let enabled = self.command_enabled(ui.ctx(), menus::Command::Sketch);
+        ui.add_enabled_ui(enabled, |ui| {
+            ui.spacing_mut().item_spacing.x = 2.;
+            let sketch = self.editor.document.settings.sketch;
+            for (label, value, hint) in [
+                (
+                    "Wireframe",
+                    true,
+                    "Hand-drawn style for all pages in this project",
+                ),
+                ("Mockup", false, "Clean style for all pages in this project"),
+            ] {
+                if ui
+                    .selectable_label(sketch == value, label)
+                    .on_hover_text(hint)
+                    .clicked()
+                    && sketch != value
+                {
+                    self.run_command(ui.ctx(), menus::Command::Sketch);
+                }
+            }
+        });
     }
 
     fn application_menu(

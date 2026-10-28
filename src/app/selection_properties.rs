@@ -923,7 +923,8 @@ impl WireframeApp {
         if let Some(p) = fields.iter().find(|p| p.key == "font_size") {
             self.common_property_row(ui, p);
         }
-        if !wireframe::text_entry::is_focused(ui.ctx())
+        if self.drag.is_none()
+            && !wireframe::text_entry::is_focused(ui.ctx())
             && !ui.ctx().text_edit_focused()
             && !egui::Popup::is_any_open(ui.ctx())
             && !ui.input(|i| i.pointer.any_down())

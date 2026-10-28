@@ -1,6 +1,13 @@
 # Changes
 
-## 0.1.0 — Unreleased
+## 0.1.0-beta.1 — Beta
+
+- Switch between **Wireframe** and **Mockup** styles directly in the toolbar.
+- Explore four editable examples: Landing, Desktop contact, Phone contact and Tablet order.
+- Keep multi-control moves intact through release and cancellation, with reliable Undo/Redo.
+- Download a drag-to-Applications Mac DMG and a portable Windows EXE; the Windows beta is untested.
+
+## 0.1.0 — Development history
 
 - Keep bold Rectangle captions in exported images and PDFs, with one searchable PDF caption.
 - Include caption font files in standalone SVG exports.

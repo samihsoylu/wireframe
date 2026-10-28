@@ -641,8 +641,10 @@ impl WireframeApp {
                 self.reset_session_identity();
                 self.categories = library::default_categories();
                 self.clear_recovery();
-                self.editor =
-                    Editor::new(Project::try_from(example_document()).expect("valid example"));
+                self.editor = Editor::new(
+                    wireframe::document::decode(include_bytes!("../examples/demo.wireframe"))
+                        .expect("valid bundled example project"),
+                );
                 self.file = None;
                 self.status = "Example project · not saved to a file".into();
                 self.restore_viewports();

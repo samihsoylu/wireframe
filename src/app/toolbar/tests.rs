@@ -49,6 +49,58 @@ fn setup() -> (egui::Context, WireframeApp) {
 }
 
 #[test]
+fn visible_style_switch_changes_only_project_style_and_keeps_noop_redo() {
+    let (ctx, mut app) = setup();
+    let before = app.editor.document.clone();
+    click(&mut app, &ctx, "Mockup");
+    let mut expected = before.clone();
+    expected.settings.sketch = false;
+    assert!(app.editor.document == expected);
+    app.editor.undo();
+    assert!(app.editor.document == before);
+    click(&mut app, &ctx, "Wireframe");
+    assert!(app.editor.document == before);
+    app.editor.redo();
+    assert!(app.editor.document == expected);
+    click(&mut app, &ctx, "Wireframe");
+    assert!(app.editor.document == before);
+    app.editor.undo();
+    assert!(app.editor.document == expected);
+}
+
+#[test]
+fn visible_style_switch_fits_minimum_width_with_fallback_menus() {
+    for width in [920., 1360., 1728.] {
+        let (ctx, mut app) = setup();
+        app.editor.document.title = "A long project title ".repeat(40);
+        frame(&mut app, &ctx, width, vec![]);
+        let bounds = frame(&mut app, &ctx, width, vec![]);
+        let wireframe = bounds["Wireframe"];
+        let mockup = bounds["Mockup"];
+        for rect in [wireframe, mockup] {
+            assert!(rect.left() >= 0. && rect.right() <= width);
+            assert!(rect.width() >= 44.);
+            for menu in ["File", "Edit", "View", "Help"] {
+                assert!(!rect.intersects(bounds[menu]));
+            }
+        }
+        assert!(!wireframe.intersects(mockup));
+    }
+}
+
+#[test]
+fn visible_style_switch_respects_an_open_canvas_text_draft() {
+    let (ctx, mut app) = setup();
+    app.editor.add(Kind::Button, 50., 50.);
+    let id = app.editor.nodes()[0].id;
+    app.begin_text_edit(id);
+    let before = app.editor.document.clone();
+    click(&mut app, &ctx, "Mockup");
+    assert!(app.editor.document == before);
+    assert!(app.text_edit.is_some());
+}
+
+#[test]
 fn icon_hover_preserves_ink_and_disabled_undo_is_dimmed_once() {
     let (ctx, mut app) = setup();
     frame(&mut app, &ctx, 940., vec![]);

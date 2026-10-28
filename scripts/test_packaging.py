@@ -19,6 +19,18 @@ import zipfile
 
 import package
 
+
+class MacBetaVersionTests(unittest.TestCase):
+    def test_beta_label_stays_out_of_numeric_bundle_versions(self):
+        self.assertEqual(package.mac_version_fields('0.1.0-beta.1', 1), ('0.1.0', '1'))
+        self.assertEqual(package.mac_version_fields('0.1.0-beta.2', 2), ('0.1.0', '2'))
+        self.assertEqual(package.mac_version_fields('0.1.0'), ('0.1.0', '0.1.0'))
+
+    def test_invalid_bundle_versions_are_rejected(self):
+        for version, build in [('beta', 1), ('0.1', 1), ('0.1.0', 0), ('0.1.0', -1)]:
+            with self.subTest(version=version, build=build), self.assertRaises(ValueError):
+                package.mac_version_fields(version, build)
+
 spec = importlib.util.spec_from_file_location('verify_dmg_input', Path(__file__).with_name('verify-dmg-input.py'))
 verifier = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(verifier)

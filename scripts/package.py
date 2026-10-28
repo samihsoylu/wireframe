@@ -103,7 +103,18 @@ def _write_archive(staging, archive, system, name):
                     raise ValueError(f'Windows packages cannot contain symlinks: {path}')
                 if path.is_file(): zip_file.write(path, Path(name) / path.relative_to(staging))
 
-def mac_bundle(binary, out, version, update_info=None):
+def mac_version_fields(version, build_number=None):
+    # Apple bundle versions are numeric; the archive/Cargo version keeps beta labels.
+    short = version.split('-', 1)[0].split('+', 1)[0]
+    if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', short):
+        raise ValueError('macOS release version requires three numeric components')
+    build = str(build_number) if build_number is not None else short
+    if build_number is not None and not re.fullmatch(r'[1-9][0-9]{0,17}', build):
+        raise ValueError('macOS build number must be a positive integer')
+    return short, build
+
+
+def mac_bundle(binary, out, version, update_info=None, build_number=None):
     # Stage completely before replacing a prior generated bundle. A download,
     # copy or signing failure leaves the prior bundle usable.
     destination = out / 'Wireframe.app'
@@ -112,10 +123,11 @@ def mac_bundle(binary, out, version, update_info=None):
         executable = bundle / 'Contents/MacOS/wireframe'
         executable.parent.mkdir(parents=True)
         shutil.copy2(binary, executable)
+        short_version, build_version = mac_version_fields(version, build_number)
         info = {'CFBundleName': 'Wireframe', 'CFBundleDisplayName':'Wireframe',
             'CFBundleIdentifier':sparkle.BUNDLE_ID, 'CFBundleExecutable':'wireframe',
-            'CFBundlePackageType':'APPL', 'CFBundleShortVersionString':version,
-            'CFBundleVersion':version, 'NSHighResolutionCapable':True,
+            'CFBundlePackageType':'APPL', 'CFBundleShortVersionString':short_version,
+            'CFBundleVersion':build_version, 'NSHighResolutionCapable':True,
             'CFBundleIconFile':'Wireframe.icns',
             'LSMinimumSystemVersion':'12.0'}
         if update_info: info.update(update_info)
@@ -147,10 +159,17 @@ def main():
         help='macOS only: JSON containing public feed_url, public_key and integer build string')
     parser.add_argument('--target', choices=('x86_64-pc-windows-gnu', 'x86_64-pc-windows-msvc', 'aarch64-pc-windows-msvc'),
         help='Build a Windows package with an installed target toolchain')
+    parser.add_argument('--build-number', type=int,
+        help='Positive macOS bundle build number, including beta iterations')
     args = parser.parse_args()
     if args.updater_config and (args.target or platform.system() != 'Darwin'):
         parser.error('--updater-config requires a native macOS build')
     update_info = sparkle.configuration(args.updater_config) if args.updater_config else None
+    if args.build_number is not None:
+        if args.build_number < 1 or args.target or platform.system() != 'Darwin':
+            parser.error('--build-number requires a positive integer and a native macOS build')
+        if update_info and update_info['CFBundleVersion'] != str(args.build_number):
+            parser.error('--build-number must match the updater configuration build')
     if os.environ.get('CARGO_BUILD_TARGET') and not args.target:
         parser.error('Use --target explicitly instead of CARGO_BUILD_TARGET when packaging')
     profile = 'debug' if args.debug else 'release'
@@ -175,7 +194,7 @@ def main():
     if args.target: target_dir /= args.target
     binary = target_dir / profile / ('wireframe.exe' if system == 'windows' else 'wireframe')
     if system == 'darwin':
-        payload = mac_bundle(binary, out, version, update_info)
+        payload = mac_bundle(binary, out, version, update_info, args.build_number)
     else:
         payload = out / name
         payload.mkdir(exist_ok=True)

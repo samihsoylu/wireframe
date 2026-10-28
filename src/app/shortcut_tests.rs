@@ -963,6 +963,36 @@ fn inspector_caption_and_inline_links_preserve_panel_width() {
 }
 
 #[test]
+fn example_project_opens_four_editable_pages_as_a_fresh_unsaved_session() {
+    let ctx = egui::Context::default();
+    let mut app = WireframeApp::workspace(&ctx, None);
+    app.editor.add(Kind::Button, 50., 50.);
+    let old_session = app.editor.clipboard_session().to_owned();
+    app.perform(Pending::Example, &ctx);
+    assert!(app.file.is_none());
+    assert_ne!(app.editor.clipboard_session(), old_session);
+    assert_eq!(app.editor.document.title, "Northstar Studio");
+    assert_eq!(
+        app.editor
+            .document
+            .pages
+            .iter()
+            .map(|page| (page.id, page.name.as_str(), page.content.nodes.len()))
+            .collect::<Vec<_>>(),
+        vec![
+            (1, "Landing", 7),
+            (9, "Desktop contact", 11),
+            (21, "Phone contact", 11),
+            (33, "Tablet order", 11)
+        ]
+    );
+    assert!(app.editor.document.assets.is_empty());
+    assert!(app.editor.undo_name().is_none());
+    assert!(app.editor.redo_name().is_none());
+    assert!(app.editor.document.encode().is_ok());
+}
+
+#[test]
 fn unnamed_project_status_does_not_claim_the_previous_file_was_saved() {
     for (action, expected) in [
         (Pending::New, "New project · not saved to a file"),

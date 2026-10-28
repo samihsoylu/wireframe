@@ -38,6 +38,151 @@ fn pointer(pos: Pos2, pressed: bool, modifiers: Modifiers) -> egui::Event {
 }
 
 #[test]
+fn shared_inspector_keeps_multi_control_move_open_until_final_release() {
+    for duplicate in [false, true] {
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        app.editor.add(Kind::TextInput, 50., 50.);
+        app.editor.add(Kind::Button, 350., 100.);
+        app.editor.select_all();
+        let before = app.editor.document.clone();
+        let originals = app.editor.nodes().to_vec();
+        frame(&ctx, &mut app, vec![], Modifiers::NONE, true);
+        let start = app.screen([70., 60.]);
+        let middle = start + Vec2::new(60., 30.);
+        let end = start + Vec2::new(90., 60.);
+        let modifiers = Modifiers {
+            alt: duplicate,
+            command: true,
+            ..Modifiers::NONE
+        };
+        frame(
+            &ctx,
+            &mut app,
+            vec![
+                egui::Event::PointerMoved(start),
+                pointer(start, true, modifiers),
+            ],
+            modifiers,
+            true,
+        );
+        frame(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(middle)],
+            modifiers,
+            true,
+        );
+        assert!(app.drag.is_some());
+        frame(
+            &ctx,
+            &mut app,
+            vec![
+                egui::Event::PointerMoved(end),
+                pointer(end, false, modifiers),
+            ],
+            modifiers,
+            true,
+        );
+        assert!(
+            app.error.is_none(),
+            "duplicate={duplicate}: {:?}",
+            app.error
+        );
+        assert!(app.drag.is_none());
+        let nodes = app.editor.nodes();
+        assert_eq!(nodes.len(), if duplicate { 4 } else { 2 });
+        for original in &originals {
+            let moved = nodes
+                .iter()
+                .find(|n| {
+                    n.content == original.content
+                        && if duplicate {
+                            n.id != original.id
+                        } else {
+                            n.id == original.id
+                        }
+                })
+                .unwrap();
+            let mut expected = original.clone();
+            expected.id = moved.id;
+            expected.origin.x += 90.;
+            expected.origin.y += 60.;
+            assert_eq!(*moved, expected);
+            if duplicate {
+                assert_eq!(
+                    nodes.iter().find(|n| n.id == original.id).unwrap(),
+                    original
+                );
+            }
+        }
+        let after = app.editor.document.clone();
+        app.editor.undo();
+        assert_eq!(app.editor.document, before);
+        app.editor.redo();
+        assert_eq!(app.editor.document, after);
+    }
+}
+
+#[test]
+fn shared_inspector_does_not_commit_multi_control_move_before_focus_cancellation() {
+    for duplicate in [false, true] {
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        app.editor.add(Kind::TextInput, 50., 50.);
+        app.editor.add(Kind::Button, 350., 100.);
+        app.editor.add(Kind::Checkbox, 600., 100.);
+        let redo = app.editor.document.clone();
+        app.editor.undo();
+        app.editor.select_all();
+        let before = app.editor.document.clone();
+        let undo = app.editor.undo_name().map(str::to_owned);
+        frame(&ctx, &mut app, vec![], Modifiers::NONE, true);
+        let start = app.screen([70., 60.]);
+        let end = start + Vec2::new(90., 60.);
+        let modifiers = Modifiers {
+            alt: duplicate,
+            command: true,
+            ..Modifiers::NONE
+        };
+        frame(
+            &ctx,
+            &mut app,
+            vec![
+                egui::Event::PointerMoved(start),
+                pointer(start, true, modifiers),
+            ],
+            modifiers,
+            true,
+        );
+        frame(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(end)],
+            modifiers,
+            true,
+        );
+        assert_ne!(app.editor.document, before);
+        frame(
+            &ctx,
+            &mut app,
+            vec![pointer(end, false, modifiers)],
+            modifiers,
+            false,
+        );
+        assert!(app.error.is_none(), "{:?}", app.error);
+        assert!(app.drag.is_none());
+        assert!(
+            app.editor.document == before,
+            "duplicate={duplicate}: focus cancellation changed the project"
+        );
+        assert_eq!(app.editor.undo_name(), undo.as_deref());
+        app.editor.redo();
+        assert_eq!(app.editor.document, redo);
+    }
+}
+
+#[test]
 fn inspector_keeps_single_control_move_open_until_final_release_position() {
     for kind in [Kind::TextInput, Kind::CircleButton] {
         for duplicate in [false, true] {

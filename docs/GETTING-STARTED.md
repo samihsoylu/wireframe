@@ -1,5 +1,9 @@
 # Your first wireframe
 
+To start with a complete example, choose **File → Open example project**. It contains Landing, Desktop contact, Phone contact and Tablet order pages; the [demo walkthrough](DEMO.md) suggests things to try.
+
+Choose **Wireframe** or **Mockup** in the top toolbar to switch between hand-drawn and clean rendering. This changes the whole project and supports Undo.
+
 1. Open Wireframe and create a project.
 2. Find a control in the library or use **Quick Add**. Drag it onto the canvas.
 3. Double-click a text-bearing control to edit it. Use the inspector to change its appearance and options.

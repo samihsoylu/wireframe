@@ -2,6 +2,10 @@
 
 ## 0.1.0 — Unreleased
 
+- Keep bold Rectangle captions in exported images and PDFs, with one searchable PDF caption.
+- Include caption font files in standalone SVG exports.
+- Keep source and license links usable in review packages and installer notices.
+
 - Return from a component source to its library by double-clicking empty canvas space.
 
 - Respond to quick slider clicks and keep following keys and text with the clicked field.

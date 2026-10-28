@@ -91,7 +91,7 @@ fn group_gap_entry_and_empty_double_click_change_only_one_context_level() {
 }
 
 #[test]
-fn empty_double_click_stops_at_component_source_root_without_leaving_or_editing_it() {
+fn empty_double_click_leaves_source_for_its_library_without_editing_or_history() {
     let ctx = egui::Context::default();
     let mut app = WireframeApp::workspace(&ctx, None);
     app.editor.add(Kind::Button, 50., 50.);
@@ -102,7 +102,9 @@ fn empty_double_click_stops_at_component_source_root_without_leaving_or_editing_
         .editor
         .create_component("Nested controls".into())
         .unwrap();
-    app.editor.edit_definition(definition).unwrap();
+    app.editor.edit_library_source(definition).unwrap();
+    let library = app.editor.library.unwrap();
+    let ungrouped = app.editor.document.clone();
     app.editor.select_all();
     app.editor.group();
     let group = *app.editor.selection.iter().next().unwrap();
@@ -122,8 +124,30 @@ fn empty_double_click_stops_at_component_source_root_without_leaving_or_editing_
     }
     click(&ctx, &mut app, blank);
     click(&ctx, &mut app, blank);
-    assert_eq!(app.editor.definition, Some(definition));
+    assert_eq!(
+        app.editor.definition, None,
+        "blank double-click leaves source root"
+    );
+    assert_eq!(app.editor.library, Some(library));
     assert!(app.editor.context.is_empty());
+    assert!(app.editor.selection.is_empty());
     assert_eq!(app.editor.document, document);
     assert_eq!(app.editor.undo_name(), undo.as_deref());
+    // The library overview is the canvas root; another blank double-click stays.
+    for _ in 0..13 {
+        frame(&ctx, &mut app, vec![]);
+    }
+    click(&ctx, &mut app, blank);
+    click(&ctx, &mut app, blank);
+    assert_eq!(app.editor.definition, None);
+    assert_eq!(app.editor.library, Some(library));
+    assert_eq!(app.editor.document, document);
+    assert_eq!(app.editor.undo_name(), undo.as_deref());
+    app.editor.undo();
+    assert_eq!(
+        app.editor.document, ungrouped,
+        "one Undo removes only Group"
+    );
+    app.editor.redo();
+    assert_eq!(app.editor.document, document, "one Redo restores Group");
 }

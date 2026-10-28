@@ -56,7 +56,12 @@ Eight tests pass on macOS with Python 3.9 and 3.13. A separate fixture containin
 
 ## Current verification scope
 
-Current private macOS ARM64 ZIP/DMG and Debian ARM64 TAR.GZ use frozen clean
+The current source-root navigation correction has passing macOS checks and local
+native graph/history evidence. Affected Linux validation/native replay and coherent
+replacement private archives remain pending (`delivery/reference-source-root/REPORT.md`).
+The following archives retain their predecessor identity.
+
+Retained private macOS ARM64 ZIP/DMG and Debian ARM64 TAR.GZ use frozen clean
 source/runtime `521d988` (rapid slider/input ownership correction). Both application
 targets (559 macOS passes/three ignored, 551 Linux passes), 51 egui library tests
 per platform, all-target warnings-denied lint, root/vendor formatting and optimized

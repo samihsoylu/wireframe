@@ -2,6 +2,8 @@
 
 ## 0.1.0 — Unreleased
 
+- Return from a component source to its library by double-clicking empty canvas space.
+
 - Respond to quick slider clicks and keep following keys and text with the clicked field.
 
 - Keep keyboard focus on the selected Trash card while scrolling through retained items.

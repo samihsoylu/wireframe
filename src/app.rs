@@ -1748,7 +1748,7 @@ if ui.add_enabled(movable, egui::Button::new("Delete")).clicked(){self.editor.de
                         }
                     }
                     let exit_group = !self.present
-                        && !self.editor.context.is_empty()
+                        && (!self.editor.context.is_empty() || self.editor.definition.is_some())
                         && double_click.is_some_and(|(pointer, _)| {
                             let point = self.world(pointer);
                             self.editor.hit(point.x, point.y).is_none()

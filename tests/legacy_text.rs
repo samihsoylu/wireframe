@@ -187,3 +187,58 @@ fn both_svg_writers_keep_distinct_bold_references_and_one_caption_source() {
         assert!(decoded(&legacy) == decoded(&canonical));
     }
 }
+
+#[test]
+fn standalone_legacy_captions_embed_the_native_proportional_fallback_faces() {
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use wireframe::{
+        model::{Control, Kind},
+        render::Item,
+    };
+    let mut control = Control::new(2, Kind::Rectangle, 20., 30.);
+    control.text = "Café caption".into();
+    let scene = Scene {
+        title: "Portable caption".into(),
+        bounds: control.bounds,
+        items: wireframe::scene::control_scene(&control, false)
+            .into_iter()
+            .map(|p| Item {
+                drawing: Drawing::Primitive(p),
+                opacity: 1.,
+                clip: None,
+            })
+            .collect(),
+        links: vec![],
+        font: None,
+    };
+    let definitions = eframe::egui::FontDefinitions::default();
+    let native_faces = &definitions.families[&eframe::egui::FontFamily::Proportional];
+    for svg in [
+        scene.svg(),
+        wireframe::scene::svg_layers("Portable caption", &[(control, None)], false),
+    ] {
+        for name in native_faces {
+            let family = format!("Wireframe {name}");
+            assert!(
+                svg.contains(&format!("@font-face{{font-family:'{family}';")),
+                "Missing embedded native face {name}"
+            );
+            assert!(
+                svg.contains(&STANDARD.encode(&definitions.font_data[name].font)),
+                "Embedded font bytes must match the canvas fallback"
+            );
+        }
+        let requested: Vec<_> = native_faces
+            .iter()
+            .map(|n| format!("Wireframe {n}"))
+            .collect();
+        assert!(
+            svg.contains(&format!("font-family=\"{}\"", requested.join(","))),
+            "Legacy captions must request the embedded aliases in native fallback order"
+        );
+        assert!(
+            svg.contains("UBUNTU FONT LICENCE Version 1.0"),
+            "Bundled fallback font notices must accompany the bytes"
+        );
+    }
+}

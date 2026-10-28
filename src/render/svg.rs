@@ -2,6 +2,29 @@
 // Copyright 2026 Wireframe contributors
 use super::*;
 use crate::scene::{color, escape};
+fn fallback_fonts(fallbacks: &std::collections::BTreeSet<&str>) -> String {
+    let definitions = egui::FontDefinitions::default();
+    let mut css = String::new();
+    for &face in fallbacks {
+        if let Some(data) = definitions.font_data.get(face) {
+            css.push_str(&format!("@font-face{{font-family:'{}';font-weight:400;font-style:normal;src:url(data:font/ttf;base64,{}) format('truetype');}}", crate::fonts::export_fallback_family(face), base64(&data.font)));
+        }
+    }
+    css
+}
+
+pub(crate) fn legacy_fonts() -> String {
+    let faces = crate::fonts::legacy_faces()
+        .iter()
+        .map(String::as_str)
+        .collect();
+    format!(
+        "<style>{}</style><metadata>{}</metadata>",
+        fallback_fonts(&faces),
+        escape(crate::fonts::FALLBACK_NOTICES)
+    )
+}
+
 fn embedded_fonts(
     font: Option<&crate::fonts::ProjectFont>,
     fallbacks: &std::collections::BTreeSet<&str>,
@@ -18,12 +41,7 @@ fn embedded_fonts(
         };
         css.push_str(&format!("@font-face{{font-family:'{family}';font-weight:{weight};font-style:{style};src:url(data:{media};base64,{}) format('{format}');}}",base64(data)));
     }
-    let definitions = egui::FontDefinitions::default();
-    for &face in fallbacks {
-        if let Some(data) = definitions.font_data.get(face) {
-            css.push_str(&format!("@font-face{{font-family:'{}';font-weight:400;font-style:normal;src:url(data:font/ttf;base64,{}) format('truetype');}}", crate::fonts::export_fallback_family(face), base64(&data.font)));
-        }
-    }
+    css.push_str(&fallback_fonts(fallbacks));
     css.push_str("</style><metadata>");
     css.push_str(&escape(crate::fonts::notices(font)));
     if !fallbacks.is_empty() {
@@ -47,7 +65,7 @@ impl Scene {
         height: f32,
         white: bool,
     ) -> String {
-        let fallbacks = self
+        let mut fallbacks: std::collections::BTreeSet<&str> = self
             .items
             .iter()
             .filter_map(|item| match &item.drawing {
@@ -55,6 +73,9 @@ impl Scene {
                 _ => None,
             })
             .collect();
+        if self.items.iter().any(|item| matches!(&item.drawing, Drawing::Primitive(Primitive::Text { text, .. }) if !text.is_empty())) {
+            fallbacks.extend(crate::fonts::legacy_faces().iter().map(String::as_str));
+        }
         let b = viewport;
         let mut out = format!(
             "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width}\" height=\"{height}\" viewBox=\"{} {} {} {}\" preserveAspectRatio=\"none\"><title>{}</title>{}",

@@ -50,6 +50,7 @@ mod smartphone;
 mod standalone_icons;
 mod static_layouts;
 mod svg;
+pub(crate) use svg::legacy_fonts;
 mod table;
 mod tablet;
 mod tabs;

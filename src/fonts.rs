@@ -169,6 +169,26 @@ pub fn export_fallback_family(face: &str) -> String {
     format!("Wireframe {face}")
 }
 
+/// Legacy captions use the ordinary UI proportional family, independently of
+/// the project's modern canvas font. Preserve that exact fallback order.
+pub(crate) fn legacy_faces() -> &'static [String] {
+    static FACES: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
+    FACES.get_or_init(|| {
+        egui::FontDefinitions::default().families[&egui::FontFamily::Proportional].clone()
+    })
+}
+
+pub(crate) fn legacy_export_family() -> &'static str {
+    static FAMILY: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    FAMILY.get_or_init(|| {
+        legacy_faces()
+            .iter()
+            .map(|name| export_fallback_family(name))
+            .collect::<Vec<_>>()
+            .join(",")
+    })
+}
+
 /// Keep graphemes together and retain the actual face selected by the canvas.
 /// The public character coverage map lists faces in the family's fallback order.
 pub fn source_faces(

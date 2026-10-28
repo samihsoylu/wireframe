@@ -615,16 +615,22 @@ pub fn svg_layers(name: &str, layers: &[(Control, Option<Bounds>)], sketch: bool
         b.x - 24.,
         b.y - 24.
     );
+    let font_position = s.len();
+    let mut has_legacy_text = false;
     for (i, (c, clip)) in layers.iter().enumerate() {
         if let Some(b) = clip {
             s.push_str(&format!("<defs><clipPath id=\"clip{i}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\"/></clipPath></defs><g clip-path=\"url(#clip{i})\">",b.x,b.y,b.w,b.h));
         }
         for (j, p) in control_scene(c, sketch).into_iter().enumerate() {
+            has_legacy_text |= matches!(&p, Primitive::Text { text, .. } if !text.is_empty());
             s.push_str(&primitive_svg_named(p, &format!("legacy-{i}-{j}")));
         }
         if clip.is_some() {
             s.push_str("</g>");
         }
+    }
+    if has_legacy_text {
+        s.insert_str(font_position, &crate::render::legacy_fonts());
     }
     s.push_str("</svg>");
     s
@@ -812,12 +818,13 @@ pub(crate) fn primitive_svg_named(p: Primitive, id: &str) -> String {
             center,
         } => {
             let source = format!(
-                "<text{} x=\"{x}\" y=\"{y}\" font-family=\"Ubuntu,DejaVu Sans,Arial,sans-serif\" font-size=\"{size}\" font-weight=\"normal\" text-anchor=\"{}\" fill=\"{}\">{}</text>",
+                "<text{} x=\"{x}\" y=\"{y}\" font-family=\"{}\" font-size=\"{size}\" font-weight=\"normal\" text-anchor=\"{}\" fill=\"{}\">{}</text>",
                 if bold {
                     format!(" id=\"{}\"", escape(id))
                 } else {
                     String::new()
                 },
+                crate::fonts::legacy_export_family(),
                 if center { "middle" } else { "start" },
                 color(c),
                 escape(&text)

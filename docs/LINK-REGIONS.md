@@ -104,6 +104,8 @@ Before the correction, regressions demonstrate a plain label cutting a hole in a
 
 Native macOS acceptance covers nine overlay/background clicks and all-page PDF export from an original eight-card fixture. Native and programmatic PDFs are byte-identical, with 268800 unit-cell target checks passing. This is scoped link-policy acceptance; broader interaction and platform coverage remain open.
 
+A named Beta 2 (`ccca24b`) Mac ARM64 Clean Text Area check exercises the actual whole-control picker: dismissal preserves the complete baseline; Link to new wireframe creates and assigns one empty destination in one undoable action. The notice opens that page before Undo, and one-step Undo/Redo preserves the complete source graph. In Present, a predeclared point in blank fill well below the caption reaches that destination; Escape returns to editing at the destination. Nine complete saved files and cold empty history pass, with independent artifact/visual review. Both sessions exit normally and all 546original data/settings files and50 bundle entries/signature are exact. Private `appearance-finishing-current/delivery/textarea-whole-area-link/REPORT.md` records the actual point, full oracles and an excluded cleanup-record field-name failure after restoration. Other states, inline precedence, crop/component/style/input/accessibility/platform variants remain open.
+
 ## Rotated inline hints
 
 Rotated text highlights follow the existing four-corner text shape. Presentation

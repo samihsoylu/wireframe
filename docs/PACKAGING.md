@@ -66,6 +66,16 @@ Predecessor browser/error/scenario and disposable-installation evidence keeps it
 
 Current Linux apps and viewer/forward/container/VM are stopped, isolated evidence archived and original limits/tool components/global context preserved; all 546 prior macOS data files remain exact. Separate old Gatekeeper image cleanup is pending. Final permanent image/library removal still awaits action-time approval after cancellation checks. Ordinary packages do not activate the updater; no public release, production feed/key or new feature deferral. Windows testing stays held. Intel/minimum macOS, downloaded/installed launch, protected installation, other Linux architectures/distributions/Wayland/physical GPUs, native IME and screen-reader acceptance remain open. See [current work](../SESSION-SPEC.md) and [release gates](RELEASE-CHECKLIST.md).
 
+The same extracted `f944e37` Linux package now also passes the sampled narrow
+Arrow inspector sequence: fractional opacity, wrapped caption/stable page link,
+pixel-exact panel width and saved caption Undo/Redo/cold Save with empty history.
+It returns to default inspector width after restart; width persistence is not
+accepted. Initial stale desktop-lock and remote zero-duration-click failures,
+measurement corrections and the accepted 100 ms input scope are retained in
+external `appearance-finishing-current/delivery/linux-inspector-width/REPORT.md`.
+No runtime/artifact change or broad physical/accessibility acceptance; apps and
+owned environment are stopped with original limits/context and host data exact.
+
 ## Application artwork
 
 The original application icon lives in `assets/app-icon`, with editable vector sources and generated PNG, ICNS and ICO files. macOS bundles declare and include the ICNS; the desktop viewport uses the PNG. Ordinary builds use the committed outputs. See the [artwork regeneration instructions](../assets/app-icon/README.md). Native Finder appearance and app startup pass on macOS; Windows executable-resource embedding and Linux native appearance remain open.

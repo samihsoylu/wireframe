@@ -27,9 +27,25 @@ plus padding/gap. A full-panel test covers pointer edits, caption expansion and
 inline links at220/300/400 points and1×/2× density. Native300-point width remains
 unchanged through the same sequence and exact saved Undo/Redo. Seven affected
 arrow tests and final lint/build/format/signature pass. Evidence: external
-`inspector-width-current/report.md`. Automated native resizing made no change;
-narrow native, common layout, physical slider snapping and exact appearance
-remain open. This does not close G01 or other platform/native coverage.
+`inspector-width-current/report.md`. That macOS check did not establish narrow
+resizing. A later current Linux checkpoint supplies the bounded narrow route
+below. Common layout, physical slider snapping and exact appearance remain open;
+this does not close G01 or other platform/native coverage.
+
+The exact extracted `f944e37` Linux package now reaches the narrow clamp
+(approximately 220 logical points from scaled capture/range evidence). Ten native
+captures retain the exact same panel edge through opacity 0.49, expanded and
+wrapped caption editing, a readable destination resolving to `page:1`, collapse,
+Save and one-step saved caption Undo/Redo. The whole opacity file equals retained
+macOS bytes; the whole caption graph matches its declared expectation. Cold Save
+is byte-exact with empty history. The inspector returns to default width after
+restart; width persistence is not accepted. A zero-duration remote click missed
+the slider and a following key nudged the Arrow, then Undo restored it. The
+accepted 100 ms click/key sequence preserves position. Rapid input, physical
+delivery, every property/variant and wider platform behavior remain unverified.
+External `appearance-finishing-current/delivery/linux-inspector-width/REPORT.md`
+retains measurement/setup exclusions and terminal cleanup. No runtime or package
+change; Windows remains held.
 
 ## Geometry implemented
 

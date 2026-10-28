@@ -1,5 +1,9 @@
 # Changes
 
+## 0.1.0-beta.2 — Beta
+
+- Show **Mixed selection** when selected controls have different active rows or tabs. The picker marks a row as selected only when every selected control agrees.
+
 ## 0.1.0-beta.1 — Beta
 
 - Switch between **Wireframe** and **Mockup** styles directly in the toolbar.

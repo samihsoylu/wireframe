@@ -7,6 +7,9 @@ use wireframe::{
     workspace::{PropertySection, SelectionProperty},
 };
 
+#[cfg(test)]
+mod row_selection_tests;
+
 // Inspector glyphs keep their identifying edges at small sizes. Canvas geometry
 // deliberately suppresses tears below its minimum control dimensions.
 fn shape_option_outline(choice: &str) -> Vec<[f32; 2]> {
@@ -617,7 +620,9 @@ impl WireframeApp {
                 reset = ui.small_button("Reset").clicked();
             }
         });
-        let caption = if rows.value < 0 {
+        let caption = if rows.mixed {
+            "Mixed selection"
+        } else if rows.value < 0 {
             "None"
         } else {
             captions
@@ -635,8 +640,13 @@ impl WireframeApp {
             },
             |ui| {
                 if rows.allow_none {
-                    if ui_text::selectable(ui, rows.value == -1, "None", ui.available_width())
-                        .clicked()
+                    if ui_text::selectable(
+                        ui,
+                        !rows.mixed && rows.value == -1,
+                        "None",
+                        ui.available_width(),
+                    )
+                    .clicked()
                     {
                         chosen = Some(-1);
                         ui.close();
@@ -648,7 +658,7 @@ impl WireframeApp {
                 for (index, label) in captions.iter().enumerate() {
                     if ui_text::selectable(
                         ui,
-                        rows.value == index as i32,
+                        !rows.mixed && rows.value == index as i32,
                         if label.is_empty() {
                             "(Empty item)"
                         } else {

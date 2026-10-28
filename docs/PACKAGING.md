@@ -56,13 +56,25 @@ Eight tests pass on macOS with Python 3.9 and 3.13. A separate fixture containin
 
 ## Current verification scope
 
-Working source now corrects rapid slider clicks and pointer-to-keyboard ownership.
-Mac application/egui tests and formatting pass; remaining validation, native
-replay and replacement artifacts are pending in external
-`appearance-finishing-current/delivery/rapid-slider-input`. The frozen `f944e37`
-artifacts below are verified predecessor packages; they do not contain the fix.
+Current private macOS ARM64 ZIP/DMG and Debian ARM64 TAR.GZ use frozen clean
+source/runtime `521d988` (rapid slider/input ownership correction). Both application
+targets (559 macOS passes/three ignored, 551 Linux passes), 51 egui library tests
+per platform, all-target warnings-denied lint, root/vendor formatting and optimized
+builds pass. Each archive contains 1,800 exact source files and 266 valid links;
+reader assets/licenses/notices are byte-exact with valid platform modes. Linux
+normalizes `licenses/manifest.json` from 0664 to 0644 without changing its bytes.
+Strict macOS signature, all 50 mounted/extracted app entries, companion ZIP and
+Applications link pass; the verification image is detached. Linux archive safety
+and dependency resolution pass. Current extracted Linux native rapid click/key,
+canvas ownership, saved drag Undo/Redo and cold Save/empty history pass. New macOS
+native input remains open; the older running review app is untouched. All owned
+Linux infrastructure is stopped with original components/limits/context and host
+data exact. External `appearance-finishing-current/delivery/rapid-slider-input/REPORT.md`
+pins identities, failed/passed checks and scope. Source is frozen at the clean
+correction commit; later evidence-only docs do not alter those artifacts. No new
+full 220-target run, downloaded/installed-launch or publication acceptance.
 
-Current private macOS ARM64 ZIP/DMG and Debian ARM64 TAR.GZ use frozen source/runtime `f944e37` (Trash arrow-focus correction). Each contains 1,800 exact corresponding-source files and 266 valid documentation links. Reader-copy links are repaired during staging while corresponding-source bytes remain exact. All 368 normal/build dependencies have preserved notices; reader licenses/assets and all checksum sidecars match. Source/artifact hashes, failed/passed checks and scope are retained in external `appearance-finishing-current/delivery/overflow-trash/review/REPORT.md`. Later evidence-only documentation commits do not alter these artifacts.
+Predecessor private macOS ARM64 ZIP/DMG and Debian ARM64 TAR.GZ use frozen source/runtime `f944e37` (Trash arrow-focus correction). Each contains 1,800 exact corresponding-source files and 266 valid documentation links. Reader-copy links are repaired during staging while corresponding-source bytes remain exact. All 368 normal/build dependencies have preserved notices; reader licenses/assets and all checksum sidecars match. Source/artifact hashes, failed/passed checks and scope are retained in external `appearance-finishing-current/delivery/overflow-trash/review/REPORT.md`. Later evidence-only documentation commits do not alter these artifacts.
 
 Full application targets pass: 557 macOS tests (three existing ignored) and 549 Linux tests (none ignored). Unchanged library/integration/example/vendor targets retain completed evidence; assembled 220-target matrices total 1,800 macOS passes/four ignored and 1,784 Linux passes/one ignored. These combine retained and refreshed targets, not uninterrupted full-suite runs. Both warnings-denied all-target lint, formatting and optimized builds pass. Linux temporarily adds official rustfmt only inside the owned container, then restores its exact original component set. Seven unchanged-input Python configuration/packaging/updater checks on each platform and five extra non-Windows archive-integrity checks retain their original scope; actual current artifacts are checked directly. No Windows-specific check is repeated.
 

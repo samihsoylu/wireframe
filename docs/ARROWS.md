@@ -47,14 +47,22 @@ External `appearance-finishing-current/delivery/linux-inspector-width/REPORT.md`
 retains measurement/setup exclusions and terminal cleanup. No runtime or package
 change; Windows remains held.
 
-A later source correction reproduces and fixes complete press/release clicks
-arriving in one frame. Sliders accept the click and focus on press; following
-keys wait for the new widget owner. Escape retains immediate gesture
-cancellation. Six width/batching cases, text ownership and existing held-history
-checks pass within 559 macOS application tests (three ignored); all 51 egui
-library tests pass. Linux/native replay and replacement packages remain pending
-in external `delivery/rapid-slider-input`. The `f944e37` native checkpoint above
-keeps its predecessor identity and does not establish acceptance of the fix.
+Current source/runtime `521d988` reproduces and fixes complete press/release
+clicks arriving in one frame. Sliders accept the click and focus on press;
+following keys wait for the new widget owner, while Escape retains immediate
+gesture cancellation. Six width/batching cases, text ownership and existing
+held-history checks pass within 559 macOS application tests (three ignored),
+551 Linux tests and 51 egui library tests per platform. Both lint, formatting,
+optimized builds and refreshed private package checks pass.
+
+The extracted Linux package repeats the zero-duration click/Left successfully:
+opacity becomes 0.44 and X/Y remain 50. Clicking the canvas still lets Left nudge
+X to 49. Slider drag changes opacity to 0.80 with one-step byte-exact saved
+Undo/Redo; cold Save is exact with empty history. New macOS native input,
+physical cadence/snapping and other variants remain open. The older macOS
+review app is preserved. External `delivery/rapid-slider-input/REPORT.md` records
+the corrected/failing checks, artifact identities and complete isolated cleanup;
+the preceding `f944e37` narrow-layout evidence retains its own identity.
 
 ## Geometry implemented
 

@@ -122,7 +122,7 @@ The default Arrow is straight in both products once the comparison fixture inclu
 
 ## Check ownership
 
-The [current parent audit](../SESSION-SPEC.md#next-actions-and-unresolved-requirements) corrects four stale evidence descriptions. E22 now has current extracted Mac whole-component PNG/document/history acceptance in its named scope; other variants and Q5/Q7/Q8 remain open. Windows stays held.
+The [current parent audit](../SESSION-SPEC.md#next-actions-and-unresolved-requirements) corrects four stale evidence descriptions. E22 component PNG and CI10 shared-version rename/conflict/Redo/cold routes now have current extracted Mac acceptance in their named scopes; other variants and Q5/Q7/Q8 remain open. Windows stays held.
 
 Every new check must name its unanswered question, reused evidence, reason another observation is needed, candidate identity and closure condition. A completed check is repeated only after a specific relevant change or a demonstrated failure. Documentation-only updates do not trigger runtime suites. Historical text widths and visual differences are remeasured in the shared current comparison rather than treated as current defects automatically.
 

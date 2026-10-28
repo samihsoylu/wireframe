@@ -62,6 +62,29 @@ class ArchiveTests(unittest.TestCase):
         shutil.rmtree(self.app)
         package.copy_payload(self.original, self.app)
 
+    def test_reader_notices_links_reach_corresponding_source_without_changing_source(self):
+        text = '# Notices\n\n[changes](vendor/README.md#patches) and [license](licenses/item/LICENSE).\n'
+        write_file(self.staging / 'THIRD_PARTY_NOTICES.md', text.encode())
+        write_file(self.staging / 'source/THIRD_PARTY_NOTICES.md', text.encode())
+        write_file(self.staging / 'source/vendor/README.md', b'# Patches\n')
+        write_file(self.staging / 'licenses/item/LICENSE', b'License text\n')
+        package.rewrite_documentation_links(self.staging)
+        self.assertEqual((self.staging / 'THIRD_PARTY_NOTICES.md').read_text(),
+                         text.replace('(vendor/README.md#patches)', '(source/vendor/README.md#patches)'))
+        self.assertEqual((self.staging / 'source/THIRD_PARTY_NOTICES.md').read_text(), text)
+
+    def test_installer_notices_describe_zip_locations_and_keep_upstream_links(self):
+        text = '# Notices\n\nCopyright retained. [changes](source/vendor/README.md#patches), [license](licenses/item/LICENSE), [upstream](https://example.test/license).\n'
+        actual = package.installer_notices(text, 'Wireframe source.zip')
+        self.assertTrue(actual.startswith('# Notices\n'))
+        self.assertIn('[companion ZIP](Wireframe%20source.zip)', actual)
+        self.assertIn('Copy it to a writable folder and extract it.', actual)
+        self.assertIn('Copyright retained.', actual)
+        self.assertIn('changes (`source/vendor/README.md#patches` inside the companion package)', actual)
+        self.assertIn('license (`licenses/item/LICENSE` inside the companion package)', actual)
+        self.assertIn('[upstream](https://example.test/license)', actual)
+        self.assertNotIn('[license](licenses/', actual)
+
     def test_legacy_framework_free_zip_still_verifies(self):
         # The previous packager omitted directory records.
         package.write_archive(self.staging, self.archive, 'windows', self.name)

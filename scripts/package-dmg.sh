@@ -34,7 +34,23 @@ ditto "$dmg_source" "$dmg_stage/Wireframe.app"
 ln -s /Applications "$dmg_stage/Applications"
 cp docs/INSTALL.txt "$dmg_stage/Install and Open.txt"
 cp "$dmg_archive" "$dmg_stage/Source and licenses/"
-cp LICENSE THIRD_PARTY_NOTICES.md "$dmg_stage/Source and licenses/"
+cp LICENSE "$dmg_stage/Source and licenses/"
+python3 -B - "$dmg_archive" "$dmg_stage/Source and licenses/THIRD_PARTY_NOTICES.md" <<'PY'
+from pathlib import Path, PurePosixPath
+import sys, zipfile
+sys.path.insert(0, 'scripts')
+import package
+archive = Path(sys.argv[1])
+with zipfile.ZipFile(archive) as companion:
+    notices = [name for name in companion.namelist()
+               if len(PurePosixPath(name).parts) == 2
+               and PurePosixPath(name).name == 'THIRD_PARTY_NOTICES.md'
+               and not name.startswith('__MACOSX/')]
+    if len(notices) != 1:
+        raise SystemExit('Companion ZIP must contain one reader notices document')
+    text = companion.read(notices[0]).decode('utf-8')
+Path(sys.argv[2]).write_text(package.installer_notices(text, archive.name))
+PY
 dmg_sdk=$(xcrun --sdk macosx --show-sdk-path)
 xcrun --sdk macosx swift -sdk "$dmg_sdk" scripts/dmg-background.swift "$dmg_stage/.background/installer.tiff"
 hdiutil create -quiet -fs HFS+ -volname "Wireframe Installer" -srcfolder "$dmg_stage" -format UDRW "$dmg_work/writable.dmg"

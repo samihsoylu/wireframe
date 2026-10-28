@@ -33,7 +33,7 @@ def copy_payload(payload, destination):
 def rewrite_documentation_links(staging):
     """Keep reader copies usable when code lives in corresponding source."""
     staging = staging.resolve()
-    documents = [staging / name for name in ('README.md', 'SESSION-SPEC.md', 'CHANGELOG.md')]
+    documents = [staging / name for name in ('README.md', 'SESSION-SPEC.md', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md')]
     documents.extend((staging / 'docs').rglob('*.md'))
     for document in documents:
         if not document.is_file():
@@ -61,6 +61,22 @@ def rewrite_documentation_links(staging):
         revised = re.sub(r'\]\(([^)\n]+)\)', relocate, text)
         if revised != text:
             document.write_text(revised)
+
+def installer_notices(text, archive_name):
+    """Keep installer notices readable when their files live inside the companion ZIP."""
+    def describe_location(match):
+        label, target = match[1], match[2]
+        url = urlsplit(target[1:-1] if target.startswith('<') and target.endswith('>') else target)
+        if url.scheme or url.netloc or not url.path or url.path.startswith('/'):
+            return match[0]
+        return f'{label} (`{target}` inside the companion package)'
+    title, _, body = text.partition('\n')
+    introduction = ('Full source and license files are in the '
+        f'[companion ZIP]({quote(archive_name, safe="._-")}). '
+        'Copy it to a writable folder and extract it. Open THIRD_PARTY_NOTICES.md '
+        'inside that package for working file links. Paths below refer to that package.')
+    body = re.sub(r'\[([^]\n]+)\]\(([^)\n]+)\)', describe_location, body)
+    return title + '\n\n' + introduction + '\n' + body
 
 def write_archive(staging, archive, system, name):
     # A refused or interrupted archive must not replace a prior good artifact.

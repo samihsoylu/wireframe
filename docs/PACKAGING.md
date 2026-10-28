@@ -70,6 +70,10 @@ named native rapid click/key, canvas ownership, saved drag Undo/Redo and cold
 Save/empty-history routes. The macOS drag uses the previously authorized guarded
 helper on a new named owned fixture; input exclusions and exact full-state
 comparisons are retained in `delivery/rapid-slider-input/native-macos/REPORT.md`.
+The same macOS package also passes the named approximately 220-point Arrow
+inspector click/key, wrapping Unicode/page-link caption, stable live width, saved
+Undo/Redo and cold Save/empty-history sequence. Cold width returns to 300 points;
+no persistence acceptance (`delivery/macos-inspector-width/REPORT.md`).
 Old idle/current macOS studies quit, original save/viewport settings and all 546
 prior data files are exact. Owned Linux infrastructure is stopped with original
 components/limits/context. Broader native/physical/platform gates remain open. External `appearance-finishing-current/delivery/rapid-slider-input/REPORT.md`

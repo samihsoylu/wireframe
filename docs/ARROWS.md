@@ -64,11 +64,20 @@ saved Undo/Redo and fresh-process Save/empty history. Its bounded drag uses the
 previously authorized unchanged helper and a separate named owned fixture;
 predeclared 0.80 and one-step saved history are exact. All original data/settings
 are restored and the old idle/current study apps are closed. Physical cadence,
-snapping, macOS narrow width and other variants remain open. External
+snapping and other variants remain open. External
 `delivery/rapid-slider-input/native-macos/REPORT.md` retains input exclusions and
 exact cleanup; `delivery/rapid-slider-input/REPORT.md` records
 the corrected/failing checks, artifact identities and complete isolated cleanup;
 the preceding `f944e37` narrow-layout evidence retains its own identity.
+
+The same extracted `521d988` macOS package now reaches approximately 220 points
+through the unchanged authorized guarded resize helper. Native track click/Left
+sets opacity 0.49 with X/Y 50. A two-line Unicode caption with a readable page link
+keeps the exact 220.03125-point width while expanded and collapsed. Complete saved
+graphs, one-step caption Undo/Redo and cold Save/empty history pass. Cold width
+returns to 300 points; width persistence remains unaccepted. All 546 original data
+files/settings are exact, both studies quit normally and package bytes/signature
+remain intact. External `delivery/macos-inspector-width/REPORT.md` retains scope.
 
 ## Geometry implemented
 

@@ -32,6 +32,8 @@ mod library_drag;
 mod library_import;
 mod menus;
 mod more_controls;
+#[cfg(test)]
+mod move_tests;
 #[cfg(target_os = "macos")]
 mod native_termination;
 mod navigator;
@@ -798,7 +800,9 @@ if c.kind==Kind::Tabs {ui.small("Separate tabs with commas.");}
                     if self.editor.is_group(c.id) && ui.button("Edit group contents").clicked(){self.editor.enter(c.id);}
                     if c!=original {if c.link == original.link {c.link=self.editor.node_link(c.id).and_then(|link|match link {wireframe::document::Link::Page(id)=>Some(id),_=>None});}self.editor.begin("Edit properties");if original.locked {c.bounds=original.bounds;}
                         self.editor.update_control(c);}
-                    if !wireframe::text_entry::is_focused(ui.ctx()) && !ui.ctx().text_edit_focused()&&!ui.input(|i|i.pointer.any_down()){self.editor.commit();}
+                    // The canvas owns a live gesture through its release or
+                    // focus-loss frame, even after the pointer button is up.
+                    if self.drag.is_none() && !wireframe::text_entry::is_focused(ui.ctx()) && !ui.ctx().text_edit_focused()&&!ui.input(|i|i.pointer.any_down()){self.editor.commit();}
                 }else {self.layering_properties(ui);self.selection_properties(ui);}
                 self.inline_link_properties(ui, &selected.iter().map(|c| c.id).collect::<Vec<_>>());
                 if selected.len() == 1 { self.group_crop_properties(ui, selected[0].id); }
@@ -1514,14 +1518,18 @@ if ui.add_enabled(movable, egui::Button::new("Delete")).clicked(){self.editor.de
                                     .collect::<Vec<_>>();
                                 if let Err(error) = self.editor.preview_move(&offsets, duplicate) {
                                     self.error = Some(error);
+                                    self.editor.cancel();
+                                    self.drag_scroll = None;
+                                    self.alignment_guides.clear();
+                                } else {
+                                    self.drag = Some(Drag::Move {
+                                        start,
+                                        original,
+                                        targets,
+                                        duplicate_targets,
+                                        motion,
+                                    });
                                 }
-                                self.drag = Some(Drag::Move {
-                                    start,
-                                    original,
-                                    targets,
-                                    duplicate_targets,
-                                    motion,
-                                });
                             }
                             Drag::Resize {
                                 start,

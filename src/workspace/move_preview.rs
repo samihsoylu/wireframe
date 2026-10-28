@@ -12,7 +12,7 @@ impl Editor {
     /// Switching duplication on/off never records or discards history.
     pub fn preview_move(&mut self, offsets: &[(Id, Point)], duplicate: bool) -> Result<(), String> {
         if self.pending.is_none() {
-            return Err("Move preview requires an active transaction".into());
+            return Err("The move was interrupted. Try dragging again.".into());
         }
         self.reset_preview();
         let duplicate = duplicate && self.can_duplicate_move();

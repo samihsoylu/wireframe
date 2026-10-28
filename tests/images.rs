@@ -317,6 +317,183 @@ fn sketch_filter_expands_extent_preserves_source_and_processes_premultiplied_alp
 }
 
 #[test]
+fn empty_image_placeholder_uses_its_caption_formatting_and_style_frame() {
+    use wireframe::{model::Bounds, scene::Primitive};
+    for sketch in [false, true] {
+        let mut e = Editor::default();
+        e.document.settings.sketch = sketch;
+        let id = add(&mut e, 50.);
+        if let NodeContent::Control { size, .. } = &mut e.document.pages[0].content.nodes[0].content
+        {
+            *size = Size::fixed(240., 140.);
+        }
+        let mut e = Editor::new(e.document.clone());
+        let before = e.document.clone();
+        let blank = e.rendered_scene(e.page).unwrap();
+        assert!(
+            blank.items.iter().all(|item| !matches!(
+                &item.drawing,
+                Drawing::Glyph(_) | Drawing::Primitive(Primitive::Text { .. })
+            )),
+            "an empty Image has no synthetic caption"
+        );
+        assert!(blank.items.iter().any(|item| matches!(
+            item.drawing,
+            Drawing::Primitive(Primitive::Rect { b, fill: [255, 255, 255], stroke: false, .. })
+                if b == Bounds::new(50., 50., 240., 140.)
+        )));
+        let (width, color) = if sketch {
+            (3., [92, 92, 94])
+        } else {
+            (1., [51; 3])
+        };
+        for points in [
+            vec![[55., 55.], [285., 185.]],
+            vec![[285., 55.], [55., 185.]],
+        ] {
+            assert!(blank.items.iter().any(|item| matches!(
+                &item.drawing,
+                Drawing::Primitive(Primitive::Line { points: actual, width: w, color: c })
+                    if *actual == points && *w == width && *c == color
+            )));
+        }
+        e.begin("Format empty Image");
+        for (key, value) in [
+            ("text", Value::Text("Café caption".into())),
+            ("font_size", Value::Number(24.)),
+            ("bold", Value::Bool(true)),
+            ("italic", Value::Bool(true)),
+            ("underline", Value::Bool(true)),
+            ("image_border", Value::Bool(true)),
+        ] {
+            e.set_control_property(id, key, value).unwrap();
+        }
+        e.commit();
+        let formatted = e.document.clone();
+        let scene = e.rendered_scene(e.page).unwrap();
+        let glyphs: Vec<_> = scene
+            .items
+            .iter()
+            .filter_map(|item| match &item.drawing {
+                Drawing::Glyph(g) => Some((g, item.clip)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            glyphs
+                .iter()
+                .map(|(g, _)| g.text.as_str())
+                .collect::<String>(),
+            "Café caption"
+        );
+        assert!(glyphs.iter().all(|(g, clip)| g.size == 24.
+            && g.bold
+            && g.italic
+            && *clip == Some(Bounds::new(50., 50., 240., 140.))));
+        assert_eq!(
+            e.document, formatted,
+            "rendering must not mutate the project"
+        );
+        let svg = scene.svg();
+        assert!(scene.png().is_ok());
+        e.undo();
+        assert_eq!(e.document, before);
+        e.redo();
+        assert_eq!(e.document, formatted);
+        let reopened =
+            Editor::new(wireframe::document::decode(&formatted.encode().unwrap()).unwrap());
+        assert_eq!(reopened.rendered_scene(reopened.page).unwrap().svg(), svg);
+    }
+}
+
+#[test]
+fn unavailable_image_retains_caption_layout_and_its_failure_status() {
+    for sketch in [false, true] {
+        let mut e = Editor::default();
+        e.document.settings.sketch = sketch;
+        e.document.settings.font_size = 20.;
+        let id = add(&mut e, 50.);
+        if let NodeContent::Control { size, .. } = &mut e.document.pages[0].content.nodes[0].content
+        {
+            *size = Size::fixed(240., 140.);
+        }
+        let mut e = Editor::new(e.document.clone());
+        e.import_image(id, prepare("caption.png", 24, 14), ImportChoice::KeepBoth)
+            .unwrap();
+        e.set_control_property(id, "text", Value::Text("*Café* caption".into()))
+            .unwrap();
+        e.set_control_property(id, "font_size", Value::Number(24.))
+            .unwrap();
+        let caption = |scene: &wireframe::render::Scene| {
+            scene
+                .items
+                .iter()
+                .filter_map(|item| match &item.drawing {
+                    Drawing::Glyph(g) if g.size == 24. => Some((
+                        g.text.clone(),
+                        g.x,
+                        g.baseline,
+                        g.size,
+                        g.bold,
+                        g.italic,
+                        g.face.clone(),
+                        item.clip,
+                    )),
+                    _ => None,
+                })
+                .collect::<Vec<_>>()
+        };
+        let loaded_caption = caption(&e.rendered_scene(e.page).unwrap());
+        assert!(!loaded_caption.is_empty());
+        for source in ["corrupt", "trashed", "removed"] {
+            let mut project = e.document.clone();
+            match source {
+                "corrupt" => project.assets[0].bytes = b"not a PNG".to_vec(),
+                "trashed" => project.assets[0].trashed = true,
+                "removed" => {
+                    let asset = project.assets.remove(0);
+                    project.removed_assets.insert(asset.id);
+                }
+                _ => unreachable!(),
+            }
+            let editor = Editor::new(project.clone());
+            let scene = editor.rendered_scene(editor.page).unwrap();
+            assert_eq!(
+                caption(&scene),
+                loaded_caption,
+                "caption layout changed for {source}"
+            );
+            let status_glyphs: Vec<_> = scene
+                .items
+                .iter()
+                .filter_map(|item| match &item.drawing {
+                    Drawing::Glyph(g) if g.size != 24. => Some(g),
+                    _ => None,
+                })
+                .collect();
+            let status = status_glyphs
+                .iter()
+                .map(|g| g.text.as_str())
+                .collect::<String>();
+            assert_eq!(status, "Image unavailable", "missing status for {source}");
+            assert!(
+                status_glyphs
+                    .iter()
+                    .all(|g| g.size == 20. && !g.bold && !g.italic && g.color == [0, 0, 0, 255]),
+                "status must use the project default style for {source}"
+            );
+            assert!(
+                scene
+                    .items
+                    .iter()
+                    .all(|item| !matches!(item.drawing, Drawing::Image { .. }))
+            );
+            assert_eq!(editor.document, project);
+        }
+    }
+}
+
+#[test]
 fn image_style_frame_crop_text_and_local_reset_share_canvas_export_data() {
     let spec = wireframe::catalog::get("image").unwrap();
     for key in ["image_border", "sketch_filter", "text"] {

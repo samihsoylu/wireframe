@@ -220,22 +220,6 @@ impl Scene {
                 scene.image_decoration(layer, sketch, fonts)?;
             } else {
                 scene.control(layer, sketch, fonts, &mut rasters)?;
-                if layer.control.kind == Kind::Image
-                    && matches!(layer.properties.get("image"), Some(Value::Asset(_)))
-                {
-                    scene.primitive(
-                        Primitive::Text {
-                            x: layer.control.bounds.x + layer.control.bounds.w / 2.,
-                            y: layer.control.bounds.y + layer.control.bounds.h / 2.,
-                            text: "Image unavailable".into(),
-                            size: 13.,
-                            bold: false,
-                            color: [130, 35, 35],
-                            center: true,
-                        },
-                        layer.clip,
-                    );
-                }
             }
             // Whole-control links share the same clipped/occluded regions as
             // inline links. Specialized text/item links take precedence.
@@ -410,6 +394,9 @@ impl Scene {
                 layer.clip,
             );
             return Ok(());
+        }
+        if c.kind == Kind::Image {
+            return self.image_placeholder(layer, sketch, fonts);
         }
         if c.kind == Kind::Dropdown {
             return self.dropdown_control(layer, sketch, fonts, rasters);

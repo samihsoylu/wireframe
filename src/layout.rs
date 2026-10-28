@@ -260,7 +260,7 @@ impl<M: TextMeasurer> Engine<'_, M> {
                     catalog::get(kind).ok_or_else(|| format!("Unknown control type: {kind}"))?;
                 let context = self.context.with_settings(&self.project.settings);
                 let mut props = spec.effective(node, &context).map_err(|e| e.to_string())?;
-                if kind == "text_block" {
+                if matches!(kind.as_str(), "text_block" | "image") {
                     props.insert(
                         "_project_font_size".into(),
                         Value::Number(f64::from(self.project.settings.font_size)),

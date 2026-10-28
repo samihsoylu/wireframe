@@ -38,57 +38,126 @@ pub(super) fn raster_clip(layer: &Layer) -> Option<Bounds> {
     }
 }
 impl Scene {
+    pub(super) fn image_placeholder(
+        &mut self,
+        layer: &Layer,
+        sketch: bool,
+        fonts: &EguiMeasurer<'_>,
+    ) -> Result<(), String> {
+        // Retain the original frame under an ancestor/crop clip, as for artwork.
+        let b = layer.control.bounds;
+        let clip = clip_with(layer.clip, b);
+        self.primitive(
+            Primitive::Rect {
+                b,
+                fill: [255; 3],
+                stroke: false,
+                radius: 0.,
+            },
+            clip,
+        );
+        self.image_frame(b, clip, sketch);
+        for points in [
+            vec![[b.x + 5., b.y + 5.], [b.x + b.w - 5., b.y + b.h - 5.]],
+            vec![[b.x + b.w - 5., b.y + 5.], [b.x + 5., b.y + b.h - 5.]],
+        ] {
+            self.primitive(
+                Primitive::Line {
+                    points,
+                    color: if sketch { [92, 92, 94] } else { [51; 3] },
+                    width: if sketch { 3. } else { 1. },
+                },
+                clip,
+            );
+        }
+        if matches!(layer.properties.get("image"), Some(Value::Asset(_))) {
+            self.image_label(
+                layer,
+                fonts,
+                "Image unavailable",
+                TextStyle {
+                    size: number(&layer.properties, "_project_font_size", 13.),
+                    bold: false,
+                    italic: false,
+                },
+                PaintOptions::default(),
+                layer.clip,
+            )?;
+        }
+        self.image_decoration(layer, sketch, fonts)
+    }
+
+    fn image_frame(&mut self, b: Bounds, clip: Option<Bounds>, sketch: bool) {
+        let width = if sketch { 3f32 } else { 1f32 };
+        let inset = (width / 2.).min(b.w / 2.).min(b.h / 2.);
+        let (l, t, r, d) = (
+            b.x + inset,
+            b.y + inset,
+            b.x + b.w - inset,
+            b.y + b.h - inset,
+        );
+        let points = if sketch {
+            vec![
+                [l, t],
+                [l + (r - l) * 0.45, t + 0.35],
+                [r, t],
+                [r - 0.25, t + (d - t) * 0.5],
+                [r, d],
+                [l + (r - l) * 0.6, d - 0.35],
+                [l, d],
+                [l + 0.25, t + (d - t) * 0.5],
+                [l, t],
+            ]
+        } else {
+            vec![[l, t], [r, t], [r, d], [l, d], [l, t]]
+        };
+        self.primitive(
+            Primitive::Line {
+                points,
+                color: if sketch { [0; 3] } else { [51; 3] },
+                width,
+            },
+            clip,
+        );
+    }
+
     pub(super) fn image_decoration(
         &mut self,
         layer: &Layer,
         sketch: bool,
         fonts: &EguiMeasurer<'_>,
     ) -> Result<(), String> {
-        let b = layer.frame;
-        let clip = clip_with(layer.clip, b);
         if boolean(&layer.properties, "image_border") {
-            let width = if sketch { 3f32 } else { 1f32 };
-            let inset = (width / 2.).min(b.w / 2.).min(b.h / 2.);
-            let (l, t, r, d) = (
-                b.x + inset,
-                b.y + inset,
-                b.x + b.w - inset,
-                b.y + b.h - inset,
-            );
-            let points = if sketch {
-                vec![
-                    [l, t],
-                    [l + (r - l) * 0.45, t + 0.35],
-                    [r, t],
-                    [r - 0.25, t + (d - t) * 0.5],
-                    [r, d],
-                    [l + (r - l) * 0.6, d - 0.35],
-                    [l, d],
-                    [l + 0.25, t + (d - t) * 0.5],
-                    [l, t],
-                ]
-            } else {
-                vec![[l, t], [r, t], [r, d], [l, d], [l, t]]
-            };
-            self.primitive(
-                Primitive::Line {
-                    points,
-                    color: if sketch { [0; 3] } else { [51; 3] },
-                    width,
-                },
-                clip,
-            );
+            self.image_frame(layer.frame, clip_with(layer.clip, layer.frame), sketch);
         }
         if layer.control.text.is_empty() {
             return Ok(());
         }
-        let parsed = RichText::parse(&layer.control.text, false);
-        let style = TextStyle {
-            size: layer.control.font_size,
-            bold: layer.control.bold,
-            italic: boolean(&layer.properties, "italic"),
-        };
-        let options = paint_options(&layer.properties);
+        self.image_label(
+            layer,
+            fonts,
+            &layer.control.text,
+            TextStyle {
+                size: layer.control.font_size,
+                bold: layer.control.bold,
+                italic: boolean(&layer.properties, "italic"),
+            },
+            paint_options(&layer.properties),
+            clip_with(layer.clip, layer.frame),
+        )
+    }
+
+    fn image_label(
+        &mut self,
+        layer: &Layer,
+        fonts: &EguiMeasurer<'_>,
+        text: &str,
+        style: TextStyle,
+        options: PaintOptions,
+        clip: Option<Bounds>,
+    ) -> Result<(), String> {
+        let b = layer.frame;
+        let parsed = RichText::parse(text, false);
         let measured = fonts
             .rich_galley_with(&parsed, style, None, false, options)
             .size;

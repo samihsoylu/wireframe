@@ -58,9 +58,15 @@ optimized builds and refreshed private package checks pass.
 The extracted Linux package repeats the zero-duration click/Left successfully:
 opacity becomes 0.44 and X/Y remain 50. Clicking the canvas still lets Left nudge
 X to 49. Slider drag changes opacity to 0.80 with one-step byte-exact saved
-Undo/Redo; cold Save is exact with empty history. New macOS native input,
-physical cadence/snapping and other variants remain open. The older macOS
-review app is preserved. External `delivery/rapid-slider-input/REPORT.md` records
+Undo/Redo; cold Save is exact with empty history. The macOS follow-up now also
+passes native coordinate click/Left (0.62, X/Y 50), ordinary canvas nudge,
+saved Undo/Redo and fresh-process Save/empty history. Its bounded drag uses the
+previously authorized unchanged helper and a separate named owned fixture;
+predeclared 0.80 and one-step saved history are exact. All original data/settings
+are restored and the old idle/current study apps are closed. Physical cadence,
+snapping, macOS narrow width and other variants remain open. External
+`delivery/rapid-slider-input/native-macos/REPORT.md` retains input exclusions and
+exact cleanup; `delivery/rapid-slider-input/REPORT.md` records
 the corrected/failing checks, artifact identities and complete isolated cleanup;
 the preceding `f944e37` narrow-layout evidence retains its own identity.
 

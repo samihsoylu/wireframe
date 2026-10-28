@@ -65,11 +65,14 @@ reader assets/licenses/notices are byte-exact with valid platform modes. Linux
 normalizes `licenses/manifest.json` from 0664 to 0644 without changing its bytes.
 Strict macOS signature, all 50 mounted/extracted app entries, companion ZIP and
 Applications link pass; the verification image is detached. Linux archive safety
-and dependency resolution pass. Current extracted Linux native rapid click/key,
-canvas ownership, saved drag Undo/Redo and cold Save/empty history pass. New macOS
-native input remains open; the older running review app is untouched. All owned
-Linux infrastructure is stopped with original components/limits/context and host
-data exact. External `appearance-finishing-current/delivery/rapid-slider-input/REPORT.md`
+and dependency resolution pass. Both current extracted platforms now pass their
+named native rapid click/key, canvas ownership, saved drag Undo/Redo and cold
+Save/empty-history routes. The macOS drag uses the previously authorized guarded
+helper on a new named owned fixture; input exclusions and exact full-state
+comparisons are retained in `delivery/rapid-slider-input/native-macos/REPORT.md`.
+Old idle/current macOS studies quit, original save/viewport settings and all 546
+prior data files are exact. Owned Linux infrastructure is stopped with original
+components/limits/context. Broader native/physical/platform gates remain open. External `appearance-finishing-current/delivery/rapid-slider-input/REPORT.md`
 pins identities, failed/passed checks and scope. Source is frozen at the clean
 correction commit; later evidence-only docs do not alter those artifacts. No new
 full 220-target run, downloaded/installed-launch or publication acceptance.

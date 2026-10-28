@@ -214,6 +214,20 @@ impl WireframeApp {
                                             response.scroll_to_me(Some(egui::Align::Center));
                                             draft.focus = false;
                                         }
+                                        if response.has_focus() {
+                                            // The grid owns arrow movement; egui must not
+                                            // move focus a second time after selection.
+                                            ui.memory_mut(|m| {
+                                                m.set_focus_lock_filter(
+                                                    response.id,
+                                                    egui::EventFilter {
+                                                        horizontal_arrows: true,
+                                                        vertical_arrows: true,
+                                                        ..Default::default()
+                                                    },
+                                                );
+                                            });
+                                        }
                                         if response.clicked() {
                                             draft.focused = *id;
                                             let modifiers = ui.input(|i| {

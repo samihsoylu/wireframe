@@ -100,6 +100,113 @@ fn setup() -> (egui::Context, WireframeApp, Id) {
     (ctx, app, second)
 }
 
+fn focused_label(ctx: &egui::Context, app: &mut WireframeApp, size: Vec2) -> String {
+    let mut output = ctx.run_ui(
+        egui::RawInput {
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, size)),
+            ..Default::default()
+        },
+        |ui| app.trash_dialog(ui.ctx()),
+    );
+    let update = output.platform_output.accesskit_update.as_ref().unwrap();
+    let label = update
+        .nodes
+        .iter()
+        .find(|(id, _)| *id == update.focus)
+        .and_then(|(_, node)| node.label())
+        .unwrap_or("<no labeled focus>")
+        .to_owned();
+    output.textures_delta.clear();
+    label
+}
+
+#[test]
+fn overflow_arrows_keep_native_focus_on_the_selected_card() {
+    for size in [Vec2::new(920., 620.), Vec2::new(1360., 932.)] {
+        let (ctx, mut app, _) = setup();
+        let mut pages = Vec::new();
+        for index in 0..30 {
+            app.editor.add_page();
+            let page = app.editor.page;
+            app.editor
+                .rename_page(page, &format!("Overflow {index:02}"))
+                .unwrap();
+            pages.push(page);
+        }
+        app.editor.trash_pages(&pages).unwrap();
+        let before = app.editor.document.clone();
+        let resources: Vec<_> = app
+            .editor
+            .retained_resources()
+            .map(|(id, name)| (id, format!("{name} — Wireframe")))
+            .collect();
+        app.open_trash();
+        for _ in 0..3 {
+            frame(&ctx, &mut app, size, vec![]);
+        }
+        assert_eq!(focused_label(&ctx, &mut app, size), resources[0].1);
+        for (key, modifiers, index, anchor) in [
+            (Key::ArrowDown, Modifiers::NONE, 3, 3),
+            (Key::ArrowDown, Modifiers::NONE, 6, 6),
+            (Key::ArrowDown, Modifiers::NONE, 9, 9),
+            (Key::ArrowRight, Modifiers::NONE, 10, 10),
+            (Key::ArrowDown, Modifiers::SHIFT, 13, 10),
+            (Key::ArrowLeft, Modifiers::SHIFT, 12, 10),
+            (Key::ArrowUp, Modifiers::NONE, 9, 9),
+            (Key::ArrowLeft, Modifiers::NONE, 8, 8),
+        ] {
+            frame(&ctx, &mut app, size, vec![self::key(key, modifiers)]);
+            assert_eq!(
+                focused_label(&ctx, &mut app, size),
+                resources[index].1,
+                "{key:?} at {size:?}"
+            );
+            let draft = app.trash.as_ref().unwrap();
+            assert_eq!(draft.focused, resources[index].0);
+            assert_eq!(
+                draft.selected,
+                resources[anchor.min(index)..=anchor.max(index)]
+                    .iter()
+                    .map(|(id, _)| *id)
+                    .collect()
+            );
+            assert_eq!(app.editor.document, before);
+        }
+    }
+}
+
+#[test]
+fn card_arrow_ownership_preserves_footer_tab_and_escape() {
+    let (ctx, mut app, _) = setup();
+    let size = Vec2::new(920., 620.);
+    let before = app.editor.document.clone();
+    app.open_trash();
+    for _ in 0..3 {
+        frame(&ctx, &mut app, size, vec![]);
+    }
+    frame(
+        &ctx,
+        &mut app,
+        size,
+        vec![key(Key::ArrowRight, Modifiers::NONE)],
+    );
+    assert_eq!(focused_label(&ctx, &mut app, size), "Contact — Wireframe");
+    for label in ["Empty Trash", "Delete Permanently", "Restore", "Close"] {
+        frame(&ctx, &mut app, size, vec![key(Key::Tab, Modifiers::NONE)]);
+        assert_eq!(focused_label(&ctx, &mut app, size), label);
+    }
+    frame(&ctx, &mut app, size, vec![key(Key::Tab, Modifiers::SHIFT)]);
+    assert_eq!(focused_label(&ctx, &mut app, size), "Restore");
+    frame(
+        &ctx,
+        &mut app,
+        size,
+        vec![key(Key::Escape, Modifiers::NONE)],
+    );
+    assert!(app.trash.is_none());
+    assert_eq!(app.editor.document, before);
+}
+
 #[test]
 fn recovery_keyboard_selection_restore_and_modal_command_boundary() {
     let (ctx, mut app, second) = setup();

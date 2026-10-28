@@ -18,6 +18,8 @@ Canvas, thumbnails and exports use the same resolved layout. History captures co
 
 Some crop/lock/resize combinations, large-project performance and Windows/Linux native acceptance remain open. Existing-format import is deferred.
 
+The current `97e7a99` macOS package also verifies local radio/checkbox marker edits and a mixed-kind shared Text reset on two direct children. The reset preserves the existing color patch, source and second instance. Full saved expected graphs, one-step reset Undo/Redo and fresh-process Save/empty history pass. Original settings/data are restored; no runtime/build/package change. Private `appearance-finishing-current/delivery/choice-component-local/REPORT.md` retains the named fixture and excluded input attempts. Other nesting/crop/property/platform combinations remain scoped.
+
 ## Resizing
 
 Whole instances now resize through recursive geometry overrides without altering definitions. Nested instances inside ordinary groups follow the same transformation. Per-control resize axes preserve fixed dimensions and edge anchoring, including a horizontal-only label at the bottom. Fonts and existing local text/property overrides remain unchanged. Resizing records descendant positions and resizable dimensions explicitly; computed dimensions retain their sizing rules. Simple movement does not create geometry overrides. Reset instance overrides restores inherited geometry and content.

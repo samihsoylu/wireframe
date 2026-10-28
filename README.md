@@ -4,7 +4,7 @@ Turn rough ideas into clear wireframes. Sketch a landing page, plan a mobile scr
 
 [Releases](https://github.com/samihsoylu/wireframe/releases) · [Getting started](docs/GETTING-STARTED.md) · [Report an issue](https://github.com/samihsoylu/wireframe/issues)
 
-**[0.1.0 Beta 1 is available](https://github.com/samihsoylu/wireframe/releases/tag/v0.1.0-beta.1).** Download the Apple Silicon Mac DMG or the portable Windows x86-64 EXE. Windows builds are **untested**; Windows runtime testing remains on hold. This early beta has manual updates and remaining feature and platform checks.
+**[0.1.0 Beta 2 is available](https://github.com/samihsoylu/wireframe/releases/tag/v0.1.0-beta.2).** Download the Apple Silicon Mac DMG or the portable Windows x86-64 EXE. Windows builds are **untested**; Windows runtime testing remains on hold. This early beta has manual updates and remaining feature and platform checks.
 
 ## Make room for your ideas
 
@@ -18,13 +18,13 @@ Turn rough ideas into clear wireframes. Sketch a landing page, plan a mobile scr
 
 ## Install
 
-Choose the file for your computer from [Beta 1](https://github.com/samihsoylu/wireframe/releases/tag/v0.1.0-beta.1):
+Choose the file for your computer from [Beta 2](https://github.com/samihsoylu/wireframe/releases/tag/v0.1.0-beta.2):
 
 | Computer | Download | Install |
 |---|---|---|
 | Mac with Apple Silicon | ARM64 `.dmg` | Open it and drag **Wireframe → Applications**. |
 | Windows x86-64 | Portable `.exe`, **untested** | Save it in a folder and run it. A companion ZIP includes source and licenses. |
-| Intel Mac or Linux | No Beta 1 download | Build from source; these beta packages are not provided. |
+| Intel Mac or Linux | No Beta 2 download | Build from source; these beta packages are not provided. |
 
 Each release will list its supported systems, changes and any known limitations. Only download an architecture that is listed for that release. See [installation help](docs/INSTALL.md), including the first-launch prompt on macOS.
 

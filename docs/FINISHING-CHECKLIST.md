@@ -122,6 +122,8 @@ The default Arrow is straight in both products once the comparison fixture inclu
 
 ## Check ownership
 
+The catalog-wide diagnostic and530key inspector-support reconciliation now cover the remaining479visible inventory keys in both styles. Raw958case outcomes remain817effects/30coupled changes/111inactive fixtures; they are not blanket native acceptance. The withdrawn Grayscale prototype corrected an inventory-versus-feature mistake and adds no product feature/deferral. Original97e7a99source, binary, packages and user data are retained; contextual/contract triage and parent gates stay open. See the [current checkpoint](../SESSION-SPEC.md#next-actions-and-unresolved-requirements).
+
 Current property evidence now covers77visible fields across6families:26Text Input/Text Area consumers are traced with named render/test/native evidence;51button-family fields pass102Clean/Sketch end-to-end paint/link, intended-only mutation and history probes. This strengthens G17 consumption evidence without closing the remaining native/variant/platform requirements. See the [current checkpoint](../SESSION-SPEC.md#next-actions-and-unresolved-requirements).
 
 The [current parent audit](../SESSION-SPEC.md#next-actions-and-unresolved-requirements) corrects four stale evidence descriptions. E22 component PNG and CI10 shared-version rename/conflict/Redo/cold routes now have current extracted Mac acceptance in their named scopes; Text Input/Text Area now also name48retained paired variants with exact current canonical replay,26visible property consumers traced, and current Mac shared Sketch font/style/color/reset saved history/cold acceptance. Other variants and Q5/Q7/Q8 remain open. Windows stays held.

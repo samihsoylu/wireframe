@@ -121,7 +121,7 @@ impl Scene {
         out.push_str("</g>");
     },
     Drawing::Image { bounds: b, data } => out.push_str(&format!("<image x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" preserveAspectRatio=\"none\" href=\"data:image/png;base64,{}\"/>", b.x,b.y,b.w,b.h,base64(&data.png))),
-    Drawing::Primitive(p)=>out.push_str(&crate::scene::primitive_svg(p.clone())),
+    Drawing::Primitive(p)=>out.push_str(&crate::scene::primitive_svg_named(p.clone(), &format!("legacy-{i}"))),
     Drawing::Glyph(g) => {
         if g.rotation != 0. { out.push_str(&format!("<g transform=\"rotate({} {} {})\">",g.rotation.to_degrees(),g.x,g.baseline)); }
         if let Some(text) = &g.positioned {

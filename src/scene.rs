@@ -619,8 +619,8 @@ pub fn svg_layers(name: &str, layers: &[(Control, Option<Bounds>)], sketch: bool
         if let Some(b) = clip {
             s.push_str(&format!("<defs><clipPath id=\"clip{i}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\"/></clipPath></defs><g clip-path=\"url(#clip{i})\">",b.x,b.y,b.w,b.h));
         }
-        for p in control_scene(c, sketch) {
-            s.push_str(&primitive_svg(p));
+        for (j, p) in control_scene(c, sketch).into_iter().enumerate() {
+            s.push_str(&primitive_svg_named(p, &format!("legacy-{i}-{j}")));
         }
         if clip.is_some() {
             s.push_str("</g>");
@@ -709,7 +709,14 @@ fn intersect(a: Bounds, b: Bounds) -> Bounds {
     )
 }
 
+/// Legacy canvas captions use a second ordinary-face draw for synthetic bold.
+pub(crate) const LEGACY_BOLD_OFFSET: f32 = 0.35;
+
 pub fn primitive_svg(p: Primitive) -> String {
+    primitive_svg_named(p, "legacy-text")
+}
+
+pub(crate) fn primitive_svg_named(p: Primitive, id: &str) -> String {
     match p {
         Primitive::Rect {
             b,
@@ -803,12 +810,28 @@ pub fn primitive_svg(p: Primitive) -> String {
             bold,
             color: c,
             center,
-        } => format!(
-            "<text x=\"{x}\" y=\"{y}\" font-family=\"Ubuntu,DejaVu Sans,Arial,sans-serif\" font-size=\"{size}\" font-weight=\"{}\" text-anchor=\"{}\" fill=\"{}\">{}</text>",
-            if bold { "bold" } else { "normal" },
-            if center { "middle" } else { "start" },
-            color(c),
-            escape(&text)
-        ),
+        } => {
+            let source = format!(
+                "<text{} x=\"{x}\" y=\"{y}\" font-family=\"Ubuntu,DejaVu Sans,Arial,sans-serif\" font-size=\"{size}\" font-weight=\"normal\" text-anchor=\"{}\" fill=\"{}\">{}</text>",
+                if bold {
+                    format!(" id=\"{}\"", escape(id))
+                } else {
+                    String::new()
+                },
+                if center { "middle" } else { "start" },
+                color(c),
+                escape(&text)
+            );
+            if bold {
+                // Reference the same text so its source appears only once. IDs
+                // come from the containing scene, not caption text or geometry.
+                format!(
+                    "{source}<use href=\"#{}\" x=\"{LEGACY_BOLD_OFFSET}\" aria-hidden=\"true\"/>",
+                    escape(id)
+                )
+            } else {
+                source
+            }
+        }
     }
 }

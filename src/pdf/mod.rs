@@ -254,17 +254,38 @@ fn draw_item(
                 x,
                 y,
                 size,
+                bold,
                 ..
             },
         ) => {
             if [*x, *y, *size].iter().any(|v| !v.is_finite()) || *size <= 0. {
                 return Err("Invalid primitive text geometry".into());
             }
+            // The native legacy painter uses ordinary-face overdraw. Keep one
+            // searchable copy; outline only the offset ink so extraction does
+            // not repeat the caption.
+            let mut plain = p.clone();
+            if let crate::scene::Primitive::Text { bold, .. } = &mut plain {
+                *bold = false;
+            }
             fonts.legacy(
                 surface,
-                &crate::scene::primitive_svg(p.clone()),
+                &crate::scene::primitive_svg(plain.clone()),
                 scene.font.as_deref(),
-            )
+                false,
+            )?;
+            if *bold {
+                if let crate::scene::Primitive::Text { x, .. } = &mut plain {
+                    *x += crate::scene::LEGACY_BOLD_OFFSET;
+                }
+                fonts.legacy(
+                    surface,
+                    &crate::scene::primitive_svg(plain),
+                    scene.font.as_deref(),
+                    true,
+                )?;
+            }
+            Ok(())
         }
 
         Drawing::Primitive(p) => vectors::primitive(surface, p),

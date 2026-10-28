@@ -55,6 +55,7 @@ impl Fonts {
         surface: &mut Surface<'_>,
         fragment: &str,
         project: Option<&ProjectFont>,
+        outlined: bool,
     ) -> Result<(), String> {
         let key = project.map_or(0, |font| font as *const ProjectFont as usize);
         let options = self.legacy_options.entry(key).or_insert_with(|| {
@@ -66,7 +67,7 @@ impl Fonts {
             options.fontdb_mut().set_sans_serif_family("Ubuntu");
             options
         });
-        legacy(surface, fragment, options)
+        legacy(surface, fragment, options, outlined)
     }
     pub(super) fn draw(
         &mut self,
@@ -270,6 +271,7 @@ impl Fonts {
                     crate::scene::escape(&g.text)
                 ),
                 project,
+                false,
             )?;
         }
         Ok(())
@@ -282,6 +284,7 @@ fn legacy(
     surface: &mut Surface<'_>,
     fragment: &str,
     options: &resvg::usvg::Options<'_>,
+    outlined: bool,
 ) -> Result<(), String> {
     use resvg::usvg;
     let source = format!(
@@ -293,10 +296,11 @@ fn legacy(
         surface: &mut Surface<'_>,
         group: &usvg::Group,
         tree: &usvg::Tree,
+        outlined: bool,
     ) -> Result<(), String> {
         for node in group.children() {
             match node {
-                usvg::Node::Group(g) => draw(surface, g, tree)?,
+                usvg::Node::Group(g) => draw(surface, g, tree, outlined)?,
                 usvg::Node::Text(text) => {
                     for span in text.layouted() {
                         if !span.visible {
@@ -370,7 +374,7 @@ fn legacy(
                                 font,
                                 &glyph.text,
                                 size,
-                                false,
+                                outlined,
                             );
                             surface.pop();
                         }
@@ -381,5 +385,5 @@ fn legacy(
         }
         Ok(())
     }
-    draw(surface, tree.root(), &tree)
+    draw(surface, tree.root(), &tree, outlined)
 }

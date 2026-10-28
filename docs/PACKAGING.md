@@ -56,7 +56,15 @@ Eight tests pass on macOS with Python 3.9 and 3.13. A separate fixture containin
 
 ## Current verification scope
 
-Current private macOS ARM64 ZIP/DMG and Linux ARM64 TAR use clean frozen
+Current private macOS ARM64 ZIP/DMG and Linux AArch64 TAR use frozen source/runtime `65d0292`, including the Image placeholder caption correction, with unchanged packaging `15003e0`. Each archive verifies 1,801 exact corresponding-source files and modes, 761 reader asset/license files and 544 local reader-file targets. macOS strict signature, 50 app entries, 17 immutable Mach-O sections and the read-only DMG companion/notices/Finder layout checks pass; its verification image detached normally. Linux ELF identity, safe extraction and dynamic dependencies pass.
+
+Final runtime checks pass on macOS (78 related integration and 559 application checks, three ignored) and Linux (78 related and 551 application checks), with both warnings-denied lint and optimized builds and shared-source formatting. These are named target matrices. Earlier broader matrices retain their exact source scope.
+
+The extracted macOS app matches all 50 entries of its native study and retains 15 graph/output assertions. The executed Linux package passes 11 graph/output assertions with all 3,643 entries exact. Each platform's six Image exports match its own renderer; the platform text backends produce small outline differences and different export bytes across macOS/Linux. The current Linux package also visibly displays the shipped icon in its title bar and Openbox app switcher. This icon acceptance is scoped to Debian 12 ARM64/X11/Openbox/software rendering; other desktop/launcher and physical-platform variants remain unverified.
+
+All study apps/infrastructure are stopped, original limits/components/context and all 546 host data files/settings are exact, and prior archives are unchanged. Private `delivery/image-placeholder-review/REPORT.md`, `delivery/image-placeholder-native-linux/REPORT.md` and `delivery/linux-icon-65d0292/REPORT.md` retain identities, exclusions and cleanup. Downloaded first launch, protected installation, production updater activation and other parent gates remain open. Windows testing and executable-resource work stay held; no publication or new deferral.
+
+Retained private macOS ARM64 ZIP/DMG and Linux ARM64 TAR use clean frozen
 source/runtime `97e7a99` (source-root navigation correction). All 559 macOS
 application checks (three ignored), 551 Linux checks, both lint/format/optimized
 builds and source/archive checks pass. Each package contains 1,800 exact source

@@ -2,6 +2,8 @@
 
 ## 0.1.0 — Unreleased
 
+- Keep keyboard focus on the selected Trash card while scrolling through retained items.
+- Show save errors clearly during close review and let you return to unsaved work.
 - Keep the preview open when Escape closes its page picker in More Controls.
 - Start with neutral control labels, refined sketch outlines and updated small icons.
 

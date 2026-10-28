@@ -56,9 +56,21 @@ Eight tests pass on macOS with Python 3.9 and 3.13. A separate fixture containin
 
 ## Current verification scope
 
-The current source-root navigation correction has passing macOS checks and local
-native graph/history evidence. Affected Linux validation/native replay and coherent
-replacement private archives remain pending (`delivery/reference-source-root/REPORT.md`).
+Current private macOS ARM64 ZIP/DMG and Linux ARM64 TAR use clean frozen
+source/runtime `97e7a99` (source-root navigation correction). All 559 macOS
+application checks (three ignored), 551 Linux checks, both lint/format/optimized
+builds and source/archive checks pass. Each package contains 1,800 exact source
+files and 266 valid links, reader assets/licenses/notices and valid platform modes.
+Strict Mac signature, 50 mounted/extracted app entries, companion ZIP and Linux
+safety/dependencies pass; the verification image is detached. Extracted Mac
+cold/source navigation/Save/empty history and Linux full source navigation/saved
+Group history/cold routes pass. All study apps/infrastructure are stopped,
+original components/limits/context and all 546 host files/settings are exact.
+Private `delivery/reference-source-root/review/REPORT.md` retains hashes, scope and
+excluded setup/menu attempts. Prior vendor/packaging checks retain unchanged
+inputs; no new uninterrupted full matrix or publication. Other platform/native
+and installation/updater gates remain open; Windows held.
+
 The following archives retain their predecessor identity.
 
 Retained private macOS ARM64 ZIP/DMG and Debian ARM64 TAR.GZ use frozen clean

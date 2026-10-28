@@ -1967,7 +1967,10 @@ if ui.add_enabled(movable, egui::Button::new("Delete")).clicked(){self.editor.de
             return;
         }
         self.text_session_ui(ctx);
-        if self.pending.is_some() {
+        // Newly shown modals have no defined relative stacking order. Keep
+        // the review pending while an error is presented on its own.
+        let showing_save_review = self.pending.is_some() && self.error.is_none();
+        if showing_save_review {
             let response = egui::Modal::new(egui::Id::new("unsaved")).show(ctx, |ui| {
                 ui.heading("Save your changes?");
                 ui.label("Save this project before continuing, or discard its local changes.");
@@ -2016,7 +2019,11 @@ if ui.add_enabled(movable, egui::Button::new("Delete")).clicked(){self.editor.de
             });
         }
         self.persistence_dialogs(ctx);
-        if let Some(error) = self.error.clone() {
+        if showing_save_review && self.error.is_some() {
+            // Save can fail synchronously inside the review. Present its
+            // error next frame, when the review is no longer drawn.
+            ctx.request_repaint();
+        } else if let Some(error) = self.error.clone() {
             let response = egui::Modal::new(egui::Id::new("error")).show(ctx, |ui| {
                 ui.heading("Couldn't complete that action");
                 ui.label(error);

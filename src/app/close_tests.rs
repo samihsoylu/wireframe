@@ -304,7 +304,17 @@ fn escape_dismisses_only_the_top_error_before_cancelling_unsaved_review() {
     app.pending = Some(Pending::Quit);
     app.error = Some("The destination is unavailable. Your work remains open.".into());
     for _ in 0..3 {
-        frame(&mut app, &ctx, vec![], false);
+        let out = frame(&mut app, &ctx, vec![], false);
+        let nodes = &out.platform_output.accesskit_update.as_ref().unwrap().nodes;
+        assert!(nodes.iter().any(|(_, n)| {
+            n.label().or_else(|| n.value()) == Some("Couldn't complete that action")
+        }));
+        assert!(
+            !nodes
+                .iter()
+                .any(|(_, n)| { n.label().or_else(|| n.value()) == Some("Save your changes?") }),
+            "the save review must not obscure the error that needs acknowledgement"
+        );
     }
     let escape = egui::Event::Key {
         key: Key::Escape,
@@ -322,6 +332,77 @@ fn escape_dismisses_only_the_top_error_before_cancelling_unsaved_review() {
     assert!(app.pending.is_none());
     assert!(!app.quit_allowed);
     assert_eq!(app.editor.document, changed);
+}
+
+#[test]
+fn synchronous_save_error_never_competes_with_the_pending_close_review() {
+    let (ctx, mut app) = setup();
+    app.editor.add(Kind::Label, 20., 30.);
+    let changed = app.editor.document.clone();
+    let directory = tempfile::tempdir().unwrap();
+    let destination = directory.path().join("blocked.wireframe");
+    std::fs::create_dir(&destination).unwrap();
+    app.file = Some(destination);
+    app.pending = Some(Pending::Quit);
+    for _ in 0..2 {
+        frame(&mut app, &ctx, vec![], false);
+    }
+    let out = frame(&mut app, &ctx, vec![], false);
+    let bounds = out
+        .platform_output
+        .accesskit_update
+        .as_ref()
+        .unwrap()
+        .nodes
+        .iter()
+        .find_map(|(_, n)| (n.label() == Some("Save")).then(|| n.bounds()).flatten())
+        .expect("pending close Save button");
+    let position = egui::pos2(
+        (bounds.x0 + bounds.x1) as f32 / 2.,
+        (bounds.y0 + bounds.y1) as f32 / 2.,
+    );
+    let mut saw_error = false;
+    for events in [
+        vec![
+            egui::Event::PointerMoved(position),
+            egui::Event::PointerButton {
+                pos: position,
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                modifiers: Modifiers::NONE,
+            },
+        ],
+        vec![egui::Event::PointerButton {
+            pos: position,
+            button: egui::PointerButton::Primary,
+            pressed: false,
+            modifiers: Modifiers::NONE,
+        }],
+        vec![],
+        vec![],
+        vec![],
+    ] {
+        let out = frame(&mut app, &ctx, events, false);
+        let labels: Vec<_> = out
+            .platform_output
+            .accesskit_update
+            .as_ref()
+            .unwrap()
+            .nodes
+            .iter()
+            .filter_map(|(_, n)| n.label().or_else(|| n.value()))
+            .collect();
+        let error_visible = labels.contains(&"Couldn't complete that action");
+        saw_error |= error_visible;
+        assert!(
+            !(error_visible && labels.contains(&"Save your changes?")),
+            "a failure created by Save must be presented separately from its review"
+        );
+        assert!(matches!(app.pending, Some(Pending::Quit)));
+        assert!(!app.quit_allowed);
+        assert_eq!(app.editor.document, changed);
+    }
+    assert!(app.error.is_some() && saw_error);
 }
 
 #[cfg(target_os = "macos")]

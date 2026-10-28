@@ -4,6 +4,8 @@ Current checkpoint: 28 October 2026, default catalog appearance, named behavior 
 
 ## Immediate priorities
 
+**Q7 Tree components — runtime `65d0292`:** current native macOS Clean direct-child editing preserves duplicate-row destinations/selection through a text reorder with changed indentation/markers. Whole-child reset, source/other-instance isolation, saved text/reset Undo/Redo, one remapped Page route and cold Save/empty history pass nine complete saved assertions. Processes exit0; all 546 original files/settings and 50 package entries/signature remain exact. Private `delivery/tree-component-local/REPORT.md` records scope and guarded cleanup. No runtime/build/package change or repeated suites; other component/property/native variants and parent gates remain open, Windows held.
+
 - [x] **Q1 — Catalog labels and order:** all 94 built-in choices reconciled; saved identities, old search terms and category memberships retained. All 27 requested labels observed across the live strip.
 - [x] **Q2 — Interface and control appearance:** V01–V05 closed in the named default-control/shell scope, with bounded minor residuals below. Wide/minimum editors and all 27 default choices in both styles are compared. Integrated workflows and broader variants retain Q4/Q6 scope.
 - [x] **Q3 — Android Alert tile:** separate native tile inserts one 200 × 102 Inline/Left Alert with the neutral recipe; save preserves other controls, Undo/Redo and cold reopen/save are byte-exact.

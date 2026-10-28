@@ -1,8 +1,10 @@
 # Presentation navigation
 
-Implemented in source, with scoped native macOS acceptance. Presentation uses a stable page/version destination and a two-way history cursor. Toolbar controls, keyboard navigation and page links share the controller.
+Implemented in source, with scoped native macOS and Linux acceptance. Presentation uses a stable page/version destination and a two-way history cursor. Toolbar controls, keyboard navigation and page links share the controller.
 
 ## Current scenario checkpoint
+
+The current extracted `1c959c9` Linux ARM64 package now verifies the five named Northstar links: Landing Contact us→Desktop, Desktop Back to home→Landing, Landing Place an order→Tablet, Tablet Back to home→Landing and Phone Back to home→Landing. Immediate native captures show the selected page and corresponding scene after each pointer action. Editor return, empty history and whole-project-byte-exact Save/cold Save pass. This is isolated Debian/X11/Mesa through scaled noVNC, with CLI fixture/cold-start setup; it does not establish physical input/display, paired visual fidelity, IME, screen-reader, all presentation variants or other Linux systems. Both native processes and the owned test environment are stopped. Private `appearance-finishing-current/delivery/linux-presentation-routes/REPORT.md` retains identities, exclusions, captures and cleanup. Older checkpoints below keep their original scope; Windows testing remains held.
 
 The current presentation navigator uses full-width list rows, independent list/thumbnail controls and shared page preview drawing. Its view mode is separate from the editor and survives presentation re-entry within the current application window. Scoped native cold-launch retention of List/Review now passes; broader cross-project/global persistence remains unverified. The selected page menu retains versions, Back/Forward and settings; right-click also opens those actions. Notes/Comments have aligned headers and backgrounds; the local reviewer menu remains available. All icon-only controls have accessible names.
 

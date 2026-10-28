@@ -129,7 +129,8 @@
     "src/data/output.rs",
     "src/widgets/drag_value.rs",
     "src/memory/mod.rs",
-    "src/containers/combo_box.rs"
+    "src/containers/combo_box.rs",
+    "src/widgets/slider.rs"
   ],
   "added_files": [
     "LICENSE-WIREFRAME",

@@ -5,6 +5,7 @@ impl WireframeApp {
     /// A field applies input during UI construction, after document shortcuts.
     /// Split at document/view commands and pointer actions so earlier text reaches
     /// its model before a command captures it, replaces it or removes its field.
+    /// Input after a pointer action waits for the clicked widget to acquire focus.
     /// Later events wait for that command, preserving text-local Undo order.
     /// This must run before egui derives pointer/focus state from the events.
     pub(super) fn order_text_input(&mut self, ctx: &egui::Context, raw: &mut egui::RawInput) {
@@ -31,6 +32,32 @@ impl WireframeApp {
         if !self.deferred_text_input.is_empty() {
             self.deferred_text_input.append(&mut raw.events);
             raw.events = std::mem::take(&mut self.deferred_text_input);
+        }
+        // Shortcuts run before widgets are drawn. Deliver a preceding click
+        // first so a following key, text edit or command uses its new owner.
+        let mut pointer_action = false;
+        let pointer_boundary = raw.events.iter().position(|event| match event {
+            egui::Event::PointerButton { .. } => {
+                pointer_action = true;
+                false
+            }
+            // Escape must still cancel a pointer gesture before its release
+            // can apply a resize, drag or drawing action in this batch.
+            egui::Event::Key {
+                key: Key::Escape, ..
+            } => false,
+            egui::Event::Key { pressed: true, .. }
+            | egui::Event::Text(_)
+            | egui::Event::Paste(_)
+            | egui::Event::Copy
+            | egui::Event::Cut
+            | egui::Event::Ime(_)
+            | egui::Event::AppCommand(_) => pointer_action,
+            _ => false,
+        });
+        if let Some(boundary) = pointer_boundary {
+            self.deferred_text_input = raw.events.split_off(boundary);
+            ctx.request_repaint();
         }
         if !wireframe::text_entry::is_focused(ctx) && !ctx.text_edit_focused() {
             return;
@@ -119,7 +146,9 @@ impl WireframeApp {
                 _ => None,
             });
         if let Some(boundary) = boundary {
-            self.deferred_text_input = raw.events.split_off(boundary);
+            let mut later = raw.events.split_off(boundary);
+            later.append(&mut self.deferred_text_input);
+            self.deferred_text_input = later;
             if !self.deferred_text_input.is_empty() {
                 ctx.request_repaint();
             }

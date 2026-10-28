@@ -56,6 +56,12 @@ Eight tests pass on macOS with Python 3.9 and 3.13. A separate fixture containin
 
 ## Current verification scope
 
+Working source now corrects rapid slider clicks and pointer-to-keyboard ownership.
+Mac application/egui tests and formatting pass; remaining validation, native
+replay and replacement artifacts are pending in external
+`appearance-finishing-current/delivery/rapid-slider-input`. The frozen `f944e37`
+artifacts below are verified predecessor packages; they do not contain the fix.
+
 Current private macOS ARM64 ZIP/DMG and Debian ARM64 TAR.GZ use frozen source/runtime `f944e37` (Trash arrow-focus correction). Each contains 1,800 exact corresponding-source files and 266 valid documentation links. Reader-copy links are repaired during staging while corresponding-source bytes remain exact. All 368 normal/build dependencies have preserved notices; reader licenses/assets and all checksum sidecars match. Source/artifact hashes, failed/passed checks and scope are retained in external `appearance-finishing-current/delivery/overflow-trash/review/REPORT.md`. Later evidence-only documentation commits do not alter these artifacts.
 
 Full application targets pass: 557 macOS tests (three existing ignored) and 549 Linux tests (none ignored). Unchanged library/integration/example/vendor targets retain completed evidence; assembled 220-target matrices total 1,800 macOS passes/four ignored and 1,784 Linux passes/one ignored. These combine retained and refreshed targets, not uninterrupted full-suite runs. Both warnings-denied all-target lint, formatting and optimized builds pass. Linux temporarily adds official rustfmt only inside the owned container, then restores its exact original component set. Seven unchanged-input Python configuration/packaging/updater checks on each platform and five extra non-Windows archive-integrity checks retain their original scope; actual current artifacts are checked directly. No Windows-specific check is repeated.

@@ -652,11 +652,18 @@ impl Slider<'_> {
             SliderOrientation::Horizontal => vec2(ui.spacing().slider_width, thickness),
             SliderOrientation::Vertical => vec2(thickness, ui.spacing().slider_width),
         };
-        ui.allocate_response(desired_size, Sense::drag())
+        // A press and release may arrive together before the next repaint.
+        // Drag-only interaction drops that complete click.
+        ui.allocate_response(desired_size, Sense::click_and_drag())
     }
 
     /// Just the slider, no text
     fn slider_ui(&mut self, ui: &Ui, response: &Response) {
+        // Acquire keyboard ownership on press, including before a held gesture
+        // crosses the drag threshold, and on a complete same-frame click.
+        if response.is_pointer_button_down_on() || response.clicked() {
+            response.request_focus();
+        }
         let rect = &response.rect;
         let handle_shape = self
             .handle_shape
@@ -1207,4 +1214,95 @@ fn logarithmic_zero_cutoff(min: f64, max: f64) -> f64 {
         "Bad cutoff {cutoff:?} for min {min:?} and max {max:?}"
     );
     cutoff
+}
+
+#[cfg(test)]
+mod click_ownership_tests {
+    use super::*;
+
+    fn frame(
+        ctx: &crate::Context,
+        value: &mut f64,
+        vertical: bool,
+        enabled: bool,
+        events: Vec<crate::Event>,
+    ) -> (Rect, bool) {
+        let mut result = (Rect::NOTHING, false);
+        let mut output = ctx.run_ui(
+            crate::RawInput {
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(400.0, 400.0))),
+                events,
+                ..Default::default()
+            },
+            |ui| {
+                let slider = Slider::new(value, 0.0..=1.0)
+                    .fixed_decimals(2)
+                    .show_value(false);
+                let response =
+                    ui.add_enabled(enabled, if vertical { slider.vertical() } else { slider });
+                result = (response.rect, response.has_focus());
+            },
+        );
+        output.textures_delta.clear();
+        result
+    }
+
+    #[test]
+    fn complete_click_sets_value_and_owns_keys_only_when_enabled() {
+        for vertical in [false, true] {
+            for enabled in [false, true] {
+                let ctx = crate::Context::default();
+                let mut value = 1.0;
+                let at = frame(&ctx, &mut value, vertical, enabled, vec![])
+                    .0
+                    .center();
+                let mut events = vec![crate::Event::PointerMoved(at)];
+                for pressed in [true, false] {
+                    events.push(crate::Event::PointerButton {
+                        pos: at,
+                        button: crate::PointerButton::Primary,
+                        pressed,
+                        modifiers: crate::Modifiers::NONE,
+                    });
+                }
+                let (_, focused) = frame(&ctx, &mut value, vertical, enabled, events);
+                assert_eq!(focused, enabled, "vertical={vertical}, enabled={enabled}");
+                if enabled {
+                    assert!(value < 1.0, "a complete click must set the value");
+                } else {
+                    assert_eq!(value, 1.0);
+                }
+                let clicked = value;
+                frame(
+                    &ctx,
+                    &mut value,
+                    vertical,
+                    enabled,
+                    vec![crate::Event::Key {
+                        key: if vertical {
+                            Key::ArrowUp
+                        } else {
+                            Key::ArrowLeft
+                        },
+                        physical_key: None,
+                        pressed: true,
+                        repeat: false,
+                        modifiers: crate::Modifiers::NONE,
+                    }],
+                );
+                if enabled {
+                    assert!(
+                        if vertical {
+                            value > clicked
+                        } else {
+                            value < clicked
+                        },
+                        "the slider must own the following key: vertical={vertical}, {clicked} -> {value}"
+                    );
+                } else {
+                    assert_eq!(value, clicked, "disabled input must remain inert");
+                }
+            }
+        }
+    }
 }

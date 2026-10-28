@@ -2,6 +2,8 @@
 
 ## 0.1.0 — Unreleased
 
+- Respond to quick slider clicks and keep following keys and text with the clicked field.
+
 - Keep keyboard focus on the selected Trash card while scrolling through retained items.
 - Show save errors clearly during close review and let you return to unsaved work.
 - Keep the preview open when Escape closes its page picker in More Controls.

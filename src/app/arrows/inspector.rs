@@ -462,22 +462,21 @@ mod tests {
         width: f32,
         events: Vec<egui::Event>,
     ) -> egui::FullOutput {
-        let mut out = ctx.run_ui(
-            egui::RawInput {
-                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(width, 900.))),
-                events,
-                ..Default::default()
-            },
-            |ui| {
-                app.shortcuts(ui.ctx());
-                assert!(app.typed_properties(ui, id));
-                assert!(
-                    ui.min_rect().right() <= width + 1.,
-                    "inspector overflow: {:?}",
-                    ui.min_rect()
-                );
-            },
-        );
+        let mut raw = egui::RawInput {
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(width, 900.))),
+            events,
+            ..Default::default()
+        };
+        app.order_text_input(ctx, &mut raw);
+        let mut out = ctx.run_ui(raw, |ui| {
+            app.shortcuts(ui.ctx());
+            assert!(app.typed_properties(ui, id));
+            assert!(
+                ui.min_rect().right() <= width + 1.,
+                "inspector overflow: {:?}",
+                ui.min_rect()
+            );
+        });
         out.textures_delta.clear();
         out
     }
@@ -655,6 +654,96 @@ mod tests {
         assert_eq!(app.editor.document, before);
         app.editor.redo();
         assert_eq!(app.editor.document, changed);
+    }
+    #[test]
+    fn coalesced_opacity_click_owns_following_arrow_key() {
+        for width in [220., 300., 400.] {
+            for key_in_click_frame in [false, true] {
+                let ctx = egui::Context::default();
+                ctx.enable_accesskit();
+                let mut app = WireframeApp::workspace(&ctx, None);
+                app.editor.add(Kind::Arrow, 20., 30.);
+                let id = *app.editor.selection.iter().next().unwrap();
+                let out = frame(&mut app, &ctx, id, width, vec![]);
+                let nodes = &out.platform_output.accesskit_update.as_ref().unwrap().nodes;
+                let slider = nodes
+                    .iter()
+                    .find(|(_, node)| {
+                        node.role() == egui::accesskit::Role::Slider
+                            && node.labelled_by().iter().any(|id| {
+                                nodes.iter().any(|(other, label)| {
+                                    other == id
+                                        && label.label().or_else(|| label.value())
+                                            == Some("Opacity")
+                                })
+                            })
+                    })
+                    .unwrap();
+                let bounds = slider.1.bounds().unwrap();
+                let at = Pos2::new(
+                    (bounds.x0 + bounds.x1) as f32 / 2.,
+                    (bounds.y0 + bounds.y1) as f32 / 2.,
+                );
+                let key = egui::Event::Key {
+                    key: Key::ArrowLeft,
+                    physical_key: None,
+                    pressed: true,
+                    repeat: false,
+                    modifiers: Modifiers::NONE,
+                };
+                let mut events = vec![egui::Event::PointerMoved(at)];
+                for pressed in [true, false] {
+                    events.push(egui::Event::PointerButton {
+                        pos: at,
+                        button: egui::PointerButton::Primary,
+                        pressed,
+                        modifiers: Modifiers::NONE,
+                    });
+                }
+                if key_in_click_frame {
+                    events.push(key.clone());
+                }
+                frame(&mut app, &ctx, id, width, events);
+                let after_click = app.editor.document.clone();
+                assert_eq!(
+                    (
+                        after_click.pages[0].content.nodes[0].origin.x,
+                        after_click.pages[0].content.nodes[0].origin.y
+                    ),
+                    (20., 30.),
+                    "width {width}, coalesced key {key_in_click_frame}: click/key must not nudge the Arrow"
+                );
+                assert!(
+                    matches!(app.editor.control_properties(id).unwrap().1["background_opacity"], Value::Number(value) if value < 1.),
+                    "width {width}: coalesced click must set opacity"
+                );
+                let opacity =
+                    app.editor.control_properties(id).unwrap().1["background_opacity"].clone();
+                frame(
+                    &mut app,
+                    &ctx,
+                    id,
+                    width,
+                    if key_in_click_frame {
+                        vec![]
+                    } else {
+                        vec![key]
+                    },
+                );
+                assert_eq!(
+                    app.editor.document.pages[0].content.nodes[0].origin,
+                    after_click.pages[0].content.nodes[0].origin,
+                    "following key must stay with clicked slider"
+                );
+                let next =
+                    app.editor.control_properties(id).unwrap().1["background_opacity"].clone();
+                assert!(matches!((opacity, next), (Value::Number(a), Value::Number(b)) if b < a));
+                assert!(
+                    app.deferred_text_input.is_empty(),
+                    "the following key must be delivered, not discarded"
+                );
+            }
+        }
     }
     #[test]
     fn clicked_opacity_slider_owns_arrow_keys_without_moving_selection() {

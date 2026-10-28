@@ -6,6 +6,15 @@ Pinned egui and egui-winit0.36.2 copies add a typed `SmartZoom` event. The nativ
 
 Native menus additionally use an opaque `AppCommand` event and a viewport-scoped input queue. The adapter drains native commands before the next window event and before extracting frame input, retaining keyboard/menu ordering. Paste uses the existing window clipboard backend. Weak registration prevents commands from reaching destroyed windows; headless contexts retain in-window menus. These original additions are GPL-3.0-only.
 
+## Slider click ownership
+
+The maintained egui slider accepts complete press/release clicks delivered in
+one frame and takes keyboard focus on press, before crossing a drag threshold.
+The application preserves input order by processing the pointer action before
+following keys, text or commands. Held edits retain their existing atomic history
+contract. These original changes are GPL-3.0-only; upstream licenses and original
+source hashes remain intact. Native platform evidence is recorded separately.
+
 ## Confirmed clipboard publication
 
 The original `CopyTextWithResult` output and correlated `ClipboardWriteResult` input let the application defer destructive Cut until the native backend succeeds. These additions are GPL-3.0-only; upstream licenses remain intact. The backend writes and reads back through arboard, or stores and verifies a Wayland selection with bounded settling retries. An unavailable native backend is an error; the in-process fallback is not accepted as system publication. The adapter appends the result to ordered input and requests a redraw. Application commands following Cut wait for this reply, and stale document/target/session results do not delete content.

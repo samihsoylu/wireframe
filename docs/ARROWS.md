@@ -47,6 +47,15 @@ External `appearance-finishing-current/delivery/linux-inspector-width/REPORT.md`
 retains measurement/setup exclusions and terminal cleanup. No runtime or package
 change; Windows remains held.
 
+A later source correction reproduces and fixes complete press/release clicks
+arriving in one frame. Sliders accept the click and focus on press; following
+keys wait for the new widget owner. Escape retains immediate gesture
+cancellation. Six width/batching cases, text ownership and existing held-history
+checks pass within 559 macOS application tests (three ignored); all 51 egui
+library tests pass. Linux/native replay and replacement packages remain pending
+in external `delivery/rapid-slider-input`. The `f944e37` native checkpoint above
+keeps its predecessor identity and does not establish acceptance of the fix.
+
 ## Geometry implemented
 
 `src/arrows.rs` owns endpoints and a middle point expressed along the endpoint

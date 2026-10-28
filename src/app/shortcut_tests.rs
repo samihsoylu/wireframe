@@ -360,6 +360,55 @@ fn text_after_tab_reaches_the_next_field_even_when_focus_wraps() {
 }
 
 #[test]
+fn text_before_and_after_a_coalesced_click_reaches_each_field_in_order() {
+    for reverse in [false, true] {
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        let mut values = [String::new(), String::new()];
+        let mut run = |events| {
+            let mut raw = egui::RawInput {
+                events,
+                ..Default::default()
+            };
+            app.order_text_input(&ctx, &mut raw);
+            let mut rects = [Rect::NOTHING; 2];
+            let mut output = ctx.run_ui(raw, |ui| {
+                for index in if reverse { [1, 0] } else { [0, 1] } {
+                    rects[index] = ui
+                        .add(
+                            TextInput::singleline(&mut values[index])
+                                .id_salt(index)
+                                .autofocus(index == 0),
+                        )
+                        .rect;
+                }
+            });
+            output.textures_delta.clear();
+            rects
+        };
+        let at = run(vec![])[1].center();
+        let mut events = vec![
+            egui::Event::Text("before".into()),
+            egui::Event::PointerMoved(at),
+        ];
+        for pressed in [true, false] {
+            events.push(egui::Event::PointerButton {
+                pos: at,
+                button: egui::PointerButton::Primary,
+                pressed,
+                modifiers: Modifiers::NONE,
+            });
+        }
+        events.push(egui::Event::Text("after".into()));
+        run(events);
+        run(vec![]);
+        run(vec![]);
+        assert_eq!(values, ["before", "after"], "reverse={reverse}");
+        assert!(app.deferred_text_input.is_empty());
+    }
+}
+
+#[test]
 fn clicking_save_after_typing_captures_the_updated_field() {
     let dir = tempfile::tempdir().unwrap();
     let ctx = egui::Context::default();

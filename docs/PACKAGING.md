@@ -56,6 +56,8 @@ Eight tests pass on macOS with Python 3.9 and 3.13. A separate fixture containin
 
 ## Current verification scope
 
+Latest source/runtime `66aee81` corrects move release/cancellation and user-facing interruption feedback. Its new Mac application/domain/lint/format/optimized-build and private native drag/history/cold checks pass; current Linux validation and a coherent replacement archive set remain pending. The65d0292archives described below retain their exact identities and do not yet carry this correction. See private `delivery/move-interruption-current/REPORT.md`; Windows wholly held, no publication.
+
 Current private macOS ARM64 ZIP/DMG and Linux AArch64 TAR use frozen source/runtime `65d0292`, including the Image placeholder caption correction, with unchanged packaging `15003e0`. Each archive verifies 1,801 exact corresponding-source files and modes, 761 reader asset/license files and 544 local reader-file targets. macOS strict signature, 50 app entries, 17 immutable Mach-O sections and the read-only DMG companion/notices/Finder layout checks pass; its verification image detached normally. Linux ELF identity, safe extraction and dynamic dependencies pass.
 
 Final runtime checks pass on macOS (78 related integration and 559 application checks, three ignored) and Linux (78 related and 551 application checks), with both warnings-denied lint and optimized builds and shared-source formatting. These are named target matrices. Earlier broader matrices retain their exact source scope.

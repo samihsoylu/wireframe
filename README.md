@@ -4,7 +4,7 @@ Turn rough ideas into clear wireframes. Sketch a landing page, plan a mobile scr
 
 [Releases](https://github.com/samihsoylu/wireframe/releases) · [Getting started](docs/GETTING-STARTED.md) · [Report an issue](https://github.com/samihsoylu/wireframe/issues)
 
-**0.1.0 is in development.** Public installers have not been released yet. macOS, Windows and Linux are the intended platforms; Windows testing is currently on hold.
+**An early beta is available.** [Download from official Releases](https://github.com/samihsoylu/wireframe/releases) for **Mac Apple Silicon (ARM64)** or **Windows x86-64**. The Windows build is unsigned and **UNTESTED on Windows**; runtime testing remains on hold. Further feature and platform checks remain open. Linux remains an intended platform, with no public beta package yet.
 
 ## Make room for your ideas
 
@@ -18,19 +18,21 @@ Turn rough ideas into clear wireframes. Sketch a landing page, plan a mobile scr
 
 ## Install
 
-When 0.1.0 is available, choose the file for your computer from [Releases](https://github.com/samihsoylu/wireframe/releases):
+Choose the file matching your computer from [Releases](https://github.com/samihsoylu/wireframe/releases):
 
 | Computer | Download | Install |
 |---|---|---|
-| Mac | `.dmg` for your Mac’s processor | Open it and drag **Wireframe → Applications**. |
-| Windows | `.exe` for your processor | Download and run Wireframe. A companion ZIP includes source and licenses. |
-| Linux | `.tar.gz` for your processor | Extract it and run `wireframe` from the extracted folder. |
+| Mac Apple Silicon / ARM64 | `.dmg` | Open it, drag **Wireframe → Applications**, eject the image and open Wireframe from Applications. |
+| Windows x86-64 — UNTESTED | Portable `.exe` | Save it in a folder and run it. A companion ZIP includes source and licenses. |
+| Linux | No public beta package yet | See the build instructions below. |
 
-Each release will list its supported systems, changes and any known limitations. Only download an architecture that is listed for that release. See [installation help](docs/INSTALL.md), including the first-launch prompt on macOS.
+The Mac beta is ad-hoc signed, without Apple Developer ID signing or notarization; macOS may block its first launch. See [Apple’s first-launch guidance](https://support.apple.com/en-us/102445). Check each release’s notes for available builds, known limits and installation details. No Apple Developer account is needed to use the app.
+
+In the beta, choose **File → Open example project** to explore four editable pages. Use **File → Save as…** to keep your own copy. [Demo walkthrough](https://github.com/samihsoylu/wireframe/blob/v0.1.0-beta.1/docs/DEMO.md).
 
 ## Updates
 
-For now, updates will be manual downloads from Releases. Built-in macOS updates using Sparkle are planned; Windows automatic updates can follow later. Wireframe does not currently check for or install updates automatically.
+Updates are manual downloads from [Releases](https://github.com/samihsoylu/wireframe/releases). Built-in macOS updates using Sparkle are planned; Windows automatic updates can follow later. Wireframe does not currently check for or install updates automatically.
 
 ## Build and contribute
 

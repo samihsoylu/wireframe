@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use wireframe::presentation::{Aid, Preferences, Settings};
 
 const NOTICE: &str =
-    "Couldn't save presentation settings. Your choices still work for this session.";
+    "Couldn't save presentation settings. Your choices still work until you close Wireframe.";
 struct Fixture {
     dir: tempfile::TempDir,
     ctx: egui::Context,

@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 use wireframe::presentation::{PageExtent, Preferences, Session, Settings, centered_view};
 
 const SAVE_FAILURE_NOTICE: &str =
-    "Couldn't save presentation settings. Your choices still work for this session.";
+    "Couldn't save presentation settings. Your choices still work until you close Wireframe.";
 
 #[derive(Default)]
 pub(crate) struct State {
@@ -56,9 +56,10 @@ impl WireframeApp {
         }
     }
     pub(in crate::app) fn presentation_save_status(&self) -> Option<&'static str> {
-        self.presentation_view.save_error.as_ref().map(
-            |_| "Couldn't save presentation settings. Your choices still work for this session.",
-        )
+        self.presentation_view
+            .save_error
+            .as_ref()
+            .map(|_| SAVE_FAILURE_NOTICE)
     }
     fn presentation_save_notice(&self, ui: &mut egui::Ui) {
         let Some(error) = &self.presentation_view.save_error else {

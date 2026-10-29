@@ -1059,7 +1059,7 @@ fn preference_feedback_preserves_document_stopped_priority_with_both_real_failur
     app.remember_presentation(); // A real independent preference persist failure.
     assert_eq!(
         app.status_text(),
-        "Couldn't save presentation settings. Your choices still work for this session."
+        "Couldn't save presentation settings. Your choices still work until you close Wireframe."
     );
     gate.release();
     let deadline = Instant::now() + Duration::from_secs(12);

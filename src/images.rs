@@ -185,6 +185,11 @@ fn from_rgba(rgba: image::RgbaImage) -> Result<Decoded, String> {
     })
 }
 impl Prepared {
+    /// Missing incoming credits never erase existing credits for identical bytes.
+    pub fn conflicts_with(&self, existing: &crate::document::Asset) -> bool {
+        self.bytes != existing.bytes
+            || matches!((&self.attribution, &existing.attribution), (Some(new), Some(old)) if new != old)
+    }
     pub fn read(path: &Path) -> Result<Self, String> {
         let mut bytes = Vec::new();
         std::fs::File::open(path)

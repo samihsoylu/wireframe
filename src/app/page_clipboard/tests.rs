@@ -294,3 +294,51 @@ fn foreign_conflict_actions_remain_pointer_accessible_after_summary_reopen() {
         );
     }
 }
+
+#[test]
+fn version_fifteen_page_clipboard_reads_and_new_page_transport_is_guarded() {
+    let (ctx, mut source) = fixture();
+    let copy = source.editor.copy_pages(&[1], "older-source").unwrap();
+    let mut json = serde_json::to_value(&copy).unwrap();
+    json["pages"]["project"]["format_version"] = 15.into();
+    let migrated: Clipboard = serde_json::from_value(json.clone()).unwrap();
+    assert_eq!(
+        migrated.pages.as_ref().unwrap().project(),
+        copy.pages.as_ref().unwrap().project()
+    );
+    let old_text = format!(
+        "wireframe-nodes-v2:{}",
+        serde_json::to_string(&json).unwrap()
+    );
+    let mut target = WireframeApp::workspace(&ctx, None);
+    target.pasted(&old_text);
+    assert!(target.error.is_none(), "{:?}", target.error);
+    assert_eq!(target.editor.document.pages.len(), 2);
+    assert!(
+        target
+            .editor
+            .document
+            .pages
+            .iter()
+            .any(|page| page.name == "Landing")
+    );
+    source.publish_clipboard(&ctx, copy).unwrap();
+    let new_text = ctx.output(|output| {
+        output
+            .commands
+            .iter()
+            .find_map(|command| {
+                if let egui::OutputCommand::CopyText(text) = command {
+                    Some(text.clone())
+                } else {
+                    None
+                }
+            })
+            .unwrap()
+    });
+    assert!(new_text.starts_with("wireframe-nodes-v3:"));
+    let mut fresh = WireframeApp::workspace(&ctx, None);
+    fresh.pasted(&new_text);
+    assert!(fresh.error.is_none(), "{:?}", fresh.error);
+    assert_eq!(fresh.editor.document, target.editor.document);
+}

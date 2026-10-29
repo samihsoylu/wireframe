@@ -30,7 +30,22 @@ pub(super) fn clipboard_text(copy: &Clipboard) -> Result<String, String> {
 }
 fn encode(copy: &Clipboard, limit: usize) -> Result<String, String> {
     let mut writer = LimitedJson {
-        bytes: b"wireframe-nodes-v2:".to_vec(),
+        bytes: if copy.assets.iter().any(|asset| asset.attribution.is_some())
+            || copy.resources.as_ref().is_some_and(|resources| {
+                resources
+                    .assets
+                    .iter()
+                    .any(|asset| asset.attribution.is_some())
+            })
+            || copy
+                .pages
+                .as_ref()
+                .is_some_and(|pages| pages.project().format_version >= 16)
+        {
+            b"wireframe-nodes-v3:".to_vec()
+        } else {
+            b"wireframe-nodes-v2:".to_vec()
+        },
         remaining: limit,
     };
     serde_json::to_writer(&mut writer, copy).map_err(|e| e.to_string())?;
@@ -64,5 +79,55 @@ mod tests {
         assert!(writer.write_all(b"cd").is_err());
         assert_eq!(writer.bytes, b"ab");
         assert_eq!(writer.remaining, 1);
+    }
+}
+
+#[cfg(test)]
+mod credit_tests {
+    use super::*;
+    use wireframe::document::{Asset, ImageAttribution};
+    fn asset() -> Asset {
+        Asset {
+            id: 2,
+            trashed: false,
+            name: "Artwork".into(),
+            media_type: "image/png".into(),
+            bytes: vec![1],
+            attribution: Some(ImageAttribution {
+                title: "Artwork".into(),
+                creator: "Creator".into(),
+                license: "CC BY 4.0".into(),
+                license_url: "https://creativecommons.org/licenses/by/4.0/".into(),
+                source_url: "https://commons.wikimedia.org/wiki/File:Artwork.jpg".into(),
+            }),
+        }
+    }
+    #[test]
+    fn credited_control_and_library_payloads_use_a_marker_old_readers_do_not_accept() {
+        for library in [false, true] {
+            let mut copy = Clipboard::default();
+            if library {
+                copy.resources = Some(wireframe::workspace::LibraryClipboard {
+                    project: "origin".into(),
+                    requested: vec![1],
+                    libraries: vec![],
+                    definitions: vec![],
+                    assets: vec![asset()],
+                    removed_assets: Default::default(),
+                });
+            } else {
+                copy.assets.push(asset());
+            }
+            let text = clipboard_text(&copy).unwrap();
+            assert!(text.starts_with("wireframe-nodes-v3:"));
+            assert!(text.strip_prefix("wireframe-nodes-v2:").is_none());
+            let restored: Clipboard =
+                serde_json::from_str(text.strip_prefix("wireframe-nodes-v3:").unwrap()).unwrap();
+            let assets = restored
+                .resources
+                .as_ref()
+                .map_or(&restored.assets, |r| &r.assets);
+            assert_eq!(assets[0].attribution, asset().attribution);
+        }
     }
 }

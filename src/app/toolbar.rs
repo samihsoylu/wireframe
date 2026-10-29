@@ -153,6 +153,7 @@ impl WireframeApp {
                 &[Close, Save, SaveAs, RenameProject],
                 &[AutomaticSave, Recover],
                 &[ExportPdf, ExportImages, ExportSvg],
+                &[ExtractText],
                 &[Example, Sketch, Font],
                 &[Quit],
             ] {

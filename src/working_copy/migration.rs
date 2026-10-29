@@ -30,7 +30,7 @@ pub(super) fn decode(bytes: &[u8]) -> Result<Record, CopyError> {
                 .map_err(|e| CopyError::Invalid(e.to_string()))?;
             Some(version_two_bytes(&old)?)
         }
-        3..=14 => {
+        3..=15 => {
             let old: Project = serde_json::from_value(envelope.project.clone())
                 .map_err(|e| CopyError::Invalid(e.to_string()))?;
             Some(serde_json::to_vec_pretty(&old).map_err(|e| CopyError::Invalid(e.to_string()))?)

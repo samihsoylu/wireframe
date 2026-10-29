@@ -9,7 +9,7 @@ request or API key is needed.
 `recognize(bytes, cancel)` returns recognized text and an engine confidence
 estimate. Empty text is a successful result. Input is limited to 32 MiB and
 16 megapixels; transparency is flattened onto white. Recognition has a 30-second
-engine deadline and cancellation callback. Decode and initialization are bounded
+engine deadline and cancellation callback at monitor checkpoints. Page segmentation may run before these checks, so this is not a guaranteed total wall-clock timeout. Decode and initialization are bounded
 but synchronous, so applications should call this from a worker thread and set
 the cancellation flag when its preview closes. No partial result is returned
 after cancellation.
@@ -64,3 +64,5 @@ CARGO_BUILD_JOBS=2 cargo test --manifest-path vendor/wireframe-ocr/Cargo.toml
 The synthetic screenshot fixture is rasterized from Wireframe's bundled OFL
 Comic Neue font. Regenerate it with `tests/make_fixtures.py` using Pillow 11.3.0;
 Pillow is a fixture-authoring tool only, not a build/runtime dependency.
+
+The parent integration disables tar's optional extended-attribute support when unpacking the pinned build inputs. No source archive needs filesystem extended attributes; this avoids an unnecessary xattr dependency and keeps the application's existing dependency versions unchanged.

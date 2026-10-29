@@ -142,6 +142,7 @@ impl NativeMenus {
                 &[NewPage, New, Open],
                 &[Close, Save, SaveAs, RenameProject, AutomaticSave, Recover],
                 &[ExportPdf, ExportImages, ExportSvg],
+                &[ExtractText],
                 &[Example, Sketch, Font],
             ],
         );

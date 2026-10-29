@@ -467,6 +467,7 @@ impl WireframeApp {
         true
     }
     pub(super) fn reset_session_identity(&mut self) {
+        self.screenshot_text = None;
         self.save_navigator_focus = None;
         self.review.reset();
         self.remember_version_view();

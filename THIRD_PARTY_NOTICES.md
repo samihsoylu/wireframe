@@ -59,6 +59,7 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | cgl-0.3.2 | MIT / Apache-2.0 | [files](licenses/cgl-0.3.2/) |
 | chrono-0.4.45 | MIT OR Apache-2.0 | [files](licenses/chrono-0.4.45/) |
 | clipboard-win-5.4.1 | BSL-1.0 | [files](licenses/clipboard-win-5.4.1/) |
+| cmake-0.1.58 | MIT OR Apache-2.0 | [files](licenses/cmake-0.1.58/) |
 | color-0.3.3 | Apache-2.0 OR MIT | [files](licenses/color-0.3.3/) |
 | color_quant-1.1.0 | MIT | [files](licenses/color_quant-1.1.0/) |
 | concurrent-queue-2.5.0 | Apache-2.0 OR MIT | [files](licenses/concurrent-queue-2.5.0/) |
@@ -111,6 +112,7 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | fax-0.2.7 | MIT | [files](licenses/fax-0.2.7/) |
 | fdeflate-0.3.7 | MIT OR Apache-2.0 | [files](licenses/fdeflate-0.3.7/) |
 | fearless_simd-0.4.1 | Apache-2.0 OR MIT | [files](licenses/fearless_simd-0.4.1/) |
+| filetime-0.2.29 | MIT/Apache-2.0 | [files](licenses/filetime-0.2.29/) |
 | find-msvc-tools-0.1.14 | MIT OR Apache-2.0 | [files](licenses/find-msvc-tools-0.1.14/) |
 | flate2-1.1.10 | MIT OR Apache-2.0 | [files](licenses/flate2-1.1.10/) |
 | float-cmp-0.9.0 | MIT | [files](licenses/float-cmp-0.9.0/) |
@@ -288,6 +290,7 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | syn-3.0.9 | MIT OR Apache-2.0 | [files](licenses/syn-3.0.9/) |
 | synstructure-0.14.0 | MIT | [files](licenses/synstructure-0.14.0/) |
 | sys-locale-0.3.2 | MIT OR Apache-2.0 | [files](licenses/sys-locale-0.3.2/) |
+| tar-0.4.46 | MIT OR Apache-2.0 | [files](licenses/tar-0.4.46/) |
 | tempfile-3.27.0 | MIT OR Apache-2.0 | [files](licenses/tempfile-3.27.0/) |
 | thiserror-1.0.69 | MIT OR Apache-2.0 | [files](licenses/thiserror-1.0.69/) |
 | thiserror-2.0.21 | MIT OR Apache-2.0 | [files](licenses/thiserror-2.0.21/) |
@@ -364,6 +367,7 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | windows_x86_64_msvc-0.53.1 | MIT OR Apache-2.0 | [files](licenses/windows_x86_64_msvc-0.53.1/) |
 | winit-0.30.13 | Apache-2.0 | [files](licenses/winit-0.30.13/) |
 | winnow-1.0.4 | MIT | [files](licenses/winnow-1.0.4/) |
+| wireframe-ocr-0.1.0 | GPL-3.0-only | [files](licenses/wireframe-ocr-0.1.0/) |
 | write-fonts-0.48.1 | MIT OR Apache-2.0 | [files](licenses/write-fonts-0.48.1/) |
 | writeable-0.6.4 | Unicode-3.0 | [files](licenses/writeable-0.6.4/) |
 | x11-dl-2.21.0 | MIT | [files](licenses/x11-dl-2.21.0/) |

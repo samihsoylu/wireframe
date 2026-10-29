@@ -6,11 +6,28 @@ use super::*;
 use crate::page_tree::PageTree;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize)]
 pub struct PageClipboard {
     project: Project,
     /// Original tree depths preserve discontiguous selection reconstruction.
     levels: Vec<usize>,
+}
+
+impl<'de> Deserialize<'de> for PageClipboard {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        struct Payload {
+            project: serde_json::Value,
+            levels: Vec<usize>,
+        }
+        let payload = Payload::deserialize(deserializer)?;
+        let bytes = serde_json::to_vec(&payload.project).map_err(serde::de::Error::custom)?;
+        let project = crate::document::decode(&bytes).map_err(serde::de::Error::custom)?;
+        Ok(Self {
+            project,
+            levels: payload.levels,
+        })
+    }
 }
 
 impl PageClipboard {

@@ -3,7 +3,7 @@
 use super::*;
 use std::sync::{
     Arc,
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicBool, AtomicUsize, Ordering},
     mpsc,
 };
 use wireframe::{
@@ -14,6 +14,37 @@ use wireframe::{
     },
     workspace::ImportChoice,
 };
+
+const MAX_NETWORK_WORKERS: usize = 4;
+static NETWORK_WORKERS: AtomicUsize = AtomicUsize::new(0);
+struct WorkerSlot(&'static AtomicUsize);
+impl WorkerSlot {
+    fn acquire(counter: &'static AtomicUsize) -> Option<Self> {
+        let mut active = counter.load(Ordering::Relaxed);
+        loop {
+            if active >= MAX_NETWORK_WORKERS {
+                return None;
+            }
+            match counter.compare_exchange_weak(
+                active,
+                active + 1,
+                Ordering::Relaxed,
+                Ordering::Relaxed,
+            ) {
+                Ok(_) => return Some(Self(counter)),
+                Err(current) => active = current,
+            }
+        }
+    }
+}
+impl Drop for WorkerSlot {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::Relaxed);
+    }
+}
+fn network_available() -> bool {
+    NETWORK_WORKERS.load(Ordering::Relaxed) < MAX_NETWORK_WORKERS
+}
 
 pub(super) struct Review {
     ids: Vec<Id>,
@@ -72,6 +103,11 @@ impl Review {
         self.thumbnail_receiver = None;
         self.next = None;
         self.searched = false;
+        let Some(slot) = WorkerSlot::acquire(&NETWORK_WORKERS) else {
+            self.error =
+                Some("Previous image requests are finishing. Try again in a moment.".into());
+            return;
+        };
         let (sender, receiver) = mpsc::channel();
         let query = self.query.clone();
         let cancel = self.search_cancel.clone();
@@ -79,6 +115,7 @@ impl Review {
         match std::thread::Builder::new()
             .name("image-search".into())
             .spawn(move || {
+                let _slot = slot;
                 let result = wireframe::images::search::search(&query, offset, &cancel);
                 let _ = sender.send(result);
                 ctx.request_repaint();
@@ -93,6 +130,12 @@ impl Review {
         self.preview = None;
         self.error = None;
         self.conflict = false;
+        self.receiver = None;
+        let Some(slot) = WorkerSlot::acquire(&NETWORK_WORKERS) else {
+            self.error =
+                Some("Previous image requests are finishing. Try again in a moment.".into());
+            return;
+        };
         let (sender, receiver) = mpsc::channel();
         let address = self.address.clone();
         let cancel = self.cancel.clone();
@@ -100,6 +143,7 @@ impl Review {
         match std::thread::Builder::new()
             .name("image-download".into())
             .spawn(move || {
+                let _slot = slot;
                 let result = wireframe::images::web::fetch(&address, &cancel);
                 let _ = sender.send(result);
                 ctx.request_repaint();
@@ -129,7 +173,9 @@ impl Review {
         let enter = query.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter));
         if (ui
             .add_enabled(
-                self.search_receiver.is_none() && !self.query.trim().is_empty(),
+                network_available()
+                    && self.search_receiver.is_none()
+                    && !self.query.trim().is_empty(),
                 egui::Button::new("Search"),
             )
             .clicked()
@@ -220,7 +266,7 @@ impl Review {
         if let Some(next) = self.next
             && ui
                 .add_enabled(
-                    self.search_receiver.is_none(),
+                    network_available() && self.search_receiver.is_none(),
                     egui::Button::new("Next results"),
                 )
                 .clicked()
@@ -240,7 +286,7 @@ impl Review {
         }
         if ui
             .add_enabled(
-                self.receiver.is_none() && !self.address.trim().is_empty(),
+                network_available() && self.receiver.is_none() && !self.address.trim().is_empty(),
                 egui::Button::new("Fetch"),
             )
             .clicked()
@@ -262,12 +308,16 @@ impl Review {
             if jobs.is_empty() {
                 continue;
             }
+            let Some(slot) = WorkerSlot::acquire(&NETWORK_WORKERS) else {
+                continue;
+            };
             let sender = sender.clone();
             let cancel = self.search_cancel.clone();
             let ctx = ctx.clone();
             let _ = std::thread::Builder::new()
                 .name("search-thumbnails".into())
                 .spawn(move || {
+                    let _slot = slot;
                     for (index, address) in jobs {
                         if cancel.load(Ordering::Relaxed) {
                             break;
@@ -388,13 +438,17 @@ impl WireframeApp {
         let mut apply = None;
         let response = egui::Modal::new(egui::Id::new("web-image-import")).show(ctx, |ui| {
             ui.set_width(500_f32.min((ctx.viewport_rect().width() - 60.).max(240.)));
-            egui::ScrollArea::vertical().id_salt("web-import-body").max_height((ctx.viewport_rect().height() - 100.).max(200.)).show(ui, |ui| {
+            egui::ScrollArea::vertical().id_salt("web-import-body").max_height((ctx.viewport_rect().height() - 190.).max(140.)).show(ui, |ui| {
             ui.heading("Import from Web");
             let old_mode = review.search_mode;
             ui.horizontal(|ui| {
                 ui.selectable_value(&mut review.search_mode, false, "Image address");
                 ui.selectable_value(&mut review.search_mode, true, "Search images");
             });
+            if !network_available() {
+                ui.small("Image requests are finishing. Please wait…");
+                ctx.request_repaint_after(std::time::Duration::from_millis(100));
+            }
             if old_mode != review.search_mode {
                 review.reset_preview();
                 review.search_cancel.store(true, Ordering::Relaxed);
@@ -433,6 +487,7 @@ impl WireframeApp {
                     ui.small("Credit is kept with this image in your project. Include it when sharing exports.");
                 }
             }
+            });
             if let Some(error) = &review.error {
                 ui.colored_label(Color32::DARK_RED, error);
             }
@@ -459,7 +514,7 @@ impl WireframeApp {
                     .editor
                     .image_conflict(image)
                     .and_then(|id| self.editor.document.live_asset(id))
-                    .is_some_and(|a| a.bytes != image.bytes)
+                    .is_some_and(|a| image.conflicts_with(a))
                 {
                     review.conflict = true;
                 } else {
@@ -467,7 +522,6 @@ impl WireframeApp {
                 }
             }
             cancel = ui.button("Cancel").clicked();
-            });
         });
         cancel |= response.is_top_modal
             && !response.any_popup_open

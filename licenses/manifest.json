@@ -525,6 +525,16 @@
     ]
   },
   {
+    "name": "cmake",
+    "version": "0.1.58",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-lang/cmake-rs",
+    "files": [
+      "cmake-0.1.58/LICENSE-APACHE",
+      "cmake-0.1.58/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "color",
     "version": "0.3.3",
     "license": "Apache-2.0 OR MIT",
@@ -1044,6 +1054,16 @@
     "files": [
       "fearless_simd-0.4.1/LICENSE-APACHE",
       "fearless_simd-0.4.1/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "filetime",
+    "version": "0.2.29",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/alexcrichton/filetime",
+    "files": [
+      "filetime-0.2.29/LICENSE-APACHE",
+      "filetime-0.2.29/LICENSE-MIT"
     ]
   },
   {
@@ -2782,6 +2802,16 @@
     ]
   },
   {
+    "name": "tar",
+    "version": "0.4.46",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/composefs/tar-rs",
+    "files": [
+      "tar-0.4.46/LICENSE-APACHE",
+      "tar-0.4.46/LICENSE-MIT"
+    ]
+  },
+  {
     "name": "tempfile",
     "version": "3.27.0",
     "license": "MIT OR Apache-2.0",
@@ -3523,6 +3553,18 @@
     "repository": "https://github.com/winnow-rs/winnow",
     "files": [
       "winnow-1.0.4/LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "wireframe-ocr",
+    "version": "0.1.0",
+    "license": "GPL-3.0-only",
+    "repository": null,
+    "files": [
+      "wireframe-ocr-0.1.0/LICENSE",
+      "wireframe-ocr-0.1.0/models/LICENSE",
+      "wireframe-ocr-0.1.0/native/leptonica-LICENSE.txt",
+      "wireframe-ocr-0.1.0/native/tesseract-LICENSE"
     ]
   },
   {

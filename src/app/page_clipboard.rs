@@ -43,7 +43,10 @@ impl WireframeApp {
             self.error = Some("The page paste target changed. Paste again.".into());
             return;
         }
-        let Some(json) = text.strip_prefix("wireframe-nodes-v2:") else {
+        let Some(json) = text
+            .strip_prefix("wireframe-nodes-v3:")
+            .or_else(|| text.strip_prefix("wireframe-nodes-v2:"))
+        else {
             return;
         };
         if json.len() > clipboard::MAX_JSON_BYTES {

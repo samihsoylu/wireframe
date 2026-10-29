@@ -121,6 +121,26 @@ impl WireframeApp {
         if ui.button("Search images…").clicked() {
             self.start_image_search(ids.clone());
         }
+        let extraction_source = sources
+            .first()
+            .copied()
+            .flatten()
+            .filter(|source| sources.iter().all(|value| *value == Some(*source)));
+        if ui
+            .add_enabled(
+                extraction_source.is_some() && self.can_extract_screenshot(),
+                egui::Button::new("Extract text…"),
+            )
+            .on_hover_text("Read text from the original image, before crops and filters.")
+            .on_disabled_hover_text(if !screenshot_text::available() {
+                "Previous text extraction is finishing. Try again in a moment."
+            } else {
+                "Select one image source and finish editing text first."
+            })
+            .clicked()
+        {
+            self.extract_asset_text(ui.ctx(), extraction_source.unwrap());
+        }
         for source in sources
             .iter()
             .flatten()
@@ -230,6 +250,21 @@ impl WireframeApp {
                         ui.ctx().copy_text(credit.credit());
                     }
                 });
+            }
+            if ui
+                .add_enabled(
+                    selected.is_some() && self.can_extract_screenshot(),
+                    egui::Button::new("Extract text…"),
+                )
+                .on_hover_text("Read text from the original image, before crops and filters.")
+                .on_disabled_hover_text(if !screenshot_text::available() {
+                    "Previous text extraction is finishing. Try again in a moment."
+                } else {
+                    "Choose an image and finish editing text first."
+                })
+                .clicked()
+            {
+                self.extract_asset_text(ui.ctx(), selected.unwrap());
             }
             if selected.is_some()
                 && ui.button("Remove image").clicked()
@@ -343,7 +378,7 @@ impl WireframeApp {
                     .editor
                     .image_conflict(&image)
                     .and_then(|id| self.editor.document.live_asset(id));
-                if conflict.is_some_and(|a| a.bytes != image.bytes) {
+                if conflict.is_some_and(|a| image.conflicts_with(a)) {
                     self.image_import = Some((target, image));
                 } else if let Err(e) =
                     self.editor
@@ -357,6 +392,7 @@ impl WireframeApp {
     }
     pub(super) fn image_import_dialog(&mut self, ctx: &egui::Context) {
         self.web_image_dialog(ctx);
+        self.screenshot_text_dialog(ctx);
         if let Some(id) = self.image_source_request.take() {
             self.start_image_import(ImageTarget::Control(id));
         }

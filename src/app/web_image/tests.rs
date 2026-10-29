@@ -301,3 +301,148 @@ fn returning_to_address_mode_discards_search_download_and_credit() {
     assert!(sender.send(Ok(preview(80))).is_err());
     assert_eq!(app.editor.document, before);
 }
+
+fn credit(creator: &str) -> ImageAttribution {
+    ImageAttribution {
+        title: "Picture".into(),
+        creator: creator.into(),
+        license: "CC BY 4.0".into(),
+        license_url: "https://creativecommons.org/licenses/by/4.0/".into(),
+        source_url: "https://commons.wikimedia.org/wiki/File:Picture.jpg".into(),
+    }
+}
+#[test]
+fn same_pixels_with_different_credits_require_choice_and_preserve_exact_history() {
+    for choice in ["Cancel", "Use new", "Use existing", "Keep both"] {
+        let ctx = egui::Context::default();
+        ctx.enable_accesskit();
+        let mut app = fixture(&ctx);
+        let mut original = preview(30).image;
+        original.attribution = Some(credit("Original"));
+        app.editor
+            .import_web_image(vec![2], original, ImportChoice::KeepBoth, false)
+            .unwrap();
+        let before = app.editor.document.clone();
+        app.start_image_search(vec![3]);
+        let mut incoming = preview(30);
+        incoming.image.attribution = Some(credit("Selected"));
+        app.web_image.as_mut().unwrap().attribution = Some(credit("Selected"));
+        app.web_image.as_mut().unwrap().preview = Some(incoming);
+        click(&mut app, &ctx, "Load");
+        assert!(app.web_image.as_ref().unwrap().conflict);
+        assert_eq!(app.editor.document, before);
+        click(&mut app, &ctx, choice);
+        if choice == "Cancel" {
+            assert_eq!(app.editor.document, before);
+            continue;
+        }
+        let after = app.editor.document.clone();
+        match choice {
+            "Use new" => assert_eq!(after.assets[0].attribution, Some(credit("Selected"))),
+            "Use existing" => assert_eq!(after.assets[0].attribution, Some(credit("Original"))),
+            _ => {
+                assert_eq!(after.assets[0].attribution, Some(credit("Original")));
+                assert_eq!(after.assets[1].attribution, Some(credit("Selected")));
+            }
+        }
+        app.editor.undo();
+        assert_eq!(app.editor.document, before);
+        app.editor.redo();
+        assert_eq!(app.editor.document, after);
+    }
+}
+#[test]
+fn cancelled_generations_and_reopened_dialogs_keep_a_fixed_live_request_bound() {
+    use std::{
+        io::{Read, Write},
+        net::TcpListener,
+        time::Duration,
+    };
+    let ctx = egui::Context::default();
+    let mut app = fixture(&ctx);
+    app.editor
+        .import_web_image(vec![2], preview(10).image, ImportChoice::KeepBoth, false)
+        .unwrap();
+    app.editor.undo();
+    let before = app.editor.document.clone();
+    let redo = app.editor.redo_name().map(str::to_owned);
+    assert_eq!(NETWORK_WORKERS.load(Ordering::Relaxed), 0);
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = format!("http://{}", listener.local_addr().unwrap());
+    let (arrived_tx, arrived_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let server = std::thread::spawn(move || {
+        let mut connections = vec![];
+        for _ in 0..MAX_NETWORK_WORKERS {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(3)))
+                .unwrap();
+            let mut headers = vec![];
+            while !headers.ends_with(b"\r\n\r\n") {
+                let mut byte = [0];
+                stream.read_exact(&mut byte).unwrap();
+                headers.push(byte[0]);
+            }
+            connections.push(stream);
+            arrived_tx.send(()).unwrap();
+        }
+        release_rx.recv_timeout(Duration::from_secs(3)).unwrap();
+        for mut stream in connections {
+            stream
+                .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+                .unwrap();
+        }
+    });
+    let mut workers = vec![];
+    let mut cancelled = vec![];
+    for name in ["search", "thumbnail", "thumbnail", "preview"] {
+        let slot = WorkerSlot::acquire(&NETWORK_WORKERS).unwrap();
+        let address = address.clone();
+        let cancel = Arc::new(AtomicBool::new(false));
+        cancelled.push(cancel.clone());
+        let (sender, receiver) = mpsc::channel();
+        drop(receiver); // Closing a generation discards its receiver.
+        workers.push(
+            std::thread::Builder::new()
+                .name(name.into())
+                .spawn(move || {
+                    let _slot = slot;
+                    let agent: ureq::Agent = ureq::Agent::config_builder()
+                        .timeout_global(Some(Duration::from_secs(3)))
+                        .build()
+                        .into();
+                    let result = agent
+                        .get(&address)
+                        .call()
+                        .map(|_| ())
+                        .map_err(|e| e.to_string());
+                    if !cancel.load(Ordering::Relaxed) {
+                        let _ = sender.send(result);
+                    }
+                })
+                .unwrap(),
+        );
+    }
+    for _ in 0..MAX_NETWORK_WORKERS {
+        arrived_rx.recv_timeout(Duration::from_secs(3)).unwrap();
+    }
+    for cancel in cancelled {
+        cancel.store(true, Ordering::Relaxed);
+    }
+    for _ in 0..32 {
+        app.start_image_search(vec![2]);
+        app.web_image = None;
+        assert!(WorkerSlot::acquire(&NETWORK_WORKERS).is_none());
+        assert_eq!(NETWORK_WORKERS.load(Ordering::Relaxed), MAX_NETWORK_WORKERS);
+    }
+    assert_eq!(app.editor.document, before);
+    assert_eq!(app.editor.redo_name(), redo.as_deref());
+    release_tx.send(()).unwrap();
+    for worker in workers {
+        worker.join().unwrap();
+    }
+    server.join().unwrap();
+    assert_eq!(NETWORK_WORKERS.load(Ordering::Relaxed), 0);
+    assert!(WorkerSlot::acquire(&NETWORK_WORKERS).is_some());
+}

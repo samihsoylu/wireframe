@@ -71,6 +71,7 @@ pub(super) enum Command {
     AutoSize,
     TreatAsMarkup,
     ShowMarkup,
+    ExtractText,
 }
 impl Command {
     pub(super) const ALL: &[Self] = &[
@@ -133,6 +134,7 @@ impl Command {
         Self::AutoSize,
         Self::TreatAsMarkup,
         Self::ShowMarkup,
+        Self::ExtractText,
     ];
     pub(super) fn from_id(id: u64) -> Option<Self> {
         Self::ALL
@@ -154,6 +156,7 @@ impl Command {
             Self::ExportImages => "Export images…",
             Self::ExportSvg => "Export page as SVG…",
             Self::Example => "Open example project",
+            Self::ExtractText => "Extract text from screenshot…",
             Self::Sketch => "Sketch style",
             Self::Font => "Font and colors…",
             Self::Undo => "Undo",
@@ -519,6 +522,7 @@ impl WireframeApp {
             AutomaticSave | Recover => self.persistence.is_some(),
             ExportPdf => self.pdf_job.is_none(),
             ExportImages => self.image_export.job.is_none(),
+            ExtractText => self.can_extract_screenshot(),
             ZoomIn => wireframe::viewport::next_zoom(self.zoom, true).is_some(),
             ZoomOut => wireframe::viewport::next_zoom(self.zoom, false).is_some(),
             SendToBack | BringToFront | SendBackward | BringForward => {
@@ -636,6 +640,7 @@ impl WireframeApp {
             }
             ExportImages => self.open_image_export(),
             ExportSvg => self.export(false),
+            ExtractText => self.choose_screenshot_text(ctx),
             Example => self.request(Pending::Example, ctx),
             Sketch => self.editor.edit("Change style", |e| {
                 e.document.settings.sketch = !e.document.settings.sketch

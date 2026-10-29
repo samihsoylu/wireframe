@@ -76,8 +76,9 @@ fn reader(bytes: &[u8]) -> Result<ImageReader<Cursor<&[u8]>>, Error> {
 ///
 /// Call from a worker thread. The model is embedded; no screenshot/model files are needed and
 /// no screenshot bytes leave this process. Cancellation is checked around decode,
-/// initialization and through Tesseract's recognition monitor. Recognition itself
-/// has a 30-second deadline; decoding/initialization are bounded but synchronous.
+/// initialization and through Tesseract's recognition monitor. The monitor uses a
+/// cooperative 30-second deadline. Page segmentation can run before its checks;
+/// this is not a total wall-clock timeout. Keep UI worker ownership until return.
 pub fn recognize(bytes: &[u8], cancel: &AtomicBool) -> Result<Recognition, Error> {
     check_cancel(cancel)?;
     let (width, height) = reader(bytes)?

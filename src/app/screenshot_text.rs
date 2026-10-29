@@ -9,6 +9,27 @@ use std::sync::{
 };
 use wireframe_ocr::Recognition;
 
+static RECOGNITION_ACTIVE: AtomicBool = AtomicBool::new(false);
+#[cfg(test)]
+pub(super) static TEST_RECOGNITION: std::sync::Mutex<()> = std::sync::Mutex::new(());
+pub(super) fn available() -> bool {
+    !RECOGNITION_ACTIVE.load(Ordering::Acquire)
+}
+struct RecognitionPermit;
+impl RecognitionPermit {
+    fn acquire() -> Option<Self> {
+        RECOGNITION_ACTIVE
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .ok()
+            .map(|_| Self)
+    }
+}
+impl Drop for RecognitionPermit {
+    fn drop(&mut self) {
+        RECOGNITION_ACTIVE.store(false, Ordering::Release);
+    }
+}
+
 pub(super) struct Review {
     receiver: Option<mpsc::Receiver<Result<Recognition, wireframe_ocr::Error>>>,
     cancel: Arc<AtomicBool>,
@@ -40,10 +61,16 @@ impl Review {
             copied: false,
             error: None,
         };
+        let Some(permit) = RecognitionPermit::acquire() else {
+            review.receiver = None;
+            review.error = Some("Previous text extraction is finishing. Close this preview and try again in a moment.".into());
+            return review;
+        };
         let ctx = ctx.clone();
         if std::thread::Builder::new()
             .name("screenshot-text".into())
             .spawn(move || {
+                let _permit = permit;
                 let result = wireframe_ocr::recognize(&bytes, &cancel);
                 let _ = sender.send(result);
                 ctx.request_repaint();
@@ -184,9 +211,10 @@ mod tests {
         let ctx = egui::Context::default();
         let mut review = completed("Project overview");
         let mut closed = false;
-        let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
+        let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
             closed = review.show(ui.ctx());
         });
+        output.textures_delta.clear();
         assert!(!closed);
         assert_eq!(review.text, "Project overview");
         assert!(review.ready);
@@ -202,9 +230,10 @@ mod tests {
             }],
             ..Default::default()
         };
-        let _ = ctx.run_ui(input, |ui| {
+        let mut output = ctx.run_ui(input, |ui| {
             closed = review.show(ui.ctx());
         });
+        output.textures_delta.clear();
         assert!(closed);
         assert!(review.cancel.load(Ordering::Relaxed));
     }
@@ -231,5 +260,57 @@ mod tests {
         let cancel = review.cancel.clone();
         drop(review);
         assert!(cancel.load(Ordering::Relaxed));
+    }
+    #[test]
+    fn cancelled_and_reopened_previews_wait_for_the_previous_worker_to_exit() {
+        let _guard = TEST_RECOGNITION.lock().unwrap();
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        while !available() {
+            assert!(std::time::Instant::now() < deadline);
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        let permit = RecognitionPermit::acquire().unwrap();
+        let (release, held) = mpsc::channel();
+        let (started, ready) = mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            let _permit = permit;
+            started.send(()).unwrap();
+            held.recv_timeout(std::time::Duration::from_secs(3))
+                .unwrap();
+        });
+        ready
+            .recv_timeout(std::time::Duration::from_secs(3))
+            .unwrap();
+        let old = completed("old result");
+        let cancel = old.cancel.clone();
+        drop(old);
+        assert!(cancel.load(Ordering::Relaxed));
+        let ctx = egui::Context::default();
+        for _ in 0..32 {
+            let new = Review::new(&ctx, vec![]);
+            assert!(new.receiver.is_none());
+            assert!(
+                new.error
+                    .as_deref()
+                    .unwrap()
+                    .contains("Previous text extraction")
+            );
+            assert!(!available());
+        }
+        release.send(()).unwrap();
+        worker.join().unwrap();
+        assert!(available());
+        let mut next = Review::new(&ctx, b"not an image".to_vec());
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+        while next.receiver.is_some() {
+            next.poll();
+            assert!(std::time::Instant::now() < deadline);
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        assert!(next.error.as_deref().unwrap().contains("Choose a PNG"));
+        while !available() {
+            assert!(std::time::Instant::now() < deadline);
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
     }
 }

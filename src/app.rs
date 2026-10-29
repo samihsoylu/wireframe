@@ -54,6 +54,8 @@ mod property_sections;
 mod quick_draw;
 mod recovery;
 mod review;
+mod screenshot_actions;
+mod screenshot_text;
 mod selection;
 mod selection_properties;
 #[cfg(test)]
@@ -195,6 +197,7 @@ pub struct WireframeApp {
     )>,
     image_crop: Option<crop::CropEdit>,
     web_image: Option<web_image::Review>,
+    screenshot_text: Option<screenshot_text::Review>,
     image_split_fraction: f32,
     quit_allowed: bool,
     window_close_pending: bool,
@@ -259,6 +262,7 @@ impl WireframeApp {
             || self.icon_dialog.is_some()
             || self.image_import.is_some()
             || self.web_image.is_some()
+            || self.screenshot_text.is_some()
             || self.image_source_request.is_some()
             || self.error.is_some()
             || self.recovery_offer.is_some()
@@ -377,6 +381,7 @@ impl WireframeApp {
             startup_open: None,
             image_import: None,
             web_image: None,
+            screenshot_text: None,
             image_crop: None,
             image_split_fraction: 0.3,
             quit_allowed: false,
@@ -2073,6 +2078,7 @@ impl eframe::App for WireframeApp {
     }
 
     fn on_exit(&mut self, gl: Option<&eframe::glow::Context>) {
+        self.screenshot_text = None;
         self.startup_open = None;
         if let (Some(compositor), Some(gl)) = (self.compositor.take(), gl) {
             compositor.destroy(gl);

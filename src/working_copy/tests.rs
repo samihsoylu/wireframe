@@ -1034,42 +1034,54 @@ fn permanently_removed_destinations_survive_recovery_and_named_reopen() {
 
 #[test]
 fn asset_retention_migration_preserves_old_clean_and_dirty_recovery_baselines() {
-    for changed in [false, true] {
-        let (_dir, copies, named) = fixture();
-        let mut old = project("Image project");
-        old.format_version = 14;
-        old.next_id = 11;
-        old.assets.push(document::Asset {
-            attribution: None,
-            id: 10,
-            trashed: false,
-            name: "Photo".into(),
-            media_type: "image/png".into(),
-            bytes: vec![1, 2, 3],
-        });
-        let bytes = serde_json::to_vec_pretty(&old).unwrap();
-        assert!(!String::from_utf8_lossy(&bytes).contains("trashed"));
-        fs::write(&named, &bytes).unwrap();
-        let copy = copies.open_named(&named).unwrap();
-        let id = copy.id().to_owned();
-        let path = copy.local_path().to_owned();
-        let mut envelope: serde_json::Value =
-            serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
-        drop(copy);
-        envelope["project"] = serde_json::from_slice(&bytes).unwrap();
-        envelope["named"]["base_content"] = serde_json::to_value(fingerprint(&bytes)).unwrap();
-        if changed {
-            envelope["project"]["title"] = "Unsaved image project".into();
+    for version in [14, 15] {
+        for changed in [false, true] {
+            let (_dir, copies, named) = fixture();
+            let mut old = project("Image project");
+            old.format_version = version;
+            old.next_id = 11;
+            old.assets.push(document::Asset {
+                attribution: None,
+                id: 10,
+                trashed: version == 15,
+                name: "Photo".into(),
+                media_type: "image/png".into(),
+                bytes: vec![1, 2, 3],
+            });
+            let bytes = serde_json::to_vec_pretty(&old).unwrap();
+            assert_eq!(
+                String::from_utf8_lossy(&bytes).contains("trashed"),
+                version == 15
+            );
+            fs::write(&named, &bytes).unwrap();
+            let copy = copies.open_named(&named).unwrap();
+            let id = copy.id().to_owned();
+            let path = copy.local_path().to_owned();
+            let mut envelope: serde_json::Value =
+                serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+            drop(copy);
+            envelope["project"] = serde_json::from_slice(&bytes).unwrap();
+            envelope["named"]["base_content"] = serde_json::to_value(fingerprint(&bytes)).unwrap();
+            if changed {
+                envelope["project"]["title"] = "Unsaved image project".into();
+            }
+            let record = serde_json::to_vec(&envelope).unwrap();
+            fs::write(&path, &record).unwrap();
+            let resumed = copies.resume(&id).unwrap();
+            assert_eq!(resumed.has_local_changes().unwrap(), changed);
+            assert_eq!(resumed.project().format_version, document::FORMAT_VERSION);
+            assert_eq!(resumed.project().assets[0].trashed, version == 15);
+            assert_eq!(resumed.project().assets, old.assets);
+            assert_eq!(fs::read(&named).unwrap(), bytes);
+            assert_eq!(fs::read(&path).unwrap(), record);
+            let expected = resumed.project().clone();
+            drop(resumed);
+            let reopened = copies.open_named(&named).unwrap();
+            assert_eq!(reopened.has_local_changes().unwrap(), changed);
+            assert_eq!(reopened.project(), &expected);
+            assert_eq!(fs::read(&named).unwrap(), bytes);
+            assert_eq!(fs::read(&path).unwrap(), record);
         }
-        let record = serde_json::to_vec(&envelope).unwrap();
-        fs::write(&path, &record).unwrap();
-        let resumed = copies.resume(&id).unwrap();
-        assert_eq!(resumed.has_local_changes().unwrap(), changed);
-        assert_eq!(resumed.project().format_version, document::FORMAT_VERSION);
-        assert!(!resumed.project().assets[0].trashed);
-        assert_eq!(resumed.project().assets, old.assets);
-        assert_eq!(fs::read(&named).unwrap(), bytes);
-        assert_eq!(fs::read(&path).unwrap(), record);
     }
 }
 
@@ -1089,4 +1101,37 @@ fn dropped_owner_releases_lock_even_while_a_duplicate_descriptor_survives() {
     assert!(matches!(copies.resume(&id), Err(CopyError::Busy)));
     drop(reopened);
     assert!(copies.resume(&id).is_ok());
+}
+
+#[test]
+fn version_fifteen_unnamed_recovery_retains_edits_and_never_rewrites_input() {
+    for changed in [false, true] {
+        let (_dir, copies, _named) = fixture();
+        let original = project("Unstored project");
+        let copy = copies.create_unnamed(&original).unwrap();
+        let id = copy.id().to_owned();
+        let path = copy.local_path().to_owned();
+        drop(copy);
+        let mut envelope: serde_json::Value =
+            serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        envelope["project"]["format_version"] = 15.into();
+        if changed {
+            envelope["project"]["title"] = "Unstored edits".into();
+        }
+        let input = serde_json::to_vec(&envelope).unwrap();
+        fs::write(&path, &input).unwrap();
+        let resumed = copies.resume(&id).unwrap();
+        assert_eq!(resumed.project().format_version, document::FORMAT_VERSION);
+        assert_eq!(
+            resumed.project().title,
+            if changed {
+                "Unstored edits"
+            } else {
+                "Unstored project"
+            }
+        );
+        assert!(resumed.has_local_changes().unwrap());
+        assert!(resumed.named_path().unwrap().is_none());
+        assert_eq!(fs::read(&path).unwrap(), input);
+    }
 }

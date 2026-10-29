@@ -460,7 +460,7 @@ impl Editor {
                 e.document
                     .assets
                     .iter()
-                    .any(|a| a.id == *id && a.bytes == image.bytes)
+                    .any(|a| a.id == *id && !image.conflicts_with(a))
             });
             let asset = if let Some(id) = same {
                 if let Some(asset) = e

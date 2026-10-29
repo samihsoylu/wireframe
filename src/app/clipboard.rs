@@ -179,7 +179,10 @@ impl WireframeApp {
             self.pasted_page_text(s);
             return;
         }
-        if let Some(json) = s.strip_prefix("wireframe-nodes-v2:") {
+        if let Some(json) = s
+            .strip_prefix("wireframe-nodes-v3:")
+            .or_else(|| s.strip_prefix("wireframe-nodes-v2:"))
+        {
             if json.len() > MAX_JSON_BYTES {
                 self.error = Some("Clipboard content is too large".into());
                 return;

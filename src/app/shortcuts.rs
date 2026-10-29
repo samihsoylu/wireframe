@@ -326,6 +326,7 @@ impl WireframeApp {
             || self.icon_dialog.is_some()
             || self.image_import.is_some()
             || self.web_image.is_some()
+            || self.screenshot_text.is_some()
             || self.recovery_offer.is_some()
             || self.image_crop.is_some()
         {

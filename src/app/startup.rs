@@ -159,7 +159,10 @@ impl WireframeApp {
     }
     fn open_failed(&mut self, path: &std::path::Path, error: String) {
         self.status = "Project could not be opened".into();
-        self.error = Some(format!("Could not open {}.\n\n{error}", path.display()));
+        self.error = Some(format!(
+            "Couldn't open this project. Try opening it again. If it still won't open, choose another copy or restore a backup.\n\nDetails: Could not open {}.\n\n{error}",
+            path.display()
+        ));
     }
     pub(super) fn startup_open_dialog(&mut self, ctx: &egui::Context) {
         let Some(job) = &self.startup_open else {

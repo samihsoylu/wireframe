@@ -164,6 +164,118 @@ fn failed_open_preserves_document_and_recovery_offer() {
         assert!(app.file.is_none());
     }
 }
+
+#[test]
+fn failed_project_read_retains_exact_details_and_pending_history() {
+    let dir = tempfile::tempdir().unwrap();
+    for contents in [None, Some(b"not a project".as_slice())] {
+        let path = dir.path().join("Unavailable project.wireframe");
+        if let Some(bytes) = contents {
+            std::fs::write(&path, bytes).unwrap();
+        }
+        let diagnostic = ProjectStore.load(&path).unwrap_err();
+        let (ctx, mut app) = setup();
+        app.editor.add(Kind::Label, 20., 30.);
+        let edited = app.editor.document.clone();
+        app.editor.undo();
+        let baseline = app.editor.document.clone();
+        let redo = app.editor.redo_name().map(str::to_owned);
+        app.start_startup_open(path.clone(), &ctx);
+        drain(&mut app);
+        let error = app.error.as_deref().unwrap();
+        let (primary, details) = error.split_once("\n\nDetails: ").unwrap();
+        assert!(primary.contains("Try opening it again"));
+        assert!(primary.contains("restore a backup"));
+        assert_eq!(
+            details,
+            format!("Could not open {}.\n\n{diagnostic}", path.display())
+        );
+        assert_eq!(app.editor.document, baseline);
+        assert_eq!(app.editor.redo_name(), redo.as_deref());
+        app.editor.redo();
+        assert_eq!(app.editor.document, edited);
+        if let Some(bytes) = contents {
+            assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        } else {
+            assert!(!path.exists());
+        }
+    }
+}
+
+#[test]
+fn project_open_keeps_version_and_size_explanations_in_visible_details() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("Newer project.wireframe");
+    let mut project = Project::default();
+    project.format_version += 1;
+    std::fs::write(&path, serde_json::to_vec(&project).unwrap()).unwrap();
+    let (ctx, mut app) = setup();
+    app.start_startup_open(path.clone(), &ctx);
+    drain(&mut app);
+    assert!(app.error.as_deref().unwrap().ends_with(&format!(
+        "Details: Could not open {}.\n\nUnsupported document version {}",
+        path.display(),
+        project.format_version
+    )));
+    let path = dir.path().join("Oversized project.wireframe");
+    std::fs::File::create(&path)
+        .unwrap()
+        .set_len(wireframe::document::MAX_FILE_BYTES as u64 + 1)
+        .unwrap();
+    app.start_startup_open(path.clone(), &ctx);
+    drain(&mut app);
+    assert!(app.error.as_deref().unwrap().ends_with(&format!(
+        "Details: Could not open {}.\n\nProject exceeds the 64 MB file limit",
+        path.display()
+    )));
+}
+
+#[test]
+fn project_error_card_wraps_primary_and_details_at_normal_window_sizes() {
+    for size in [Vec2::new(920., 620.), Vec2::new(1360., 900.)] {
+        let (ctx, mut app) = setup();
+        let path = PathBuf::from(format!(
+            "/unavailable/{}/Project.wireframe",
+            "long-folder-name/".repeat(25)
+        ));
+        app.start_startup_open(path, &ctx);
+        drain(&mut app);
+        let error = app.error.clone().unwrap();
+        let mut observed = std::collections::HashMap::new();
+        for _ in 0..3 {
+            let mut out = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(Rect::from_min_size(Pos2::ZERO, size)),
+                    ..Default::default()
+                },
+                |ui| app.dialogs(ui.ctx()),
+            );
+            out.textures_delta.clear();
+            if let Some(update) = out.platform_output.accesskit_update {
+                for (_, node) in update.nodes {
+                    let text = node.label().or_else(|| node.value());
+                    if matches!(text, Some("Couldn't complete that action" | "OK"))
+                        || text == Some(error.as_str())
+                    {
+                        observed.insert(text.unwrap().to_owned(), node.bounds().unwrap());
+                    }
+                }
+            }
+        }
+        for label in ["Couldn't complete that action", error.as_str(), "OK"] {
+            let bounds = observed
+                .get(label)
+                .unwrap_or_else(|| panic!("missing visible error content {label}"));
+            assert!(
+                bounds.x0 >= 0.
+                    && bounds.y0 >= 0.
+                    && bounds.x1 <= size.x as f64
+                    && bounds.y1 <= size.y as f64,
+                "error content outside {size:?}: {label:?} {bounds:?}"
+            );
+        }
+    }
+}
 #[test]
 fn fallback_startup_loads_the_project_and_worker_disconnect_reports_failure() {
     let dir = tempfile::tempdir().unwrap();
@@ -188,7 +300,10 @@ fn fallback_startup_loads_the_project_and_worker_disconnect_reports_failure() {
         ctx: ctx.clone(),
     });
     app.poll_startup_open();
-    assert!(app.error.as_ref().unwrap().contains("stopped unexpectedly"));
+    let error = app.error.as_ref().unwrap();
+    let (primary, details) = error.split_once("\n\nDetails: ").unwrap();
+    assert!(!primary.contains("worker"));
+    assert!(details.ends_with("The file-opening worker stopped unexpectedly."));
     assert!(app.editor.document == p);
 }
 #[test]

@@ -226,10 +226,65 @@ mod tests {
         app.poll_pdf_export(&ctx);
         assert_eq!(app.status, "PDF export failed");
         assert!(app.error.as_ref().unwrap().contains("Choose between"));
+        assert!(
+            !app.error
+                .as_ref()
+                .unwrap()
+                .contains("Couldn't save the PDF")
+        );
         assert!(!app.quit_after_pdf);
         assert!(!app.quit_allowed);
         assert!(app.pending.is_none());
         assert!(app.pdf_job.is_none());
         assert_eq!(std::fs::read(path).unwrap(), b"prior output");
+    }
+
+    #[test]
+    fn pdf_write_failure_has_exact_details_preserves_output_work_and_history() {
+        let ctx = egui::Context::default();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("Existing output.pdf");
+        std::fs::create_dir(&path).unwrap();
+        let sentinel = path.join("keep.txt");
+        std::fs::write(&sentinel, b"existing output contents").unwrap();
+        let raw = wireframe::storage::write_atomic(&path, b"not published").unwrap_err();
+        app.editor.add(Kind::Label, 20., 30.);
+        let edited = app.editor.document.clone();
+        app.editor.undo();
+        let baseline = app.editor.document.clone();
+        let redo = app.editor.redo_name().map(str::to_owned);
+        app.pdf_job = Some(
+            pdf::ExportJob::start(
+                app.editor.document.clone(),
+                pdf::Options::default(),
+                path.clone(),
+            )
+            .unwrap(),
+        );
+        app.request(Pending::Quit, &ctx);
+        assert!(app.quit_after_pdf);
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        while !app.pdf_job.as_ref().unwrap().is_finished() {
+            assert!(std::time::Instant::now() < deadline);
+            std::thread::sleep(Duration::from_millis(2));
+        }
+        app.poll_pdf_export(&ctx);
+        let error = app.error.as_deref().unwrap();
+        let (primary, details) = error.split_once("\n\nDetails: ").unwrap();
+        assert!(primary.contains("Couldn't save the PDF"));
+        assert!(primary.contains("Choose a different folder"));
+        assert_eq!(details, raw);
+        assert_eq!(app.status, "PDF export failed");
+        assert!(!app.quit_after_pdf && !app.quit_allowed && app.pending.is_none());
+        assert_eq!(app.editor.document, baseline);
+        assert_eq!(app.editor.redo_name(), redo.as_deref());
+        app.editor.redo();
+        assert_eq!(app.editor.document, edited);
+        assert!(path.is_dir());
+        assert_eq!(
+            std::fs::read(sentinel).unwrap(),
+            b"existing output contents"
+        );
     }
 }

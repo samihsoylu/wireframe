@@ -47,16 +47,39 @@ impl Decoded {
             .id()
     }
 }
-fn reader(bytes: &[u8]) -> Result<ImageReader<Cursor<&[u8]>>, String> {
-    if bytes.len() > MAX_BYTES {
-        return Err("This image exceeds the 32 MB limit".into());
+// Keep actionable import constraints distinct from codec/IO diagnostics without
+// exposing a new error type or changing the backend's String-returning API.
+enum ReadFailure {
+    Guidance(&'static str),
+    Diagnostic(String),
+}
+impl ReadFailure {
+    fn diagnostic(self) -> String {
+        match self {
+            Self::Guidance(message) => message.into(),
+            Self::Diagnostic(message) => message,
+        }
     }
-    let format = image::guess_format(bytes).map_err(|_| "Choose a PNG, JPEG or GIF image")?;
+    fn local_import_message(self) -> String {
+        match self {
+            Self::Guidance(message) => message.into(),
+            Self::Diagnostic(error) => format!(
+                "Couldn't import this image. Check that you can open the file, then try again or choose another image.\n\nDetails: {error}"
+            ),
+        }
+    }
+}
+fn reader(bytes: &[u8]) -> Result<ImageReader<Cursor<&[u8]>>, ReadFailure> {
+    if bytes.len() > MAX_BYTES {
+        return Err(ReadFailure::Guidance("This image exceeds the 32 MB limit"));
+    }
+    let format = image::guess_format(bytes)
+        .map_err(|_| ReadFailure::Guidance("Choose a PNG, JPEG or GIF image"))?;
     if !matches!(
         format,
         ImageFormat::Png | ImageFormat::Jpeg | ImageFormat::Gif
     ) {
-        return Err("Choose a PNG, JPEG or GIF image".into());
+        return Err(ReadFailure::Guidance("Choose a PNG, JPEG or GIF image"));
     }
     let mut reader = ImageReader::with_format(Cursor::new(bytes), format);
     let mut limits = image::Limits::default();
@@ -67,19 +90,27 @@ fn reader(bytes: &[u8]) -> Result<ImageReader<Cursor<&[u8]>>, String> {
     Ok(reader)
 }
 pub fn dimensions(bytes: &[u8]) -> Result<(u32, u32), String> {
+    image_dimensions(bytes).map_err(ReadFailure::diagnostic)
+}
+fn image_dimensions(bytes: &[u8]) -> Result<(u32, u32), ReadFailure> {
     let (w, h) = reader(bytes)?
         .into_dimensions()
-        .map_err(|e| format!("Cannot read image: {e}"))?;
+        .map_err(|e| ReadFailure::Diagnostic(format!("Cannot read image: {e}")))?;
     if w == 0 || h == 0 || u64::from(w) * u64::from(h) > MAX_PIXELS {
-        return Err("This image exceeds the 64 megapixel decoding limit".into());
+        return Err(ReadFailure::Guidance(
+            "This image exceeds the 64 megapixel decoding limit",
+        ));
     }
     Ok((w, h))
 }
 fn decode(bytes: &[u8]) -> Result<DynamicImage, String> {
-    dimensions(bytes)?;
+    decode_image(bytes).map_err(ReadFailure::diagnostic)
+}
+fn decode_image(bytes: &[u8]) -> Result<DynamicImage, ReadFailure> {
+    image_dimensions(bytes)?;
     reader(bytes)?
         .decode()
-        .map_err(|e| format!("Cannot decode image: {e}"))
+        .map_err(|e| ReadFailure::Diagnostic(format!("Cannot decode image: {e}")))
 }
 fn png(image: &DynamicImage) -> Result<Vec<u8>, String> {
     let mut out = Cursor::new(Vec::new());
@@ -155,15 +186,18 @@ impl Prepared {
     pub fn read(path: &Path) -> Result<Self, String> {
         let mut bytes = Vec::new();
         std::fs::File::open(path)
-            .map_err(|e| e.to_string())?
+            .map_err(|e| ReadFailure::Diagnostic(e.to_string()).local_import_message())?
             .take(MAX_BYTES as u64 + 1)
             .read_to_end(&mut bytes)
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| ReadFailure::Diagnostic(e.to_string()).local_import_message())?;
         let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("Image");
-        Self::from_bytes(name, &bytes)
+        Self::prepare(name, &bytes).map_err(ReadFailure::local_import_message)
     }
     pub fn from_bytes(name: &str, bytes: &[u8]) -> Result<Self, String> {
-        let mut decoded = decode(bytes)?;
+        Self::prepare(name, bytes).map_err(ReadFailure::diagnostic)
+    }
+    fn prepare(name: &str, bytes: &[u8]) -> Result<Self, ReadFailure> {
+        let mut decoded = decode_image(bytes)?;
         let (w, h) = (decoded.width(), decoded.height());
         if f64::from(w) * f64::from(h) > IMPORT_PIXELS {
             let ratio = f64::from(w) / f64::from(h);
@@ -172,14 +206,15 @@ impl Prepared {
             decoded = decoded.resize_exact(width, height, image::imageops::FilterType::Lanczos3);
         }
         let alpha = decoded.to_rgba8().pixels().any(|p| p[3] < 255);
-        let format = image::guess_format(bytes).map_err(|e| e.to_string())?;
+        let format =
+            image::guess_format(bytes).map_err(|e| ReadFailure::Diagnostic(e.to_string()))?;
         let resized = (decoded.width(), decoded.height()) != (w, h);
         let (bytes, media_type) = if alpha {
             (
                 if format == ImageFormat::Png && !resized {
                     bytes.to_vec()
                 } else {
-                    png(&decoded)?
+                    png(&decoded).map_err(ReadFailure::Diagnostic)?
                 },
                 "image/png",
             )
@@ -189,7 +224,7 @@ impl Prepared {
             let mut encoded = Vec::new();
             image::codecs::jpeg::JpegEncoder::new_with_quality(&mut encoded, 92)
                 .encode_image(&decoded.to_rgb8())
-                .map_err(|e| e.to_string())?;
+                .map_err(|e| ReadFailure::Diagnostic(e.to_string()))?;
             (encoded, "image/jpeg")
         };
         let name = name
@@ -202,5 +237,55 @@ impl Prepared {
             media_type: media_type.into(),
             bytes,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn local_import_keeps_actionable_format_size_and_pixel_limit_messages() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("Unsupported.png");
+        std::fs::write(&path, b"not an image").unwrap();
+        assert_eq!(
+            Prepared::read(&path).unwrap_err(),
+            "Choose a PNG, JPEG or GIF image"
+        );
+
+        let path = dir.path().join("Oversized.png");
+        std::fs::File::create(&path)
+            .unwrap()
+            .set_len(MAX_BYTES as u64 + 1)
+            .unwrap();
+        assert_eq!(
+            Prepared::read(&path).unwrap_err(),
+            "This image exceeds the 32 MB limit"
+        );
+
+        // Header-only payload: dimensions are checked before any large decode.
+        let mut bytes = Vec::new();
+        {
+            let mut encoder = png::Encoder::new(&mut bytes, 10000, 7000);
+            encoder.set_color(png::ColorType::Grayscale);
+            let mut writer = encoder.write_header().unwrap();
+            writer
+                .write_chunk(
+                    png::chunk::IDAT,
+                    &[0x78, 0x9c, 0x03, 0x00, 0x00, 0x00, 0x00, 0x01],
+                )
+                .unwrap();
+        }
+        assert_eq!(
+            dimensions(&bytes).unwrap_err(),
+            "This image exceeds the 64 megapixel decoding limit"
+        );
+        let path = dir.path().join("Too many pixels.png");
+        std::fs::write(&path, bytes).unwrap();
+        assert_eq!(
+            Prepared::read(&path).unwrap_err(),
+            "This image exceeds the 64 megapixel decoding limit"
+        );
     }
 }

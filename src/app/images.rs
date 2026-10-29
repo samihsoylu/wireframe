@@ -294,23 +294,26 @@ impl WireframeApp {
                 .add_filter("Images", &["png", "jpg", "jpeg", "gif"])
                 .pick_file()
         }) {
-            match Prepared::read(&path) {
-                Ok(image) => {
-                    let conflict = self
-                        .editor
-                        .image_conflict(&image)
-                        .and_then(|id| self.editor.document.live_asset(id));
-                    if conflict.is_some_and(|a| a.bytes != image.bytes) {
-                        self.image_import = Some((target, image));
-                    } else if let Err(e) =
-                        self.editor
-                            .import_image_at(target, image, ImportChoice::UseExisting)
-                    {
-                        self.error = Some(e);
-                    }
+            self.import_image_file(target, &path);
+        }
+    }
+    fn import_image_file(&mut self, target: ImageImportTarget, path: &std::path::Path) {
+        match Prepared::read(path) {
+            Ok(image) => {
+                let conflict = self
+                    .editor
+                    .image_conflict(&image)
+                    .and_then(|id| self.editor.document.live_asset(id));
+                if conflict.is_some_and(|a| a.bytes != image.bytes) {
+                    self.image_import = Some((target, image));
+                } else if let Err(e) =
+                    self.editor
+                        .import_image_at(target, image, ImportChoice::UseExisting)
+                {
+                    self.error = Some(e);
                 }
-                Err(e) => self.error = Some(e),
             }
+            Err(e) => self.error = Some(e),
         }
     }
     pub(super) fn image_import_dialog(&mut self, ctx: &egui::Context) {
@@ -387,6 +390,66 @@ mod tests {
             )
             .unwrap();
         app
+    }
+    #[test]
+    fn unreadable_and_corrupt_local_images_preserve_work_and_actual_redo() {
+        let dir = tempfile::tempdir().unwrap();
+        let missing = dir.path().join("Missing.png");
+        let corrupt = dir.path().join("Broken.png");
+        // A recognized PNG signature with an incomplete body exercises codec
+        // diagnostics rather than the actionable unsupported-format branch.
+        let broken = b"\x89PNG\r\n\x1a\n";
+        std::fs::write(&corrupt, broken).unwrap();
+        for path in [&missing, &corrupt] {
+            let raw = if path == &missing {
+                std::fs::read(path).unwrap_err().to_string()
+            } else {
+                Prepared::from_bytes("Broken.png", broken).unwrap_err()
+            };
+            let ctx = egui::Context::default();
+            let mut app = app(&ctx);
+            app.editor.move_by(20., 0.);
+            let moved = app.editor.document.clone();
+            app.editor.undo();
+            let before = app.editor.document.clone();
+            let redo = app.editor.redo_name().map(str::to_owned);
+            app.import_image_file(ImageTarget::Control(2).into(), path);
+            let error = app.error.as_deref().unwrap();
+            let (primary, details) = error.split_once("\n\nDetails: ").unwrap();
+            assert!(primary.contains("Couldn't import this image"));
+            assert!(primary.contains("choose another image"));
+            assert_eq!(details, raw);
+            assert_eq!(app.editor.document, before);
+            assert_eq!(app.editor.redo_name(), redo.as_deref());
+            assert!(app.image_import.is_none());
+            app.editor.redo();
+            assert_eq!(app.editor.document, moved);
+        }
+        assert_eq!(std::fs::read(corrupt).unwrap(), broken);
+        assert!(!missing.exists());
+    }
+    #[test]
+    fn valid_local_image_file_still_imports_as_one_reversible_action() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("Local new image.png");
+        let image = picture(140);
+        std::fs::write(&path, &image.bytes).unwrap();
+        let ctx = egui::Context::default();
+        let mut app = app(&ctx);
+        let before = app.editor.document.clone();
+        app.import_image_file(ImageTarget::Control(2).into(), &path);
+        assert!(app.error.is_none() && app.image_import.is_none());
+        assert_eq!(app.editor.document.assets.len(), before.assets.len() + 1);
+        assert_eq!(
+            app.editor.document.assets.last().unwrap().bytes,
+            image.bytes
+        );
+        assert_eq!(app.editor.undo_name(), Some("Import image"));
+        let after = app.editor.document.clone();
+        app.editor.undo();
+        assert_eq!(app.editor.document, before);
+        app.editor.redo();
+        assert_eq!(app.editor.document, after);
     }
     fn frame(
         app: &mut WireframeApp,

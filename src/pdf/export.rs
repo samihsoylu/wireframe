@@ -14,7 +14,11 @@ impl ExportJob {
             .spawn(move || {
                 let pages = super::plan(&project, &options)?;
                 let bytes = super::encode(&project.title, &pages)?;
-                crate::storage::write_atomic(&path, &bytes)?;
+                crate::storage::write_atomic(&path, &bytes).map_err(|error| {
+                    format!(
+                        "Couldn't save the PDF. Choose a different folder and try exporting again. If it still fails, check your available disk space.\n\nDetails: {error}"
+                    )
+                })?;
                 Ok(path)
             })
             .map_err(|e| format!("Cannot start PDF export: {e}"))?;
@@ -27,5 +31,18 @@ impl ExportJob {
         self.handle
             .join()
             .map_err(|_| "PDF export stopped unexpectedly".to_owned())?
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn interrupted_pdf_job_remains_distinct_from_destination_write_failure() {
+        let job = ExportJob {
+            handle: std::thread::spawn(|| panic!("injected export interruption")),
+        };
+        assert_eq!(job.finish().unwrap_err(), "PDF export stopped unexpectedly");
     }
 }

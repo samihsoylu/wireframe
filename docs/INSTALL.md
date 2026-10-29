@@ -1,6 +1,6 @@
 # Install Wireframe
 
-[0.1.0 Beta 2](https://github.com/samihsoylu/wireframe/releases/tag/v0.1.0-beta.2) provides an Apple Silicon Mac DMG and a portable Windows x86-64 EXE. The Windows build is **untested**. Intel Mac and Linux packages are not included in this beta.
+[0.1.0 Beta 3](https://github.com/samihsoylu/wireframe/releases/tag/v0.1.0-beta.3) provides an Apple Silicon Mac DMG and a portable Windows x86-64 EXE. The Windows build is **untested**. Intel Mac and Linux packages are not included in this beta.
 
 ## Mac
 
@@ -18,7 +18,7 @@ Download the x86-64 `.exe` listed in the release. Save it in a permanent folder 
 
 ## Linux
 
-No Linux package is published with Beta 2. To build from source, follow [development instructions](DEVELOPMENT.md). Future `.tar.gz` packages can be extracted and run from their application folder.
+No Linux package is published with Beta 3. To build from source, follow [development instructions](DEVELOPMENT.md). Future `.tar.gz` packages can be extracted and run from their application folder.
 
 The currently exercised environment is Debian 12 on ARM64 with X11. Runtime requirements include an OpenGL driver, XKB support and a running desktop portal with its desktop-specific backend for file dialogs. On Debian/Ubuntu, X11 also needs `libxkbcommon-x11-0`. Other distributions, Wayland and x86-64 need their own validation before being listed as supported.
 

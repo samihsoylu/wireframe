@@ -4,10 +4,14 @@ use super::*;
 use std::collections::BTreeSet;
 use wireframe::presentation::{PageExtent, Preferences, Session, Settings, centered_view};
 
+const SAVE_FAILURE_NOTICE: &str =
+    "Couldn't save presentation settings. Your choices still work for this session.";
+
 #[derive(Default)]
 pub(crate) struct State {
     pub session: Session,
     pub preferences: Preferences,
+    save_error: Option<String>,
     pub settings_open: bool,
     pub exclusions: Option<BTreeSet<Id>>,
     pub(super) thumbnails: bool,
@@ -43,14 +47,29 @@ impl WireframeApp {
         self.presentation_view.hints = hints::Hints::default();
     }
     pub(in crate::app) fn remember_presentation(&mut self) {
-        if let Some(key) = &self.presentation_view.key
-            && let Err(error) = self
+        if let Some(key) = &self.presentation_view.key {
+            self.presentation_view.save_error = self
                 .presentation_view
                 .preferences
                 .remember(key, self.presentation_view.session.settings())
-        {
-            self.status = format!("Presentation settings are retained for this session: {error}");
+                .err();
         }
+    }
+    pub(in crate::app) fn presentation_save_status(&self) -> Option<&'static str> {
+        self.presentation_view.save_error.as_ref().map(
+            |_| "Couldn't save presentation settings. Your choices still work for this session.",
+        )
+    }
+    fn presentation_save_notice(&self, ui: &mut egui::Ui) {
+        let Some(error) = &self.presentation_view.save_error else {
+            return;
+        };
+        ui.label(SAVE_FAILURE_NOTICE);
+        ui.collapsing("Details", |ui| {
+            egui::ScrollArea::vertical().max_height(84.).show(ui, |ui| {
+                ui.add(egui::Label::new(error).wrap());
+            });
+        });
     }
     pub(in crate::app) fn presentation_toolbar(&mut self, ui: &mut egui::Ui) {
         if self.presentation_view.fullscreen_prior.is_none() {
@@ -58,6 +77,15 @@ impl WireframeApp {
                 Some(ui.input(|i| i.viewport().fullscreen.unwrap_or(false)));
             ui.ctx()
                 .send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
+        }
+        if !self.presentation_view.settings_open && self.presentation_view.save_error.is_some() {
+            egui::Panel::bottom("presentation-save-notice")
+                .frame(
+                    egui::Frame::NONE
+                        .fill(chrome::PANEL)
+                        .inner_margin(egui::Margin::symmetric(12, 8)),
+                )
+                .show(ui, |ui| self.presentation_save_notice(ui));
         }
         let settings = self.presentation_view.session.settings().clone();
         if settings.navigator {
@@ -296,7 +324,12 @@ impl WireframeApp {
                         Some(self.presentation_view.session.settings().excluded.clone());
                 }
             });
-            ui.add_space(65.);
+            if self.presentation_view.save_error.is_some() {
+                ui.add_space(12.);
+                self.presentation_save_notice(ui);
+            } else {
+                ui.add_space(65.);
+            }
             ui.separator();
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if ui.button("Close Settings").clicked() {
@@ -311,6 +344,7 @@ impl WireframeApp {
         egui::Modal::new(egui::Id::new("presentation-centering")).show(ctx, |ui| {
             ui.set_width(460.);
             ui.heading("Project Centering Rules");
+            self.presentation_save_notice(ui);
             ui.label(
                 "Included pages share a common canvas size. Excluded pages center individually.",
             );

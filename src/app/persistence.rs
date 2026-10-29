@@ -250,6 +250,8 @@ impl WireframeApp {
     pub(super) fn status_text(&self) -> &str {
         if self.persistence.as_ref().is_some_and(|p| p.failed) {
             SAVING_STOPPED_STATUS
+        } else if let Some(status) = self.presentation_save_status() {
+            status
         } else {
             &self.status
         }

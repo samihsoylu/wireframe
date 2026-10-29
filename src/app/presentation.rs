@@ -288,3 +288,6 @@ impl WireframeApp {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod feedback_tests;

@@ -1015,3 +1015,112 @@ fn save_focus_click(ctx: &egui::Context, app: &mut WireframeApp, label: &str) {
         .drop_without_applying_deltas();
     }
 }
+
+#[test]
+fn preference_feedback_preserves_document_stopped_priority_with_both_real_failures() {
+    let (dir, ctx, mut app) = fixture();
+    app.set_save_mode(false);
+    app.editor.add(Kind::Button, 10., 20.);
+    let path = dir.path().join("Already-saved.wireframe");
+    ProjectStore.save(&path, &app.editor.document).unwrap();
+    let saved = std::fs::read(&path).unwrap();
+    app.file = Some(path.clone());
+    app.editor.mark_saved();
+    // Reuse the existing controlled actor-disconnect setup. It is not an OS crash.
+    let gate = SaveFocusGate(Arc::new((Mutex::new(false), Condvar::new())));
+    let wait = gate.0.clone();
+    let p = app.persistence.as_mut().unwrap();
+    let copy = p.copies.open_named(&path).unwrap();
+    p.id = Some(copy.id().to_owned());
+    p.session = Some(
+        ProjectSession::start(
+            p.copies.clone(),
+            copy,
+            false,
+            Arc::new(move || {
+                let mut released = wait.0.lock().unwrap();
+                while !*released {
+                    released = wait.1.wait(released).unwrap();
+                }
+                drop(released);
+                panic!("test-only document actor disconnect for preference priority");
+            }),
+        )
+        .unwrap(),
+    );
+    app.start_presentation();
+    app.remember_presentation();
+    let prefs = dir.path().join("presentation-settings.json");
+    std::fs::rename(&prefs, dir.path().join("preferences-baseline.json")).unwrap();
+    std::fs::create_dir(&prefs).unwrap();
+    app.presentation_view
+        .session
+        .toggle(wireframe::presentation::Aid::BigCursor);
+    app.remember_presentation(); // A real independent preference persist failure.
+    assert_eq!(
+        app.status_text(),
+        "Couldn't save presentation settings. Your choices still work for this session."
+    );
+    gate.release();
+    let deadline = Instant::now() + Duration::from_secs(12);
+    while app.status_text() != "Saving stopped · keep this document open" {
+        app.poll_saves(&ctx);
+        assert!(
+            Instant::now() < deadline,
+            "document actor did not disconnect"
+        );
+        std::thread::yield_now();
+    }
+    assert_local_save_stopped(&app);
+    let document = app.editor.document.clone();
+    app.error = None; // Existing acknowledgement does not clear either persistence state.
+    app.present = false;
+    ctx.enable_accesskit();
+    let mut labels = vec![];
+    for _ in 0..3 {
+        let output = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(920., 620.),
+                )),
+                ..Default::default()
+            },
+            |ui| {
+                app.toolbar(ui);
+                app.remember_presentation();
+            },
+        );
+        labels = output
+            .platform_output
+            .accesskit_update
+            .as_ref()
+            .unwrap()
+            .nodes
+            .iter()
+            .filter_map(|(_, n)| n.label().or_else(|| n.value()).map(str::to_owned))
+            .collect::<Vec<_>>();
+        output.drop_without_applying_deltas();
+    }
+    assert!(
+        labels
+            .iter()
+            .any(|s| s == "Saving stopped · keep this document open"),
+        "Toolbar tree: {labels:?}"
+    );
+    assert!(
+        !labels
+            .iter()
+            .any(|s| s.starts_with("Couldn't save presentation settings."))
+    );
+    assert_eq!(std::fs::read(&path).unwrap(), saved);
+    assert_eq!(app.editor.document, document);
+    std::fs::remove_dir(&prefs).unwrap();
+    app.remember_presentation(); // Successful preference receipt must not dismiss stopped document saving.
+    assert_eq!(
+        app.status_text(),
+        "Saving stopped · keep this document open"
+    );
+    assert!(app.persistence.as_ref().unwrap().failed);
+    app.on_exit(None);
+}

@@ -166,17 +166,7 @@ impl WireframeApp {
                 format!("Move {} items to Trash", targets.len())
             };
             if ui.button(trash).clicked() {
-                if single {
-                    self.move_page_to_trash(page);
-                } else {
-                    self.end_pointer_gestures();
-                    match self.editor.trash_pages(&targets) {
-                        Ok(()) => {
-                            self.status = format!("{} wireframes moved to Trash", targets.len())
-                        }
-                        Err(error) => self.error = Some(error),
-                    }
-                }
+                self.move_pages_to_trash(&targets);
                 ui.close();
             }
         });

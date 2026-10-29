@@ -316,6 +316,9 @@ impl WireframeApp {
 }
 
 #[cfg(test)]
+mod retention_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 

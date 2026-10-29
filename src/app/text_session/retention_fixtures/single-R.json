@@ -1,0 +1,144 @@
+{
+  "reviews": {},
+  "asset_imports": {},
+  "page_imports": {},
+  "removed_pages": [],
+  "removed_assets": [],
+  "libraries": [],
+  "default_library": null,
+  "versions": [],
+  "format_version": 15,
+  "title": "R11 actual Redo payload",
+  "next_id": 20,
+  "settings": {
+    "sketch": false,
+    "font_size": 13,
+    "palette": {
+      "selection": [
+        149,
+        188,
+        242
+      ],
+      "link": [
+        8,
+        83,
+        148
+      ]
+    }
+  },
+  "pages": [
+    {
+      "id": 1,
+      "trashed": false,
+      "name": "Draft page",
+      "notes": "Draft page notes stay exact",
+      "parent": null,
+      "content": {
+        "nodes": [
+          {
+            "id": 10,
+            "origin": {
+              "x": 180,
+              "y": 80
+            },
+            "locked": false,
+            "markup": false,
+            "crop": null,
+            "properties": {
+              "text": {
+                "type": "text",
+                "value": "Original paragraph"
+              }
+            },
+            "content": {
+              "type": "control",
+              "kind": "paragraph",
+              "size": {
+                "width": {
+                  "fixed": 220
+                },
+                "height": {
+                  "fixed": 80
+                }
+              }
+            }
+          },
+          {
+            "id": 11,
+            "origin": {
+              "x": 440,
+              "y": 480
+            },
+            "locked": false,
+            "markup": false,
+            "crop": null,
+            "properties": {
+              "text": {
+                "type": "text",
+                "value": "Local sentinel"
+              }
+            },
+            "content": {
+              "type": "control",
+              "kind": "label",
+              "size": {
+                "width": {
+                  "fixed": 120
+                },
+                "height": {
+                  "fixed": 28
+                }
+              }
+            }
+          }
+        ],
+        "paint_order": []
+      },
+      "alternates": []
+    },
+    {
+      "id": 3,
+      "trashed": false,
+      "name": "Sentinel page",
+      "notes": "Unrelated page notes stay exact",
+      "parent": null,
+      "content": {
+        "nodes": [
+          {
+            "id": 12,
+            "origin": {
+              "x": 60,
+              "y": 70
+            },
+            "locked": false,
+            "markup": false,
+            "crop": null,
+            "properties": {
+              "text": {
+                "type": "text",
+                "value": "Unrelated sentinel"
+              }
+            },
+            "content": {
+              "type": "control",
+              "kind": "label",
+              "size": {
+                "width": {
+                  "fixed": 180
+                },
+                "height": {
+                  "fixed": 28
+                }
+              }
+            }
+          }
+        ],
+        "paint_order": []
+      },
+      "alternates": []
+    }
+  ],
+  "definitions": [],
+  "assets": [],
+  "font": null
+}

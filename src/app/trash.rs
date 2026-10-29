@@ -54,10 +54,22 @@ impl WireframeApp {
         }
     }
 
-    pub(super) fn move_page_to_trash(&mut self, page: Id) {
+    pub(super) fn move_pages_to_trash(&mut self, pages: &[Id]) {
+        // Ordinary outside-pointer acceptance runs before page widgets. If a
+        // different activation leaves text provisional, do not invalidate it.
+        if self.text_edit.is_some() {
+            self.status = "Finish editing text, then try moving to Trash again.".into();
+            return;
+        }
         self.end_pointer_gestures();
-        match self.editor.trash_pages(&[page]) {
-            Ok(()) => self.status = "Wireframe moved to Trash".into(),
+        match self.editor.trash_pages(pages) {
+            Ok(()) => {
+                self.status = if pages.len() == 1 {
+                    "Wireframe moved to Trash".into()
+                } else {
+                    format!("{} wireframes moved to Trash", pages.len())
+                };
+            }
             Err(error) => self.error = Some(error),
         }
     }

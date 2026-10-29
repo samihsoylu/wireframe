@@ -3,6 +3,8 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod app;
+#[cfg(any(target_os = "linux", test))]
+mod startup_window;
 use eframe::egui;
 fn main() -> eframe::Result {
     let icon = image::load_from_memory(include_bytes!("../assets/app-icon/wireframe-256.png"))
@@ -24,6 +26,10 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "Wireframe",
         options,
-        Box::new(|cc| Ok(Box::new(app::WireframeApp::new(cc)))),
+        Box::new(|cc| {
+            #[cfg(target_os = "linux")]
+            startup_window::configure(cc);
+            Ok(Box::new(app::WireframeApp::new(cc)))
+        }),
     )
 }

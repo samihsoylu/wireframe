@@ -20,7 +20,7 @@ pub use validation::{MAX_DEPTH, MAX_NODES};
 pub type Id = u64;
 pub type NodePath = Vec<Id>;
 pub type Properties = BTreeMap<String, Value>;
-pub const FORMAT_VERSION: u32 = 15;
+pub const FORMAT_VERSION: u32 = 16;
 /// Internal marker on disposable resolved placeholders; canonical instances retain their data.
 pub const MISSING_COMPONENT: &str = "_missing_component";
 pub const EMPTY_COMPONENT: &str = "_empty_component";
@@ -329,8 +329,34 @@ pub struct Definition {
     pub name: String,
     pub content: Content,
 }
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ImageAttribution {
+    pub title: String,
+    pub creator: String,
+    pub license: String,
+    pub license_url: String,
+    pub source_url: String,
+}
+impl ImageAttribution {
+    pub fn credit(&self) -> String {
+        format!(
+            "{} — {}\n{} {}\n{}\nImage may be resized or styled in this project.",
+            self.title,
+            if self.creator.is_empty() {
+                "See source for creator"
+            } else {
+                &self.creator
+            },
+            self.license,
+            self.license_url,
+            self.source_url
+        )
+    }
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Asset {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attribution: Option<ImageAttribution>,
     pub id: Id,
     /// Retain the bytes and identity while excluding this asset from live lookup.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]

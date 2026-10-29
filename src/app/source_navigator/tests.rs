@@ -474,6 +474,7 @@ fn rejected_large_clipboard_keeps_cut_controls_and_history() {
     project.font = None;
     project.next_id = 1000;
     project.assets.push(Asset {
+        attribution: None,
         trashed: false,
         id: 900,
         name: "Large icon".into(),

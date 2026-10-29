@@ -25,6 +25,7 @@ fn fixture() -> (Editor, Id) {
     e.insert_component(definition, 250., 60.).unwrap();
     let asset = e.document.allocate_id().unwrap();
     e.document.assets.push(Asset {
+        attribution: None,
         trashed: false,
         id: asset, name: "Badge".into(), media_type: "image/svg+xml".into(),
         bytes: br#"<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" fill="red"/></svg>"#.to_vec(),

@@ -211,3 +211,93 @@ fn stale_project_or_surface_drops_pending_preview_without_mutation() {
         assert!(app.error.as_ref().unwrap().contains("changed"));
     }
 }
+#[test]
+fn cancelled_search_cannot_deliver_late_results_or_change_redo() {
+    let ctx = egui::Context::default();
+    ctx.enable_accesskit();
+    let mut app = fixture(&ctx);
+    app.editor
+        .import_web_image(vec![2], preview(30).image, ImportChoice::KeepBoth, false)
+        .unwrap();
+    app.editor.undo();
+    let before = app.editor.document.clone();
+    let redo = app.editor.redo_name().map(str::to_owned);
+    app.start_image_search(vec![2]);
+    let (sender, receiver) = mpsc::channel();
+    let review = app.web_image.as_mut().unwrap();
+    let cancelled = review.search_cancel.clone();
+    review.search_receiver = Some(receiver);
+    frame(&mut app, &ctx, vec![]);
+    frame(&mut app, &ctx, vec![key(Key::Escape)]);
+    assert!(app.web_image.is_none());
+    assert!(cancelled.load(Ordering::Relaxed));
+    assert!(
+        sender
+            .send(Ok(Results {
+                hits: vec![],
+                next: None
+            }))
+            .is_err()
+    );
+    assert_eq!(app.editor.document, before);
+    assert_eq!(app.editor.redo_name(), redo.as_deref());
+}
+#[test]
+fn search_preview_credit_load_save_and_history_are_one_atomic_change() {
+    let ctx = egui::Context::default();
+    ctx.enable_accesskit();
+    let mut app = fixture(&ctx);
+    let before = app.editor.document.clone();
+    app.start_image_search(vec![2, 3]);
+    let credit = ImageAttribution {
+        title: "Canal.jpg".into(),
+        creator: "Example creator".into(),
+        license: "CC BY 4.0".into(),
+        license_url: "https://creativecommons.org/licenses/by/4.0/".into(),
+        source_url: "https://commons.wikimedia.org/wiki/File:Canal.jpg".into(),
+    };
+    let (sender, receiver) = mpsc::channel();
+    let review = app.web_image.as_mut().unwrap();
+    review.attribution = Some(credit.clone());
+    review.receiver = Some(receiver);
+    sender.send(Ok(preview(40))).unwrap();
+    frame(&mut app, &ctx, vec![]);
+    assert_eq!(app.editor.document, before);
+    click(&mut app, &ctx, "Copy image credit");
+    assert_eq!(app.editor.document, before);
+    click(&mut app, &ctx, "Load");
+    let after = app.editor.document.clone();
+    assert_eq!(after.assets[0].attribution, Some(credit));
+    assert_eq!(
+        wireframe::document::decode(&after.encode().unwrap()).unwrap(),
+        after
+    );
+    assert_eq!(app.editor.undo_name(), Some("Import image"));
+    app.editor.undo();
+    assert_eq!(app.editor.document, before);
+    app.editor.redo();
+    assert_eq!(app.editor.document, after);
+}
+#[test]
+fn returning_to_address_mode_discards_search_download_and_credit() {
+    let ctx = egui::Context::default();
+    ctx.enable_accesskit();
+    let mut app = fixture(&ctx);
+    let before = app.editor.document.clone();
+    app.start_image_search(vec![2]);
+    let review = app.web_image.as_mut().unwrap();
+    let (sender, receiver) = mpsc::channel();
+    review.receiver = Some(receiver);
+    let cancel = review.cancel.clone();
+    let _ = frame(&mut app, &ctx, vec![]);
+    // Selectable tabs expose a button role through egui AccessKit.
+    click(&mut app, &ctx, "Image address");
+    let review = app.web_image.as_ref().unwrap();
+    assert!(!review.search_mode);
+    assert!(review.receiver.is_none());
+    assert!(review.preview.is_none());
+    assert!(review.attribution.is_none());
+    assert!(cancel.load(Ordering::Relaxed));
+    assert!(sender.send(Ok(preview(80))).is_err());
+    assert_eq!(app.editor.document, before);
+}

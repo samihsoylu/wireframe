@@ -29,6 +29,7 @@ fn image_project() -> Project {
     node.properties.insert("image".into(), Value::Asset(3));
     project.pages[0].content.nodes.push(node);
     project.assets.push(Asset {
+        attribution: None,
         id: 3,
         trashed: false,
         name: "Photo".into(),

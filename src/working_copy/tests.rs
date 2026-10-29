@@ -1040,6 +1040,7 @@ fn asset_retention_migration_preserves_old_clean_and_dirty_recovery_baselines() 
         old.format_version = 14;
         old.next_id = 11;
         old.assets.push(document::Asset {
+            attribution: None,
             id: 10,
             trashed: false,
             name: "Photo".into(),

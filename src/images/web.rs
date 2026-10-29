@@ -38,12 +38,55 @@ fn fetch_with_timeout(
     cancel: &AtomicBool,
     timeout: Duration,
 ) -> Result<Preview, String> {
+    let (name, bytes) = download(address, cancel, timeout, MAX_BYTES, false)?;
+    let image = Prepared::from_bytes(&name, &bytes)?;
+    let original = decoded_styled(&image.bytes, 0, false)?;
+    cancelled(cancel)?;
+    let sketch = decoded_styled(&image.bytes, 0, true)?;
+    cancelled(cancel)?;
+    Ok(Preview {
+        image,
+        original,
+        sketch,
+    })
+}
+/// Search-result thumbnails have tighter time, byte and decoded-pixel limits.
+pub(crate) fn thumbnail(address: &str, cancel: &AtomicBool) -> Result<Decoded, String> {
+    let (_, bytes) = download(
+        address,
+        cancel,
+        Duration::from_secs(8),
+        2 * 1024 * 1024,
+        true,
+    )?;
+    decode_thumbnail(&bytes, cancel)
+}
+fn decode_thumbnail(bytes: &[u8], cancel: &AtomicBool) -> Result<Decoded, String> {
+    let (width, height) = super::dimensions(bytes)?;
+    if u64::from(width) * u64::from(height) > 2 * 1024 * 1024 {
+        return Err("Search thumbnail is too large".into());
+    }
+    cancelled(cancel)?;
+    super::decoded(bytes)
+}
+fn download(
+    address: &str,
+    cancel: &AtomicBool,
+    timeout: Duration,
+    limit: usize,
+    commons_only: bool,
+) -> Result<(String, Vec<u8>), String> {
     let mut url = Url::parse(address.trim()).map_err(|_| "Enter an HTTP or HTTPS image address")?;
     validate(&url)?;
     url.set_fragment(None);
     let start = Instant::now();
     for redirect in 0..=5 {
         cancelled(cancel)?;
+        if commons_only
+            && (url.scheme() != "https" || url.host_str() != Some("upload.wikimedia.org"))
+        {
+            return Err("The search thumbnail has an unsupported address".into());
+        }
         let remaining = timeout
             .checked_sub(start.elapsed())
             .filter(|d| !d.is_zero())
@@ -56,6 +99,14 @@ fn fetch_with_timeout(
             .into();
         let mut response = agent
             .get(url.as_str())
+            .header(
+                "User-Agent",
+                concat!(
+                    "Wireframe/",
+                    env!("CARGO_PKG_VERSION"),
+                    " (https://github.com/samihsoylu/wireframe)"
+                ),
+            )
             .header("Accept", "image/png,image/jpeg,image/gif")
             .call()
             .map_err(|_| "Cannot download the image. Check the address and your connection.")?;
@@ -91,9 +142,12 @@ fn fetch_with_timeout(
             .get("content-length")
             .and_then(|v| v.to_str().ok())
             .and_then(|v| v.parse::<u64>().ok())
-            .is_some_and(|n| n > MAX_BYTES as u64)
+            .is_some_and(|n| n > limit as u64)
         {
-            return Err("This image exceeds the 32 MB limit".into());
+            return Err(format!(
+                "This image exceeds the {} MB limit",
+                limit / (1024 * 1024)
+            ));
         }
         let mut reader = response.body_mut().as_reader();
         let mut bytes = Vec::new();
@@ -106,8 +160,11 @@ fn fetch_with_timeout(
             if count == 0 {
                 break;
             }
-            if bytes.len() + count > MAX_BYTES {
-                return Err("This image exceeds the 32 MB limit".into());
+            if bytes.len() + count > limit {
+                return Err(format!(
+                    "This image exceeds the {} MB limit",
+                    limit / (1024 * 1024)
+                ));
             }
             bytes.extend_from_slice(&chunk[..count]);
         }
@@ -117,16 +174,7 @@ fn fetch_with_timeout(
             .and_then(|mut p| p.next_back())
             .filter(|s| !s.is_empty())
             .unwrap_or("Web image");
-        let image = Prepared::from_bytes(name, &bytes)?;
-        let original = decoded_styled(&image.bytes, 0, false)?;
-        cancelled(cancel)?;
-        let sketch = decoded_styled(&image.bytes, 0, true)?;
-        cancelled(cancel)?;
-        return Ok(Preview {
-            image,
-            original,
-            sketch,
-        });
+        return Ok((name.to_owned(), bytes));
     }
     unreachable!()
 }
@@ -177,6 +225,26 @@ mod tests {
         .into_bytes();
         out.extend_from_slice(body);
         out
+    }
+    #[test]
+    fn thumbnails_have_an_independent_decoded_pixel_cap() {
+        assert_eq!(
+            decode_thumbnail(&png(), &AtomicBool::new(false))
+                .unwrap()
+                .pixels
+                .size,
+            [12, 8]
+        );
+        let mut bytes = Cursor::new(Vec::new());
+        image::RgbaImage::from_pixel(2048, 1025, image::Rgba([255, 255, 255, 255]))
+            .write_to(&mut bytes, image::ImageFormat::Png)
+            .unwrap();
+        assert!(
+            decode_thumbnail(&bytes.into_inner(), &AtomicBool::new(false))
+                .unwrap_err()
+                .contains("thumbnail is too large")
+        );
+        assert!(decode_thumbnail(&png(), &AtomicBool::new(true)).is_err());
     }
     #[test]
     fn relative_redirect_fetches_bounded_preview_without_sending_fragment_or_cookies() {

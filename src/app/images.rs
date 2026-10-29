@@ -118,6 +118,30 @@ impl WireframeApp {
         if ui.button("Import from Web…").clicked() {
             self.start_web_image(ids.clone());
         }
+        if ui.button("Search images…").clicked() {
+            self.start_image_search(ids.clone());
+        }
+        for source in sources
+            .iter()
+            .flatten()
+            .copied()
+            .collect::<std::collections::BTreeSet<_>>()
+        {
+            if let Some(credit) = self
+                .editor
+                .document
+                .live_asset(source)
+                .and_then(|a| a.attribution.as_ref())
+            {
+                ui.collapsing("Image credit", |ui| {
+                    ui.label(credit.credit());
+                    ui.hyperlink_to("Source & usage terms", &credit.source_url);
+                    if ui.button("Copy image credit").clicked() {
+                        ui.ctx().copy_text(credit.credit());
+                    }
+                });
+            }
+        }
         if sources.iter().any(Option::is_some) {
             ui.horizontal(|ui| {
                 if ui.button("Rotate images 90°").clicked()
@@ -191,6 +215,21 @@ impl WireframeApp {
             }
             if ui.button("Import from Web…").clicked() {
                 self.start_web_image(vec![id]);
+            }
+            if ui.button("Search images…").clicked() {
+                self.start_image_search(vec![id]);
+            }
+            if let Some(credit) = selected
+                .and_then(|asset| self.editor.document.live_asset(asset))
+                .and_then(|a| a.attribution.as_ref())
+            {
+                ui.collapsing("Image credit", |ui| {
+                    ui.label(credit.credit());
+                    ui.hyperlink_to("Source & usage terms", &credit.source_url);
+                    if ui.button("Copy image credit").clicked() {
+                        ui.ctx().copy_text(credit.credit());
+                    }
+                });
             }
             if selected.is_some()
                 && ui.button("Remove image").clicked()

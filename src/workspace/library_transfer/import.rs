@@ -515,6 +515,7 @@ impl LibraryImportPlan {
                     a.trashed == asset.trashed
                         && a.media_type == asset.media_type
                         && a.bytes == asset.bytes
+                        && a.attribution == asset.attribution
                 }) {
                 existing.id
             } else {

@@ -156,6 +156,28 @@ impl Project {
         for a in &self.assets {
             text(&a.name, 10000)?;
             text(&a.media_type, 200)?;
+            if let Some(credit) = &a.attribution {
+                for value in [
+                    &credit.title,
+                    &credit.creator,
+                    &credit.license,
+                    &credit.license_url,
+                    &credit.source_url,
+                ] {
+                    text(value, 4000)?;
+                }
+                for address in [&credit.license_url, &credit.source_url] {
+                    if !address.is_empty()
+                        && !url::Url::parse(address).is_ok_and(|u| {
+                            u.scheme() == "https"
+                                && u.username().is_empty()
+                                && u.password().is_none()
+                        })
+                    {
+                        return Err("Invalid image attribution link".into());
+                    }
+                }
+            }
             asset_bytes = asset_bytes
                 .checked_add(a.bytes.len())
                 .ok_or("Asset size overflow")?;

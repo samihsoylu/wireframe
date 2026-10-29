@@ -25,6 +25,7 @@ fn fixture() -> Project {
         ..Project::default()
     };
     p.assets.push(Asset {
+        attribution: None,
         id: 10,
         trashed: false,
         name: "Photo.png".into(),
@@ -189,6 +190,7 @@ fn imported_file_does_not_reuse_or_replace_hidden_asset_implicitly() {
     let mut e = Editor::new(fixture());
     e.trash_assets(&[10]).unwrap();
     let prepared = wireframe::images::Prepared {
+        attribution: None,
         name: "Photo.png".into(),
         media_type: "image/png".into(),
         bytes: e.document.assets[0].bytes.clone(),

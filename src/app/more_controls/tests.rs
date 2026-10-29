@@ -389,6 +389,7 @@ fn combined_review_steps_images_pages_and_libraries_before_one_apply() {
         out.into_inner()
     };
     source.document.assets.push(Asset {
+        attribution: None,
         trashed: false,
         id: asset,
         name: "Logo".into(),
@@ -504,6 +505,7 @@ fn asset_review_exposes_availability_and_previews_retained_artwork_read_only() {
         .write_to(&mut bytes, image::ImageFormat::Png)
         .unwrap();
     snapshot.project.assets.push(Asset {
+        attribution: None,
         id,
         trashed: false,
         name: "Photo".into(),

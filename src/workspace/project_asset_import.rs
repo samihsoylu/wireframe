@@ -84,7 +84,10 @@ pub(super) fn entries(base: &Project, source: &Project, origin: &str) -> Vec<Ass
     entries
 }
 fn identical(a: &Asset, b: &Asset) -> bool {
-    a.trashed == b.trashed && a.media_type == b.media_type && a.bytes == b.bytes
+    a.trashed == b.trashed
+        && a.media_type == b.media_type
+        && a.bytes == b.bytes
+        && a.attribution == b.attribution
 }
 pub(super) fn remember(project: &mut Project, target: Id, origin: &str, incoming: Id) {
     let records = project.asset_imports.entry(target).or_default();
@@ -148,6 +151,7 @@ pub(super) fn stage(
             if choice == AssetImportChoice::UseNew {
                 let current = after.assets.iter_mut().find(|a| a.id == id).unwrap();
                 current.trashed = asset.trashed;
+                current.attribution = asset.attribution.clone();
                 current.bytes = asset.bytes.clone();
                 current.media_type = asset.media_type.clone();
                 counts.assets_replaced += 1;

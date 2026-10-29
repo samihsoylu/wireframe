@@ -23,6 +23,7 @@ fn fixture(offset: Id, label: &str) -> Project {
         .write_to(&mut bytes, image::ImageFormat::Png)
         .unwrap();
     p.assets.push(Asset {
+        attribution: None,
         trashed: false,
         id: offset + 20,
         name: "Logo".into(),

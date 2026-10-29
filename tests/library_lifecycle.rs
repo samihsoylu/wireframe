@@ -34,6 +34,7 @@ fn fixture() -> (Editor, Id, Id, Id) {
         .insert("image".into(), Value::Asset(asset));
     e.document.definitions[0].content.nodes.push(button);
     e.document.assets.push(Asset {
+        attribution: None,
         trashed: false,
         id: asset,
         name: "Retained artwork".into(),

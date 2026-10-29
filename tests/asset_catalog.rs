@@ -15,6 +15,7 @@ fn fixture() -> Project {
     Project {
         next_id: 20,
         assets: vec![Asset {
+            attribution: None,
             trashed: false,
             id: 10,
             name: "old-size-120x80.png".into(),

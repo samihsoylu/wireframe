@@ -527,6 +527,7 @@ fn quick_add_asset_uses_shared_image_natural_size_and_one_step_history() {
         .unwrap();
     let id = app.editor.document.allocate_id().unwrap();
     app.editor.document.assets.push(wireframe::document::Asset {
+        attribution: None,
         trashed: false,
         id,
         name: "Shared test image".into(),
@@ -668,6 +669,7 @@ fn asset_context_menu_moves_image_to_shared_trash_without_inserting_a_control() 
         .write_to(&mut bytes, image::ImageFormat::Png)
         .unwrap();
     app.editor.document.assets.push(wireframe::document::Asset {
+        attribution: None,
         id,
         trashed: false,
         name: "Photo".into(),

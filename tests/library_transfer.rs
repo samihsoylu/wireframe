@@ -108,6 +108,7 @@ fn fixture() -> Editor {
     p.libraries[0].imports.push(binding(11));
     p.assets = (50..=52)
         .map(|id| Asset {
+            attribution: None,
             trashed: false,
             id,
             name: format!("Asset {id}"),
@@ -121,6 +122,13 @@ fn fixture() -> Editor {
 #[test]
 fn whole_library_copy_preserves_artwork_and_transitive_graph_without_mutating_source() {
     let mut e = fixture();
+    e.document.assets[0].attribution = Some(ImageAttribution {
+        title: "Artwork".into(),
+        creator: "Example creator".into(),
+        license: "CC BY 4.0".into(),
+        license_url: "https://creativecommons.org/licenses/by/4.0/".into(),
+        source_url: "https://commons.wikimedia.org/wiki/File:Artwork.jpg".into(),
+    });
     let unrelated = e.create_library("Unrelated").unwrap();
     let before = e.document.clone();
     let copy = e.copy_libraries(&[10], "origin").unwrap();

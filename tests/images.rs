@@ -814,6 +814,7 @@ fn invalid_imports_and_locked_controls_do_not_mutate_document_or_history() {
     let before = e.document.clone();
     let undo = e.undo_name().map(str::to_owned);
     let bad = Prepared {
+        attribution: None,
         name: "broken.png".into(),
         media_type: "image/png".into(),
         bytes: vec![1, 2, 3],

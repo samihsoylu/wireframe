@@ -22,6 +22,7 @@ fn asset(id: Id, name: &str, color: u8) -> Asset {
         .write_to(&mut bytes, image::ImageFormat::Png)
         .unwrap();
     Asset {
+        attribution: None,
         trashed: false,
         id,
         name: name.into(),
@@ -136,7 +137,16 @@ fn pixel(e: &Editor) -> [u8; 4] {
 }
 #[test]
 fn mixed_asset_and_page_choices_share_one_mapping_and_exact_history() {
-    let source = source();
+    let mut source = source();
+    for asset in &mut source.assets {
+        asset.attribution = Some(ImageAttribution {
+            title: asset.name.clone(),
+            creator: format!("Creator {}", asset.id),
+            license: "CC BY 4.0".into(),
+            license_url: "https://creativecommons.org/licenses/by/4.0/".into(),
+            source_url: "https://commons.wikimedia.org/wiki/File:Photo.jpg".into(),
+        });
+    }
     let source_before = source.clone();
     let mut e = Editor::new(base());
     let before = e.document.clone();
@@ -176,6 +186,18 @@ fn mixed_asset_and_page_choices_share_one_mapping_and_exact_history() {
     assert_eq!(e.document.pages[0], before.pages[0]);
     assert_eq!(pixel(&e), [110, 0, 0, 255]);
     assert_eq!(e.document.assets[0].id, 10);
+    assert_eq!(
+        e.document.assets[0].attribution,
+        source.assets[0].attribution
+    );
+    assert_eq!(
+        e.document.assets[1].attribution,
+        before.assets[1].attribution
+    );
+    assert_eq!(
+        e.document.live_asset(new_badge).unwrap().attribution,
+        source.assets[2].attribution
+    );
     assert_eq!(e.document.assets[0].name, "Hero");
     assert_eq!(e.document.assets[1], before.assets[1]);
     assert_eq!(e.document.assets[2], before.assets[2]);
@@ -389,6 +411,7 @@ fn replacement_checks_final_file_limits_instead_of_temporary_duplicates() {
         ..Project::default()
     };
     p.assets = vec![Asset {
+        attribution: None,
         trashed: false,
         id: 10,
         name: "Large".into(),

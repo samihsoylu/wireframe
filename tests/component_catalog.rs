@@ -424,6 +424,7 @@ fn asset_bytes_and_nested_override_assets_refresh_preview_but_unrelated_assets_d
     let unrelated = e.document.allocate_id().unwrap();
     e.document.assets = vec![
         Asset {
+            attribution: None,
             trashed: false,
             id: asset,
             name: "Image".into(),
@@ -431,6 +432,7 @@ fn asset_bytes_and_nested_override_assets_refresh_preview_but_unrelated_assets_d
             bytes: png([255, 0, 0, 255]),
         },
         Asset {
+            attribution: None,
             trashed: false,
             id: unrelated,
             name: "Unused".into(),

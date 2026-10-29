@@ -3,6 +3,7 @@
 //! Bounded image decoding and project-owned import data.
 use eframe::egui;
 mod filter;
+pub mod search;
 mod tint;
 pub mod web;
 use image::{DynamicImage, ImageFormat, ImageReader};
@@ -18,6 +19,7 @@ const IMPORT_PIXELS: f64 = 2. * 1024. * 1024.;
 
 #[derive(Clone, Debug)]
 pub struct Prepared {
+    pub attribution: Option<crate::document::ImageAttribution>,
     pub name: String,
     pub media_type: String,
     pub bytes: Vec<u8>,
@@ -233,6 +235,7 @@ impl Prepared {
             .unwrap_or("Image")
             .to_owned();
         Ok(Self {
+            attribution: None,
             name,
             media_type: media_type.into(),
             bytes,

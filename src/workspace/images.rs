@@ -463,12 +463,21 @@ impl Editor {
                     .any(|a| a.id == *id && a.bytes == image.bytes)
             });
             let asset = if let Some(id) = same {
+                if let Some(asset) = e
+                    .document
+                    .assets
+                    .iter_mut()
+                    .find(|a| a.id == id && a.attribution.is_none())
+                {
+                    asset.attribution = image.attribution.clone();
+                }
                 id
             } else if let Some(id) = conflict
                 .filter(|_| matches!(choice, ImportChoice::UseExisting | ImportChoice::Replace))
             {
                 if matches!(choice, ImportChoice::Replace) {
                     let a = e.document.assets.iter_mut().find(|a| a.id == id).unwrap();
+                    a.attribution = image.attribution;
                     a.bytes = image.bytes;
                     a.media_type = image.media_type;
                 }
@@ -487,6 +496,7 @@ impl Editor {
                     suffix += 1;
                 }
                 e.document.assets.push(Asset {
+                    attribution: image.attribution,
                     trashed: false,
                     id,
                     name,

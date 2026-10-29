@@ -109,6 +109,13 @@ fn fixture() -> Project {
     });
     source.default_library = Some(30);
     source.assets.push(Asset {
+        attribution: Some(ImageAttribution {
+            title: "Photo".into(),
+            creator: "Example creator".into(),
+            license: "CC BY 4.0".into(),
+            license_url: "https://creativecommons.org/licenses/by/4.0/".into(),
+            source_url: "https://commons.wikimedia.org/wiki/File:Photo.jpg".into(),
+        }),
         trashed: false,
         id: 50,
         name: "Photo".into(),
@@ -116,6 +123,13 @@ fn fixture() -> Project {
         bytes: vec![1, 2, 3],
     });
     source.assets.push(Asset {
+        attribution: Some(ImageAttribution {
+            title: "Photo".into(),
+            creator: "Example creator".into(),
+            license: "CC BY 4.0".into(),
+            license_url: "https://creativecommons.org/licenses/by/4.0/".into(),
+            source_url: "https://commons.wikimedia.org/wiki/File:Photo.jpg".into(),
+        }),
         trashed: false,
         id: 51,
         name: "Unused photo".into(),
@@ -158,6 +172,8 @@ fn complete_graph_copies_links_alternates_assets_and_scoped_overrides_atomically
     assert_eq!(library.sources[0].node, 31);
     assert_eq!(library.imports[0].definitions[&40], definition);
     assert_eq!(library.content.paint_order, [vec![31], vec![32]]);
+    assert_eq!(expected.assets[0].attribution, source.assets[0].attribution);
+    assert_eq!(expected.assets[1].attribution, source.assets[1].attribution);
     let asset = expected.assets[0].id;
     let def = expected
         .definitions

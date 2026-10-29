@@ -222,6 +222,7 @@ fn cycles_and_expansion_growth_fail_but_missing_references_remain_loadable() {
 fn assets_alternates_and_sparse_context_values_round_trip() {
     let mut p = component_project();
     p.assets.push(Asset {
+        attribution: None,
         trashed: false,
         id: 12,
         name: "sample".into(),
@@ -409,4 +410,42 @@ fn a_page_cannot_multiply_the_expansion_budget_across_instances() {
     let nodes: Vec<_> = (30..34).map(|id| instance(id, 23, vec![])).collect();
     assert!(p.resolve(&nodes[0]).is_ok());
     assert!(p.resolve_all(&nodes).unwrap_err().contains("limit"));
+}
+
+#[test]
+fn image_credits_round_trip_and_version_15_migrates_without_silent_credit_loss() {
+    let mut project = Project {
+        next_id: 3,
+        ..Project::default()
+    };
+    project.assets.push(Asset {
+        id: 2,
+        trashed: false,
+        name: "Picture".into(),
+        media_type: "image/png".into(),
+        bytes: vec![1, 2, 3],
+        attribution: None,
+    });
+    let mut old = serde_json::to_value(&project).unwrap();
+    old["format_version"] = 15.into();
+    assert_eq!(decode(&serde_json::to_vec(&old).unwrap()).unwrap(), project);
+    project.assets[0].attribution = Some(ImageAttribution {
+        title: "Picture".into(),
+        creator: "Creator".into(),
+        license: "CC BY 4.0".into(),
+        license_url: "https://creativecommons.org/licenses/by/4.0/".into(),
+        source_url: "https://commons.wikimedia.org/wiki/File:Picture.jpg".into(),
+    });
+    assert_eq!(decode(&project.encode().unwrap()).unwrap(), project);
+    let mut credited = serde_json::to_value(&project).unwrap();
+    for version in [14, 15] {
+        credited["format_version"] = version.into();
+        assert!(
+            decode(&serde_json::to_vec(&credited).unwrap())
+                .unwrap_err()
+                .contains("credits require document version 16")
+        );
+    }
+    project.assets[0].attribution.as_mut().unwrap().source_url = "javascript:bad".into();
+    assert!(project.encode().unwrap_err().contains("attribution link"));
 }

@@ -12,6 +12,8 @@ pub fn decode(bytes: &[u8]) -> Result<Project, String> {
     struct PageState {
         #[serde(default)]
         trashed: bool,
+        #[serde(default)]
+        attribution: Option<serde_json::Value>,
     }
     #[derive(Deserialize)]
     struct Version {
@@ -33,6 +35,14 @@ pub fn decode(bytes: &[u8]) -> Result<Project, String> {
     }
     let version: Version =
         serde_json::from_slice(bytes).map_err(|e| format!("Cannot read project: {e}"))?;
+    if version.format_version < 16
+        && version
+            .assets
+            .iter()
+            .any(|asset| asset.attribution.is_some())
+    {
+        return Err("Image credits require document version 16".into());
+    }
     if version.format_version < 15
         && (!version.removed_assets.is_empty() || version.assets.iter().any(|asset| asset.trashed))
     {
@@ -88,7 +98,7 @@ pub fn decode(bytes: &[u8]) -> Result<Project, String> {
             }
             project
         }
-        3..=14 => {
+        3..=15 => {
             let mut project: Project =
                 serde_json::from_slice(bytes).map_err(|e| format!("Cannot read project: {e}"))?;
             project.format_version = FORMAT_VERSION;

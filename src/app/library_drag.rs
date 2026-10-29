@@ -909,6 +909,7 @@ mod tests {
                 .unwrap();
             let id = app.editor.document.allocate_id().unwrap();
             app.editor.document.assets.push(wireframe::document::Asset {
+                attribution: None,
                 trashed: false,
                 id,
                 name: "Shared image".into(),

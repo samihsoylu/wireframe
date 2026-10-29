@@ -1,5 +1,7 @@
 # Wireframe — current state
 
+**Candidate online image search:** user authorized both online search and local screenshot text on29October. This isolated branch adds Commons search/thumbnail/preview/import, retained credits, version16 project migration and transfer/history coverage, based on unreleased CF. No public beta or installed app is replaced. Parent current delivery record is the `codex/beta3-release-records` checkout and `delivery/PARENT-ACTIVE-CHECKPOINT.json`; native CF baseline remains frozen. Focused checks and independent source/UI/package review govern acceptance; Windows runtime and current Mac data/UI access remain held. OCR is a separate owner pending integration. See `docs/IMAGES.md` and `delivery/online-image-search`.
+
 ## Active delivery — GitHub beta for the 29 October demo
 
 **Goal continuity confirmed by the user:** the original V01–V05/Q3–Q8 objective is unchanged. All requests below are additions. **10:00 is a demo milestone, not goal completion; continue the original work afterward.**

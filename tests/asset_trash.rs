@@ -25,6 +25,7 @@ fn fixture() -> Editor {
         ..Project::default()
     };
     p.assets.push(Asset {
+        attribution: None,
         id: 10,
         trashed: false,
         name: "Private artwork.png".into(),

@@ -582,6 +582,7 @@ fn image_setup() -> (egui::Context, WireframeApp, Id) {
         .unwrap();
     let id = app.editor.document.allocate_id().unwrap();
     app.editor.document.assets.push(wireframe::document::Asset {
+        attribution: None,
         id,
         trashed: false,
         name: "Photo".into(),

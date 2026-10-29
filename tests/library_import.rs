@@ -76,6 +76,7 @@ fn fixture() -> Editor {
     });
     p.default_library = Some(10);
     p.assets.push(Asset {
+        attribution: None,
         trashed: false,
         id: 30,
         name: "Action icon".into(),

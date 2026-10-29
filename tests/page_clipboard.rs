@@ -300,6 +300,7 @@ fn component_closure_omits_unused_sources_and_preserves_current_dependency_on_sa
 fn retained_image_bytes_are_not_published_and_remain_unavailable_after_paste() {
     let mut e = fixture();
     e.document.assets.push(Asset {
+        attribution: None,
         id: 30,
         trashed: true,
         name: "Private image".into(),
@@ -388,6 +389,7 @@ fn dependency_closure_includes_images_used_only_inside_a_component() {
     e.create_component("Card".into()).unwrap();
     let asset = e.document.allocate_id().unwrap();
     e.document.assets.push(Asset {
+        attribution: None,
         id: asset,
         trashed: false,
         name: "Placement icon".into(),

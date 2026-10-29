@@ -42,7 +42,7 @@ impl WireframeApp {
                 ui.disable();
             }
             ui.horizontal(|ui| {
-                ui.small(&self.status);
+                ui.small(self.status_text());
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.small(format!(
                         "{:.0}%  ·  {} controls  ·  {} selected",

@@ -30,6 +30,160 @@ fn named(app: &mut WireframeApp, ctx: &egui::Context, path: &std::path::Path) {
     assert!(!app.editor.dirty());
 }
 
+// Capture every public history state, returning to the original tip. These
+// fixtures intentionally start without a redo tail.
+fn local_save_history(editor: &mut Editor) -> Vec<serde_json::Value> {
+    assert!(editor.redo_name().is_none());
+    let mut states = vec![local_save_editor_state(editor)];
+    while editor.undo_name().is_some() {
+        editor.undo();
+        states.push(local_save_editor_state(editor));
+    }
+    for _ in 1..states.len() {
+        editor.redo();
+    }
+    states
+}
+fn local_save_editor_state(editor: &Editor) -> serde_json::Value {
+    let mut selection: Vec<_> = editor.selection.iter().copied().collect();
+    selection.sort_unstable();
+    serde_json::json!({
+        "document": editor.document,
+        "page": editor.page,
+        "definition": editor.definition,
+        "library": editor.library,
+        "context": editor.context,
+        "selection": selection,
+        "versions": editor.version_selections(),
+        "undo": editor.undo_name(),
+        "redo": editor.redo_name(),
+    })
+}
+fn assert_local_save_stopped(app: &WireframeApp) {
+    assert!(app.persistence.as_ref().unwrap().failed);
+    assert_local_save_stopped_feedback(app);
+}
+fn assert_local_save_stopped_feedback(app: &WireframeApp) {
+    assert_eq!(
+        app.status_text(),
+        "Saving stopped · keep this document open"
+    );
+    let error = app.error.as_deref().unwrap();
+    let (primary, details) = error.split_once("\n\nDetails: ").unwrap();
+    assert_eq!(
+        primary,
+        "Saving stopped. Keep this document open. Use File → Save as… to try saving a separate copy. If saving still fails, check available disk space and access."
+    );
+    assert!(!details.is_empty());
+    for technical in ["worker", "queue", "transaction"] {
+        assert!(!primary.contains(technical));
+    }
+}
+
+#[test]
+fn first_local_record_failure_keeps_graph_history_and_save_as_recovery_guidance() {
+    let (dir, ctx, mut app) = fixture();
+    // A synthetic graph with official and alternate content, two pages, and a
+    // library/source. No local record exists until the controlled edit below.
+    app.editor.add(Kind::Button, 10., 20.);
+    app.editor.add_page();
+    let page = app.editor.page;
+    app.editor.rename_page(page, "Details").unwrap();
+    let library = app.editor.create_library("Shared").unwrap();
+    app.editor
+        .create_empty_source(library, "Card", Default::default())
+        .unwrap();
+    app.editor.switch_page(page);
+    let alternate = app.editor.create_version("Phone").unwrap();
+    let before_edit = app.editor.document.clone();
+    let earlier_path = dir.path().join("Earlier.wireframe");
+    ProjectStore.save(&earlier_path, &before_edit).unwrap();
+    let earlier_bytes = std::fs::read(&earlier_path).unwrap();
+    let root = dir.path().join("working-copies");
+    let aside = dir.path().join("owned-working-copies-aside");
+    assert!(app.persistence.as_ref().unwrap().session.is_none());
+    assert!(app.persistence.as_ref().unwrap().id.is_none());
+    assert_eq!(std::fs::read_dir(&root).unwrap().count(), 0);
+    std::fs::rename(&root, &aside).unwrap();
+    std::fs::write(&root, b"owned local-save fault sentinel").unwrap();
+    app.editor.add(Kind::Label, 30., 40.); // Exactly one edit after the fault.
+    let expected = app.editor.document.clone();
+    let history = local_save_history(&mut app.editor);
+    let state = local_save_editor_state(&app.editor);
+    let dirty = app.editor.dirty();
+    assert!(dirty);
+    assert_eq!(app.editor.page, page);
+    assert_eq!(app.editor.active_alternate(page), Some(alternate));
+    assert!(!app.editor.selection.is_empty());
+    app.pending = Some(Pending::Quit);
+    app.observe_project();
+    assert_eq!(app.editor.document, expected);
+    assert_eq!(local_save_editor_state(&app.editor), state);
+    assert_eq!(local_save_history(&mut app.editor), history);
+    assert_eq!(app.editor.dirty(), dirty);
+    assert!(matches!(app.pending, Some(Pending::Quit)));
+    assert!(!app.quit_allowed);
+    assert!(!app.save_busy());
+    assert!(app.persistence.as_ref().unwrap().failed);
+    assert!(app.error.is_some());
+    eprintln!("FIRST-FAULT status={:?}; error={:?}", app.status, app.error);
+    eprintln!(
+        "FULL-ORACLE {}",
+        serde_json::json!({"state": state, "history": history, "dirty": dirty, "pre_edit": before_edit})
+    );
+    assert_local_save_stopped(&app);
+    let stopped_status = app.status.clone();
+    app.error = None; // Dismissal leaves the persistent stopped status.
+    app.observe_project();
+    app.poll_saves(&ctx);
+    assert_eq!(app.status, stopped_status);
+    assert!(app.error.is_none());
+    let rescue = dir.path().join("Separate.wireframe");
+    assert!(!app.queue_save(rescue.clone(), true));
+    eprintln!(
+        "BLOCKED-RETRY status={:?}; error={:?}",
+        app.status, app.error
+    );
+    assert_local_save_stopped(&app);
+    assert!(!rescue.exists());
+    assert_eq!(local_save_editor_state(&app.editor), state);
+    assert_eq!(local_save_history(&mut app.editor), history);
+    assert_eq!(app.editor.dirty(), dirty);
+    assert!(matches!(app.pending, Some(Pending::Quit)));
+    assert!(!app.save_busy());
+    assert!(!app.quit_allowed);
+    std::fs::remove_file(&root).unwrap();
+    std::fs::rename(&aside, &root).unwrap();
+    app.pending = None; // Explicit Cancel before the normal Save As rescue.
+    app.error = None;
+    assert!(app.queue_save(rescue.clone(), true));
+    drain(&mut app, &ctx);
+    assert!(app.error.is_none(), "{:?}", app.error);
+    assert!(!app.persistence.as_ref().unwrap().failed);
+    assert_eq!(app.status_text(), "Saved to your computer");
+    assert_eq!(ProjectStore.load(&rescue).unwrap(), expected);
+    assert_eq!(local_save_editor_state(&app.editor), state);
+    assert_eq!(local_save_history(&mut app.editor), history);
+    assert!(!app.editor.dirty());
+    app.editor.undo();
+    assert_eq!(app.editor.document, before_edit);
+    assert!(app.editor.dirty());
+    app.editor.redo();
+    assert_eq!(app.editor.document, expected);
+    assert!(!app.editor.dirty());
+    assert_eq!(std::fs::read(&earlier_path).unwrap(), earlier_bytes);
+    app.on_exit(None);
+    // A fresh model from saved bytes, not a claim of native process coverage.
+    let cold = Editor::new(ProjectStore.load(&rescue).unwrap());
+    assert_eq!(cold.document, expected);
+    assert!(!cold.dirty());
+    assert!(cold.undo_name().is_none());
+    assert!(cold.redo_name().is_none());
+    eprintln!(
+        "RECOVERED: full graph, complete history, one Undo/Redo, earlier bytes, cold model verified"
+    );
+}
+
 use std::sync::{Condvar, Mutex};
 struct SaveFocusGate(Arc<(Mutex<bool>, Condvar)>);
 impl SaveFocusGate {
@@ -43,6 +197,161 @@ impl Drop for SaveFocusGate {
         self.release();
     }
 }
+#[test]
+fn injected_disconnect_keeps_clean_or_dirty_state_and_releases_busy_close() {
+    // Controlled application unit evidence: the test wake callback panics
+    // before the actor can process queued commands. This is not a native
+    // worker-crash reproduction or a filesystem-failure test.
+    for dirty in [false, true] {
+        for busy in [false, true] {
+            let (dir, ctx, mut app) = fixture();
+            app.set_save_mode(false);
+            app.editor.add(Kind::Button, 10., 20.);
+            let path = dir.path().join("Already-saved.wireframe");
+            ProjectStore.save(&path, &app.editor.document).unwrap();
+            let saved_bytes = std::fs::read(&path).unwrap();
+            app.file = Some(path.clone());
+            app.editor.mark_saved();
+            let gate = SaveFocusGate(Arc::new((Mutex::new(false), Condvar::new())));
+            let wait = gate.0.clone();
+            let p = app.persistence.as_mut().unwrap();
+            let copy = p.copies.open_named(&path).unwrap();
+            p.id = Some(copy.id().to_owned());
+            p.session = Some(
+                ProjectSession::start(
+                    p.copies.clone(),
+                    copy,
+                    false,
+                    Arc::new(move || {
+                        let mut released = wait.0.lock().unwrap();
+                        while !*released {
+                            released = wait.1.wait(released).unwrap();
+                        }
+                        drop(released);
+                        panic!("injected test-only disconnect after initial checkpoint");
+                    }),
+                )
+                .unwrap(),
+            );
+            if dirty {
+                app.editor.add(Kind::Label, 30., 40.);
+            }
+            let history = local_save_history(&mut app.editor);
+            let state = local_save_editor_state(&app.editor);
+            app.pending = Some(Pending::Quit);
+            if busy {
+                assert!(app.queue_save(path.clone(), false));
+                assert!(app.pending.is_none());
+                assert_eq!(app.status, "Saving…");
+            }
+            gate.release();
+            let deadline = Instant::now() + Duration::from_secs(12);
+            while !app.persistence.as_ref().unwrap().failed {
+                app.poll_saves(&ctx);
+                assert!(Instant::now() < deadline, "injected disconnect timed out");
+                std::thread::sleep(Duration::from_millis(5));
+            }
+            assert!(!app.save_busy());
+            assert!(matches!(app.pending, Some(Pending::Quit)));
+            assert!(!app.quit_allowed);
+            assert_eq!(app.file.as_ref(), Some(&path));
+            assert_eq!(local_save_editor_state(&app.editor), state);
+            assert_eq!(local_save_history(&mut app.editor), history);
+            assert_eq!(app.editor.dirty(), dirty);
+            assert_eq!(std::fs::read(&path).unwrap(), saved_bytes);
+            assert_local_save_stopped(&app);
+            assert!(
+                app.error
+                    .as_deref()
+                    .unwrap()
+                    .ends_with("Details: Save worker stopped; keep your current document open")
+            );
+            eprintln!(
+                "INJECTED-DISCONNECT dirty={dirty} busy={busy}: graph/history/saved bytes/pending Quit preserved; {:?}",
+                app.error
+            );
+            app.error = None;
+            app.observe_project();
+            app.poll_saves(&ctx);
+            assert_eq!(app.status, "Saving stopped · keep this document open");
+            assert_eq!(app.editor.dirty(), dirty);
+            assert!(app.error.is_none());
+            if dirty {
+                // A normal catalog edit replaces the transient status. The
+                // actual toolbar must still show terminal persistence state.
+                app.insert_catalog_at(
+                    wireframe::workspace::CatalogItem::Control(Kind::Label),
+                    egui::pos2(60., 70.),
+                );
+                assert_eq!(app.status, "Added Text Label");
+                app.observe_project();
+                ctx.enable_accesskit();
+                let mut labels = Vec::new();
+                for _ in 0..2 {
+                    let output = ctx.run_ui(
+                        egui::RawInput {
+                            screen_rect: Some(egui::Rect::from_min_size(
+                                egui::Pos2::ZERO,
+                                egui::vec2(1200., 850.),
+                            )),
+                            ..Default::default()
+                        },
+                        |ui| app.toolbar(ui),
+                    );
+                    labels = output
+                        .platform_output
+                        .accesskit_update
+                        .as_ref()
+                        .unwrap()
+                        .nodes
+                        .iter()
+                        .filter_map(|(_, node)| {
+                            node.label().or_else(|| node.value()).map(str::to_owned)
+                        })
+                        .collect();
+                    output.drop_without_applying_deltas();
+                }
+                assert!(
+                    labels
+                        .iter()
+                        .any(|label| label == "Saving stopped · keep this document open"),
+                    "toolbar labels: {labels:?}"
+                );
+                assert!(!labels.iter().any(|label| label == "Added Text Label"));
+                assert!(app.persistence.as_ref().unwrap().failed);
+                app.editor.undo();
+                assert_eq!(
+                    local_save_editor_state(&app.editor)["document"],
+                    state["document"]
+                );
+                app.editor.redo();
+                eprintln!(
+                    "INJECTED-DISCONNECT: stopped toolbar status survives dismissal and normal catalog edit/status"
+                );
+            }
+            let finish_state = local_save_editor_state(&app.editor);
+            let finish_history = local_save_history(&mut app.editor);
+            let finish_dirty = app.editor.dirty();
+            assert!(!app.finish_session(false));
+            // Preserve the existing take/failed=false/return=false lifecycle.
+            assert!(app.persistence.as_ref().unwrap().session.is_none());
+            assert!(!app.persistence.as_ref().unwrap().failed);
+            assert!(!app.save_busy());
+            assert_local_save_stopped_feedback(&app);
+            assert_eq!(local_save_editor_state(&app.editor), finish_state);
+            assert_eq!(local_save_history(&mut app.editor), finish_history);
+            assert_eq!(app.editor.dirty(), finish_dirty);
+            assert_eq!(std::fs::read(&path).unwrap(), saved_bytes);
+            assert!(matches!(app.pending, Some(Pending::Quit)));
+            assert!(!app.quit_allowed);
+            eprintln!(
+                "INJECTED-DISCONNECT finish error: graph/history/dirty/bytes/pending preserved, session taken and failed cleared as before; {:?}",
+                app.error
+            );
+        }
+    }
+}
+
 fn save_focus_frame(
     ctx: &egui::Context,
     app: &mut WireframeApp,

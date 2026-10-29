@@ -12,6 +12,9 @@ use wireframe::{
     workspace::Editor,
 };
 
+const SAVING_STOPPED_STATUS: &str = "Saving stopped · keep this document open";
+const SAVING_STOPPED_GUIDANCE: &str = "Saving stopped. Keep this document open. Use File → Save as… to try saving a separate copy. If saving still fails, check available disk space and access.";
+
 #[derive(Serialize, Deserialize)]
 struct Settings {
     automatic: bool,
@@ -195,7 +198,7 @@ impl WireframeApp {
     fn ensure_session(&mut self) -> Result<(), String> {
         let p = self.persistence.as_ref().unwrap();
         if p.failed {
-            return Err("Saving stopped. Keep this document open and use Save As to retain a separate copy.".into());
+            return Err(SAVING_STOPPED_GUIDANCE.into());
         }
         if p.session.is_some() {
             return Ok(());
@@ -244,6 +247,17 @@ impl WireframeApp {
     pub(super) fn automatic_named(&self) -> bool {
         self.file.is_some() && self.persistence.as_ref().is_some_and(|p| p.automatic)
     }
+    pub(super) fn status_text(&self) -> &str {
+        if self.persistence.as_ref().is_some_and(|p| p.failed) {
+            SAVING_STOPPED_STATUS
+        } else {
+            &self.status
+        }
+    }
+    fn show_stopped_saving(&mut self, error: impl std::fmt::Display) {
+        self.status = SAVING_STOPPED_STATUS.into();
+        self.error = Some(format!("{SAVING_STOPPED_GUIDANCE}\n\nDetails: {error}"));
+    }
     pub(super) fn observe_project(&mut self) {
         if self.quit_allowed || self.persistence.is_none() || self.startup_open.is_some() {
             return;
@@ -265,7 +279,7 @@ impl WireframeApp {
         });
         if let Err(e) = result {
             self.persistence.as_mut().unwrap().failed = true;
-            self.error = Some(e);
+            self.show_stopped_saving(e);
         }
     }
     /// Queue a save. A selected Save As path is the caller's overwrite consent.
@@ -284,12 +298,12 @@ impl WireframeApp {
             match p.copies.create_unnamed(&self.editor.document) {
                 Ok(copy) => {
                     if let Err(e) = self.start_copy(copy) {
-                        self.error = Some(e);
+                        self.show_stopped_saving(e);
                         return false;
                     }
                 }
                 Err(e) => {
-                    self.error = Some(e.to_string());
+                    self.show_stopped_saving(e);
                     return false;
                 }
             }
@@ -337,7 +351,7 @@ impl WireframeApp {
                     if let Some(action) = p.busy.take() {
                         self.pending = action.after;
                     }
-                    self.error = Some(e);
+                    self.show_stopped_saving(e);
                     return;
                 }
             };
@@ -435,7 +449,7 @@ impl WireframeApp {
             });
             if let Err(e) = result {
                 p.failed = false;
-                self.error = Some(e);
+                self.show_stopped_saving(e);
                 return false;
             }
         } else if discard && let Some(id) = &p.id {

@@ -1,0 +1,26 @@
+[
+  {
+    "name": "tesseract",
+    "version": "5.5.4",
+    "url": "https://codeload.github.com/tesseract-ocr/tesseract/tar.gz/refs/tags/5.5.4",
+    "path": "native/tesseract-5.5.4.tar.gz",
+    "sha256": "a8dbf8b8c8ee427ff6ad1d99116502feaf59440af1adb893caf60a6576826cf4",
+    "bytes": 1969431
+  },
+  {
+    "name": "leptonica",
+    "version": "1.87.0",
+    "url": "https://codeload.github.com/DanBloomberg/leptonica/tar.gz/refs/tags/1.87.0",
+    "path": "native/leptonica-1.87.0.tar.gz",
+    "sha256": "fa2b40c5caea96d1bb93a97486262aed8731b69ce25a84a6bf5d25323e33f631",
+    "bytes": 13719323
+  },
+  {
+    "name": "tessdata_fast-eng",
+    "version": "87416418657359cb625c412a48b6e1d6d41c29bd",
+    "url": "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/87416418657359cb625c412a48b6e1d6d41c29bd/eng.traineddata",
+    "path": "models/eng.traineddata",
+    "sha256": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
+    "bytes": 4113088
+  }
+]

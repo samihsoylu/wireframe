@@ -4,12 +4,12 @@ Turn rough ideas into clear wireframes. Sketch a landing page, plan a mobile scr
 
 [Releases](https://github.com/samihsoylu/wireframe/releases) · [Getting started](docs/GETTING-STARTED.md) · [Report an issue](https://github.com/samihsoylu/wireframe/issues)
 
-**An early beta is available.** [Download from official Releases](https://github.com/samihsoylu/wireframe/releases) for **Mac Apple Silicon (ARM64)** or **Windows x86-64**. The Windows build is unsigned and **UNTESTED on Windows**; runtime testing remains on hold. Further feature and platform checks remain open. Linux remains an intended platform, with no public beta package yet.
+**[0.1.0 Beta 3 is available](https://github.com/samihsoylu/wireframe/releases/tag/v0.1.0-beta.3).** [Download from official Releases](https://github.com/samihsoylu/wireframe/releases) for **Mac Apple Silicon (ARM64)** or **Windows x86-64**. The Windows build is unsigned and **UNTESTED on Windows**; runtime testing remains on hold. Further feature and platform checks remain open. Linux remains an intended platform, with no public beta package yet.
 
 ## Make room for your ideas
 
 - Build screens from 86 controls: buttons, forms, navigation, tables, charts, device frames and more.
-- Choose a rough sketch or a clean style. Add your own images, icons and project fonts.
+- Choose **Wireframe** or **Mockup** in the top toolbar for a rough sketch or a clean style. Add your own images, icons and project fonts.
 - Double-click controls to edit their text. Move, resize, align and group them, with Undo and Redo as you work.
 - Organize pages, reuse components, and add notes and review comments.
 - Link pages and present a clickable walkthrough, with a large pointer and optional link hints.
@@ -28,7 +28,7 @@ Choose the file matching your computer from [Releases](https://github.com/samihs
 
 The Mac beta is ad-hoc signed, without Apple Developer ID signing or notarization; macOS may block its first launch. See [Apple’s first-launch guidance](https://support.apple.com/en-us/102445). Check each release’s notes for available builds, known limits and installation details. No Apple Developer account is needed to use the app.
 
-In the beta, choose **File → Open example project** to explore four editable pages. Use **File → Save as…** to keep your own copy. [Demo walkthrough](https://github.com/samihsoylu/wireframe/blob/v0.1.0-beta.1/docs/DEMO.md).
+In the beta, choose **File → Open example project** to explore four editable pages. Use **File → Save as…** to keep your own copy. [Demo walkthrough](https://github.com/samihsoylu/wireframe/blob/v0.1.0-beta.3/docs/DEMO.md).
 
 ## Updates
 

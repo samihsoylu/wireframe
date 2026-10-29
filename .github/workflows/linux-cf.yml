@@ -1,0 +1,114 @@
+name: Exact CF Linux ARM64 affected verification (preparation candidate)
+
+# Adoption requires parent review and authorization. This branch has no Windows
+# push match. A future reviewed CI-only commit triggers without a main merge.
+on:
+  push:
+    branches: [codex/linux-cf-ci]
+    paths: [.github/workflows/linux-cf.yml, 'ci-linux-cf/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-cf-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  exact-cf:
+    if: github.repository == 'samihsoylu/wireframe' && github.event.repository.private == false
+    name: CF ARM64 ${{ matrix.group }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        group: [binary, library, image-integration, clippy, release]
+    container:
+      # Verified ARM64 OCI platform manifest, NOT a mutable tag or Ubuntu libc.
+      image: docker.io/library/rust@sha256:efecb7694d37171c478bd45d0cc88d9acc6e7fd31d7a1a39891ed4a294d0ce6f
+    defaults:
+      run:
+        shell: bash
+    env:
+      CI_GROUP: ${{ matrix.group }}
+      RUSTUP_TOOLCHAIN: 1.99.1
+      CARGO_BUILD_JOBS: '1'
+      CARGO_INCREMENTAL: '0'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Prepare ephemeral Bookworm system dependencies and pinned Clippy
+        run: |
+          set -euo pipefail
+          umask 022
+          mkdir ci-work
+          mkdir ci-work/receipts
+          df -B1 . > ci-work/receipts/disk-initial.txt
+          test "$(df -B1 --output=avail . | tail -1)" -ge 10737418240
+          apt-get update
+          apt-get install -y --no-install-recommends python3 git g++ pkg-config binutils file \
+            libx11-dev libxi-dev libxrandr-dev libxcursor-dev libxinerama-dev \
+            libxkbcommon-dev libwayland-dev libgl1-mesa-dev libegl1-mesa-dev libudev-dev
+          rm -r /var/lib/apt/lists/*
+          rustup component add --toolchain 1.99.1 clippy
+          dpkg-query -W > ci-work/receipts/system-packages.txt
+          df -B1 . > ci-work/receipts/disk-after-system-prepare.txt
+
+      - name: Checkout reviewed CI controller (workflow identity)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.sha }}
+          path: controller
+          persist-credentials: false
+
+      - name: Checkout exact unmodified CF product (product identity)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: cf7694af89823dcf3b55f2d8423c73700bc5de21
+          path: product
+          persist-credentials: false
+
+      - name: Verify source and toolchain; fetch locked dependencies in separate stage
+        run: |
+          set -euo pipefail
+          python3 controller/ci-linux-cf/ci.py prepare --group "$CI_GROUP" --repo product --work ci-work
+
+      - name: Execute exact ordinary-profile verification offline (no cache reuse)
+        run: |
+          set -euo pipefail
+          python3 controller/ci-linux-cf/ci.py verify --group "$CI_GROUP" --repo product --work ci-work
+
+      - name: Retain bounded receipts on success or failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: linux-cf-receipts-${{ matrix.group }}-${{ github.sha }}
+          path: ci-work/receipts/
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Retain statically verified candidate ELF and complete source/license package
+        if: success() && matrix.group == 'release'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: linux-cf-candidate-UNACCEPTED-${{ github.sha }}
+          path: ci-work/artifacts/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  required-scope:
+    name: CF 101 distinct tests, scoped Clippy and release package
+    needs: exact-cf
+    if: always() && github.repository == 'samihsoylu/wireframe' && github.event.repository.private == false
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 5
+    env:
+      VERIFICATION_RESULT: ${{ needs.exact-cf.result }}
+    steps:
+      - name: Require every exact-CF matrix job to succeed
+        run: |
+          test "$VERIFICATION_RESULT" = success
+          printf '%s\n' 'Exact CF 101 distinct tests + scoped Clippy + release/static package completed.'
+          printf '%s\n' 'Native compatibility, UI evidence and parent acceptance remain separate gates.'

@@ -1,0 +1,11 @@
+{
+  "commit": "cf7694af89823dcf3b55f2d8423c73700bc5de21",
+  "sourcePaths": 1823,
+  "sourceDirectoriesIncludingRoot": 546,
+  "packagedSourcePathsDerived": 1821,
+  "sourceTarSHA256": "608717bc6ae426a9243b98bfc9ac60af7faa548c20ae6d5a834ca4c1f7ddfd1b",
+  "sourceTarBytes": 21278720,
+  "CargoLockSHA256": "662aa827119463a72cb7f1739420df7743b58fdab7f3f49abcfa718c03695cc1",
+  "retainedManifestSHA256": "77592d325c7ca8992fe72031e6c3037815de91e16b2d383fa753024b89e5020e",
+  "trackedIndexSHA256": "847fed112d7b12ba61faf62af00841adcfb0253b05523aa1d9a60f715ef06de0"
+}

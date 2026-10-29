@@ -1,0 +1,31 @@
+{
+  "binary": [
+    "app-startup",
+    "app-images",
+    "app-pdf",
+    "geometry-policy",
+    "presentation-app",
+    "local-record",
+    "disconnect",
+    "combined-priority",
+    "r11-retention"
+  ],
+  "library": [
+    "image-constraints",
+    "pdf-interruption",
+    "presentation-core"
+  ],
+  "image-integration": [
+    "image-regressions"
+  ],
+  "clippy": [
+    "scoped-clippy"
+  ],
+  "release": [
+    "optimized-build",
+    "package",
+    "static-file",
+    "static-readelf",
+    "static-loader"
+  ]
+}

@@ -2,7 +2,7 @@ name: Windows beta package (untested)
 
 on:
   push:
-    branches: [codex/appearance-finishing]
+    branches: [codex/appearance-finishing, codex/beta3-save-feedback]
   workflow_dispatch:
 
 permissions:

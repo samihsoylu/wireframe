@@ -1,0 +1,25 @@
+Wireframe local screenshot text recognition
+
+Tesseract 5.5.4: Apache License 2.0. See Tesseract-LICENSE.txt and
+Tesseract-AUTHORS.txt. https://github.com/tesseract-ocr/tesseract/tree/5.5.4
+
+Leptonica 1.87.0: BSD 2-Clause. Copyright (C) 2001-2020 Leptonica.
+See Leptonica-LICENSE.txt.
+https://github.com/DanBloomberg/leptonica/tree/1.87.0
+
+Official tessdata_fast English model: Apache License 2.0.
+See English-model-LICENSE.txt. The official README explicitly licenses
+all repository data, including these model weights, under Apache-2.0:
+https://github.com/tesseract-ocr/tessdata_fast/blob/87416418657359cb625c412a48b6e1d6d41c29bd/README.md
+Model SHA-256: 7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2
+
+Native source archives and original per-file notices, the model, exact source
+URLs/hashes and Wireframe's GPL-3.0-only wrapper/build script are supplied in
+the companion corresponding-source package under source/vendor/wireframe-ocr.
+Original source archives and model weights are unchanged. Generated Tesseract
+CMakeLists.txt has a prominently marked Wireframe change that replaces the
+unnecessary TIFF runtime probe with known disabled-TIFF results; see
+native/no-tiff-runtime-probe.cmake in corresponding source. OCR source is
+unchanged. Build configuration
+disables native file codecs/network/GUI, legacy engine, training/debug helpers
+and CPU-specific optimization; see that source directory's README.md.

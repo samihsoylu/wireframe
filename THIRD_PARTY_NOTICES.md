@@ -421,3 +421,7 @@ Font Awesome Free 6.7.2 by Fonticons, Inc. is bundled under CC BY 4.0. SVG path 
 ## Optional macOS updater
 
 Optional macOS update builds bundle Sparkle 2.10.0. Its copyright notices and component licenses are retained in [Sparkle notices](licenses/sparkle-2.10.0/LICENSE) and in the installed app at `Contents/Resources/Sparkle-LICENSE.txt`. The pinned archive is defined in `scripts/sparkle.py`.
+
+## Local screenshot text recognition
+
+Tesseract 5.5.4 is Apache-2.0; Leptonica 1.87.0 is BSD-2-Clause; the official tessdata_fast English model is Apache-2.0, explicitly including all repository data. Unchanged pinned source archives, model and hashes are in [OCR source and provenance](vendor/wireframe-ocr/README.md). [Redistribution notices](assets/ocr/NOTICE.txt) and full terms are included in assets/ocr and macOS app Resources/assets/ocr. Native libraries are linked statically and the model is embedded; no recognition service is contacted.

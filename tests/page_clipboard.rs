@@ -255,6 +255,13 @@ fn stale_preparation_and_mixed_or_overbroad_payloads_leave_document_unchanged() 
         .as_array_mut()
         .unwrap()
         .push(serde_json::to_value(&e.document.pages[2]).unwrap());
+    // Restoring a page while retaining its removed identity is rejected on decode.
+    assert!(serde_json::from_value::<Clipboard>(json.clone()).is_err());
+    // A valid document can still have an overbroad page clipboard hierarchy.
+    json["pages"]["project"]["removed_pages"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|id| id.as_u64() != Some(e.document.pages[2].id));
     let invalid: Clipboard = serde_json::from_value(json).unwrap();
     assert!(invalid.page_payload().is_err());
     assert!(e.copy_pages(&[1, 1], "origin").is_err());

@@ -31,6 +31,7 @@ impl WireframeApp {
         screenshot_text::available()
             && !self.canvas_input_blocked()
             && self.text_edit.is_none()
+            && !self.notes_editing()
             && self.drag.is_none()
             && self.library_drag.is_none()
             && self.library_press.is_none()

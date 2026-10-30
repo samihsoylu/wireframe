@@ -656,6 +656,29 @@ impl WireframeApp {
             }
         }
     }
+    /// Shared with the full UI so modal drop refusal is checked before Open.
+    fn open_dropped_project(&mut self, ctx: &egui::Context) {
+        if !(self.startup_open.is_some()
+            || self.save_busy()
+            || self.present && self.presentation_view.settings_open)
+            && !self.recovery_chooser_open()
+            && self.pdf_options.is_none()
+            && !self.image_export.blocks_input()
+            && self.versions.rename.is_none()
+            && self.page_rename.is_none()
+            && self.trash.is_none()
+            && self.pending.is_none()
+            && self.text_edit.is_none()
+            && self.screenshot_text.is_none()
+            && self.icon_dialog.is_none()
+            && self.recovery_offer.is_none()
+            && self.image_crop.is_none()
+            && let Some(path) =
+                ctx.input(|i| i.raw.dropped_files.first().map(|f| f.path().to_path_buf()))
+        {
+            self.request(Pending::Open(path), ctx);
+        }
+    }
     fn open(&mut self, ctx: &egui::Context) {
         if let Some(path) = self.menus.with_dialog(|| {
             rfd::FileDialog::new()
@@ -2107,25 +2130,7 @@ impl eframe::App for WireframeApp {
         self.poll_pdf_export(&ctx);
         self.poll_image_export(&ctx);
         self.capture_window_close(&ctx);
-        if !(self.startup_open.is_some()
-            || self.save_busy()
-            || self.present && self.presentation_view.settings_open)
-            && !self.recovery_chooser_open()
-            && self.pdf_options.is_none()
-            && !self.image_export.blocks_input()
-            && self.versions.rename.is_none()
-            && self.page_rename.is_none()
-            && self.trash.is_none()
-            && self.pending.is_none()
-            && self.text_edit.is_none()
-            && self.icon_dialog.is_none()
-            && self.recovery_offer.is_none()
-            && self.image_crop.is_none()
-            && let Some(path) =
-                ctx.input(|i| i.raw.dropped_files.first().map(|f| f.path().to_path_buf()))
-        {
-            self.request(Pending::Open(path), &ctx);
-        }
+        self.open_dropped_project(&ctx);
         #[cfg(debug_assertions)]
         if let Ok(path) = std::env::var("WIREFRAME_INPUT_TRACE") {
             let pointer_events = ctx.input(|i| {

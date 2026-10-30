@@ -46,7 +46,44 @@ fn network_available() -> bool {
     NETWORK_WORKERS.load(Ordering::Relaxed) < MAX_NETWORK_WORKERS
 }
 
+trait ImageRequests: Send + Sync {
+    fn search(
+        &self,
+        query: &str,
+        offset: Option<u64>,
+        cancel: &AtomicBool,
+    ) -> Result<Results, String>;
+    fn preview(&self, address: &str, cancel: &AtomicBool) -> Result<Preview, String>;
+    fn thumbnail(
+        &self,
+        address: &str,
+        cancel: &AtomicBool,
+    ) -> Result<wireframe::images::Decoded, String>;
+}
+struct OnlineRequests;
+impl ImageRequests for OnlineRequests {
+    fn search(
+        &self,
+        query: &str,
+        offset: Option<u64>,
+        cancel: &AtomicBool,
+    ) -> Result<Results, String> {
+        wireframe::images::search::search(query, offset, cancel)
+    }
+    fn preview(&self, address: &str, cancel: &AtomicBool) -> Result<Preview, String> {
+        wireframe::images::web::fetch(address, cancel)
+    }
+    fn thumbnail(
+        &self,
+        address: &str,
+        cancel: &AtomicBool,
+    ) -> Result<wireframe::images::Decoded, String> {
+        wireframe::images::search::thumbnail(address, cancel)
+    }
+}
+
 pub(super) struct Review {
+    requests: Arc<dyn ImageRequests>,
     ids: Vec<Id>,
     session: String,
     surface: Id,
@@ -109,6 +146,7 @@ impl Review {
             return;
         };
         let (sender, receiver) = mpsc::channel();
+        let requests = self.requests.clone();
         let query = self.query.clone();
         let cancel = self.search_cancel.clone();
         let ctx = ctx.clone();
@@ -116,7 +154,7 @@ impl Review {
             .name("image-search".into())
             .spawn(move || {
                 let _slot = slot;
-                let result = wireframe::images::search::search(&query, offset, &cancel);
+                let result = requests.search(&query, offset, &cancel);
                 let _ = sender.send(result);
                 ctx.request_repaint();
             }) {
@@ -137,6 +175,7 @@ impl Review {
             return;
         };
         let (sender, receiver) = mpsc::channel();
+        let requests = self.requests.clone();
         let address = self.address.clone();
         let cancel = self.cancel.clone();
         let ctx = ctx.clone();
@@ -144,7 +183,7 @@ impl Review {
             .name("image-download".into())
             .spawn(move || {
                 let _slot = slot;
-                let result = wireframe::images::web::fetch(&address, &cancel);
+                let result = requests.preview(&address, &cancel);
                 let _ = sender.send(result);
                 ctx.request_repaint();
             }) {
@@ -312,6 +351,7 @@ impl Review {
                 continue;
             };
             let sender = sender.clone();
+            let requests = self.requests.clone();
             let cancel = self.search_cancel.clone();
             let ctx = ctx.clone();
             let _ = std::thread::Builder::new()
@@ -322,7 +362,7 @@ impl Review {
                         if cancel.load(Ordering::Relaxed) {
                             break;
                         }
-                        let result = wireframe::images::search::thumbnail(&address, &cancel);
+                        let result = requests.thumbnail(&address, &cancel);
                         if sender.send((index, result)).is_err() {
                             break;
                         }
@@ -397,6 +437,7 @@ impl WireframeApp {
         self.end_pointer_gestures();
         self.editor.commit();
         self.web_image = Some(Review {
+            requests: Arc::new(OnlineRequests),
             ids,
             session: self.editor.clipboard_session().into(),
             surface: self.editor.surface_id(),

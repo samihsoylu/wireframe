@@ -209,3 +209,66 @@ fn completed_local_recognition_copy_and_close_leave_project_and_redo_exact() {
     assert_eq!(app.editor.document, before);
     assert_eq!(app.editor.redo_name(), redo.as_deref());
 }
+
+#[derive(Debug)]
+struct ProjectDrop(std::path::PathBuf);
+impl egui::DroppedFile for ProjectDrop {
+    fn path(&self) -> &std::path::Path {
+        &self.0
+    }
+    fn bytes(&self) -> Result<Vec<u8>, String> {
+        std::fs::read(&self.0).map_err(|error| error.to_string())
+    }
+}
+#[test]
+fn production_drop_dispatch_refuses_active_extraction_and_keeps_normal_open_available() {
+    let _guard = screenshot_text::TEST_RECOGNITION.lock().unwrap();
+    let ctx = egui::Context::default();
+    let mut app = fixture(&ctx);
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("dropped.wireframe");
+    let target = Project {
+        font: None,
+        title: "Dropped example".into(),
+        ..Project::default()
+    };
+    std::fs::write(&path, target.encode().unwrap()).unwrap();
+    let before = app.editor.document.clone();
+    let redo = app.editor.redo_name().map(str::to_owned);
+    let session = app.editor.clipboard_session().to_owned();
+    app.extract_asset_text(&ctx, 3);
+    assert!(app.screenshot_text.is_some());
+    let input = || egui::RawInput {
+        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(900., 700.))),
+        dropped_files: vec![std::sync::Arc::new(ProjectDrop(path.clone()))],
+        ..Default::default()
+    };
+    let mut output = ctx.run_ui(input(), |ui| {
+        app.image_import_dialog(ui.ctx());
+        app.prepare_page_notes(ui.ctx());
+        app.open_dropped_project(ui.ctx());
+    });
+    output.textures_delta.clear();
+    assert!(app.screenshot_text.is_some());
+    assert!(app.startup_open.is_none());
+    assert!(app.pending.is_none());
+    assert!(app.file.is_none());
+    assert_eq!(app.editor.document, before);
+    assert_eq!(app.editor.redo_name(), redo.as_deref());
+    assert_eq!(app.editor.clipboard_session(), session);
+    app.screenshot_text = None;
+    let mut output = ctx.run_ui(input(), |ui| app.open_dropped_project(ui.ctx()));
+    output.textures_delta.clear();
+    assert!(
+        app.startup_open.is_some()
+            || app.pending.is_some()
+            || app.file.as_deref() == Some(path.as_path())
+    );
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    while app.startup_open.is_some() {
+        app.poll_startup_open();
+        assert!(std::time::Instant::now() < deadline);
+        std::thread::sleep(std::time::Duration::from_millis(2));
+    }
+    assert!(app.error.is_none(), "{:?}", app.error);
+}

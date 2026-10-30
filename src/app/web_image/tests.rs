@@ -3,6 +3,7 @@
 use super::*;
 use wireframe::document::{Node, Point, Size};
 use wireframe::images::{Prepared, decoded_styled};
+static NETWORK_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 fn fixture(ctx: &egui::Context) -> WireframeApp {
     let mut app = WireframeApp::workspace(ctx, None);
     let mut project = Project {
@@ -353,6 +354,7 @@ fn same_pixels_with_different_credits_require_choice_and_preserve_exact_history(
 }
 #[test]
 fn cancelled_generations_and_reopened_dialogs_keep_a_fixed_live_request_bound() {
+    let _guard = NETWORK_TEST_LOCK.lock().unwrap();
     use std::{
         io::{Read, Write},
         net::TcpListener,
@@ -445,4 +447,277 @@ fn cancelled_generations_and_reopened_dialogs_keep_a_fixed_live_request_bound() 
     server.join().unwrap();
     assert_eq!(NETWORK_WORKERS.load(Ordering::Relaxed), 0);
     assert!(WorkerSlot::acquire(&NETWORK_WORKERS).is_some());
+}
+
+struct ControlledRequests {
+    address: String,
+}
+impl ControlledRequests {
+    fn wait(&self, kind: &str, cancel: &AtomicBool) -> Result<(), String> {
+        let agent: ureq::Agent = ureq::Agent::config_builder()
+            .timeout_global(Some(std::time::Duration::from_secs(5)))
+            .build()
+            .into();
+        agent
+            .get(&format!("{}/{kind}", self.address))
+            .call()
+            .map_err(|error| error.to_string())?;
+        if cancel.load(Ordering::Relaxed) {
+            Err("cancelled controlled request".into())
+        } else {
+            Ok(())
+        }
+    }
+}
+impl ImageRequests for ControlledRequests {
+    fn search(
+        &self,
+        _query: &str,
+        _offset: Option<u64>,
+        cancel: &AtomicBool,
+    ) -> Result<Results, String> {
+        self.wait("search", cancel)?;
+        Ok(Results {
+            hits: vec![],
+            next: None,
+        })
+    }
+    fn preview(&self, _address: &str, cancel: &AtomicBool) -> Result<Preview, String> {
+        self.wait("preview", cancel)?;
+        Ok(preview(90))
+    }
+    fn thumbnail(
+        &self,
+        _address: &str,
+        cancel: &AtomicBool,
+    ) -> Result<wireframe::images::Decoded, String> {
+        self.wait("thumbnail", cancel)?;
+        Ok(preview(90).original)
+    }
+}
+enum ServerControl {
+    Release,
+    Stop,
+}
+struct ControlledServer {
+    requests: Arc<ControlledRequests>,
+    entered: mpsc::Receiver<String>,
+    control: mpsc::Sender<ServerControl>,
+    thread: Option<std::thread::JoinHandle<()>>,
+}
+impl ControlledServer {
+    fn new() -> Self {
+        use std::{
+            io::{Read, Write},
+            net::TcpListener,
+            time::Duration,
+        };
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let address = format!("http://{}", listener.local_addr().unwrap());
+        let (entered, arrivals) = mpsc::channel();
+        let (control, commands) = mpsc::channel();
+        let thread = std::thread::spawn(move || {
+            let mut held: Vec<std::net::TcpStream> = vec![];
+            let mut blocked = true;
+            loop {
+                match commands.try_recv() {
+                    Ok(ServerControl::Stop) | Err(mpsc::TryRecvError::Disconnected) => break,
+                    Ok(ServerControl::Release) => {
+                        blocked = false;
+                        for mut stream in held.drain(..) {
+                            let _:Result<(),std::io::Error>=stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+                        }
+                    }
+                    Err(mpsc::TryRecvError::Empty) => {}
+                }
+                match listener.accept() {
+                    Ok((mut stream, _)) => {
+                        stream.set_nonblocking(false).unwrap();
+                        stream
+                            .set_read_timeout(Some(Duration::from_secs(3)))
+                            .unwrap();
+                        let mut headers = vec![];
+                        while !headers.ends_with(b"\r\n\r\n") {
+                            let mut byte = [0];
+                            stream.read_exact(&mut byte).unwrap();
+                            headers.push(byte[0]);
+                        }
+                        let request = String::from_utf8(headers).unwrap();
+                        let kind = request
+                            .split_whitespace()
+                            .nth(1)
+                            .unwrap()
+                            .trim_start_matches('/')
+                            .to_owned();
+                        entered.send(kind).unwrap();
+                        if blocked {
+                            held.push(stream);
+                        } else {
+                            let _=stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+                        }
+                    }
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        std::thread::sleep(Duration::from_millis(2))
+                    }
+                    Err(error) => panic!("controlled server: {error}"),
+                }
+            }
+        });
+        Self {
+            requests: Arc::new(ControlledRequests { address }),
+            entered: arrivals,
+            control,
+            thread: Some(thread),
+        }
+    }
+    fn entered(&self, expected: &str) {
+        assert_eq!(
+            self.entered
+                .recv_timeout(std::time::Duration::from_secs(3))
+                .unwrap(),
+            expected
+        );
+    }
+    fn no_admission(&self) {
+        assert!(matches!(
+            self.entered
+                .recv_timeout(std::time::Duration::from_millis(80)),
+            Err(mpsc::RecvTimeoutError::Timeout)
+        ));
+    }
+}
+impl Drop for ControlledServer {
+    fn drop(&mut self) {
+        let _ = self.control.send(ServerControl::Stop);
+        if let Some(thread) = self.thread.take() {
+            let result = thread.join();
+            if !std::thread::panicking() {
+                result.expect("controlled server must stop normally");
+            }
+        }
+    }
+}
+fn thumbnail_hits() -> Vec<Hit> {
+    (0..2)
+        .map(|index| Hit {
+            address: format!("image-{index}"),
+            thumbnail: Some(format!("thumb-{index}")),
+            width: 12,
+            height: 8,
+            attribution: credit("Controlled"),
+        })
+        .collect()
+}
+fn wait_network_idle() {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    while NETWORK_WORKERS.load(Ordering::Relaxed) != 0 {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "workers must actually exit"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+}
+#[test]
+fn actual_search_thumbnail_and_preview_launches_bound_cancelled_generations_and_retry() {
+    let _guard = NETWORK_TEST_LOCK.lock().unwrap();
+    wait_network_idle();
+    let ctx = egui::Context::default();
+    let mut app = fixture(&ctx);
+    app.editor
+        .import_web_image(vec![2], preview(10).image, ImportChoice::KeepBoth, false)
+        .unwrap();
+    app.editor.undo();
+    let before = app.editor.document.clone();
+    let redo = app.editor.redo_name().map(str::to_owned);
+    let server = ControlledServer::new();
+    app.start_image_search(vec![2]);
+    {
+        let review = app.web_image.as_mut().unwrap();
+        review.requests = server.requests.clone();
+        review.query = "blocked search".into();
+        review.search(&ctx, None);
+    }
+    server.entered("search");
+    app.web_image = None;
+    app.start_image_search(vec![2]);
+    {
+        let review = app.web_image.as_mut().unwrap();
+        review.requests = server.requests.clone();
+        review.hits = thumbnail_hits();
+        review.start_thumbnails(&ctx);
+    }
+    server.entered("thumbnail");
+    server.entered("thumbnail");
+    app.web_image = None;
+    app.start_web_image(vec![2]);
+    {
+        let review = app.web_image.as_mut().unwrap();
+        review.requests = server.requests.clone();
+        review.address = "blocked preview".into();
+        review.fetch(&ctx);
+    }
+    server.entered("preview");
+    app.web_image = None;
+    assert_eq!(NETWORK_WORKERS.load(Ordering::Relaxed), 4);
+    for _ in 0..2 {
+        for route in ["search", "thumbnail", "preview"] {
+            app.start_image_search(vec![2]);
+            let review = app.web_image.as_mut().unwrap();
+            review.requests = server.requests.clone();
+            review.query = "replacement".into();
+            review.address = "replacement".into();
+            match route {
+                "search" => review.search(&ctx, None),
+                "preview" => review.fetch(&ctx),
+                _ => {
+                    review.hits = thumbnail_hits();
+                    review.start_thumbnails(&ctx);
+                }
+            }
+            server.no_admission();
+            assert_eq!(NETWORK_WORKERS.load(Ordering::Relaxed), 4);
+            app.web_image = None;
+        }
+    }
+    app.start_image_search(vec![2]);
+    app.web_image.as_mut().unwrap().requests = server.requests.clone();
+    server.control.send(ServerControl::Release).unwrap();
+    wait_network_idle();
+    app.web_image.as_mut().unwrap().poll(&ctx);
+    assert!(app.web_image.as_ref().unwrap().hits.is_empty());
+    assert!(app.web_image.as_ref().unwrap().preview.is_none());
+    assert_eq!(app.editor.document, before);
+    assert_eq!(app.editor.redo_name(), redo.as_deref());
+    app.web_image.as_mut().unwrap().query = "fresh".into();
+    app.web_image.as_mut().unwrap().search(&ctx, None);
+    server.entered("search");
+    wait_network_idle();
+    app.web_image.as_mut().unwrap().poll(&ctx);
+    assert!(app.web_image.as_ref().unwrap().searched);
+    app.web_image.as_mut().unwrap().address = "fresh".into();
+    app.web_image.as_mut().unwrap().fetch(&ctx);
+    server.entered("preview");
+    wait_network_idle();
+    app.web_image.as_mut().unwrap().poll(&ctx);
+    assert!(app.web_image.as_ref().unwrap().preview.is_some());
+    app.web_image.as_mut().unwrap().hits = thumbnail_hits();
+    app.web_image.as_mut().unwrap().start_thumbnails(&ctx);
+    server.entered("thumbnail");
+    server.entered("thumbnail");
+    wait_network_idle();
+    app.web_image.as_mut().unwrap().poll(&ctx);
+    assert!(
+        app.web_image
+            .as_ref()
+            .unwrap()
+            .thumbnails
+            .iter()
+            .all(Option::is_some)
+    );
+    app.web_image = None;
+    assert_eq!(app.editor.document, before);
+    assert_eq!(app.editor.redo_name(), redo.as_deref());
+    assert_eq!(NETWORK_WORKERS.load(Ordering::Relaxed), 0);
 }

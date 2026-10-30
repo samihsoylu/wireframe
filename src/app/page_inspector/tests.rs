@@ -840,3 +840,48 @@ fn invalid_panel_settings_are_preserved_while_session_sizing_remains_available()
         assert_eq!(std::fs::read_to_string(&path).unwrap(), contents);
     }
 }
+
+#[test]
+fn extract_text_native_command_preserves_pending_page_and_source_notes_and_redo() {
+    let _guard = crate::app::screenshot_text::TEST_RECOGNITION
+        .lock()
+        .unwrap();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    while !crate::app::screenshot_text::available() {
+        assert!(std::time::Instant::now() < deadline);
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    for source_notes in [false, true] {
+        let (ctx, mut app) = setup();
+        if source_notes {
+            let library = app.editor.create_library("Shared controls").unwrap();
+            app.editor
+                .create_empty_source(library, "Source", wireframe::document::Point::default())
+                .unwrap();
+        }
+        app.editor.edit("Change title", |editor| {
+            editor.document.title = "Later title".into()
+        });
+        app.editor.undo();
+        app.begin_page_notes(Rect::from_min_size(Pos2::ZERO, Vec2::new(500., 500.)));
+        app.page_inspector.draft.as_mut().unwrap().text =
+            "Pending notes that must stay editable".into();
+        let before = app.editor.document.clone();
+        let redo = app.editor.redo_name().map(str::to_owned);
+        assert!(!app.can_extract_screenshot());
+        assert!(!app.command_enabled(&ctx, menus::Command::ExtractText));
+        frame(
+            &mut app,
+            &ctx,
+            vec![egui::Event::AppCommand(menus::Command::ExtractText as u64)],
+        );
+        assert_eq!(
+            app.page_inspector.draft.as_ref().unwrap().text,
+            "Pending notes that must stay editable"
+        );
+        assert_eq!(app.editor.document, before);
+        assert_eq!(app.editor.redo_name(), redo.as_deref());
+        assert!(app.screenshot_text.is_none());
+        assert!(app.error.is_none());
+    }
+}

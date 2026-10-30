@@ -1,5 +1,5 @@
 {
-  "integrationShards": 6,
+  "integrationShards": 21,
   "exampleShards": 2,
   "knownLinuxEmptyIntegrationTargets": {
     "interface_typography": "Source file explicitly cfg(target_os=macos); separate platform acceptance"

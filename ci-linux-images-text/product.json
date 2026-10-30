@@ -1,6 +1,6 @@
 {
   "armed": true,
-  "productCommit": "738a4851e1cd6e505211cb4a0e2c675f65f743c8",
+  "productCommit": "d00763bc5dc9ffce5c20865ae954fa3525074a6c",
   "version": "0.1.0-beta.3",
   "sourceManifest": {
     ".gitattributes": {
@@ -5430,8 +5430,8 @@
     },
     "src/app/text_session/retention_tests.rs": {
       "mode": "0o644",
-      "bytes": 16108,
-      "sha256": "cd3dfa3d6bc31fe8b2820724ae0548401c7bbd355d2a55f773b728632c37607d"
+      "bytes": 16125,
+      "sha256": "07a767973dfd50f711761239a5ca1dc5541e0dc6ac7e14ddff4744aa761d4b08"
     },
     "src/app/toolbar.rs": {
       "mode": "0o644",
@@ -9388,50 +9388,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:arrows",
+        "identity": "test:clean_scrollbars",
         "selector": [
           "--test",
-          "arrows"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:button_bars",
-        "selector": [
-          "--test",
-          "button_bars"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:charts",
-        "selector": [
-          "--test",
-          "charts"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:component_libraries",
-        "selector": [
-          "--test",
-          "component_libraries"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:control_creation",
-        "selector": [
-          "--test",
-          "control_creation"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:custom_icons",
-        "selector": [
-          "--test",
-          "custom_icons"
+          "clean_scrollbars"
         ],
         "allowEmpty": false
       },
@@ -9444,50 +9404,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:icon_pixel_alignment",
+        "identity": "test:link_occlusion",
         "selector": [
           "--test",
-          "icon_pixel_alignment"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:label_orientation",
-        "selector": [
-          "--test",
-          "label_orientation"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:library_transfer",
-        "selector": [
-          "--test",
-          "library_transfer"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:list_links",
-        "selector": [
-          "--test",
-          "list_links"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:markup_inspector",
-        "selector": [
-          "--test",
-          "markup_inspector"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:mobile_rows",
-        "selector": [
-          "--test",
-          "mobile_rows"
+          "link_occlusion"
         ],
         "allowEmpty": false
       },
@@ -9500,50 +9420,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:pdf_plan",
+        "identity": "test:raster_archive",
         "selector": [
           "--test",
-          "pdf_plan"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:project_asset_import",
-        "selector": [
-          "--test",
-          "project_asset_import"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:project_session",
-        "selector": [
-          "--test",
-          "project_session"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:raster_plan",
-        "selector": [
-          "--test",
-          "raster_plan"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:retained_pages",
-        "selector": [
-          "--test",
-          "retained_pages"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:rules",
-        "selector": [
-          "--test",
-          "rules"
+          "raster_archive"
         ],
         "allowEmpty": false
       },
@@ -9556,50 +9436,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:smartphones",
+        "identity": "test:tabs",
         "selector": [
           "--test",
-          "smartphones"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:source_move",
-        "selector": [
-          "--test",
-          "source_move"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:table_options",
-        "selector": [
-          "--test",
-          "table_options"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:text_engine",
-        "selector": [
-          "--test",
-          "text_engine"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:text_palette",
-        "selector": [
-          "--test",
-          "text_palette"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:version_workflows",
-        "selector": [
-          "--test",
-          "version_workflows"
+          "tabs"
         ],
         "allowEmpty": false
       }
@@ -9614,50 +9454,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:asset_catalog",
+        "identity": "test:component_catalog",
         "selector": [
           "--test",
-          "asset_catalog"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:button_corners",
-        "selector": [
-          "--test",
-          "button_corners"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:choice_groups",
-        "selector": [
-          "--test",
-          "choice_groups"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:component_overrides",
-        "selector": [
-          "--test",
-          "component_overrides"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:control_opacity",
-        "selector": [
-          "--test",
-          "control_opacity"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:date_controls",
-        "selector": [
-          "--test",
-          "date_controls"
+          "component_catalog"
         ],
         "allowEmpty": false
       },
@@ -9670,50 +9470,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:image_split",
+        "identity": "test:list_control",
         "selector": [
           "--test",
-          "image_split"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:large_icon_pixels",
-        "selector": [
-          "--test",
-          "large_icon_pixels"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:linear_controls",
-        "selector": [
-          "--test",
-          "linear_controls"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:locking",
-        "selector": [
-          "--test",
-          "locking"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:markup_selection",
-        "selector": [
-          "--test",
-          "markup_selection"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:move_preview",
-        "selector": [
-          "--test",
-          "move_preview"
+          "list_control"
         ],
         "allowEmpty": false
       },
@@ -9726,50 +9486,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:permanent_pages",
+        "identity": "test:raster_files",
         "selector": [
           "--test",
-          "permanent_pages"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:project_copy",
-        "selector": [
-          "--test",
-          "project_copy"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:properties",
-        "selector": [
-          "--test",
-          "properties"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:raster_regions",
-        "selector": [
-          "--test",
-          "raster_regions"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:review_comments",
-        "selector": [
-          "--test",
-          "review_comments"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:save_lifecycle",
-        "selector": [
-          "--test",
-          "save_lifecycle"
+          "raster_files"
         ],
         "allowEmpty": false
       },
@@ -9782,50 +9502,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:snapping",
+        "identity": "test:text_controls",
         "selector": [
           "--test",
-          "snapping"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:source_workspace",
-        "selector": [
-          "--test",
-          "source_workspace"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:table_palette",
-        "selector": [
-          "--test",
-          "table_palette"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:text_entry",
-        "selector": [
-          "--test",
-          "text_entry"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:text_pixel_alignment",
-        "selector": [
-          "--test",
-          "text_pixel_alignment"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:video",
-        "selector": [
-          "--test",
-          "video"
+          "text_controls"
         ],
         "allowEmpty": false
       }
@@ -9840,50 +9520,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:asset_retention",
+        "identity": "test:component_deletion",
         "selector": [
           "--test",
-          "asset_retention"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:catalog_labels",
-        "selector": [
-          "--test",
-          "catalog_labels"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:circle_buttons",
-        "selector": [
-          "--test",
-          "circle_buttons"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:component_resize",
-        "selector": [
-          "--test",
-          "component_resize"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:coordinate_rounding",
-        "selector": [
-          "--test",
-          "coordinate_rounding"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:diagrams",
-        "selector": [
-          "--test",
-          "diagrams"
+          "component_deletion"
         ],
         "allowEmpty": false
       },
@@ -9896,50 +9536,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:images",
+        "identity": "test:list_icons",
         "selector": [
           "--test",
-          "images"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:layering",
-        "selector": [
-          "--test",
-          "layering"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:link_actions",
-        "selector": [
-          "--test",
-          "link_actions"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:markup",
-        "selector": [
-          "--test",
-          "markup"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:markup_visibility",
-        "selector": [
-          "--test",
-          "markup_visibility"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:multiline_buttons",
-        "selector": [
-          "--test",
-          "multiline_buttons"
+          "list_icons"
         ],
         "allowEmpty": false
       },
@@ -9952,50 +9552,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:phones",
+        "identity": "test:raster_job",
         "selector": [
           "--test",
-          "phones"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:project_fonts",
-        "selector": [
-          "--test",
-          "project_fonts"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:quick_draw",
-        "selector": [
-          "--test",
-          "quick_draw"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:readable_text_links",
-        "selector": [
-          "--test",
-          "readable_text_links"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:review_integration",
-        "selector": [
-          "--test",
-          "review_integration"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:scrollbars",
-        "selector": [
-          "--test",
-          "scrollbars"
+          "raster_job"
         ],
         "allowEmpty": false
       },
@@ -10008,50 +9568,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:source_actions",
+        "identity": "test:text_conversion",
         "selector": [
           "--test",
-          "source_actions"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:specialized_selection",
-        "selector": [
-          "--test",
-          "specialized_selection"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:tablets",
-        "selector": [
-          "--test",
-          "tablets"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:text_entry_layout",
-        "selector": [
-          "--test",
-          "text_entry_layout"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:toggle",
-        "selector": [
-          "--test",
-          "toggle"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:windows",
-        "selector": [
-          "--test",
-          "windows"
+          "text_conversion"
         ],
         "allowEmpty": false
       }
@@ -10066,50 +9586,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:asset_trash",
+        "identity": "test:component_libraries",
         "selector": [
           "--test",
-          "asset_trash"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:catalog_layout",
-        "selector": [
-          "--test",
-          "catalog_layout"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:clean_scrollbars",
-        "selector": [
-          "--test",
-          "clean_scrollbars"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:component_sections",
-        "selector": [
-          "--test",
-          "component_sections"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:cover_flow",
-        "selector": [
-          "--test",
-          "cover_flow"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:document_v2",
-        "selector": [
-          "--test",
-          "document_v2"
+          "component_libraries"
         ],
         "allowEmpty": false
       },
@@ -10122,50 +9602,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:input_appearance",
+        "identity": "test:list_links",
         "selector": [
           "--test",
-          "input_appearance"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:legacy_text",
-        "selector": [
-          "--test",
-          "legacy_text"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:link_occlusion",
-        "selector": [
-          "--test",
-          "link_occlusion"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:markup_arrangement",
-        "selector": [
-          "--test",
-          "markup_arrangement"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:media_controls",
-        "selector": [
-          "--test",
-          "media_controls"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:navigation",
-        "selector": [
-          "--test",
-          "navigation"
+          "list_links"
         ],
         "allowEmpty": false
       },
@@ -10178,50 +9618,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:pickers",
+        "identity": "test:raster_plan",
         "selector": [
           "--test",
-          "pickers"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:project_library_import",
-        "selector": [
-          "--test",
-          "project_library_import"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:raster_archive",
-        "selector": [
-          "--test",
-          "raster_archive"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:recursive_workspace",
-        "selector": [
-          "--test",
-          "recursive_workspace"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:rich_text",
-        "selector": [
-          "--test",
-          "rich_text"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:search",
-        "selector": [
-          "--test",
-          "search"
+          "raster_plan"
         ],
         "allowEmpty": false
       },
@@ -10234,50 +9634,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:source_appearance",
+        "identity": "test:text_engine",
         "selector": [
           "--test",
-          "source_appearance"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:standalone_icons",
-        "selector": [
-          "--test",
-          "standalone_icons"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:tabs",
-        "selector": [
-          "--test",
-          "tabs"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:text_entry_widget",
-        "selector": [
-          "--test",
-          "text_entry_widget"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:trees",
-        "selector": [
-          "--test",
-          "trees"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:workflows",
-        "selector": [
-          "--test",
-          "workflows"
+          "text_engine"
         ],
         "allowEmpty": false
       }
@@ -10292,50 +9652,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:browser_contours",
+        "identity": "test:component_overrides",
         "selector": [
           "--test",
-          "browser_contours"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:catalog_presets",
-        "selector": [
-          "--test",
-          "catalog_presets"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:component_catalog",
-        "selector": [
-          "--test",
-          "component_catalog"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:components",
-        "selector": [
-          "--test",
-          "components"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:cropped_resize",
-        "selector": [
-          "--test",
-          "cropped_resize"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:dropdown",
-        "selector": [
-          "--test",
-          "dropdown"
+          "component_overrides"
         ],
         "allowEmpty": false
       },
@@ -10348,50 +9668,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:interface_symbols",
+        "identity": "test:locking",
         "selector": [
           "--test",
-          "interface_symbols"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:library_import",
-        "selector": [
-          "--test",
-          "library_import"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:list_control",
-        "selector": [
-          "--test",
-          "list_control"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:markup_export",
-        "selector": [
-          "--test",
-          "markup_export"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:menus",
-        "selector": [
-          "--test",
-          "menus"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:optional_icons",
-        "selector": [
-          "--test",
-          "optional_icons"
+          "locking"
         ],
         "allowEmpty": false
       },
@@ -10404,50 +9684,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:pointed_buttons",
+        "identity": "test:raster_regions",
         "selector": [
           "--test",
-          "pointed_buttons"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:project_page_import",
-        "selector": [
-          "--test",
-          "project_page_import"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:raster_files",
-        "selector": [
-          "--test",
-          "raster_files"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:rendering",
-        "selector": [
-          "--test",
-          "rendering"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:row_icons",
-        "selector": [
-          "--test",
-          "row_icons"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:selection_geometry",
-        "selector": [
-          "--test",
-          "selection_geometry"
+          "raster_regions"
         ],
         "allowEmpty": false
       },
@@ -10460,42 +9700,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:source_clipboard",
+        "identity": "test:text_entry",
         "selector": [
           "--test",
-          "source_clipboard"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:static_layouts",
-        "selector": [
-          "--test",
-          "static_layouts"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:text_controls",
-        "selector": [
-          "--test",
-          "text_controls"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:text_link_transfers",
-        "selector": [
-          "--test",
-          "text_link_transfers"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:ui_text",
-        "selector": [
-          "--test",
-          "ui_text"
+          "text_entry"
         ],
         "allowEmpty": false
       }
@@ -10510,50 +9718,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:browsers",
+        "identity": "test:component_resize",
         "selector": [
           "--test",
-          "browsers"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:catalog_starters",
-        "selector": [
-          "--test",
-          "catalog_starters"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:component_deletion",
-        "selector": [
-          "--test",
-          "component_deletion"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:control_browser",
-        "selector": [
-          "--test",
-          "control_browser"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:cropped_ungroup",
-        "selector": [
-          "--test",
-          "cropped_ungroup"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:editing_context",
-        "selector": [
-          "--test",
-          "editing_context"
+          "component_resize"
         ],
         "allowEmpty": false
       },
@@ -10566,50 +9734,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:interface_typography",
+        "identity": "test:markup",
         "selector": [
           "--test",
-          "interface_typography"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "test:library_lifecycle",
-        "selector": [
-          "--test",
-          "library_lifecycle"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:list_icons",
-        "selector": [
-          "--test",
-          "list_icons"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:markup_geometry",
-        "selector": [
-          "--test",
-          "markup_geometry"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:mobile_keyboards",
-        "selector": [
-          "--test",
-          "mobile_keyboards"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:outlines",
-        "selector": [
-          "--test",
-          "outlines"
+          "markup"
         ],
         "allowEmpty": false
       },
@@ -10622,50 +9750,10 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:presentation_scene",
+        "identity": "test:readable_text_links",
         "selector": [
           "--test",
-          "presentation_scene"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:project_palette",
-        "selector": [
-          "--test",
-          "project_palette"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:raster_job",
-        "selector": [
-          "--test",
-          "raster_job"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:resize_minimum",
-        "selector": [
-          "--test",
-          "resize_minimum"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:row_selection",
-        "selector": [
-          "--test",
-          "row_selection"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:selection_properties",
-        "selector": [
-          "--test",
-          "selection_properties"
+          "readable_text_links"
         ],
         "allowEmpty": false
       },
@@ -10678,10 +9766,786 @@
         "allowEmpty": false
       },
       {
+        "identity": "test:text_entry_layout",
+        "selector": [
+          "--test",
+          "text_entry_layout"
+        ],
+        "allowEmpty": false
+      }
+    ],
+    "integration-07": [
+      {
+        "identity": "test:arrows",
+        "selector": [
+          "--test",
+          "arrows"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:component_sections",
+        "selector": [
+          "--test",
+          "component_sections"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:icon_pixel_alignment",
+        "selector": [
+          "--test",
+          "icon_pixel_alignment"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:markup_arrangement",
+        "selector": [
+          "--test",
+          "markup_arrangement"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:pdf_plan",
+        "selector": [
+          "--test",
+          "pdf_plan"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:recursive_workspace",
+        "selector": [
+          "--test",
+          "recursive_workspace"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:smartphones",
+        "selector": [
+          "--test",
+          "smartphones"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:text_entry_widget",
+        "selector": [
+          "--test",
+          "text_entry_widget"
+        ],
+        "allowEmpty": false
+      }
+    ],
+    "integration-08": [
+      {
+        "identity": "test:asset_catalog",
+        "selector": [
+          "--test",
+          "asset_catalog"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:components",
+        "selector": [
+          "--test",
+          "components"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:image_split",
+        "selector": [
+          "--test",
+          "image_split"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:markup_export",
+        "selector": [
+          "--test",
+          "markup_export"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:permanent_pages",
+        "selector": [
+          "--test",
+          "permanent_pages"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:rendering",
+        "selector": [
+          "--test",
+          "rendering"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:snapping",
+        "selector": [
+          "--test",
+          "snapping"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:text_link_transfers",
+        "selector": [
+          "--test",
+          "text_link_transfers"
+        ],
+        "allowEmpty": false
+      }
+    ],
+    "integration-09": [
+      {
+        "identity": "test:asset_retention",
+        "selector": [
+          "--test",
+          "asset_retention"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:control_browser",
+        "selector": [
+          "--test",
+          "control_browser"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:images",
+        "selector": [
+          "--test",
+          "images"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:markup_geometry",
+        "selector": [
+          "--test",
+          "markup_geometry"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:phones",
+        "selector": [
+          "--test",
+          "phones"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:resize_minimum",
+        "selector": [
+          "--test",
+          "resize_minimum"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:source_actions",
+        "selector": [
+          "--test",
+          "source_actions"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:text_links",
+        "selector": [
+          "--test",
+          "text_links"
+        ],
+        "allowEmpty": false
+      }
+    ],
+    "integration-10": [
+      {
+        "identity": "test:asset_trash",
+        "selector": [
+          "--test",
+          "asset_trash"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:control_creation",
+        "selector": [
+          "--test",
+          "control_creation"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:input_appearance",
+        "selector": [
+          "--test",
+          "input_appearance"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:markup_inspector",
+        "selector": [
+          "--test",
+          "markup_inspector"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:pickers",
+        "selector": [
+          "--test",
+          "pickers"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:retained_pages",
+        "selector": [
+          "--test",
+          "retained_pages"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:source_appearance",
+        "selector": [
+          "--test",
+          "source_appearance"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:text_palette",
+        "selector": [
+          "--test",
+          "text_palette"
+        ],
+        "allowEmpty": false
+      }
+    ],
+    "integration-11": [
+      {
+        "identity": "test:browser_contours",
+        "selector": [
+          "--test",
+          "browser_contours"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:control_opacity",
+        "selector": [
+          "--test",
+          "control_opacity"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:interface_symbols",
+        "selector": [
+          "--test",
+          "interface_symbols"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:markup_selection",
+        "selector": [
+          "--test",
+          "markup_selection"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:pointed_buttons",
+        "selector": [
+          "--test",
+          "pointed_buttons"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:review_comments",
+        "selector": [
+          "--test",
+          "review_comments"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:source_clipboard",
+        "selector": [
+          "--test",
+          "source_clipboard"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:text_pixel_alignment",
+        "selector": [
+          "--test",
+          "text_pixel_alignment"
+        ],
+        "allowEmpty": false
+      }
+    ],
+    "integration-12": [
+      {
+        "identity": "test:browsers",
+        "selector": [
+          "--test",
+          "browsers"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:coordinate_rounding",
+        "selector": [
+          "--test",
+          "coordinate_rounding"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:interface_typography",
+        "selector": [
+          "--test",
+          "interface_typography"
+        ],
+        "allowEmpty": true
+      },
+      {
+        "identity": "test:markup_visibility",
+        "selector": [
+          "--test",
+          "markup_visibility"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:presentation_scene",
+        "selector": [
+          "--test",
+          "presentation_scene"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:review_integration",
+        "selector": [
+          "--test",
+          "review_integration"
+        ],
+        "allowEmpty": false
+      },
+      {
         "identity": "test:source_locking",
         "selector": [
           "--test",
           "source_locking"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:toggle",
+        "selector": [
+          "--test",
+          "toggle"
+        ],
+        "allowEmpty": false
+      }
+    ],
+    "integration-13": [
+      {
+        "identity": "test:button_bars",
+        "selector": [
+          "--test",
+          "button_bars"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:cover_flow",
+        "selector": [
+          "--test",
+          "cover_flow"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:label_orientation",
+        "selector": [
+          "--test",
+          "label_orientation"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:media_controls",
+        "selector": [
+          "--test",
+          "media_controls"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:project_asset_import",
+        "selector": [
+          "--test",
+          "project_asset_import"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:rich_text",
+        "selector": [
+          "--test",
+          "rich_text"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:source_move",
+        "selector": [
+          "--test",
+          "source_move"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:trees",
+        "selector": [
+          "--test",
+          "trees"
+        ],
+        "allowEmpty": false
+      }
+    ],
+    "integration-14": [
+      {
+        "identity": "test:button_corners",
+        "selector": [
+          "--test",
+          "button_corners"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:cropped_resize",
+        "selector": [
+          "--test",
+          "cropped_resize"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:large_icon_pixels",
+        "selector": [
+          "--test",
+          "large_icon_pixels"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:menus",
+        "selector": [
+          "--test",
+          "menus"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:project_copy",
+        "selector": [
+          "--test",
+          "project_copy"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:row_icons",
+        "selector": [
+          "--test",
+          "row_icons"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:source_workspace",
+        "selector": [
+          "--test",
+          "source_workspace"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:ui_text",
+        "selector": [
+          "--test",
+          "ui_text"
+        ],
+        "allowEmpty": false
+      }
+    ],
+    "integration-15": [
+      {
+        "identity": "test:catalog_labels",
+        "selector": [
+          "--test",
+          "catalog_labels"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:cropped_ungroup",
+        "selector": [
+          "--test",
+          "cropped_ungroup"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:layering",
+        "selector": [
+          "--test",
+          "layering"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:mobile_keyboards",
+        "selector": [
+          "--test",
+          "mobile_keyboards"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:project_fonts",
+        "selector": [
+          "--test",
+          "project_fonts"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:row_selection",
+        "selector": [
+          "--test",
+          "row_selection"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:specialized_selection",
+        "selector": [
+          "--test",
+          "specialized_selection"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:version_surfaces",
+        "selector": [
+          "--test",
+          "version_surfaces"
+        ],
+        "allowEmpty": false
+      }
+    ],
+    "integration-16": [
+      {
+        "identity": "test:catalog_layout",
+        "selector": [
+          "--test",
+          "catalog_layout"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:custom_icons",
+        "selector": [
+          "--test",
+          "custom_icons"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:legacy_text",
+        "selector": [
+          "--test",
+          "legacy_text"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:mobile_rows",
+        "selector": [
+          "--test",
+          "mobile_rows"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:project_library_import",
+        "selector": [
+          "--test",
+          "project_library_import"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:rules",
+        "selector": [
+          "--test",
+          "rules"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:standalone_icons",
+        "selector": [
+          "--test",
+          "standalone_icons"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:version_workflows",
+        "selector": [
+          "--test",
+          "version_workflows"
+        ],
+        "allowEmpty": false
+      }
+    ],
+    "integration-17": [
+      {
+        "identity": "test:catalog_presets",
+        "selector": [
+          "--test",
+          "catalog_presets"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:date_controls",
+        "selector": [
+          "--test",
+          "date_controls"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:library_import",
+        "selector": [
+          "--test",
+          "library_import"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:move_preview",
+        "selector": [
+          "--test",
+          "move_preview"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:project_page_import",
+        "selector": [
+          "--test",
+          "project_page_import"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:save_lifecycle",
+        "selector": [
+          "--test",
+          "save_lifecycle"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:static_layouts",
+        "selector": [
+          "--test",
+          "static_layouts"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:video",
+        "selector": [
+          "--test",
+          "video"
+        ],
+        "allowEmpty": false
+      }
+    ],
+    "integration-18": [
+      {
+        "identity": "test:catalog_starters",
+        "selector": [
+          "--test",
+          "catalog_starters"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:diagrams",
+        "selector": [
+          "--test",
+          "diagrams"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:library_lifecycle",
+        "selector": [
+          "--test",
+          "library_lifecycle"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:multiline_buttons",
+        "selector": [
+          "--test",
+          "multiline_buttons"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:project_palette",
+        "selector": [
+          "--test",
+          "project_palette"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:scrollbars",
+        "selector": [
+          "--test",
+          "scrollbars"
         ],
         "allowEmpty": false
       },
@@ -10694,26 +10558,192 @@
         "allowEmpty": false
       },
       {
-        "identity": "test:text_conversion",
+        "identity": "test:windows",
         "selector": [
           "--test",
-          "text_conversion"
+          "windows"
+        ],
+        "allowEmpty": false
+      }
+    ],
+    "integration-19": [
+      {
+        "identity": "test:charts",
+        "selector": [
+          "--test",
+          "charts"
         ],
         "allowEmpty": false
       },
       {
-        "identity": "test:text_links",
+        "identity": "test:document_v2",
         "selector": [
           "--test",
-          "text_links"
+          "document_v2"
         ],
         "allowEmpty": false
       },
       {
-        "identity": "test:version_surfaces",
+        "identity": "test:library_transfer",
         "selector": [
           "--test",
-          "version_surfaces"
+          "library_transfer"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:navigation",
+        "selector": [
+          "--test",
+          "navigation"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:project_session",
+        "selector": [
+          "--test",
+          "project_session"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:search",
+        "selector": [
+          "--test",
+          "search"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:table_options",
+        "selector": [
+          "--test",
+          "table_options"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:workflows",
+        "selector": [
+          "--test",
+          "workflows"
+        ],
+        "allowEmpty": false
+      }
+    ],
+    "integration-20": [
+      {
+        "identity": "test:choice_groups",
+        "selector": [
+          "--test",
+          "choice_groups"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:dropdown",
+        "selector": [
+          "--test",
+          "dropdown"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:linear_controls",
+        "selector": [
+          "--test",
+          "linear_controls"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:optional_icons",
+        "selector": [
+          "--test",
+          "optional_icons"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:properties",
+        "selector": [
+          "--test",
+          "properties"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:selection_geometry",
+        "selector": [
+          "--test",
+          "selection_geometry"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:table_palette",
+        "selector": [
+          "--test",
+          "table_palette"
+        ],
+        "allowEmpty": false
+      }
+    ],
+    "integration-21": [
+      {
+        "identity": "test:circle_buttons",
+        "selector": [
+          "--test",
+          "circle_buttons"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:editing_context",
+        "selector": [
+          "--test",
+          "editing_context"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:link_actions",
+        "selector": [
+          "--test",
+          "link_actions"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:outlines",
+        "selector": [
+          "--test",
+          "outlines"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:quick_draw",
+        "selector": [
+          "--test",
+          "quick_draw"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:selection_properties",
+        "selector": [
+          "--test",
+          "selection_properties"
+        ],
+        "allowEmpty": false
+      },
+      {
+        "identity": "test:tablets",
+        "selector": [
+          "--test",
+          "tablets"
         ],
         "allowEmpty": false
       }
@@ -11711,5 +11741,5 @@
   "platformExcludedTargets": {
     "interface_typography": "Source file explicitly cfg(target_os=macos); separate platform acceptance"
   },
-  "reviewEvidenceSHA256": "05cb4c7b078181e12710e02cfd5919b15492be07b37e9f1cb09eca5cf78be422"
+  "reviewEvidenceSHA256": "d6497cf56ffef5a8d1b4137e5e7515f4ff5ede4597977cb9f74a7a9ec12119ab"
 }

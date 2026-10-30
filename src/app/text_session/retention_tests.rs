@@ -33,7 +33,8 @@ const BATCH: Golden = Golden {
 };
 
 fn project(json: &str) -> Project {
-    let project: Project = serde_json::from_str(json).expect("independently frozen complete graph");
+    let project =
+        wireframe::document::decode(json.as_bytes()).expect("independently frozen complete graph");
     project.validate().expect("valid frozen graph");
     project
 }

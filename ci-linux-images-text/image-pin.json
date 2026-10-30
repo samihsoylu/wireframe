@@ -1,0 +1,18 @@
+{
+  "tag": "docker.io/library/rust:1.99.1-slim-bookworm",
+  "indexDigest": "sha256:24707e70a4f1e23d9a7b25202ec43126d28a52294b96aad5c670df1fd1f1d400",
+  "arm64ManifestDigest": "sha256:efecb7694d37171c478bd45d0cc88d9acc6e7fd31d7a1a39891ed4a294d0ce6f",
+  "configDigest": "sha256:0a09e6bb4a4b4990f66590e9bcf4e99a2541ff81e6dc6fc707571407f13e7e42",
+  "platform": {
+    "architecture": "arm64",
+    "os": "linux",
+    "variant": "v8"
+  },
+  "compressedLayerBytes": 280814127,
+  "configArchitecture": "arm64",
+  "configOS": "linux",
+  "checkedDate": "2026-10-29",
+  "registryReadOnly": true,
+  "imageLayersDownloaded": false,
+  "source": "https://registry-1.docker.io/v2/library/rust/manifests/1.99.1-slim-bookworm"
+}

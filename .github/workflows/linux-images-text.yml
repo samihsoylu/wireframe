@@ -1,0 +1,153 @@
+name: Reviewed image search and local OCR Linux ARM64 validation
+
+on:
+  push:
+    branches: [codex/linux-images-text-ci]
+    paths: [.github/workflows/linux-images-text.yml, 'ci-linux-images-text/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-images-text-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  binding:
+    if: github.repository == 'samihsoylu/wireframe' && github.event.repository.private == false
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 5
+    outputs:
+      product: ${{ steps.binding.outputs.product }}
+      matrix: ${{ steps.binding.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Require final parent-reviewed product binding (fails closed)
+        id: binding
+        run: python3 ci-linux-images-text/bind.py assert-armed --output "$GITHUB_OUTPUT"
+
+  execute:
+    needs: binding
+    name: Full Linux ARM64 ${{ matrix.group }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.binding.outputs.matrix) }}
+    container:
+      image: docker.io/library/rust@sha256:efecb7694d37171c478bd45d0cc88d9acc6e7fd31d7a1a39891ed4a294d0ce6f
+    defaults:
+      run:
+        shell: bash
+    env:
+      CI_GROUP: ${{ matrix.group }}
+      RUSTUP_TOOLCHAIN: 1.99.1
+      CARGO_BUILD_JOBS: '1'
+      CARGO_INCREMENTAL: '0'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Provision disposable Bookworm compiler and desktop prerequisites
+        run: |
+          set -euo pipefail
+          umask 022
+          mkdir -p ci-work/receipts
+          df -B1 . > ci-work/receipts/disk-initial.txt
+          test "$(df -B1 --output=avail . | tail -1)" -ge 10737418240
+          apt-get update
+          apt-get install -y --no-install-recommends python3 git g++ make cmake pkg-config binutils file \
+            libx11-dev libxi-dev libxrandr-dev libxcursor-dev libxinerama-dev \
+            libxkbcommon-dev libwayland-dev libgl1-mesa-dev libegl1-mesa-dev libudev-dev \
+            fontconfig fonts-noto-core
+          rm -r /var/lib/apt/lists/*
+          fc-list --quiet 'Noto Sans'
+          fc-list --quiet 'Noto Serif'
+          for family in sans-serif serif monospace; do
+            font_file="$(fc-match --format='%{file}' "$family")"
+            test -n "$font_file"
+            test -s "$font_file"
+            printf '%s\t%s\n' "$family" "$font_file"
+          done > ci-work/receipts/font-matches.txt
+          rustup component add --toolchain 1.99.1 clippy
+          dpkg-query -W > ci-work/receipts/system-packages.txt
+          df -B1 . > ci-work/receipts/disk-system-prepared.txt
+
+      - name: Checkout exact CI controller identity
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: controller
+          persist-credentials: false
+
+      - name: Checkout independently bound exact product identity
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ needs.binding.outputs.product }}
+          path: product
+          persist-credentials: false
+
+      - name: Verify source/toolchain/model; prepare locked dependencies
+        run: |
+          set -euo pipefail
+          python3 controller/ci-linux-images-text/controller.py prepare --group "$CI_GROUP" --repo product --work ci-work
+
+      - name: Execute full ordinary-profile group with offline Cargo
+        run: |
+          set -euo pipefail
+          python3 controller/ci-linux-images-text/controller.py verify --group "$CI_GROUP" --repo product --work ci-work
+
+      - name: Retain raw catalog/results and failure receipts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: images-text-receipts-${{ matrix.group }}-${{ github.sha }}
+          path: ci-work/receipts/
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Retain candidate ELF and complete source/license package for review
+        if: success() && matrix.group == 'release'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: images-text-linux-candidate-UNACCEPTED-${{ github.sha }}
+          path: ci-work/artifacts/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  required-scope:
+    name: Full ordinary Linux suite and static package; native acceptance separate
+    needs: [binding, execute]
+    if: always() && github.repository == 'samihsoylu/wireframe' && github.event.repository.private == false
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 10
+    env:
+      BINDING_RESULT: ${{ needs.binding.result }}
+      EXECUTION_RESULT: ${{ needs.execute.result }}
+    steps:
+      - name: Refuse partial or unarmed run
+        run: |
+          test "$BINDING_RESULT" = success
+          test "$EXECUTION_RESULT" = success
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Read this run's bounded receipts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: images-text-receipts-*-${{ github.sha }}
+          path: received
+          merge-multiple: false
+      - name: Re-parse raw names/results; require full planned and critical coverage
+        run: python3 ci-linux-images-text/aggregate.py --received received --output full-linux-scope.json
+      - name: Retain exact aggregate named accounting
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: images-text-linux-scope-${{ github.sha }}
+          path: full-linux-scope.json
+          if-no-files-found: error
+          retention-days: 1

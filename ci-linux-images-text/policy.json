@@ -1,0 +1,71 @@
+{
+  "integrationShards": 6,
+  "exampleShards": 2,
+  "knownLinuxEmptyIntegrationTargets": {
+    "interface_typography": "Source file explicitly cfg(target_os=macos); separate platform acceptance"
+  },
+  "allowedIgnored": {
+    "lib:wireframe::working_copy::crash_tests::child_process": "Helper executed by ordinary crash tests in a separate process",
+    "lib:wireframe::images::search::tests::commons_provider_search_thumbnail_and_full_preview_smoke": "Existing explicit external-provider smoke; ordinary offline CI does not invoke it",
+    "bin:wireframe::app::offscreen_tests::nested_opacity_keeps_overlap_masks_clips_and_tile_boundaries": "Existing opt-in native OpenGL/WIREFRAME_RENDER_DIR gate",
+    "bin:wireframe::app::offscreen_tests::canvas_text_preserves_raster_coverage_at_actual_size": "Existing opt-in native OpenGL/WIREFRAME_RENDER_DIR gate",
+    "bin:wireframe::app::review::tests::render_review_states_without_windows": "Existing macOS-only opt-in rendering; not Linux acceptance"
+  },
+  "criticalModules": [
+    {
+      "path": "src/app/web_image/tests.rs",
+      "target": "bin:wireframe",
+      "module": "app::web_image::tests"
+    },
+    {
+      "path": "src/app/screenshot_text.rs",
+      "target": "bin:wireframe",
+      "module": "app::screenshot_text::tests"
+    },
+    {
+      "path": "src/images/search/tests.rs",
+      "target": "lib:wireframe",
+      "module": "images::search::tests"
+    },
+    {
+      "path": "src/working_copy/tests.rs",
+      "target": "lib:wireframe",
+      "module": "working_copy::tests"
+    },
+    {
+      "path": "src/working_copy/crash_tests.rs",
+      "target": "lib:wireframe",
+      "module": "working_copy::crash_tests"
+    },
+    {
+      "path": "src/app/screenshot_actions/tests.rs",
+      "target": "bin:wireframe",
+      "module": "app::screenshot_actions::tests"
+    },
+    {
+      "path": "src/app/page_inspector/tests.rs",
+      "target": "bin:wireframe",
+      "module": "app::page_inspector::tests"
+    },
+    {
+      "path": "src/images.rs",
+      "target": "lib:wireframe",
+      "module": "images::tests"
+    }
+  ],
+  "criticalIntegrationTargets": [
+    "document_v2",
+    "library_transfer",
+    "page_clipboard",
+    "source_clipboard",
+    "project_copy",
+    "project_asset_import",
+    "project_library_import",
+    "project_page_import",
+    "asset_catalog",
+    "asset_retention",
+    "asset_trash",
+    "shared_images",
+    "images"
+  ]
+}

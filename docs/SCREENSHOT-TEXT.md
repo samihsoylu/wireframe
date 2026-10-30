@@ -1,6 +1,6 @@
 # Extract text from a screenshot
 
-Choose **File → Extract text from screenshot…**, or select an image and choose **Extract text…** in its inspector. Text extraction recognizes the original image on your device and opens a text preview. Finish any canvas text edit first; another extraction waits for prior processing to finish.
+Choose **File → Extract text from screenshot…**, or select an image and choose **Extract text…** in its inspector. Text extraction recognizes the original image on your device and opens a text preview. Finish any active text or notes edit first; another extraction waits for prior processing to finish.
 Review and correct the result, then choose **Copy text**. **Cancel**, **Close** or
 Escape dismisses the preview. Recognition, corrections in the preview and
 copying do not add controls, import assets, change image captions or create an

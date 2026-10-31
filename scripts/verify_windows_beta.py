@@ -13,7 +13,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_DIRECTORIES = ('src', 'tests', 'examples', 'scripts', 'assets', 'vendor',
                       'docs', 'licenses', '.github')
-SOURCE_FILES = ('Cargo.toml', 'Cargo.lock', 'LICENSE', 'README.md', 'CHANGELOG.md',
+SOURCE_FILES = ('Cargo.toml', 'Cargo.lock', 'build.rs', 'LICENSE', 'README.md', 'CHANGELOG.md',
                 'SESSION-SPEC.md', 'THIRD_PARTY_NOTICES.md')
 
 
@@ -26,7 +26,118 @@ def sha256(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def inspect_pe(data):
+def ico_images(data):
+    require(len(data) >= 6, 'Truncated ICO header')
+    reserved, kind, count = struct.unpack_from('<HHH', data)
+    require(reserved == 0 and kind == 1 and 0 < count <= 256, 'Invalid ICO header')
+    end = 6 + count * 16
+    require(end <= len(data), 'Truncated ICO directory')
+    images = {}
+    intervals = []
+    for index in range(count):
+        entry = struct.unpack_from('<BBBBHHII', data, 6 + index * 16)
+        width, height, colors, reserved, planes, bits, size, offset = entry
+        require(reserved == 0 and size > 0 and offset >= end and offset + size <= len(data),
+                'Invalid ICO image bounds')
+        descriptor = (width, height, colors, reserved, planes, bits, size)
+        require(descriptor not in images, 'Duplicate ICO image descriptor')
+        require(all(offset + size <= start or offset >= stop for start, stop in intervals),
+                'Overlapping ICO images')
+        intervals.append((offset, offset + size))
+        images[descriptor] = data[offset:offset + size]
+    return images
+
+
+def icon_resources(data, offset, resource_rva, resource_size, icon):
+    """Bounded PE type/name/language tree; no Windows loader or APIs."""
+    require(resource_rva and resource_size >= 16, 'Missing PE icon resource directory')
+    base = offset(resource_rva, resource_size)
+    resources = {}
+    visited = set()
+    entries_seen = 0
+
+    def relative(position, size):
+        require(0 <= position and 0 < size and position + size <= resource_size,
+                'Resource directory offset exceeds bounds')
+        return base + position
+
+    def walk(position, path):
+        nonlocal entries_seen
+        require(position not in visited, 'Cyclic or shared resource directory')
+        require(len(path) < 3, 'Resource directory exceeds type/name/language depth')
+        visited.add(position)
+        header = relative(position, 16)
+        named, numbered = struct.unpack_from('<HH', data, header + 12)
+        count = named + numbered
+        entries_seen += count
+        require(count > 0 and entries_seen <= 4096, 'Invalid or oversized resource directory')
+        start = relative(position + 16, count * 8)
+        keys = set()
+        previous_id = -1
+        for index in range(count):
+            name, target = struct.unpack_from('<II', data, start + index * 8)
+            require(bool(name & 0x80000000) == (index < named), 'Resource named/ID count mismatch')
+            if name & 0x80000000:
+                string = name & 0x7fffffff
+                length = struct.unpack_from('<H', data, relative(string, 2))[0]
+                require(length > 0, 'Empty resource name')
+                text = relative(string + 2, length * 2)
+                key = data[text:text + length * 2].decode('utf-16-le')
+            else:
+                require(name <= 0xffff, 'Invalid numeric resource ID')
+                key = name
+            require(key not in keys, 'Duplicate resource directory key')
+            keys.add(key)
+            if isinstance(key, int):
+                require(key > previous_id, 'Resource IDs are not in ascending order')
+                previous_id = key
+            child = path + (key,)
+            pointer = target & 0x7fffffff
+            if target & 0x80000000:
+                walk(pointer, child)
+            else:
+                require(len(child) == 3, 'Resource leaf lacks type/name/language')
+                leaf = relative(pointer, 16)
+                rva, size, _, reserved = struct.unpack_from('<IIII', data, leaf)
+                require(reserved == 0 and size > 0 and resource_rva <= rva
+                        and rva + size <= resource_rva + resource_size, 'Invalid resource data bounds')
+                address = offset(rva, size)
+                require(child not in resources, 'Duplicate resource leaf')
+                resources[child] = data[address:address + size]
+    walk(0, ())
+
+    expected = ico_images(icon)
+    groups = {key: value for key, value in resources.items() if key[0] == 14}
+    require(groups and all(key[1] == 1 for key in groups), 'Missing or unexpected application icon group')
+    used = set()
+    for (_, _, language), group in groups.items():
+        require(isinstance(language, int) and len(group) >= 6, 'Invalid icon group language/header')
+        reserved, kind, count = struct.unpack_from('<HHH', group)
+        require(reserved == 0 and kind == 1 and count == len(expected)
+                and len(group) == 6 + count * 14, 'Icon group differs from ICO directory')
+        matched = set()
+        identifiers = set()
+        for index in range(count):
+            entry = struct.unpack_from('<BBBBHHIH', group, 6 + index * 14)
+            descriptor, identifier = entry[:-1], entry[-1]
+            require(descriptor in expected and descriptor not in matched, 'Unexpected or duplicate icon frame')
+            require(identifier > 0 and identifier not in identifiers, 'Duplicate or invalid icon image ID')
+            key = (3, identifier, language)
+            require(key in resources, 'Icon group references missing image')
+            require(resources[key] == expected[descriptor], 'Embedded icon payload differs from committed ICO')
+            identifiers.add(identifier)
+            matched.add(descriptor)
+            used.add(key)
+        require(matched == set(expected), 'Incomplete embedded icon group')
+    require(used == {key for key in resources if key[0] == 3}, 'Unreferenced icon image resource')
+    return {'verified': True, 'group_id': 1, 'languages': sorted(key[2] for key in groups),
+            'ico_sha256': sha256(icon), 'images': [
+                {'width': descriptor[0] or 256, 'height': descriptor[1] or 256,
+                 'bits': descriptor[5], 'bytes': len(payload), 'sha256': sha256(payload)}
+                for descriptor, payload in expected.items()]}
+
+
+def inspect_pe(data, icon=None):
     require(len(data) >= 64 and data[:2] == b'MZ', 'Missing DOS executable header')
     pe = struct.unpack_from('<I', data, 60)[0]
     require(pe + 24 <= len(data) and data[pe:pe + 4] == b'PE\0\0', 'Missing PE header')
@@ -48,10 +159,11 @@ def inspect_pe(data):
         regions.append((rva, raw_size, raw))
 
     def offset(rva, length=1):
-        for base, size, raw in regions:
-            if base <= rva and rva + length <= base + size:
-                return raw + rva - base
-        raise ValueError(f'Unmapped PE RVA: {rva:#x}')
+        require(length > 0 and 0 <= rva and rva + length <= 0x100000000, 'Invalid PE RVA bounds')
+        matches = [raw + rva - base for base, size, raw in regions
+                   if base <= rva and rva + length <= base + size]
+        require(len(matches) == 1, f'Unmapped or ambiguous PE RVA: {rva:#x}')
+        return matches[0]
 
     directory_count = struct.unpack_from('<I', data, optional + 108)[0]
     require(directory_count >= 2, 'Missing import data directory')
@@ -73,9 +185,14 @@ def inspect_pe(data):
             'Portable EXE unexpectedly imports a VC++ redistributable DLL')
     certificate_size = struct.unpack_from('<I', data, optional + 148)[0] if directory_count >= 5 and optional_size >= 152 else 0
     require(not certificate_size, 'Unexpected certificate table in this unsigned beta')
+    icons = None
+    if icon is not None:
+        require(directory_count >= 3 and optional_size >= 136, 'Missing resource data directory')
+        resource_rva, resource_size = struct.unpack_from('<II', data, optional + 128)
+        icons = icon_resources(data, offset, resource_rva, resource_size, icon)
     return {'format': 'PE32+', 'machine': 'AMD64 (0x8664)', 'subsystem': 'Windows GUI',
             'sections': sections, 'imports': sorted(set(imports), key=str.lower),
-            'certificate_table_present': bool(certificate_size)}
+            'certificate_table_present': bool(certificate_size), 'icon_resource': icons}
 
 
 def verify(artifact_dir, source_commit):
@@ -84,7 +201,7 @@ def verify(artifact_dir, source_commit):
     exe = artifact_dir / (name + '.exe')
     archive = artifact_dir / (name + '.zip')
     payload = exe.read_bytes()
-    pe = inspect_pe(payload)
+    pe = inspect_pe(payload, (ROOT / 'assets/app-icon/Wireframe.ico').read_bytes())
     require(len(payload) > 1024 * 1024, 'Unexpectedly small release EXE')
     identities = {}
     for path in (exe, archive):
@@ -131,7 +248,7 @@ def verify(artifact_dir, source_commit):
     return {'source_commit': source_commit, 'version': version, 'platform': 'Windows x86-64',
             'status': 'UNTESTED ON WINDOWS — static package inspection only',
             'runtime_tests_performed': False, 'application_launched': False,
-            'windows_icon_resource_verified': False, 'source_files_matched': len(source_paths),
+            'windows_icon_resource_verified': pe['icon_resource']['verified'], 'source_files_matched': len(source_paths),
             'dependency_notices': len(manifest), 'zip_entries': len(entries), 'pe': pe,
             'artifacts': identities}
 
@@ -152,7 +269,7 @@ def main():
         'Keep the matching source/license ZIP and checksums with the EXE.\n'
         'Download the EXE to a writable folder and open it to start Wireframe.\n'
         'Windows may warn about this unsigned beta. No automatic updater is activated.\n'
-        'Windows executable icon-resource integration remains unverified.\n'
+        'Embedded icon resources statically match the committed ICO. Explorer appearance is untested.\n'
         f'Source commit: {args.source_commit}\n')
     print(json.dumps(report, indent=2))
 

@@ -19,6 +19,14 @@ import sparkle
 
 ROOT = Path(__file__).resolve().parents[1]
 
+def copy_corresponding_source(destination):
+    destination.mkdir(exist_ok=True)
+    for path in ('src','tests','examples','scripts','assets','vendor','docs','licenses','.github'):
+        shutil.copytree(ROOT / path, destination / path, dirs_exist_ok=True, symlinks=True,
+            ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
+    for path in ('Cargo.toml','Cargo.lock','build.rs','LICENSE','README.md','CHANGELOG.md','SESSION-SPEC.md','THIRD_PARTY_NOTICES.md'):
+        shutil.copyfile(ROOT / path, destination / path)
+
 def run(*args):
     env = os.environ.copy()
     if platform.system() == 'Darwin':
@@ -218,12 +226,7 @@ def main():
     shutil.copytree(ROOT / '.github', staging / '.github', dirs_exist_ok=True)
     # Include this product's corresponding source and build scripts with every package.
     source = staging / 'source'
-    source.mkdir(exist_ok=True)
-    for path in ('src','tests','examples','scripts','assets','vendor','docs','licenses','.github'):
-        shutil.copytree(ROOT / path, source / path, dirs_exist_ok=True, symlinks=True,
-            ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
-    for path in ('Cargo.toml','Cargo.lock','LICENSE','README.md','CHANGELOG.md','SESSION-SPEC.md','THIRD_PARTY_NOTICES.md'):
-        shutil.copyfile(ROOT / path, source / path)
+    copy_corresponding_source(source)
     rewrite_documentation_links(staging)
     archive = out / (name + ('.tar.gz' if system == 'linux' else '.zip'))
     write_archive(staging, archive, system, name)

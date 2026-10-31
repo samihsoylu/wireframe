@@ -6,6 +6,9 @@ rust-version = "1.95"
 description = "A local desktop wireframing workspace"
 license = "GPL-3.0-only"
 
+[build-dependencies]
+embed-resource = "=3.0.12"
+
 [dependencies]
 wireframe-ocr = { path = "vendor/wireframe-ocr" }
 flate2 = "=1.1.10"

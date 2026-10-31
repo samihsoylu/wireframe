@@ -2,7 +2,7 @@
 
 Wireframe project code is GPL-3.0-only licensed. Dependencies retain the terms below. This inventory covers the locked normal and build dependency graph for macOS, Windows and Linux; some entries are build tools or platform-specific.
 
-Full license texts and applicable copyright notices are in `licenses/`. Unchanged source for option-ext and the file containing Krilla's MPL-attributed path conversion is included there. The dispatch crate ships an MIT declaration without a license text; its exact declaration, source and SPDX reference terms are included. Dual-license expressions are upstream choices; inclusion of both texts does not remove that choice.
+Full license texts and applicable copyright notices are in `licenses/`. Unchanged source for option-ext and the file containing Krilla's MPL-attributed path conversion is included there. The conditional r-efi build-tool dependency ships declarations/authors without full license texts; its declarations/authors and reference texts for its declared alternatives are retained. The dispatch crate ships an MIT declaration without a license text; its exact declaration, source and SPDX reference terms are included. Dual-license expressions are upstream choices; inclusion of both texts does not remove that choice.
 
 | Package | License | Notices |
 | --- | --- | --- |
@@ -97,6 +97,7 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | egui_glow-0.36.2 | MIT OR Apache-2.0 | [files](licenses/egui_glow-0.36.2/) |
 | either-1.19.0 | MIT OR Apache-2.0 | [files](licenses/either-1.19.0/) |
 | emath-0.36.2 | MIT OR Apache-2.0 | [files](licenses/emath-0.36.2/) |
+| embed-resource-3.0.12 | MIT | [files](licenses/embed-resource-3.0.12/) |
 | endi-1.1.1 | MIT | [files](licenses/endi-1.1.1/) |
 | enumflags2-0.7.12 | MIT OR Apache-2.0 | [files](licenses/enumflags2-0.7.12/) |
 | enumflags2_derive-0.7.12 | MIT OR Apache-2.0 | [files](licenses/enumflags2_derive-0.7.12/) |
@@ -176,6 +177,7 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | indexmap-2.14.2 | Apache-2.0 OR MIT | [files](licenses/indexmap-2.14.2/) |
 | itertools-0.15.0 | MIT OR Apache-2.0 | [files](licenses/itertools-0.15.0/) |
 | itoa-1.0.18 | MIT OR Apache-2.0 | [files](licenses/itoa-1.0.18/) |
+| jobserver-0.1.35 | MIT OR Apache-2.0 | [files](licenses/jobserver-0.1.35/) |
 | khronos_api-3.1.0 | Apache-2.0 | [files](licenses/khronos_api-3.1.0/) |
 | krilla-0.8.2 | MIT OR Apache-2.0 | [files](licenses/krilla-0.8.2/) |
 | kurbo-0.13.1 | Apache-2.0 OR MIT | [files](licenses/kurbo-0.13.1/) |
@@ -236,6 +238,7 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | quick-error-2.0.1 | MIT/Apache-2.0 | [files](licenses/quick-error-2.0.1/) |
 | quick-xml-0.41.0 | MIT | [files](licenses/quick-xml-0.41.0/) |
 | quote-1.0.47 | MIT OR Apache-2.0 | [files](licenses/quote-1.0.47/) |
+| r-efi-6.0.0 | MIT OR Apache-2.0 OR LGPL-2.1-or-later | [files](licenses/r-efi-6.0.0/) |
 | rangemap-1.8.0 | MIT/Apache-2.0 | [files](licenses/rangemap-1.8.0/) |
 | raw-window-handle-0.6.2 | MIT OR Apache-2.0 OR Zlib | [files](licenses/raw-window-handle-0.6.2/) |
 | read-fonts-0.37.0 | MIT OR Apache-2.0 | [files](licenses/read-fonts-0.37.0/) |
@@ -248,6 +251,7 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | roxmltree-0.20.0 | MIT OR Apache-2.0 | [files](licenses/roxmltree-0.20.0/) |
 | roxmltree-0.21.1 | MIT OR Apache-2.0 | [files](licenses/roxmltree-0.21.1/) |
 | rustc-hash-2.1.3 | Apache-2.0 OR MIT | [files](licenses/rustc-hash-2.1.3/) |
+| rustc_version-0.4.1 | MIT OR Apache-2.0 | [files](licenses/rustc_version-0.4.1/) |
 | rustix-0.38.44 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | [files](licenses/rustix-0.38.44/) |
 | rustix-1.1.5 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | [files](licenses/rustix-1.1.5/) |
 | rustls-0.23.46 | Apache-2.0 OR ISC OR MIT | [files](licenses/rustls-0.23.46/) |
@@ -257,11 +261,13 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | scoped-tls-1.0.1 | MIT/Apache-2.0 | [files](licenses/scoped-tls-1.0.1/) |
 | scopeguard-1.2.0 | MIT OR Apache-2.0 | [files](licenses/scopeguard-1.2.0/) |
 | self_cell-1.3.0 | Apache-2.0 OR GPL-2.0-only | [files](licenses/self_cell-1.3.0/) |
+| semver-1.0.28 | MIT OR Apache-2.0 | [files](licenses/semver-1.0.28/) |
 | serde-1.0.229 | MIT OR Apache-2.0 | [files](licenses/serde-1.0.229/) |
 | serde_core-1.0.229 | MIT OR Apache-2.0 | [files](licenses/serde_core-1.0.229/) |
 | serde_derive-1.0.229 | MIT OR Apache-2.0 | [files](licenses/serde_derive-1.0.229/) |
 | serde_json-1.0.154 | MIT OR Apache-2.0 | [files](licenses/serde_json-1.0.154/) |
 | serde_repr-0.1.21 | MIT OR Apache-2.0 | [files](licenses/serde_repr-0.1.21/) |
+| serde_spanned-1.1.2 | MIT OR Apache-2.0 | [files](licenses/serde_spanned-1.1.2/) |
 | sha2-0.11.1 | MIT OR Apache-2.0 | [files](licenses/sha2-0.11.1/) |
 | shlex-2.0.1 | MIT OR Apache-2.0 | [files](licenses/shlex-2.0.1/) |
 | signal-hook-registry-1.4.8 | MIT OR Apache-2.0 | [files](licenses/signal-hook-registry-1.4.8/) |
@@ -301,9 +307,11 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | tiny-skia-path-0.12.0 | BSD-3-Clause | [files](licenses/tiny-skia-path-0.12.0/) |
 | tinystr-0.8.4 | Unicode-3.0 | [files](licenses/tinystr-0.8.4/) |
 | tinyvec-1.13.3 | Zlib OR Apache-2.0 OR MIT | [files](licenses/tinyvec-1.13.3/) |
+| toml-1.1.8+spec-1.1.0 | MIT OR Apache-2.0 | [files](licenses/toml-1.1.8+spec-1.1.0/) |
 | toml_datetime-1.1.2+spec-1.1.0 | MIT OR Apache-2.0 | [files](licenses/toml_datetime-1.1.2+spec-1.1.0/) |
 | toml_edit-0.25.17+spec-1.1.0 | MIT OR Apache-2.0 | [files](licenses/toml_edit-0.25.17+spec-1.1.0/) |
 | toml_parser-1.1.5+spec-1.1.0 | MIT OR Apache-2.0 | [files](licenses/toml_parser-1.1.5+spec-1.1.0/) |
+| toml_writer-1.1.3+spec-1.1.0 | MIT OR Apache-2.0 | [files](licenses/toml_writer-1.1.3+spec-1.1.0/) |
 | tracing-0.1.44 | MIT | [files](licenses/tracing-0.1.44/) |
 | tracing-attributes-0.1.31 | MIT | [files](licenses/tracing-attributes-0.1.31/) |
 | tracing-core-0.1.36 | MIT | [files](licenses/tracing-core-0.1.36/) |
@@ -329,6 +337,8 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | vello_common-0.1.0 | Apache-2.0 OR MIT | [files](licenses/vello_common-0.1.0/) |
 | vello_cpu-0.1.0 | Apache-2.0 OR MIT | [files](licenses/vello_cpu-0.1.0/) |
 | version_check-0.9.5 | MIT/Apache-2.0 | [files](licenses/version_check-0.9.5/) |
+| vswhom-0.1.0 | MIT | [files](licenses/vswhom-0.1.0/) |
+| vswhom-sys-0.1.3 | MIT | [files](licenses/vswhom-sys-0.1.3/) |
 | wayland-backend-0.3.17 | MIT | [files](licenses/wayland-backend-0.3.17/) |
 | wayland-client-0.31.15 | MIT | [files](licenses/wayland-client-0.31.15/) |
 | wayland-csd-frame-0.3.0 | MIT | [files](licenses/wayland-csd-frame-0.3.0/) |
@@ -367,6 +377,7 @@ Full license texts and applicable copyright notices are in `licenses/`. Unchange
 | windows_x86_64_msvc-0.53.1 | MIT OR Apache-2.0 | [files](licenses/windows_x86_64_msvc-0.53.1/) |
 | winit-0.30.13 | Apache-2.0 | [files](licenses/winit-0.30.13/) |
 | winnow-1.0.4 | MIT | [files](licenses/winnow-1.0.4/) |
+| winreg-0.56.0 | MIT | [files](licenses/winreg-0.56.0/) |
 | wireframe-ocr-0.1.0 | GPL-3.0-only | [files](licenses/wireframe-ocr-0.1.0/) |
 | write-fonts-0.48.1 | MIT OR Apache-2.0 | [files](licenses/write-fonts-0.48.1/) |
 | writeable-0.6.4 | Unicode-3.0 | [files](licenses/writeable-0.6.4/) |

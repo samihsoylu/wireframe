@@ -29,6 +29,28 @@ def fetch(url):
     except (urllib.error.HTTPError, urllib.error.URLError):
         return None
 
+def include_root_build_dependencies(meta, used):
+    """A cross-target Cargo tree still uses this machine for build dependencies.
+
+    Include the root build tools' normal/build closure for every resolved host,
+    so collecting on macOS also retains Windows resource compiler helpers.
+    """
+    nodes = {node['id']: node for node in meta['resolve']['nodes']}
+    packages = {package['id']: package for package in meta['packages']}
+    root = meta['resolve']['root']
+    pending = [dep['pkg'] for dep in nodes[root]['deps']
+               if any(kind['kind'] == 'build' for kind in dep['dep_kinds'])]
+    visited = set()
+    while pending:
+        identity = pending.pop()
+        if identity in visited:
+            continue
+        visited.add(identity)
+        package = packages[identity]
+        used.add((package['name'], package['version']))
+        pending.extend(dep['pkg'] for dep in nodes[identity]['deps']
+                       if any(kind['kind'] in (None, 'build') for kind in dep['dep_kinds']))
+
 def main():
     meta = json.loads(cargo('metadata', '--locked', '--format-version', '1'))
     used = set()
@@ -36,6 +58,7 @@ def main():
         for line in cargo('tree', '--locked', '--edges', 'normal,build', '--prefix', 'none', '--format', '{p}', '--target', target).splitlines():
             match = re.match(r'([^ ]+) v([^ ]+)', line)
             if match: used.add(match.groups())
+    include_root_build_dependencies(meta, used)
     packages = [p for p in meta['packages']
         if (p['source'] or Path(p['manifest_path']).is_relative_to(ROOT / 'vendor'))
         and (p['name'], p['version']) in used]
@@ -71,7 +94,9 @@ def main():
             sha = json.loads(vcs.read_text())['git']['sha1'] if vcs.exists() else None
             repo = package.get('repository') or ''
             match = re.search(r'github.com/([^/]+/[^/]+)', repo)
-            if match and sha and package['name'] != 'dispatch':
+            declaration_only = (package['name'] == 'dispatch'
+                or (package['name'] == 'r-efi' and package['version'] == '6.0.0'))
+            if match and sha and not declaration_only:
                 repo = match.group(1).removesuffix('.git')
                 upstream.setdefault((repo, sha), []).append((folder, files))
             elif package['name'] == 'dispatch' and package['version'] == '0.2.0':
@@ -85,6 +110,20 @@ def main():
                 reference.write_bytes(data)
                 files.extend([str(declaration.relative_to(DEST)), str(reference.relative_to(DEST))])
                 shutil.copytree(source / 'src', folder / 'src', dirs_exist_ok=True)
+            elif package['name'] == 'r-efi' and package['version'] == '6.0.0':
+                # The package and exact upstream revision ship declarations and
+                # authors but no full license text. Preserve those and
+                # reference texts for every alternative it declares.
+                declaration = folder / 'UPSTREAM-DECLARATION.toml'
+                shutil.copyfile(source / 'Cargo.toml.orig', declaration)
+                shutil.copyfile(source / 'AUTHORS', folder / 'AUTHORS')
+                files.extend([str(declaration.relative_to(DEST)), str((folder / 'AUTHORS').relative_to(DEST))])
+                for identifier in ('MIT', 'Apache-2.0', 'LGPL-2.1-or-later'):
+                    reference = folder / (identifier + '-reference.txt')
+                    data = fetch(f'https://raw.githubusercontent.com/spdx/license-list-data/main/text/{identifier}.txt')
+                    if not data: raise SystemExit('Could not fetch ' + identifier + ' reference terms')
+                    reference.write_bytes(data)
+                    files.append(str(reference.relative_to(DEST)))
             elif not files:
                 missing.append(key)
         manifest.append({'name':package['name'], 'version':package['version'], 'license':package['license'], 'repository':package['repository'], 'files':files})
@@ -111,7 +150,7 @@ def main():
     if missing:
         raise SystemExit('No notices found for: ' + ', '.join(sorted(set(missing))))
     (DEST / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
-    rows = ['# Third-party notices', '', 'Wireframe project code is GPL-3.0-only licensed. Dependencies retain the terms below. This inventory covers the locked normal and build dependency graph for macOS, Windows and Linux; some entries are build tools or platform-specific.', '', 'Full license texts and applicable copyright notices are in `licenses/`. Unchanged source for option-ext and the file containing Krilla\'s MPL-attributed path conversion is included there. The dispatch crate ships an MIT declaration without a license text; its exact declaration, source and SPDX reference terms are included. Dual-license expressions are upstream choices; inclusion of both texts does not remove that choice.', '', '| Package | License | Notices |', '| --- | --- | --- |']
+    rows = ['# Third-party notices', '', 'Wireframe project code is GPL-3.0-only licensed. Dependencies retain the terms below. This inventory covers the locked normal and build dependency graph for macOS, Windows and Linux; some entries are build tools or platform-specific.', '', 'Full license texts and applicable copyright notices are in `licenses/`. Unchanged source for option-ext and the file containing Krilla\'s MPL-attributed path conversion is included there. The conditional r-efi build-tool dependency ships declarations/authors without full license texts; its declarations/authors and reference texts for its declared alternatives are retained. The dispatch crate ships an MIT declaration without a license text; its exact declaration, source and SPDX reference terms are included. Dual-license expressions are upstream choices; inclusion of both texts does not remove that choice.', '', '| Package | License | Notices |', '| --- | --- | --- |']
     for p in manifest:
         key = f"{p['name']}-{p['version']}"
         rows.append(f"| {key} | {p['license']} | [files](licenses/{key}/) |")

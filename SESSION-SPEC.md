@@ -1,5 +1,13 @@
 # Wireframe — current state
 
+## Beta 4 delivery checkpoint — 31 October 2026
+
+The resumed user request authorizes the next GitHub beta when ready, while keeping Windows runtime testing on hold. Exact source `fc1d98b4882321a7ce5c4056fd7a9123c2a63805` has fresh Mac/Windows/Linux build/package/static acceptance. The exact Mac Beta 4/build 4 app also has qualified independent acceptance for all 14 image/OCR/history/reopen stages and both loaded/cold credit inspectors; normal waits and scoped restoration are complete.
+
+Eight download assets and user-facing bullet-point release notes are independently reviewed and uploaded to a private GitHub draft; remote names, sizes, SHA-256 digests, source and body match exactly. Publication remains pending the Linux PDF native case. The staging-path correction passed independent review. Its fresh isolated VM/container/desktop and owned warm app are now running under parent control; the named synthetic baseline is open and saved. Before the first accepted stage, the browser's documented JPEG-only capture format exposed a PNG-only transport assumption. A narrow additive transport correction is under source review; original JPEG bytes, dimensions, quality, base controls and all seven native stages remain required. No unattended supervision is claimed.
+
+See [Beta 4 verification](docs/BETA4-VERIFICATION.md) for exact evidence scope, retained corrections, current release limits and next action. These later records preserve the packaged fc1 source and all earlier history below. The original Q5/Q7/Q8 goal and explicit holds remain open.
+
 ## Next beta — source preparation only
 
 The next source candidate is `0.1.0-beta.4` on `codex/beta4-source`, based on accepted `124b44b` with the seven documentation histories from root `909b50e` reconciled. Product code, format 16, assets, embedded model, notices and dependency versions are preserved. Only the application version and source/release documentation change.

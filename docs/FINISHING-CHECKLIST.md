@@ -2,7 +2,7 @@
 
 Current checkpoint: 31 October 2026. The original Q3–Q8 scope continues after the published Beta 3 demo milestone. Current source, native and CI results are recorded in [SESSION-SPEC.md](../SESSION-SPEC.md). Q5, Q7 and Q8 remain open. Retained evidence applies to its named candidate and behavior; Windows runtime/native testing remains held.
 
-The candidate image search and local text workflow now has independent Linux native acceptance: both OCR entrypoints and external Copy proofs, preview cancellation, exact saved history/import and a cold reopen with the provider HTTP route disabled pass twelve complete project comparisons. Cleanup is complete. Full Linux validation continues in run `41154197685`, source `71306ba7`; the separate Windows icon source `b70e661` is in build-only run `41154794102`. Mac native feature checks, broader variants and release gates remain open. Published Beta 3 is unchanged.
+The candidate image search and local text workflow now has independent Linux native acceptance: both OCR entrypoints and external Copy proofs, preview cancellation, exact saved history/import and a cold reopen with the provider HTTP route disabled pass twelve complete project comparisons. Cleanup is complete. Full Linux validation continues in run `41154197685`, source `71306ba7`; the separate Windows icon source `b70e661` has accepted compile/package/static evidence from successful run `41154794102` and 17 independent artifact checks. Windows runtime appearance remains unverified. Mac native feature checks, broader variants and release gates remain open. Published Beta 3 is unchanged.
 
 ## Immediate priorities
 

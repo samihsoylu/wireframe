@@ -1,5 +1,13 @@
 # Changes
 
+## 0.1.0-beta.4 — Draft, not published
+
+- Search Wikimedia Commons images, preview before loading, and keep available image credits with the project.
+- Extract English text from screenshots on your device, correct the preview, and copy it without changing the drawing.
+- Include the application icon in Windows executables.
+
+Downloads, tested systems and remaining limitations will be finalized after review. This is a source-only draft; earlier candidate checks do not establish Beta 4 execution or acceptance. Updates remain manual, and Windows runtime testing remains on hold.
+
 ## 0.1.0-beta.2 — Beta
 
 - Show **Mixed selection** when selected controls have different active rows or tabs. The picker marks a row as selected only when every selected control agrees.

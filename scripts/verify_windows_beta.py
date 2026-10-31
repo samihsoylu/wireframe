@@ -191,7 +191,7 @@ def inspect_pe(data, icon=None):
         resource_rva, resource_size = struct.unpack_from('<II', data, optional + 128)
         icons = icon_resources(data, offset, resource_rva, resource_size, icon)
     return {'format': 'PE32+', 'machine': 'AMD64 (0x8664)', 'subsystem': 'Windows GUI',
-            'sections': sections, 'imports': sorted(set(imports), key=str.lower),
+            'sections': sections, 'imports': sorted(set(imports), key=lambda name: (name.lower(), name)),
             'certificate_table_present': bool(certificate_size), 'icon_resource': icons}
 
 

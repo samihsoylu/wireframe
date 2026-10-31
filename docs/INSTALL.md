@@ -20,7 +20,7 @@ Download the x86-64 `.exe` listed in the release. Save it in a permanent folder 
 
 No Linux package is published with Beta 3. To build from source, follow [development instructions](DEVELOPMENT.md). Future `.tar.gz` packages can be extracted and run from their application folder.
 
-The currently exercised environment is Debian 12 on ARM64 with X11. Runtime requirements include an OpenGL driver, XKB support and a running desktop portal with its desktop-specific backend for file dialogs. On Debian/Ubuntu, X11 also needs `libxkbcommon-x11-0`. Other distributions, Wayland and x86-64 need their own validation before being listed as supported.
+The currently exercised environment is Debian 12 on ARM64 with X11. Runtime requirements include an OpenGL driver and XKB support. File dialogs use a working desktop portal and its desktop-specific backend, with Zenity as a fallback when the portal is unavailable. The portal route also needs a session bus and the D-Bus client library at runtime; checking the executable's linked libraries alone does not establish file-picker readiness. On Debian/Ubuntu, X11 also needs `libxkbcommon-x11-0`. Other distributions, Wayland and x86-64 need their own validation before being listed as supported.
 
 ## Updating
 

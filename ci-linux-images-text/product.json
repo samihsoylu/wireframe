@@ -1,6 +1,6 @@
 {
   "armed": true,
-  "productCommit": "d00763bc5dc9ffce5c20865ae954fa3525074a6c",
+  "productCommit": "71306ba7f8979a844234beb16bd0a22bfad89343",
   "version": "0.1.0-beta.3",
   "sourceManifest": {
     ".gitattributes": {
@@ -50,8 +50,8 @@
     },
     "SESSION-SPEC.md": {
       "mode": "0o644",
-      "bytes": 133570,
-      "sha256": "5adb91360437659adaae5f4f90c3b4b5c36882f7a42d565072c53d7d2dec5fda"
+      "bytes": 160389,
+      "sha256": "52a08671ba69d11a047a052166cfb8685aa186b741996fbfc8ae4eba7ba2f67e"
     },
     "THIRD_PARTY_NOTICES.md": {
       "mode": "0o644",
@@ -385,8 +385,8 @@
     },
     "docs/FINISHING-CHECKLIST.md": {
       "mode": "0o644",
-      "bytes": 44538,
-      "sha256": "1cd13a6f60f16caaaa76cbc151917d6c38f5ee514663946f289fd3a5c6a5bf81"
+      "bytes": 44793,
+      "sha256": "6570d261c420de4319f09f248efcf108af2b7350df758fc4ac4bd08bc17829b4"
     },
     "docs/GETTING-STARTED.md": {
       "mode": "0o644",
@@ -415,8 +415,8 @@
     },
     "docs/IMAGES.md": {
       "mode": "0o644",
-      "bytes": 18111,
-      "sha256": "d9b7425b02e063e3437a94cf919767c38319de64d933fcd1b99a9708c21aa848"
+      "bytes": 19139,
+      "sha256": "d1bd5785523826c09832288db3ce389a653e55668ef2c919e2816b4441d90f53"
     },
     "docs/IMPLEMENTATION-PLAN.md": {
       "mode": "0o644",
@@ -590,8 +590,8 @@
     },
     "docs/RELEASE-CHECKLIST.md": {
       "mode": "0o644",
-      "bytes": 98392,
-      "sha256": "f2d6a4c158f443ccb6bb368be16cfa00ab92458b0f3c27f6d61134deac08f123"
+      "bytes": 98712,
+      "sha256": "3abdcb4def573deb3c2501f85ffc1f3e7de6f1835ef4e16f47ea2f7a202d5493"
     },
     "docs/REVIEW-COMMENTS.md": {
       "mode": "0o644",
@@ -620,8 +620,8 @@
     },
     "docs/SCREENSHOT-TEXT.md": {
       "mode": "0o644",
-      "bytes": 2475,
-      "sha256": "b31749a019955fe393f155928a26ba6515a4495ff70068cc2942d7c4c00fd26e"
+      "bytes": 2484,
+      "sha256": "a3dbaa5e516a7c9a9a5ea1e099f4cca456654077c5798422c0e0fa1e288570f0"
     },
     "docs/SHAPES.md": {
       "mode": "0o644",
@@ -7285,8 +7285,8 @@
     },
     "tests/page_clipboard.rs": {
       "mode": "0o644",
-      "bytes": 17069,
-      "sha256": "0badecf7e37bf4f29215b2ed2d0e84074fd036e4f5816d32367541171a5e3ccb"
+      "bytes": 17459,
+      "sha256": "b35603ce7811ef54eec296f5b607e24f2d2fcc9ad23e39c5dbddc2e7834b19ae"
     },
     "tests/page_hierarchy.rs": {
       "mode": "0o644",
@@ -11741,5 +11741,5 @@
   "platformExcludedTargets": {
     "interface_typography": "Source file explicitly cfg(target_os=macos); separate platform acceptance"
   },
-  "reviewEvidenceSHA256": "d6497cf56ffef5a8d1b4137e5e7515f4ff5ede4597977cb9f74a7a9ec12119ab"
+  "reviewEvidenceSHA256": "07c6103eada2ce9b9e67f29b361abb444fcf89611e9b8e311fc305956d55dae7"
 }

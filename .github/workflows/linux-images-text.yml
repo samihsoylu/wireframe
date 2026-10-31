@@ -57,11 +57,11 @@ jobs:
           mkdir -p ci-work/receipts
           df -B1 . > ci-work/receipts/disk-initial.txt
           test "$(df -B1 --output=avail . | tail -1)" -ge 10737418240
-          apt-get update
+          apt-get update 2>&1 | tee ci-work/receipts/apt-update.txt
           apt-get install -y --no-install-recommends python3 git g++ make cmake pkg-config binutils file \
             libx11-dev libxi-dev libxrandr-dev libxcursor-dev libxinerama-dev \
             libxkbcommon-dev libwayland-dev libgl1-mesa-dev libegl1-mesa-dev libudev-dev \
-            fontconfig fonts-noto-core
+            fontconfig fonts-noto-core fonts-noto-cjk fonts-noto-color-emoji 2>&1 | tee ci-work/receipts/apt-install.txt
           rm -r /var/lib/apt/lists/*
           fc-list --quiet 'Noto Sans'
           fc-list --quiet 'Noto Serif'
@@ -71,6 +71,44 @@ jobs:
             test -s "$font_file"
             printf '%s\t%s\n' "$family" "$font_file"
           done > ci-work/receipts/font-matches.txt
+          # Retain actual package/font inputs; scalar coverage does not prove ZWJ shaping.
+          dpkg-query -W -f='${binary:Package}\t${Version}\t${Architecture}\n' fontconfig fonts-noto-core fonts-noto-cjk fonts-noto-color-emoji > ci-work/receipts/font-packages.txt
+          fc-list --version > ci-work/receipts/fontconfig-version.txt 2>&1
+          fc-list --format='%{file}\t%{index}\t%{family}\t%{style}\t%{charset}\n' | LC_ALL=C sort > ci-work/receipts/font-inventory.txt
+          dpkg-query -L fonts-noto-cjk fonts-noto-color-emoji > ci-work/receipts/font-package-files.txt
+          while IFS= read -r font_file; do
+            case "$font_file" in
+              *.ttf|*.ttc|*.otf|*.conf)
+                test -s "$font_file"
+                test -r "$font_file"
+                sha256sum -- "$font_file"
+                ;;
+            esac
+          done < ci-work/receipts/font-package-files.txt > ci-work/receipts/font-package-file-sha256.txt
+          {
+            for scalar in 4f60 597d 4e16 754c 1f469 1f4bb; do
+              printf 'REQUIRED U+%s\n' "$scalar"
+              fc-list --quiet ":charset=$scalar"
+              fc-list --format='%{file}\t%{index}\t%{family}\n' ":charset=$scalar" | LC_ALL=C sort
+              fc-match --format='MATCH %{file}\t%{index}\t%{family}\n' "sans-serif:charset=$scalar"
+            done
+            for scalar in 1f469 1f4bb; do
+              printf 'Noto Color Emoji U+%s\n' "$scalar"
+              fc-list --quiet "Noto Color Emoji:charset=$scalar"
+              fc-list --format='%{file}\t%{index}\t%{family}\n' "Noto Color Emoji:charset=$scalar"
+            done
+          } > ci-work/receipts/font-character-coverage.txt
+          {
+            printf 'DIAGNOSTIC U+1F469 U+200D U+1F4BB; actual shaping remains a Rust test.\n'
+            printf 'U+200D is default-ignorable; this diagnostic is not a standalone glyph gate.\n'
+            fc-list --format='%{file}\t%{index}\t%{family}\n' ':charset=200d' | LC_ALL=C sort
+            fc-match --format='SEQUENCE MATCH %{file}\t%{index}\t%{family}\n' 'emoji:charset=1f469 200d 1f4bb'
+          } > ci-work/receipts/font-zwj-sequence-diagnostic.txt
+          for receipt in apt-update apt-install font-packages fontconfig-version font-inventory font-package-files font-package-file-sha256 font-character-coverage font-zwj-sequence-diagnostic; do
+            test -s "ci-work/receipts/$receipt.txt"
+            test "$(wc -c < "ci-work/receipts/$receipt.txt")" -le 1048576
+          done
+          sha256sum ci-work/receipts/apt-update.txt ci-work/receipts/apt-install.txt ci-work/receipts/font*.txt > ci-work/receipts/font-evidence.sha256
           rustup component add --toolchain 1.99.1 clippy
           dpkg-query -W > ci-work/receipts/system-packages.txt
           df -B1 . > ci-work/receipts/disk-system-prepared.txt

@@ -21,7 +21,7 @@ import verify_package as package
 P = Path(__file__).resolve().parent
 GIB = 1024**3
 RESERVE, FREE_GATE, STABLE_CAP = GIB, 10 * GIB, 8 * GIB
-PACKAGE = 'Wireframe-0.1.0-beta.3-linux-aarch64'
+PACKAGE = 'Wireframe-0.1.0-beta.4-linux-aarch64'
 
 
 def source_identity(repo, binding):

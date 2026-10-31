@@ -16,7 +16,7 @@ import tarfile
 from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
 COMMIT = None
-NAME = 'Wireframe-0.1.0-beta.3-linux-aarch64'
+NAME = 'Wireframe-0.1.0-beta.4-linux-aarch64'
 TOP = ('Cargo.toml', 'Cargo.lock', 'LICENSE', 'README.md', 'CHANGELOG.md',
        'SESSION-SPEC.md', 'THIRD_PARTY_NOTICES.md')
 READER_TOP = ('LICENSE', 'README.md', 'CHANGELOG.md', 'SESSION-SPEC.md', 'THIRD_PARTY_NOTICES.md')

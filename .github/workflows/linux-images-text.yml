@@ -1,15 +1,15 @@
-name: Reviewed image search and local OCR Linux ARM64 validation
+name: Beta4 Linux ARM64 build and private package (no native or full tests)
 
 on:
   push:
-    branches: [codex/linux-images-text-ci]
+    branches: [codex/linux-beta4-build-only]
     paths: [.github/workflows/linux-images-text.yml, 'ci-linux-images-text/**']
 
 permissions:
   contents: read
 
 concurrency:
-  group: linux-images-text-${{ github.ref }}
+  group: linux-beta4-build-only-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -25,18 +25,18 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Require final parent-reviewed product binding (fails closed)
+      - name: Require exact parent-authorized build-only product binding
         id: binding
         run: python3 ci-linux-images-text/bind.py assert-armed --output "$GITHUB_OUTPUT"
 
   execute:
     needs: binding
-    name: Full Linux ARM64 ${{ matrix.group }}
+    name: Beta4 Linux ARM64 build-package-static
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 180
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 1
       matrix: ${{ fromJSON(needs.binding.outputs.matrix) }}
     container:
       image: docker.io/library/rust@sha256:efecb7694d37171c478bd45d0cc88d9acc6e7fd31d7a1a39891ed4a294d0ce6f
@@ -132,7 +132,7 @@ jobs:
           set -euo pipefail
           python3 controller/ci-linux-images-text/controller.py prepare --group "$CI_GROUP" --repo product --work ci-work
 
-      - name: Execute full ordinary-profile group with offline Cargo
+      - name: Build optimized release, package and verify static source/readers/notices
         run: |
           set -euo pipefail
           python3 controller/ci-linux-images-text/controller.py verify --group "$CI_GROUP" --repo product --work ci-work
@@ -141,7 +141,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: images-text-receipts-${{ matrix.group }}-${{ github.sha }}
+          name: beta4-linux-build-receipts-${{ github.sha }}
           path: ci-work/receipts/
           if-no-files-found: error
           retention-days: 1
@@ -150,42 +150,8 @@ jobs:
         if: success() && matrix.group == 'release'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: images-text-linux-candidate-UNACCEPTED-${{ github.sha }}
+          name: beta4-linux-build-UNREVIEWED-${{ github.sha }}
           path: ci-work/artifacts/
           if-no-files-found: error
           compression-level: 0
-          retention-days: 1
-
-  required-scope:
-    name: Full ordinary Linux suite and static package; native acceptance separate
-    needs: [binding, execute]
-    if: always() && github.repository == 'samihsoylu/wireframe' && github.event.repository.private == false
-    runs-on: ubuntu-24.04-arm
-    timeout-minutes: 10
-    env:
-      BINDING_RESULT: ${{ needs.binding.result }}
-      EXECUTION_RESULT: ${{ needs.execute.result }}
-    steps:
-      - name: Refuse partial or unarmed run
-        run: |
-          test "$BINDING_RESULT" = success
-          test "$EXECUTION_RESULT" = success
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-      - name: Read this run's bounded receipts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          pattern: images-text-receipts-*-${{ github.sha }}
-          path: received
-          merge-multiple: false
-      - name: Re-parse raw names/results; require full planned and critical coverage
-        run: python3 ci-linux-images-text/aggregate.py --received received --output full-linux-scope.json
-      - name: Retain exact aggregate named accounting
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: images-text-linux-scope-${{ github.sha }}
-          path: full-linux-scope.json
-          if-no-files-found: error
           retention-days: 1

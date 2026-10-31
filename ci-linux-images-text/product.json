@@ -1,7 +1,7 @@
 {
   "armed": true,
-  "productCommit": "71306ba7f8979a844234beb16bd0a22bfad89343",
-  "version": "0.1.0-beta.3",
+  "productCommit": "fc1d98b4882321a7ce5c4056fd7a9123c2a63805",
+  "version": "0.1.0-beta.4",
   "sourceManifest": {
     ".gitattributes": {
       "mode": "0o644",
@@ -25,18 +25,18 @@
     },
     "CHANGELOG.md": {
       "mode": "0o644",
-      "bytes": 3266,
-      "sha256": "a17bb5a98bb2df0537fbbbf3adc9af06393cd4de52981e7d3b3d164133243788"
+      "bytes": 3849,
+      "sha256": "cf659d5a752ffdcf0a37c371a01f0c00c3e55f67b9e3206316a12d6867b47a97"
     },
     "Cargo.lock": {
       "mode": "0o644",
-      "bytes": 125498,
-      "sha256": "ba1e2c8442e1d73e1759d80d5702051ebeb2ab59a238f0b5b63033ae53b6f258"
+      "bytes": 127270,
+      "sha256": "aae0e216579c3970949e82365485a42b78587fb8280bda842628545fb2d738bd"
     },
     "Cargo.toml": {
       "mode": "0o644",
-      "bytes": 2159,
-      "sha256": "83e4b7872020495a1e07000ba91d5a3dab4df749636e97252d060f0c1823e35d"
+      "bytes": 2208,
+      "sha256": "756b69a7b69be3620fe5fe06536a9b3bfd06689b59d86ae93b86fcad379d1b57"
     },
     "LICENSE": {
       "mode": "0o644",
@@ -50,18 +50,18 @@
     },
     "SESSION-SPEC.md": {
       "mode": "0o644",
-      "bytes": 160389,
-      "sha256": "52a08671ba69d11a047a052166cfb8685aa186b741996fbfc8ae4eba7ba2f67e"
+      "bytes": 167710,
+      "sha256": "8c0fdd8951f2bd115e6fba493d02c48e3a00be77d3e75bcd7ab2fa42f4ea7a20"
     },
     "THIRD_PARTY_NOTICES.md": {
       "mode": "0o644",
-      "bytes": 34755,
-      "sha256": "6e315b1de562e6d778185a04b52c88b076ca30dae5e9fecdd9c6831eece5f6a7"
+      "bytes": 35803,
+      "sha256": "e24e9fbea0cf4bf1919f7faad621b7b8d7c4fd6fcda20808f428e338c42d8795"
     },
     "assets/app-icon/README.md": {
       "mode": "0o644",
-      "bytes": 847,
-      "sha256": "e3e49dc8cd285fd36b900000a9d84ca18aa1c992585eb04137069a69d53d0f0b"
+      "bytes": 1406,
+      "sha256": "c5165742b664403e16b743ad29512ccce8768ba92ab95d84d85236c0c7942754"
     },
     "assets/app-icon/Wireframe.icns": {
       "mode": "0o644",
@@ -72,6 +72,11 @@
       "mode": "0o644",
       "bytes": 101351,
       "sha256": "90a3a178e80e87dc9f1d329d35c616511e43bf2bd1aaee8a5165a5a19710211a"
+    },
+    "assets/app-icon/windows.rc": {
+      "mode": "0o644",
+      "bytes": 147,
+      "sha256": "e5503553b3be597a8f87a676f2208e233532c516ae7c7e0b132ed99c256f7223"
     },
     "assets/app-icon/wireframe-1024.png": {
       "mode": "0o644",
@@ -238,6 +243,11 @@
       "bytes": 764,
       "sha256": "0afc18b6023d55be7bff7a944fcdd4585d03f550a4939ba585113107c90ffca6"
     },
+    "build.rs": {
+      "mode": "0o644",
+      "bytes": 683,
+      "sha256": "373392bb807eec324e5b7281b5a696139dd4656363d47a006385f5fbfcaadfe2"
+    },
     "docs/ACCORDIONS.md": {
       "mode": "0o644",
       "bytes": 2067,
@@ -385,8 +395,8 @@
     },
     "docs/FINISHING-CHECKLIST.md": {
       "mode": "0o644",
-      "bytes": 44793,
-      "sha256": "6570d261c420de4319f09f248efcf108af2b7350df758fc4ac4bd08bc17829b4"
+      "bytes": 46166,
+      "sha256": "86e00e626e92e5d080e722c042aeaea1ee1efe68842b012f273ad51d9f2657a7"
     },
     "docs/GETTING-STARTED.md": {
       "mode": "0o644",
@@ -415,8 +425,8 @@
     },
     "docs/IMAGES.md": {
       "mode": "0o644",
-      "bytes": 19139,
-      "sha256": "d1bd5785523826c09832288db3ce389a653e55668ef2c919e2816b4441d90f53"
+      "bytes": 19226,
+      "sha256": "6527a849b03ff6ba7ec0fac017c7cc57eefea66e48ef9fe59c15ad75dce68f07"
     },
     "docs/IMPLEMENTATION-PLAN.md": {
       "mode": "0o644",
@@ -430,8 +440,8 @@
     },
     "docs/INSTALL.md": {
       "mode": "0o644",
-      "bytes": 2591,
-      "sha256": "ed008e3156b4826297f5cc9cf2067a45f86b23e61cc988767b168c548a199eca"
+      "bytes": 2822,
+      "sha256": "aa106b3ab7b90b51ad14968c60ce44fee71dcc081610834a5bd6734be3bdf62f"
     },
     "docs/INSTALL.txt": {
       "mode": "0o644",
@@ -515,8 +525,8 @@
     },
     "docs/PACKAGING.md": {
       "mode": "0o644",
-      "bytes": 28393,
-      "sha256": "d03df26b09da3b5a7a6e482d55ccc10b266e6933d74321dc77f0b74dfaa72e54"
+      "bytes": 31292,
+      "sha256": "d0fb5938e2c23eedb7a14ef82a131d321ba0d82f004b9af2bad260cf0e0ad8f0"
     },
     "docs/PAGE-ACTIONS.md": {
       "mode": "0o644",
@@ -590,8 +600,8 @@
     },
     "docs/RELEASE-CHECKLIST.md": {
       "mode": "0o644",
-      "bytes": 98712,
-      "sha256": "3abdcb4def573deb3c2501f85ffc1f3e7de6f1835ef4e16f47ea2f7a202d5493"
+      "bytes": 101263,
+      "sha256": "1c1200c18b0870ad98ac53afd395421ef5c739806c4847b7bd2a23b98a92186c"
     },
     "docs/REVIEW-COMMENTS.md": {
       "mode": "0o644",
@@ -1938,6 +1948,11 @@
       "bytes": 1092,
       "sha256": "95ca92f5f8ea5231f1580b3a2a799e8260af3114b900e1def5355a7f44bcf60c"
     },
+    "licenses/embed-resource-3.0.12/LICENSE": {
+      "mode": "0o644",
+      "bytes": 1081,
+      "sha256": "1abdbbd4e3f95e56c79d4a8af190254c23ddb14db34aadadfafef9c3af041113"
+    },
     "licenses/endi-1.1.1/LICENSE-MIT": {
       "mode": "0o644",
       "bytes": 1023,
@@ -2623,6 +2638,16 @@
       "bytes": 1023,
       "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
     },
+    "licenses/jobserver-0.1.35/LICENSE-APACHE": {
+      "mode": "0o644",
+      "bytes": 10847,
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+    },
+    "licenses/jobserver-0.1.35/LICENSE-MIT": {
+      "mode": "0o644",
+      "bytes": 1057,
+      "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397"
+    },
     "licenses/khronos_api-3.1.0/upstream-LICENSE": {
       "mode": "0o644",
       "bytes": 11358,
@@ -2760,8 +2785,8 @@
     },
     "licenses/manifest.json": {
       "mode": "0o644",
-      "bytes": 99258,
-      "sha256": "ca1cf81669a1f3363b3b2785c4cac21f5ee9261e4f0be8b00a1c49f9bc121f20"
+      "bytes": 102021,
+      "sha256": "9660b7fab3468206b1b9ed47380f6e432b10b6879b7cfd3787b0f691c8b70385"
     },
     "licenses/memchr-2.8.3/COPYING": {
       "mode": "0o644",
@@ -3183,6 +3208,31 @@
       "bytes": 1023,
       "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
     },
+    "licenses/r-efi-6.0.0/AUTHORS": {
+      "mode": "0o644",
+      "bytes": 3733,
+      "sha256": "d027e91dbc9cdbb2f1190068e498bd6b61cff022b6a032b191021ba658d96111"
+    },
+    "licenses/r-efi-6.0.0/Apache-2.0-reference.txt": {
+      "mode": "0o644",
+      "bytes": 10280,
+      "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+    },
+    "licenses/r-efi-6.0.0/LGPL-2.1-or-later-reference.txt": {
+      "mode": "0o644",
+      "bytes": 26001,
+      "sha256": "5749785c8bdefafcb5d798270ed0a967036fe2ca63dcedade1627565dfef81d2"
+    },
+    "licenses/r-efi-6.0.0/MIT-reference.txt": {
+      "mode": "0o644",
+      "bytes": 1078,
+      "sha256": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5"
+    },
+    "licenses/r-efi-6.0.0/UPSTREAM-DECLARATION.toml": {
+      "mode": "0o644",
+      "bytes": 1107,
+      "sha256": "b8e89c393831c2161b6d390bd40422910ac34f02903ad39edd85ec38d4513fef"
+    },
     "licenses/rangemap-1.8.0/LICENSE-APACHE": {
       "mode": "0o644",
       "bytes": 10837,
@@ -3328,6 +3378,16 @@
       "bytes": 1022,
       "sha256": "30fefc3a7d6a0041541858293bcbea2dde4caa4c0a5802f996a7f7e8c0085652"
     },
+    "licenses/rustc_version-0.4.1/LICENSE-APACHE": {
+      "mode": "0o644",
+      "bytes": 10847,
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+    },
+    "licenses/rustc_version-0.4.1/LICENSE-MIT": {
+      "mode": "0o644",
+      "bytes": 1071,
+      "sha256": "c9a75f18b9ab2927829a208fc6aa2cf4e63b8420887ba29cdb265d6619ae82d5"
+    },
     "licenses/rustix-0.38.44/LICENSE-APACHE": {
       "mode": "0o644",
       "bytes": 10847,
@@ -3428,6 +3488,16 @@
       "bytes": 18091,
       "sha256": "f9c375a1be4a41f7b70301dd83c91cb89e41567478859b77eef375a52d782505"
     },
+    "licenses/semver-1.0.28/LICENSE-APACHE": {
+      "mode": "0o644",
+      "bytes": 9723,
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+    },
+    "licenses/semver-1.0.28/LICENSE-MIT": {
+      "mode": "0o644",
+      "bytes": 1023,
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+    },
     "licenses/serde-1.0.229/LICENSE-APACHE": {
       "mode": "0o644",
       "bytes": 9723,
@@ -3477,6 +3547,16 @@
       "mode": "0o644",
       "bytes": 1023,
       "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+    },
+    "licenses/serde_spanned-1.1.2/LICENSE-APACHE": {
+      "mode": "0o644",
+      "bytes": 11349,
+      "sha256": "249fdb6694467dd615b259f7ddde07be3f8ae5a72cecebb0e24f6629af4215fe"
+    },
+    "licenses/serde_spanned-1.1.2/LICENSE-MIT": {
+      "mode": "0o644",
+      "bytes": 1062,
+      "sha256": "6efb0476a1cc085077ed49357026d8c173bf33017278ef440f222fb9cbcb66e6"
     },
     "licenses/sha2-0.11.1/LICENSE-APACHE": {
       "mode": "0o644",
@@ -3828,6 +3908,16 @@
       "bytes": 851,
       "sha256": "84b34dd7608f7fb9b17bd588a6bf392bf7de504e2716f024a77d89f1b145a151"
     },
+    "licenses/toml-1.1.8+spec-1.1.0/LICENSE-APACHE": {
+      "mode": "0o644",
+      "bytes": 11349,
+      "sha256": "249fdb6694467dd615b259f7ddde07be3f8ae5a72cecebb0e24f6629af4215fe"
+    },
+    "licenses/toml-1.1.8+spec-1.1.0/LICENSE-MIT": {
+      "mode": "0o644",
+      "bytes": 1062,
+      "sha256": "6efb0476a1cc085077ed49357026d8c173bf33017278ef440f222fb9cbcb66e6"
+    },
     "licenses/toml_datetime-1.1.2+spec-1.1.0/LICENSE-APACHE": {
       "mode": "0o644",
       "bytes": 11349,
@@ -3854,6 +3944,16 @@
       "sha256": "249fdb6694467dd615b259f7ddde07be3f8ae5a72cecebb0e24f6629af4215fe"
     },
     "licenses/toml_parser-1.1.5+spec-1.1.0/LICENSE-MIT": {
+      "mode": "0o644",
+      "bytes": 1062,
+      "sha256": "6efb0476a1cc085077ed49357026d8c173bf33017278ef440f222fb9cbcb66e6"
+    },
+    "licenses/toml_writer-1.1.3+spec-1.1.0/LICENSE-APACHE": {
+      "mode": "0o644",
+      "bytes": 11349,
+      "sha256": "249fdb6694467dd615b259f7ddde07be3f8ae5a72cecebb0e24f6629af4215fe"
+    },
+    "licenses/toml_writer-1.1.3+spec-1.1.0/LICENSE-MIT": {
       "mode": "0o644",
       "bytes": 1062,
       "sha256": "6efb0476a1cc085077ed49357026d8c173bf33017278ef440f222fb9cbcb66e6"
@@ -4097,6 +4197,16 @@
       "mode": "0o644",
       "bytes": 1085,
       "sha256": "b7e650f3fce5c53249d1cdc608b54df156a97edd636cf9d23498d0cfe7aec63e"
+    },
+    "licenses/vswhom-0.1.0/LICENSE": {
+      "mode": "0o644",
+      "bytes": 1082,
+      "sha256": "b9b7e5d4bf8857061fbecab39ef1923644eba639337af22d7ad0bb9b3ce59c49"
+    },
+    "licenses/vswhom-sys-0.1.3/LICENSE": {
+      "mode": "0o644",
+      "bytes": 1082,
+      "sha256": "b9b7e5d4bf8857061fbecab39ef1923644eba639337af22d7ad0bb9b3ce59c49"
     },
     "licenses/wayland-backend-0.3.17/LICENSE.txt": {
       "mode": "0o644",
@@ -4417,6 +4527,11 @@
       "mode": "0o644",
       "bytes": 1023,
       "sha256": "cb5aedb296c5246d1f22e9099f925a65146f9f0d6b4eebba97fd27a6cdbbab2d"
+    },
+    "licenses/winreg-0.56.0/LICENSE": {
+      "mode": "0o644",
+      "bytes": 1055,
+      "sha256": "ea021d8c6383c84d19c15ce90d3b1602cf448fdcc0bf3772c98e43c7bf1bf1d1"
     },
     "licenses/wireframe-ocr-0.1.0/LICENSE": {
       "mode": "0o644",
@@ -4770,8 +4885,8 @@
     },
     "scripts/generate_notices.py": {
       "mode": "0o644",
-      "bytes": 10097,
-      "sha256": "cc759e33d0fa89b026bc44bb772f73ca02c5348e9e26451a9fb7bfdfa096ad19"
+      "bytes": 12597,
+      "sha256": "2bd2d1fe1f4cf86e72f0be30680d1d7f8dbbc53b3eda9c8544208a6c1d337d1f"
     },
     "scripts/import_icons.py": {
       "mode": "0o644",
@@ -4785,23 +4900,38 @@
     },
     "scripts/package.py": {
       "mode": "0o644",
-      "bytes": 12806,
-      "sha256": "387bcc1bc1541f1251c8b115363d516950cdaea834021baade233ed555d202a0"
+      "bytes": 12915,
+      "sha256": "17e7ddafb59ba5121e6f35a097b6389619d8060394e45c1e9577f413284ec61e"
     },
     "scripts/sparkle.py": {
       "mode": "0o644",
       "bytes": 4417,
       "sha256": "58b5a12730439f312fa6db95ceecfaf22b13dbe984f6113ee00d432c6f817e00"
     },
+    "scripts/test_notice_build_dependencies.py": {
+      "mode": "0o644",
+      "bytes": 3630,
+      "sha256": "2c3f35475ff52eacd5350ad9d372ad3d48c4e29866cda52173627cb6f05960e7"
+    },
     "scripts/test_packaging.py": {
       "mode": "0o644",
       "bytes": 12178,
       "sha256": "03b4eceb57cda64b94c4745578a17b078c343d5b0c8c0d30a82bae86decbe8b8"
     },
+    "scripts/test_pe_report_order.py": {
+      "mode": "0o644",
+      "bytes": 2704,
+      "sha256": "731a7f2a0d36b7bb7c6af8db4021bc707b80b3ea6187bb89674773728df10e7a"
+    },
     "scripts/test_sparkle.py": {
       "mode": "0o644",
       "bytes": 7264,
       "sha256": "94103f9fbb9a6d1219935769fd80f61310864b9fd0e2c43c42abf45bdd8a1115"
+    },
+    "scripts/test_windows_resources.py": {
+      "mode": "0o644",
+      "bytes": 11021,
+      "sha256": "0d9c7b3b8e55affa4674eb21e72062b7065b711d223b62fabcb29b29b7471222"
     },
     "scripts/verify-dmg-input.py": {
       "mode": "0o644",
@@ -4810,8 +4940,8 @@
     },
     "scripts/verify_windows_beta.py": {
       "mode": "0o644",
-      "bytes": 8777,
-      "sha256": "6113f5ae7d8b940702e009d5851b70ef5d177ef34176be24d7c7397ebccaa62b"
+      "bytes": 15258,
+      "sha256": "316e4d9a84bf0fb24b5fd5b766ae3e0a958f9a97c54883e81587124dbb5c4392"
     },
     "src/accordion.rs": {
       "mode": "0o644",
@@ -9324,1865 +9454,12 @@
       "sha256": "d69b696b4c24f1ae7a4e3798bd295ca60dafc986ae6e2b6eb4c6702c72b44741"
     }
   },
-  "sourceFiles": 1864,
-  "packagedSourceFiles": 1862,
-  "rootLockSHA256": "ba1e2c8442e1d73e1759d80d5702051ebeb2ab59a238f0b5b63033ae53b6f258",
+  "sourceFiles": 1890,
+  "packagedSourceFiles": 1888,
+  "rootLockSHA256": "aae0e216579c3970949e82365485a42b78587fb8280bda842628545fb2d738bd",
   "ocrLockSHA256": "a4153e735ac3a608876bac00d50cbb707b9f6cd9a0abac8964e68de1881413c9",
-  "noticeRecords": 399,
+  "noticeRecords": 410,
   "groups": {
-    "unit": [
-      {
-        "identity": "lib:wireframe",
-        "selector": [
-          "--lib"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "bin:wireframe",
-        "selector": [
-          "--bin",
-          "wireframe"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "ocr": [
-      {
-        "identity": "ocr-lib:wireframe_ocr",
-        "selector": [
-          "--manifest-path",
-          "vendor/wireframe-ocr/Cargo.toml",
-          "--lib"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "ocr-test:inference",
-        "selector": [
-          "--manifest-path",
-          "vendor/wireframe-ocr/Cargo.toml",
-          "--test",
-          "inference"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "ocr-doc:wireframe_ocr",
-        "selector": [
-          "--manifest-path",
-          "vendor/wireframe-ocr/Cargo.toml",
-          "--doc"
-        ],
-        "allowEmpty": true
-      }
-    ],
-    "lint": [],
-    "integration-01": [
-      {
-        "identity": "test:accordions",
-        "selector": [
-          "--test",
-          "accordions"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:clean_scrollbars",
-        "selector": [
-          "--test",
-          "clean_scrollbars"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:empty_components",
-        "selector": [
-          "--test",
-          "empty_components"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:link_occlusion",
-        "selector": [
-          "--test",
-          "link_occlusion"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:page_actions",
-        "selector": [
-          "--test",
-          "page_actions"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:raster_archive",
-        "selector": [
-          "--test",
-          "raster_archive"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:shapes",
-        "selector": [
-          "--test",
-          "shapes"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:tabs",
-        "selector": [
-          "--test",
-          "tabs"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-02": [
-      {
-        "identity": "test:alerts",
-        "selector": [
-          "--test",
-          "alerts"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:component_catalog",
-        "selector": [
-          "--test",
-          "component_catalog"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:field_sets",
-        "selector": [
-          "--test",
-          "field_sets"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:list_control",
-        "selector": [
-          "--test",
-          "list_control"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:page_clipboard",
-        "selector": [
-          "--test",
-          "page_clipboard"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:raster_files",
-        "selector": [
-          "--test",
-          "raster_files"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:shared_images",
-        "selector": [
-          "--test",
-          "shared_images"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:text_controls",
-        "selector": [
-          "--test",
-          "text_controls"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-03": [
-      {
-        "identity": "test:annotations",
-        "selector": [
-          "--test",
-          "annotations"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:component_deletion",
-        "selector": [
-          "--test",
-          "component_deletion"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:font_instances",
-        "selector": [
-          "--test",
-          "font_instances"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:list_icons",
-        "selector": [
-          "--test",
-          "list_icons"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:page_hierarchy",
-        "selector": [
-          "--test",
-          "page_hierarchy"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:raster_job",
-        "selector": [
-          "--test",
-          "raster_job"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:shared_shape_arrow",
-        "selector": [
-          "--test",
-          "shared_shape_arrow"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:text_conversion",
-        "selector": [
-          "--test",
-          "text_conversion"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-04": [
-      {
-        "identity": "test:app_bar_icons",
-        "selector": [
-          "--test",
-          "app_bar_icons"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:component_libraries",
-        "selector": [
-          "--test",
-          "component_libraries"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:group_crop",
-        "selector": [
-          "--test",
-          "group_crop"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:list_links",
-        "selector": [
-          "--test",
-          "list_links"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:page_order",
-        "selector": [
-          "--test",
-          "page_order"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:raster_plan",
-        "selector": [
-          "--test",
-          "raster_plan"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:shared_trash",
-        "selector": [
-          "--test",
-          "shared_trash"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:text_engine",
-        "selector": [
-          "--test",
-          "text_engine"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-05": [
-      {
-        "identity": "test:app_bars",
-        "selector": [
-          "--test",
-          "app_bars"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:component_overrides",
-        "selector": [
-          "--test",
-          "component_overrides"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:group_links",
-        "selector": [
-          "--test",
-          "group_links"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:locking",
-        "selector": [
-          "--test",
-          "locking"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:page_trash",
-        "selector": [
-          "--test",
-          "page_trash"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:raster_regions",
-        "selector": [
-          "--test",
-          "raster_regions"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:sliders",
-        "selector": [
-          "--test",
-          "sliders"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:text_entry",
-        "selector": [
-          "--test",
-          "text_entry"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-06": [
-      {
-        "identity": "test:arrangement",
-        "selector": [
-          "--test",
-          "arrangement"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:component_resize",
-        "selector": [
-          "--test",
-          "component_resize"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:icon_catalog",
-        "selector": [
-          "--test",
-          "icon_catalog"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:markup",
-        "selector": [
-          "--test",
-          "markup"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:pdf",
-        "selector": [
-          "--test",
-          "pdf"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:readable_text_links",
-        "selector": [
-          "--test",
-          "readable_text_links"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:small_forms",
-        "selector": [
-          "--test",
-          "small_forms"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:text_entry_layout",
-        "selector": [
-          "--test",
-          "text_entry_layout"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-07": [
-      {
-        "identity": "test:arrows",
-        "selector": [
-          "--test",
-          "arrows"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:component_sections",
-        "selector": [
-          "--test",
-          "component_sections"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:icon_pixel_alignment",
-        "selector": [
-          "--test",
-          "icon_pixel_alignment"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:markup_arrangement",
-        "selector": [
-          "--test",
-          "markup_arrangement"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:pdf_plan",
-        "selector": [
-          "--test",
-          "pdf_plan"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:recursive_workspace",
-        "selector": [
-          "--test",
-          "recursive_workspace"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:smartphones",
-        "selector": [
-          "--test",
-          "smartphones"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:text_entry_widget",
-        "selector": [
-          "--test",
-          "text_entry_widget"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-08": [
-      {
-        "identity": "test:asset_catalog",
-        "selector": [
-          "--test",
-          "asset_catalog"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:components",
-        "selector": [
-          "--test",
-          "components"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:image_split",
-        "selector": [
-          "--test",
-          "image_split"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:markup_export",
-        "selector": [
-          "--test",
-          "markup_export"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:permanent_pages",
-        "selector": [
-          "--test",
-          "permanent_pages"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:rendering",
-        "selector": [
-          "--test",
-          "rendering"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:snapping",
-        "selector": [
-          "--test",
-          "snapping"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:text_link_transfers",
-        "selector": [
-          "--test",
-          "text_link_transfers"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-09": [
-      {
-        "identity": "test:asset_retention",
-        "selector": [
-          "--test",
-          "asset_retention"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:control_browser",
-        "selector": [
-          "--test",
-          "control_browser"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:images",
-        "selector": [
-          "--test",
-          "images"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:markup_geometry",
-        "selector": [
-          "--test",
-          "markup_geometry"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:phones",
-        "selector": [
-          "--test",
-          "phones"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:resize_minimum",
-        "selector": [
-          "--test",
-          "resize_minimum"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:source_actions",
-        "selector": [
-          "--test",
-          "source_actions"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:text_links",
-        "selector": [
-          "--test",
-          "text_links"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-10": [
-      {
-        "identity": "test:asset_trash",
-        "selector": [
-          "--test",
-          "asset_trash"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:control_creation",
-        "selector": [
-          "--test",
-          "control_creation"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:input_appearance",
-        "selector": [
-          "--test",
-          "input_appearance"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:markup_inspector",
-        "selector": [
-          "--test",
-          "markup_inspector"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:pickers",
-        "selector": [
-          "--test",
-          "pickers"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:retained_pages",
-        "selector": [
-          "--test",
-          "retained_pages"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:source_appearance",
-        "selector": [
-          "--test",
-          "source_appearance"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:text_palette",
-        "selector": [
-          "--test",
-          "text_palette"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-11": [
-      {
-        "identity": "test:browser_contours",
-        "selector": [
-          "--test",
-          "browser_contours"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:control_opacity",
-        "selector": [
-          "--test",
-          "control_opacity"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:interface_symbols",
-        "selector": [
-          "--test",
-          "interface_symbols"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:markup_selection",
-        "selector": [
-          "--test",
-          "markup_selection"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:pointed_buttons",
-        "selector": [
-          "--test",
-          "pointed_buttons"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:review_comments",
-        "selector": [
-          "--test",
-          "review_comments"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:source_clipboard",
-        "selector": [
-          "--test",
-          "source_clipboard"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:text_pixel_alignment",
-        "selector": [
-          "--test",
-          "text_pixel_alignment"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-12": [
-      {
-        "identity": "test:browsers",
-        "selector": [
-          "--test",
-          "browsers"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:coordinate_rounding",
-        "selector": [
-          "--test",
-          "coordinate_rounding"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:interface_typography",
-        "selector": [
-          "--test",
-          "interface_typography"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "test:markup_visibility",
-        "selector": [
-          "--test",
-          "markup_visibility"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:presentation_scene",
-        "selector": [
-          "--test",
-          "presentation_scene"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:review_integration",
-        "selector": [
-          "--test",
-          "review_integration"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:source_locking",
-        "selector": [
-          "--test",
-          "source_locking"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:toggle",
-        "selector": [
-          "--test",
-          "toggle"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-13": [
-      {
-        "identity": "test:button_bars",
-        "selector": [
-          "--test",
-          "button_bars"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:cover_flow",
-        "selector": [
-          "--test",
-          "cover_flow"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:label_orientation",
-        "selector": [
-          "--test",
-          "label_orientation"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:media_controls",
-        "selector": [
-          "--test",
-          "media_controls"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:project_asset_import",
-        "selector": [
-          "--test",
-          "project_asset_import"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:rich_text",
-        "selector": [
-          "--test",
-          "rich_text"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:source_move",
-        "selector": [
-          "--test",
-          "source_move"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:trees",
-        "selector": [
-          "--test",
-          "trees"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-14": [
-      {
-        "identity": "test:button_corners",
-        "selector": [
-          "--test",
-          "button_corners"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:cropped_resize",
-        "selector": [
-          "--test",
-          "cropped_resize"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:large_icon_pixels",
-        "selector": [
-          "--test",
-          "large_icon_pixels"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:menus",
-        "selector": [
-          "--test",
-          "menus"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:project_copy",
-        "selector": [
-          "--test",
-          "project_copy"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:row_icons",
-        "selector": [
-          "--test",
-          "row_icons"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:source_workspace",
-        "selector": [
-          "--test",
-          "source_workspace"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:ui_text",
-        "selector": [
-          "--test",
-          "ui_text"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-15": [
-      {
-        "identity": "test:catalog_labels",
-        "selector": [
-          "--test",
-          "catalog_labels"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:cropped_ungroup",
-        "selector": [
-          "--test",
-          "cropped_ungroup"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:layering",
-        "selector": [
-          "--test",
-          "layering"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:mobile_keyboards",
-        "selector": [
-          "--test",
-          "mobile_keyboards"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:project_fonts",
-        "selector": [
-          "--test",
-          "project_fonts"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:row_selection",
-        "selector": [
-          "--test",
-          "row_selection"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:specialized_selection",
-        "selector": [
-          "--test",
-          "specialized_selection"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:version_surfaces",
-        "selector": [
-          "--test",
-          "version_surfaces"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-16": [
-      {
-        "identity": "test:catalog_layout",
-        "selector": [
-          "--test",
-          "catalog_layout"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:custom_icons",
-        "selector": [
-          "--test",
-          "custom_icons"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:legacy_text",
-        "selector": [
-          "--test",
-          "legacy_text"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:mobile_rows",
-        "selector": [
-          "--test",
-          "mobile_rows"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:project_library_import",
-        "selector": [
-          "--test",
-          "project_library_import"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:rules",
-        "selector": [
-          "--test",
-          "rules"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:standalone_icons",
-        "selector": [
-          "--test",
-          "standalone_icons"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:version_workflows",
-        "selector": [
-          "--test",
-          "version_workflows"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-17": [
-      {
-        "identity": "test:catalog_presets",
-        "selector": [
-          "--test",
-          "catalog_presets"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:date_controls",
-        "selector": [
-          "--test",
-          "date_controls"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:library_import",
-        "selector": [
-          "--test",
-          "library_import"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:move_preview",
-        "selector": [
-          "--test",
-          "move_preview"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:project_page_import",
-        "selector": [
-          "--test",
-          "project_page_import"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:save_lifecycle",
-        "selector": [
-          "--test",
-          "save_lifecycle"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:static_layouts",
-        "selector": [
-          "--test",
-          "static_layouts"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:video",
-        "selector": [
-          "--test",
-          "video"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-18": [
-      {
-        "identity": "test:catalog_starters",
-        "selector": [
-          "--test",
-          "catalog_starters"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:diagrams",
-        "selector": [
-          "--test",
-          "diagrams"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:library_lifecycle",
-        "selector": [
-          "--test",
-          "library_lifecycle"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:multiline_buttons",
-        "selector": [
-          "--test",
-          "multiline_buttons"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:project_palette",
-        "selector": [
-          "--test",
-          "project_palette"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:scrollbars",
-        "selector": [
-          "--test",
-          "scrollbars"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:table_geometry",
-        "selector": [
-          "--test",
-          "table_geometry"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:windows",
-        "selector": [
-          "--test",
-          "windows"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-19": [
-      {
-        "identity": "test:charts",
-        "selector": [
-          "--test",
-          "charts"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:document_v2",
-        "selector": [
-          "--test",
-          "document_v2"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:library_transfer",
-        "selector": [
-          "--test",
-          "library_transfer"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:navigation",
-        "selector": [
-          "--test",
-          "navigation"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:project_session",
-        "selector": [
-          "--test",
-          "project_session"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:search",
-        "selector": [
-          "--test",
-          "search"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:table_options",
-        "selector": [
-          "--test",
-          "table_options"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:workflows",
-        "selector": [
-          "--test",
-          "workflows"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-20": [
-      {
-        "identity": "test:choice_groups",
-        "selector": [
-          "--test",
-          "choice_groups"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:dropdown",
-        "selector": [
-          "--test",
-          "dropdown"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:linear_controls",
-        "selector": [
-          "--test",
-          "linear_controls"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:optional_icons",
-        "selector": [
-          "--test",
-          "optional_icons"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:properties",
-        "selector": [
-          "--test",
-          "properties"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:selection_geometry",
-        "selector": [
-          "--test",
-          "selection_geometry"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:table_palette",
-        "selector": [
-          "--test",
-          "table_palette"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "integration-21": [
-      {
-        "identity": "test:circle_buttons",
-        "selector": [
-          "--test",
-          "circle_buttons"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:editing_context",
-        "selector": [
-          "--test",
-          "editing_context"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:link_actions",
-        "selector": [
-          "--test",
-          "link_actions"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:outlines",
-        "selector": [
-          "--test",
-          "outlines"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:quick_draw",
-        "selector": [
-          "--test",
-          "quick_draw"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:selection_properties",
-        "selector": [
-          "--test",
-          "selection_properties"
-        ],
-        "allowEmpty": false
-      },
-      {
-        "identity": "test:tablets",
-        "selector": [
-          "--test",
-          "tablets"
-        ],
-        "allowEmpty": false
-      }
-    ],
-    "examples-01": [
-      {
-        "identity": "example:check_migration",
-        "selector": [
-          "--example",
-          "check_migration"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:filter_image",
-        "selector": [
-          "--example",
-          "filter_image"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_accordions",
-        "selector": [
-          "--example",
-          "render_accordions"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_annotations",
-        "selector": [
-          "--example",
-          "render_annotations"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_app_icon",
-        "selector": [
-          "--example",
-          "render_app_icon"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_button_bars",
-        "selector": [
-          "--example",
-          "render_button_bars"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_charts",
-        "selector": [
-          "--example",
-          "render_charts"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_choices",
-        "selector": [
-          "--example",
-          "render_choices"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_cover_flow",
-        "selector": [
-          "--example",
-          "render_cover_flow"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_dates",
-        "selector": [
-          "--example",
-          "render_dates"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_dropdown",
-        "selector": [
-          "--example",
-          "render_dropdown"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_forms",
-        "selector": [
-          "--example",
-          "render_forms"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_label_orientations",
-        "selector": [
-          "--example",
-          "render_label_orientations"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_list",
-        "selector": [
-          "--example",
-          "render_list"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_list_links",
-        "selector": [
-          "--example",
-          "render_list_links"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_media_controls",
-        "selector": [
-          "--example",
-          "render_media_controls"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_mobile_rows",
-        "selector": [
-          "--example",
-          "render_mobile_rows"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_navigation",
-        "selector": [
-          "--example",
-          "render_navigation"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_phones",
-        "selector": [
-          "--example",
-          "render_phones"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_pointed_buttons",
-        "selector": [
-          "--example",
-          "render_pointed_buttons"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_search",
-        "selector": [
-          "--example",
-          "render_search"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_small_forms",
-        "selector": [
-          "--example",
-          "render_small_forms"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_standalone_icons",
-        "selector": [
-          "--example",
-          "render_standalone_icons"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_tablets",
-        "selector": [
-          "--example",
-          "render_tablets"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_text",
-        "selector": [
-          "--example",
-          "render_text"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_trees",
-        "selector": [
-          "--example",
-          "render_trees"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_windows",
-        "selector": [
-          "--example",
-          "render_windows"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "doc:wireframe",
-        "selector": [
-          "--doc"
-        ],
-        "allowEmpty": true
-      }
-    ],
-    "examples-02": [
-      {
-        "identity": "example:component_fixture",
-        "selector": [
-          "--example",
-          "component_fixture"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:inspect_text",
-        "selector": [
-          "--example",
-          "inspect_text"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_alerts",
-        "selector": [
-          "--example",
-          "render_alerts"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_app_bars",
-        "selector": [
-          "--example",
-          "render_app_bars"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_browsers",
-        "selector": [
-          "--example",
-          "render_browsers"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_catalog_presets",
-        "selector": [
-          "--example",
-          "render_catalog_presets"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_choice_groups",
-        "selector": [
-          "--example",
-          "render_choice_groups"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_circle_buttons",
-        "selector": [
-          "--example",
-          "render_circle_buttons"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_custom_icons",
-        "selector": [
-          "--example",
-          "render_custom_icons"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_diagrams",
-        "selector": [
-          "--example",
-          "render_diagrams"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_field_sets",
-        "selector": [
-          "--example",
-          "render_field_sets"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_input_appearance",
-        "selector": [
-          "--example",
-          "render_input_appearance"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_linear_controls",
-        "selector": [
-          "--example",
-          "render_linear_controls"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_list_icons",
-        "selector": [
-          "--example",
-          "render_list_icons"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_markup",
-        "selector": [
-          "--example",
-          "render_markup"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_mobile_keyboards",
-        "selector": [
-          "--example",
-          "render_mobile_keyboards"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_multiline_buttons",
-        "selector": [
-          "--example",
-          "render_multiline_buttons"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_optional_icons",
-        "selector": [
-          "--example",
-          "render_optional_icons"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_pickers",
-        "selector": [
-          "--example",
-          "render_pickers"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_scrollbars",
-        "selector": [
-          "--example",
-          "render_scrollbars"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_sliders",
-        "selector": [
-          "--example",
-          "render_sliders"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_smartphones",
-        "selector": [
-          "--example",
-          "render_smartphones"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_static_layouts",
-        "selector": [
-          "--example",
-          "render_static_layouts"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_tabs",
-        "selector": [
-          "--example",
-          "render_tabs"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_text_controls",
-        "selector": [
-          "--example",
-          "render_text_controls"
-        ],
-        "allowEmpty": true
-      },
-      {
-        "identity": "example:render_video",
-        "selector": [
-          "--example",
-          "render_video"
-        ],
-        "allowEmpty": true
-      }
-    ],
     "release": []
   },
   "requiredPassedIdentities": [
@@ -11741,5 +10018,14 @@
   "platformExcludedTargets": {
     "interface_typography": "Source file explicitly cfg(target_os=macos); separate platform acceptance"
   },
-  "reviewEvidenceSHA256": "07c6103eada2ce9b9e67f29b361abb444fcf89611e9b8e311fc305956d55dae7"
+  "reviewEvidenceSHA256": "e5dc5db758bcc99dd86993e93f58630b62cba2e1ea51a5c47e450920108f58b8",
+  "buildAuthorizationSHA256": "e5dc5db758bcc99dd86993e93f58630b62cba2e1ea51a5c47e450920108f58b8",
+  "executionScope": "Beta4 build/package/static only; no fresh full tests or native acceptance",
+  "priorQualifiedEvidence": {
+    "source": "71306ba7f8979a844234beb16bd0a22bfad89343",
+    "controller": "eebf3ada7a5f1c4c4ecbe5c2b7a374a4e07c5f39",
+    "run": 41154197685,
+    "qualifiedOnly": true
+  },
+  "currentIndependentArtifactReviewRequired": true
 }

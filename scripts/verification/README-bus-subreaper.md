@@ -42,7 +42,7 @@ absolute artifact directory owned65534:65534 mode0700. Set both:
 - `WIREFRAME_BUS_SUBREAPER_TEST_ARTIFACTS=/ABS/PARENT-OWNED-TEST-ARTIFACTS`
 
 Then invoke the staged `test_bus_subreaper.py` using assertions-enabled Python
-with `-I -B`. Six tests cover double-fork adoption/raw exit23/actual PID absence,
+with `-I -B`. The six kernel fixtures cover double-fork adoption/raw exit23/actual PID absence,
 direct exit7, raw self-SIGTERM/explicit143 encoding, bounded124 timeout with live
 children honestly reported, failed exec127, and wrong-UID refusal before fork.
 All fixture children self-exit; tests send no cleanup signals and never use
@@ -78,3 +78,9 @@ or nonzero child preserves failure and cannot authorize archive.
 No Linux test, process fixture, VM/Docker action, staging or UI was executed when
 these sources were prepared. Syntax compilation alone does not prove adoption,
 reaping or actual service closure.
+
+## Actual private session-bus check
+
+The additional named test `BusSubreaperTests.test_real_dbus_session_daemon_is_adopted_reaped_and_absent` wraps the installed `dbus-run-session` and a finite Python holder. It records live holder/bus/daemon ancestry before ordinary stop, then requires the original bus child and adopted daemon to be genuinely reaped and absent. The daemon raw status is retained rather than assumed zero. Run only this named delta after its review; the six unchanged kernel fixtures already have retained acceptance.
+
+On 1 November 2026 this named test passed on Linux ARM64/UID65534, with actual bus/daemon raw waits0, all hierarchy PIDs absent and normal container/VM closure. It exercised no portal or product/UI. Source review2393934b and independent retained-runtime review0ada851c retain its scope. The late portal-SIGTERM adapter guard and full native service/archive case remain open.

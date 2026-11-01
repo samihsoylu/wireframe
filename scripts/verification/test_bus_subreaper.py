@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import signal
+import shutil
 import stat
 import subprocess
 import sys
@@ -42,10 +43,72 @@ def wait_file(path, timeout=3):
     return json.loads(path.read_text())
 
 
+def real_bus_hold_fixture(root):
+    """A real session holder: observe only, then return0 on the original stop request."""
+    holder=supervisor.process_identity(os.getpid())
+    bus=supervisor.process_identity(holder['ppid'])
+    end=time.monotonic()+2
+    while True:
+        daemons=[]
+        for path in Path('/proc').iterdir():
+            if not path.name.isdigit():
+                continue
+            try:
+                fields={line.split(':',1)[0]:line.split(':',1)[1].split()
+                        for line in (path/'status').read_text().splitlines() if ':' in line}
+                if int(fields['PPid'][0])!=bus['pid'] or fields['Uid']!=['65534']*4:
+                    continue
+                executable=(path/'exe').resolve(strict=True)
+                if executable.name!='dbus-daemon':
+                    continue
+                identity=supervisor.process_identity(int(path.name))
+                if '--session' not in identity['argv']:
+                    continue
+                daemons.append({'identity':identity,'executable':str(executable),
+                                'executableSHA256':supervisor.hashlib.sha256((path/'exe').read_bytes()).hexdigest()})
+            except (FileNotFoundError,ProcessLookupError):
+                continue
+        if len(daemons)==1:
+            break
+        if len(daemons)>1:
+            raise RuntimeError('ambiguous daemon under the actual dbus-run-session child')
+        if time.monotonic()>=end:
+            raise TimeoutError('no actual session daemon under the bus child')
+        time.sleep(0.01)
+    daemon=daemons[0]
+    for identity in [holder,bus,daemon['identity']]:
+        if identity['uids']!=[65534]*4 or identity['gids']!=[65534]*4 or identity['state']=='Z':
+            raise RuntimeError('live same-UID/GID bus hierarchy required')
+    if holder['ppid']!=bus['pid'] or daemon['identity']['ppid']!=bus['pid']:
+        raise RuntimeError('holder/daemon outside the actual direct-child hierarchy')
+    # Recheck all three original start ticks/argv/UIDs and parents before retaining live evidence.
+    for identity in [holder,bus,daemon['identity']]:
+        again=supervisor.process_identity(identity['pid'])
+        for key in ['pid','ppid','startTicks','uids','gids','argv','argvSHA256']:
+            if again[key]!=identity[key]:
+                raise RuntimeError('live bus hierarchy changed before recording')
+    address=os.environ.get('DBUS_SESSION_BUS_ADDRESS','')
+    if not address.startswith('unix:'):
+        raise RuntimeError('dbus-run-session did not provide a private Unix bus')
+    if (root/'bus-stop-request.json').exists() or (root/'bus-stop-request.json').is_symlink():
+        raise RuntimeError('stop requested before live ancestry proof')
+    emit(root/'real-bus-ancestry.json',{'holder':holder,'busChild':bus,'daemon':daemon,
+         'privateBusAddressSHA256':supervisor.hashlib.sha256(address.encode()).hexdigest(),
+         'liveBeforeStopRequest':True})
+    request=wait_file(root/'bus-stop-request.json',timeout=4)
+    if request!={'studyRunID':STUDY,'request':'normal-owned-bus-stop'}:
+        raise ValueError('original stop-request protocol mismatch')
+    emit(root/'real-bus-holder-return.json',{'pid':holder['pid'],'startTicks':holder['startTicks'],
+         'ordinaryStopRequest':request,'returnCode':0,'rawHolderWaitClaimed':False})
+    return 0
+
+
 def fixture(mode, directory):
     if not AUTHORIZED:
         raise RuntimeError('fixture process requires explicit Linux UID65534 authorization')
     root = Path(directory)
+    if mode == 'real-bus-hold':
+        return real_bus_hold_fixture(root)
     if mode == 'timeout':
         emit(root / 'fixture-live.json', {'pid': os.getpid()})
         time.sleep(0.8)  # Finite self-exit, even after its supervisor times out.
@@ -217,6 +280,79 @@ class BusSubreaperTests(unittest.TestCase):
         self.assertEqual(result['directChildWait']['exitCode'], 127)
         self.assertTrue(result['allChildrenReaped'])
         self.assertTrue(any(e.startswith('exec: ') for e in result['errors']))
+
+    def test_real_dbus_session_daemon_is_adopted_reaped_and_absent(self):
+        installed=shutil.which('dbus-run-session')
+        self.assertIsNotNone(installed,'installed dbus-run-session is required; no install or skip-PASS')
+        executable=Path(installed).resolve(strict=True)
+        holder_argv=[sys.executable,'-I','-B',str(Path(__file__).resolve()),
+                     '--fixture','real-bus-hold',str(self.root)]
+        command=[str(executable),'--']+holder_argv
+        emit(self.root/'real-bus-command.json',{'argv':command,'executable':str(executable),
+             'executableSHA256':supervisor.hashlib.sha256(executable.read_bytes()).hexdigest()})
+        argv=[sys.executable,'-I','-B',str(Path(__file__).resolve()),
+              '--supervisor',str(self.root),'2.0']+command
+        self.process=subprocess.Popen(argv)
+        try:
+            launch=wait_file(self.root/'bus-supervisor-launch.json')
+            ancestry=wait_file(self.root/'real-bus-ancestry.json')
+            bus=ancestry['busChild'];holder=ancestry['holder'];daemon=ancestry['daemon']['identity']
+            self.assertTrue(ancestry['liveBeforeStopRequest'])
+            self.assertEqual(bus['pid'],launch['directChild']['pid'])
+            self.assertEqual(bus['startTicks'],launch['directChild']['startTicks'])
+            self.assertEqual(bus['ppid'],launch['supervisor']['pid'])
+            self.assertEqual(bus['argv'],command)
+            self.assertEqual(holder['argv'],holder_argv)
+            self.assertEqual(holder['ppid'],bus['pid'])
+            self.assertEqual(daemon['ppid'],bus['pid'])
+            self.assertIn('--session',daemon['argv'])
+            for identity in [bus,holder,daemon]:
+                self.assertEqual(identity['uids'],[65534]*4)
+                self.assertEqual(identity['gids'],[65534]*4)
+                self.assertNotEqual(identity['state'],'Z')
+        finally:
+            # Ordinary request only, including if a live-evidence assertion fails.
+            if not (self.root/'bus-stop-request.json').exists():
+                self.stop_request()
+        result=self.result()
+        self.assertEqual(self.process.returncode,0)
+        self.assertTrue(result['allChildrenReaped'])
+        self.assertFalse(result['timedOut'])
+        self.assertEqual(result['errors'],[])
+        direct=result['directChildWait']
+        returned=wait_file(self.root/'real-bus-holder-return.json')
+        self.assertEqual(returned['pid'],holder['pid'])
+        self.assertEqual(returned['startTicks'],holder['startTicks'])
+        self.assertEqual(returned['returnCode'],0)
+        self.assertFalse(returned['rawHolderWaitClaimed'])
+        self.assertEqual(direct['pid'],bus['pid'])
+        self.assertEqual(direct['identity']['startTicks'],bus['startTicks'])
+        self.assertTrue(direct['reaped'])
+        self.assertEqual(direct['identity']['ppid'],launch['supervisor']['pid'])
+        self.assertEqual(direct['identity']['uids'],[65534]*4)
+        self.assertEqual(direct['identity']['gids'],[65534]*4)
+        self.assertEqual(direct['waitidUID'],65534)
+        self.assertEqual(direct['rawWaitStatus'],0)
+        self.assertEqual(direct['exitCode'],0)
+        self.assertIsNone(direct['signal'])
+        adopted=next(row for row in result['waits'] if row['pid']==daemon['pid'])
+        self.assertFalse(adopted['directChild'])
+        self.assertEqual(adopted['identity']['startTicks'],daemon['startTicks'])
+        self.assertEqual(adopted['identity']['ppid'],launch['supervisor']['pid'])
+        self.assertEqual(adopted['identity']['uids'],[65534]*4)
+        self.assertEqual(adopted['identity']['gids'],[65534]*4)
+        self.assertEqual(adopted['identity']['state'],'Z')
+        self.assertEqual(adopted['waitidUID'],65534)
+        self.assertTrue(adopted['reaped'])
+        self.assertIsNone(adopted['identityError'])
+        # Keep the actual daemon exit/signal status; normal bus shutdown need not return daemon0.
+        self.assertEqual(adopted['exitCode'],os.waitstatus_to_exitcode(adopted['rawWaitStatus']))
+        emit(self.root/'real-bus-terminal-observations.json',{'busChildWait':direct,
+             'adoptedDaemonWait':adopted,'holderReturnWitness':returned,'holderAbsent':not (Path('/proc')/str(holder['pid'])).exists(),
+             'allChildrenReaped':result['allChildrenReaped'],'remainingDirectChildren':result['remainingDirectChildren']})
+        for identity in [holder,bus,daemon,launch['supervisor']]:
+            self.assertFalse((Path('/proc')/str(identity['pid'])).exists())
+        self.assertEqual(result['remainingDirectChildren'],[])
 
     def test_same_uid_failure_happens_before_fork_or_records(self):
         before={p.name:p.read_bytes() for p in self.root.iterdir()}

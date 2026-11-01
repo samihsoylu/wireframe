@@ -10,9 +10,15 @@ The resumed H7 Linux PDF case passed all seven saved-graph/history checkpoints, 
 
 See [Beta 4 verification](docs/BETA4-VERIFICATION.md) for exact evidence scope, retained corrections, current release limits and next action. These later records preserve the packaged fc1 source and all earlier history below. The original Q5/Q7/Q8 goal and explicit holds remain open.
 
+## Verification follow-up — 1 November 2026
+
+The isolated test-bus supervisor and six opt-in Linux test sources passed source review after two corrected setup findings. All six real kernel/process fixtures then passed, with raw outcomes and complete artifacts retained. The test container exited0, no fixture processes remained, and the verification VM stopped; configuration/context and the old H7 container state stayed unchanged. Full native bus/portal closure and normal archive remain open. See `scripts/verification/README-bus-subreaper.md` and `INTEGRATION-NOTE.md`.
+
+The Data grid source audit now traces all16 visible property consumers, preserves3 hidden compatibility fields and reuses9 actual retained passed functions after verifying the9 relevant files are byte-identical. This is source evidence with no new native-property acceptance. The finishing checklist is reconciled to delivered Beta4; all249 requirements and86/1106 family/property rows remain.
+
 ## Next work after Beta 4
 
-1. Correct the isolated Linux test setup with a UID65534 subreaper above the owned session bus. Review and verify adoption/reaping before a fresh full case; retain the original H7 failure and transport qualifications. Do not claim a restart closes the original check.
+1. Integrate the reviewed UID65534 bus subreaper into a fresh full native case, with new source pins, authority and existing capacity limits. Its six real Linux process-fixture tests passed, including raw failure/signal/timeout and adoption/reaping/PID absence; this does not establish actual bus/portal integration or close H7. Retain the original H7 failure and transport qualifications. Do not claim a restart closes the original check.
 2. Continue Q5/Q7/Q8 from the existing requirement ledgers, checking named remaining behavior and visual variants. The beta milestone does not close the original goal.
 3. Keep Windows application/test/example execution, stable/main merge, production updater activation, Apple notarization and existing physical-input/security/first-launch handoffs held. Updates remain manual.
 

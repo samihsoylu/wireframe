@@ -1,0 +1,145 @@
+--- immutable-primary-plan-v1/direct_guest.py
++++ prospective-owned-bus/direct_guest.py
+@@ -28,7 +28,7 @@
+     assert a['resourcesAuthorized'] is a['nativeStudyAuthorized'] is True
+     assert a['cleanupAuthorized'] is True and a['rootExpectedHEAD']=='909b50ea4109706e03ac1deae3f4ca08f8bfa686'
+     for key in ['MacAccessAuthorized','WindowsExecutionAuthorized','providerRequestsAuthorized','installAuthorized','accountChangeAuthorized','buildAuthorized','globalConfigOrSecurityChangeAuthorized']:assert a[key] is False
+-    mapped={'start':'desktop','hold':'desktop','pin-components':'ready','portal-before':'observe','portal-pin':'observe','portal-cancel':'observe','stop-component':'cleanup','stop-services':'cleanup','request-bus-stop':'cleanup','service-closure':'cleanup'}
++    mapped={'start':'desktop','hold':'desktop','pin-components':'ready','portal-before':'observe','portal-pin':'observe','portal-cancel':'observe','stop-component':'cleanup','stop-services':'cleanup','request-bus-stop':'cleanup','service-closure':'cleanup','bus-child-closure':'cleanup','bus-supervisor-closure':'cleanup'}
+     if phase in mapped:assert mapped[phase] in a['allowedPhases']
+     return a
+ 
+@@ -37,9 +37,69 @@
+     if session:value.update(b.read(ROOT/'runtime-env.json'))
+     return value
+ 
++def bus_supervisor_argv():
++    study=b.read(ROOT/'runtime-authority.json')['studyRunID']
++    return ['/usr/bin/python3','-I','-B',str(ROOT/'bus_subreaper.py'),
++            '--state-dir',str(ROOT),'--study-run-id',study,'--shutdown-timeout','15']
++
++def bus_launch(pins):
++    value=b.read(no_links(ROOT/'bus-supervisor-launch.json'))
++    assert value['kind']=='owned-bus-subreaper-launch-v1' and value['subreaperVerified'] is True
++    assert value['studyRunID']==b.read(ROOT/'runtime-authority.json')['studyRunID']
++    for name,key in [('desktop','supervisor'),('dbus-run-session','directChild')]:
++        row=value[key];pin=pins[name]
++        assert row['pid']==pin['pid'] and row['startTicks']==pin['startTicks']
++        assert row['uids']==row['gids']==[65534]*4
++    assert value['directChild']['ppid']==pins['desktop']['pid']
++    assert value['expectedArgv']==['dbus-run-session','--','/usr/bin/python3','-B',str(ROOT/'direct_guest.py'),'hold']
++    return value
++
++def bus_ancestry(pins):
++    value=b.read(no_links(ROOT/'bus-session-ancestry.json'))
++    assert value['kind']=='owned-bus-live-startup-ancestry-v1'
++    assert value['studyRunID']==b.read(ROOT/'runtime-authority.json')['studyRunID']
++    for name in ['desktop','dbus-run-session','dbus-shell']:assert value['identities'][name]==pins[name]
++    assert value['observedParents']=={'dbus-run-session':pins['desktop']['pid'],'dbus-shell':pins['dbus-run-session']['pid']}
++    # This is retained startup evidence, not a current-PPID requirement after legitimate adoption.
++    return value
++
++def bus_child_closure():
++    b.all_started_sessions_closed(True);pins=component_pins(True);launch=bus_launch(pins);bus_ancestry(pins)
++    value=b.read(no_links(ROOT/'bus-supervisor-child-exit.json'));row=value['wait']
++    assert value['kind']=='owned-bus-child-exit-v1' and value['studyRunID']==launch['studyRunID']
++    assert value['supervisorPID']==pins['desktop']['pid'] and value['supervisorStartTicks']==pins['desktop']['startTicks']
++    assert row['directChild'] is True and row['reaped'] is True and row['identityError'] is None
++    assert row['pid']==pins['dbus-run-session']['pid'] and row['identity']['startTicks']==pins['dbus-run-session']['startTicks']
++    assert row['identity']['ppid']==pins['desktop']['pid'] and row['identity']['state']=='Z'
++    assert row['identity']['uids']==row['identity']['gids']==[65534]*4 and row['waitidUID']==65534
++    assert row['rawWaitStatus']==row['exitCode']==0 and row['signal'] is None
++    b.prove_pid_absent(row['pid'])
++    return value
++
++def bus_supervisor_closure():
++    child=bus_child_closure();pins=component_pins(True);launch=bus_launch(pins)
++    value=b.read(no_links(ROOT/'bus-supervisor-result.json'))
++    assert value['kind']=='owned-bus-subreaper-result-v1' and value['studyRunID']==launch['studyRunID']
++    assert value['supervisor']==launch['supervisor'] and value['directChildWait']==child['wait']
++    assert value['allChildrenReaped'] is True and value['timedOut'] is False
++    assert value['errors']==[] and value['supervisorExitCode']==0 and value['remainingDirectChildren']==[]
++    assert value['signalsSent']==[] and value['nativeAccepted'] is False and value['strictPIDAbsenceStillRequired'] is True
++    raw=no_links(ROOT/'bus-supervisor-waits.jsonl').read_bytes();assert len(raw)<=1048576
++    assert len(raw)==value['waitLogBytes'] and hashlib.sha256(raw).hexdigest()==value['waitLogSHA256']
++    waits=[json.loads(line,object_pairs_hook=b.unique_pairs) for line in raw.splitlines() if line]
++    assert waits==value['waits'] and 1<=len(waits)<=256
++    for row in waits:
++        assert row['reaped'] is True and row['identityError'] is None
++        assert row['identity']['pid']==row['pid'] and row['identity']['ppid']==pins['desktop']['pid']
++        assert row['identity']['uids']==row['identity']['gids']==[65534]*4 and row['waitidUID']==65534
++        # Preserve all descendant statuses, including signals/nonzero; never relabel them zero.
++        b.prove_pid_absent(row['pid'])
++    for name in ['desktop','dbus-run-session','session-bus-daemon']:b.prove_pid_absent(pins[name]['pid'])
++    return value
++
+ def start(component):
+     guard_current();b.immutable()
+-    if component=='bus':argv=['dbus-run-session','--','/usr/bin/python3','-B',str(ROOT/'direct_guest.py'),'hold'];name='desktop'
++    if component=='bus':argv=bus_supervisor_argv();name='desktop'
+     else:assert component in COMPONENTS;argv=COMPONENTS[component];name=component
+     with (ROOT/(name+'.pid')).open('x') as out:out.write(str(os.getpid())+'\n');out.flush();os.fsync(out.fileno())
+     log=ROOT/('session.log' if component=='bus' else 'portal-monitor.log' if component=='monitor' else component+'.log')
+@@ -51,7 +111,8 @@
+     b.emit(ROOT/'runtime-env.json',{**{k:os.environ[k] for k in b.config()['privateEnvironment']},'DBUS_SESSION_BUS_ADDRESS':os.environ['DBUS_SESSION_BUS_ADDRESS']})
+     with (ROOT/'dbus-shell.pid').open('x') as out:out.write(str(os.getpid())+'\n')
+     # Compatibility filename only: actual recorded argv is this Python session
+-    # owner, not a shell. Parent keeps the dbus-run-session handle throughout.
++    # owner, not a shell. Parent keeps the subreaper outer handle; its
++    # dbus-run-session child is separately pinned and waited.
+     request=ROOT/'bus-stop-request.json'
+     while not request.exists():time.sleep(0.2)
+     a=authorize('hold');r=b.read(request);assert r=={'studyRunID':a['studyRunID'],'request':'normal-owned-bus-stop'}
+@@ -86,10 +147,23 @@
+     guard_current();b.immutable()
+     pins={name:b.proc_identity(int((ROOT/(name+'.pid')).read_text())) for name in ['desktop','dbus-shell','xvfb','openbox','vnc','viewer','monitor']}
+     for name,argv in COMPONENTS.items():assert pins[name]['argv']==argv,name
+-    assert pins['desktop']['argv']==['dbus-run-session','--','/usr/bin/python3','-B',str(ROOT/'direct_guest.py'),'hold']
++    assert pins['desktop']['argv']==bus_supervisor_argv()
++    launch=b.read(no_links(ROOT/'bus-supervisor-launch.json'));child=b.proc_identity(launch['directChild']['pid'])
++    assert child['startTicks']==launch['directChild']['startTicks'] and child['argv']==launch['expectedArgv']
++    assert launch['supervisor']['pid']==pins['desktop']['pid'] and launch['supervisor']['startTicks']==pins['desktop']['startTicks']
++    child_status={row.split(':',1)[0]:row.split(':',1)[1].split() for row in Path('/proc',str(child['pid']),'status').read_text().splitlines() if ':' in row}
++    assert int(child_status['PPid'][0])==pins['desktop']['pid']
++    hold_status={row.split(':',1)[0]:row.split(':',1)[1].split() for row in Path('/proc',str(pins['dbus-shell']['pid']),'status').read_text().splitlines() if ':' in row}
++    assert int(hold_status['PPid'][0])==child['pid'],'hold process outside pinned bus hierarchy'
++    b.live_identity(child);b.live_identity(pins['dbus-shell'])
++    pins['dbus-run-session']=child;bus_launch(pins)
+     assert pins['dbus-shell']['argv']==['/usr/bin/python3','-B',str(ROOT/'direct_guest.py'),'hold']
++    b.emit(ROOT/'bus-session-ancestry.json',{'kind':'owned-bus-live-startup-ancestry-v1',
++           'studyRunID':launch['studyRunID'],
++           'identities':{name:pins[name] for name in ['desktop','dbus-run-session','dbus-shell']},
++           'observedParents':{'dbus-run-session':int(child_status['PPid'][0]),'dbus-shell':int(hold_status['PPid'][0])}})
+     b.emit(ROOT/'component-pin-candidate.json',pins)
+-    pins['session-bus-daemon']=session_daemon(pins['desktop']['pid'])
++    pins['session-bus-daemon']=session_daemon(pins['dbus-run-session']['pid'])
+     b.emit(ROOT/'desktop-process-pins.json',pins);return component_live()
+ 
+ def component_live():
+@@ -189,6 +263,8 @@
+     return {'ownedIdentitySignalled':row,'signal':'SIGTERM','rawOuterExitMustBeRetainedByParent':True,'noExit0Claim':True}
+ 
+ def service_closure(stop=False):
++    if stop:bus_child_closure()  # Allowed owned SIGTERM while the supervisor remains alive to reap.
++    else:bus_supervisor_closure()  # Requires genuine reaping, then the original strict PID checks.
+     b.all_started_sessions_closed(True);facts=b.read(ROOT/'observations/portal-owners.json');result={}
+     for label in ['frontend','backend']:
+         row=facts[label]['identity']
+@@ -199,7 +275,7 @@
+     return result
+ 
+ def main():
+-    parser=argparse.ArgumentParser();parser.add_argument('phase',choices=['start','hold','pin-components','portal-before','portal-pin','portal-cancel','stop-component','request-bus-stop','service-closure','stop-services','guard','session','pin','observe','archive']);parser.add_argument('--component');parser.add_argument('--session',choices=['warm','cold']);parser.add_argument('--stage',choices=b.STAGES);parser.add_argument('--incomplete',action='store_true');args=parser.parse_args();a=authorize(args.phase)
++    parser=argparse.ArgumentParser();parser.add_argument('phase',choices=['start','hold','pin-components','portal-before','portal-pin','portal-cancel','stop-component','request-bus-stop','service-closure','stop-services','bus-child-closure','bus-supervisor-closure','guard','session','pin','observe','archive']);parser.add_argument('--component');parser.add_argument('--session',choices=['warm','cold']);parser.add_argument('--stage',choices=b.STAGES);parser.add_argument('--incomplete',action='store_true');args=parser.parse_args();a=authorize(args.phase)
+     if args.phase!='archive':guard_current()
+     if args.phase in ['guard','session','pin','observe','archive']:b.authorize_guest(args.phase,args.incomplete)
+     if args.phase=='start':return start(args.component)
+@@ -213,6 +289,8 @@
+         b.all_started_sessions_closed(args.incomplete)
+         for name in ['openbox','vnc','viewer','monitor']:b.prove_pid_absent(component_pins(args.incomplete)[name]['pid'])
+         b.emit(ROOT/'bus-stop-request.json',{'studyRunID':a['studyRunID'],'request':'normal-owned-bus-stop'});result={'requestWritten':True}
++    elif args.phase=='bus-child-closure':result=bus_child_closure()
++    elif args.phase=='bus-supervisor-closure':result=bus_supervisor_closure()
+     elif args.phase in ['service-closure','stop-services']:result=service_closure(args.phase=='stop-services')
+     elif args.phase=='guard':result=b.immutable(allow_fixture_drift=args.incomplete)
+     elif args.phase=='session':return b.session_run(args.session)

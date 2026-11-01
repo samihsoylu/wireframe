@@ -1,6 +1,6 @@
 # Wireframe — current state
 
-## Active progress checkpoint — 1 November 2026, 23:20 CET
+## Active progress checkpoint — 1 November 2026
 
 User direction: finish the remaining checks, release the next beta when ready, keep Windows execution held, and keep written evidence of progress. Beta4 is already public. No product changes since that release currently warrant a new package.
 
@@ -9,11 +9,11 @@ User direction: finish the remaining checks, release the next beta when ready, k
 | Done | Published Beta4; all eight actual downloads match prepared sizes/hashes. | `docs/BETA4-VERIFICATION.md`; GitHub tag `v0.1.0-beta.4` |
 | Done | Six real Linux process fixtures and one real private D-Bus test passed; normal isolated shutdown. | `scripts/verification/README-bus-subreaper.md` |
 | Done | Fixed late portal shutdown guard; nine focused pure checks passed; independent source review passed; pushed `c902cd7`. | `scripts/verification/INTEGRATION-NOTE.md` |
-| Active | Run the prepared two-level component remap/reset check on the exact Beta4 Mac app. Preflight passed: 546 original files backed up and verified; no app launched yet. | Private `delivery/nested-component-remap-native-v1`; fixture `nested-component-remap-preparation-v1` |
-| Next | Fresh Linux portal/PDF run with normal service reaping and archive. Use a separate namespace in the retained tool-equipped container; preserve original H7 failure. | Engineer Linux owns a compact S2 integration amendment. |
+| Passed; review pending | Exact Beta4 Mac two-level component remap/reset: all9 complete saved graphs, separate import/reset history, fresh-process empty history and byte-identical cold Save. Both processes exited0; test copy closed; all546 original app-data files and native settings scopes restored exactly. | Private `delivery/nested-component-remap-native-v1/REPORT.md`; independent retained-result review owns final acceptance. |
+| Active next check | Fresh Linux portal/PDF run with normal service reaping and archive. Use a separate namespace in the retained tool-equipped container; preserve original H7 failure. | Engineer Linux owns a compact S2 integration amendment; parent will first measure current capacity. |
 | Open | Remaining bounded behavior questions and capability/approval limits. Windows execution remains held. | `docs/verification/REMAINING-CHECKS.md` |
 
-The immediate Mac pass requires nine complete saved-state comparisons, observed import/reset history, a fresh-process reopen with empty history, normal Quit/waits and exact scoped data restoration. The next action is execution after the narrow restoration-helper safety review. Do not generate another preparation framework or repeat unchanged suites. If a check stops yielding new evidence, record the concrete blocker and change approach; do not count plans, classifications or repeated reviews as product acceptance. Parent owns runtime/UI; helpers prepare/review source only. Close the isolated app afterward. No unattended supervision is implied.
+The immediate Mac execution is complete. Its native picker changed only one last-folder bookmark; separately guarded restoration returned the original native preference bytes before the reviewed Rust restoration completed. Input/observation qualifications are retained in the report. Do not rerun this accepted branch without a concrete review finding. Next: finish result review and measure the fresh Linux case's capacity, then execute or record the actual blocker. Do not generate another preparation framework or repeat unchanged suites. If a check stops yielding new evidence, record the concrete blocker and change approach; do not count plans, classifications or repeated reviews as product acceptance. Parent owns runtime/UI; helpers prepare/review source only. No app is running; no unattended supervision is implied.
 
 ## Beta 4 delivery checkpoint — 1 November 2026
 

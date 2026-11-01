@@ -50,7 +50,7 @@ These questions are tied to existing requirements. They are proposed bounded evi
 
 ## Approval and capability limits
 
-Windows app/test/example execution requires the user to resume it. The reviewed two-item permanent-removal fixture still requires action-time approval. Reference identity/terms, downloaded first launch/protected installation, Gatekeeper and production updater/Keychain/feed activation retain their existing handoffs. Apple Developer membership/notarization is declined. No new release or main/stable merge is authorized by this checklist.
+Windows app/test/example execution requires the user to resume it. The reviewed two-item permanent-removal fixture still requires action-time approval. Reference identity/terms, downloaded first launch/protected installation, Gatekeeper and production updater/Keychain/feed activation retain their existing handoffs. Apple Developer membership/notarization is declined. The user separately authorized the next beta when ready; main/stable merge remains held. The Mac is freshly available for isolated checks, followed by closure of the test copy.
 
 Exact Q5 startup/animation tracing, physical cadence/held input, native IME/screen reader and wider platform/display environments retain their recorded capability limits. The existing SVG browser policy rejection prohibits HTTP/indirect/alternate-browser workarounds; no bypass is attempted. Existing-format project import remains the only explicitly deferred feature.
 

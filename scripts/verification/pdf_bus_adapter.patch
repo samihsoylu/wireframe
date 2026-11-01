@@ -116,7 +116,7 @@
      b.emit(ROOT/'desktop-process-pins.json',pins);return component_live()
  
  def component_live():
-@@ -189,6 +263,8 @@
+@@ -189,17 +263,25 @@
      return {'ownedIdentitySignalled':row,'signal':'SIGTERM','rawOuterExitMustBeRetainedByParent':True,'noExit0Claim':True}
  
  def service_closure(stop=False):
@@ -125,7 +125,17 @@
      b.all_started_sessions_closed(True);facts=b.read(ROOT/'observations/portal-owners.json');result={}
      for label in ['frontend','backend']:
          row=facts[label]['identity']
-@@ -199,7 +275,7 @@
+         try:b.prove_pid_absent(row['pid']);result[label]='absent'
+         except RuntimeError:
+             if not stop:raise
+-            b.live_identity(row);os.kill(row['pid'],signal.SIGTERM);result[label]='owned SIGTERM requested; absence still required'
++            b.live_identity(row)
++            # Stored bus-child exit proof does not establish a living reaper now.
++            b.live_identity(component_pins(True)['desktop'])
++            try:(ROOT/'bus-supervisor-result.json').lstat()
++            except FileNotFoundError:pass
++            else:raise RuntimeError('supervisor terminal result published; refuse portal SIGTERM')
++            os.kill(row['pid'],signal.SIGTERM);result[label]='owned SIGTERM requested; absence still required'
      return result
  
  def main():
@@ -134,7 +144,7 @@
      if args.phase!='archive':guard_current()
      if args.phase in ['guard','session','pin','observe','archive']:b.authorize_guest(args.phase,args.incomplete)
      if args.phase=='start':return start(args.component)
-@@ -213,6 +289,8 @@
+@@ -213,6 +295,8 @@
          b.all_started_sessions_closed(args.incomplete)
          for name in ['openbox','vnc','viewer','monitor']:b.prove_pid_absent(component_pins(args.incomplete)[name]['pid'])
          b.emit(ROOT/'bus-stop-request.json',{'studyRunID':a['studyRunID'],'request':'normal-owned-bus-stop'});result={'requestWritten':True}

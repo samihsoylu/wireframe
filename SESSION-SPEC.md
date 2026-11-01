@@ -1,14 +1,22 @@
 # Wireframe — current state
 
-## Beta 4 delivery checkpoint — 31 October 2026
+## Beta 4 delivery checkpoint — 1 November 2026
 
 The resumed user request authorizes the next GitHub beta when ready, while keeping Windows runtime testing on hold. Exact source `fc1d98b4882321a7ce5c4056fd7a9123c2a63805` has fresh Mac/Windows/Linux build/package/static acceptance. The exact Mac Beta 4/build 4 app also has qualified independent acceptance for all 14 image/OCR/history/reopen stages and both loaded/cold credit inspectors; normal waits and scoped restoration are complete.
 
-Eight download assets and user-facing release notes are independently reviewed and uploaded to a verified private GitHub draft. Publication still requires the Linux PDF failure/retry/history/reopen case. H5 passed its baseline before a parent-authored record-format error; H6 stopped before allocation at a stale test display marker. Neither is a confirmed product defect or a completed native pass. A fresh-container probe found missing UI/portal tools and was closed without installing anything. The existing verified environment is now ready for fresh preparation: its two proven H5 display leftovers were removed under a separately accepted exact-identity cleanup, with the archive, parent directory and other entry names preserved. Container/profile closure and protected Host checks passed. The next full seven-stage case remains unaccepted. No VM or app is currently running; Windows execution remains held.
+[Beta 4](https://github.com/samihsoylu/wireframe/releases/tag/v0.1.0-beta.4) is published as a prerelease from exact source `fc1d98b4882321a7ce5c4056fd7a9123c2a63805`. All eight actual anonymous downloads, totalling 233,088,481 bytes, match their prepared sizes and SHA-256. Tag and friendly release notes match; Beta 3's tag/body/assets remain unchanged. Windows runtime testing remains held.
+
+The resumed H7 Linux PDF case passed all seven saved-graph/history checkpoints, primary system chooser, readable failure/retry, strict PDF content and fresh-process reopen on its identified earlier build. Independent review gives qualified functional PASS. Both real application waits returned zero. The original strict normal-closure/archive criterion remains failed: the test container left three original exited bus/portal processes unreaped under sleep PID1. Safe desktop/container/profile shutdown and complete failure retention passed, with protected Host/source guards exact. After independent readiness review, the parent explicitly accepted those named product results and safe teardown as sufficient for this beta; this revises the beta publication prerequisite while preserving the original failed/open criterion. No VM, app or viewer is running.
 
 See [Beta 4 verification](docs/BETA4-VERIFICATION.md) for exact evidence scope, retained corrections, current release limits and next action. These later records preserve the packaged fc1 source and all earlier history below. The original Q5/Q7/Q8 goal and explicit holds remain open.
 
-## Next beta — source preparation only
+## Next work after Beta 4
+
+1. Correct the isolated Linux test setup with a UID65534 subreaper above the owned session bus. Review and verify adoption/reaping before a fresh full case; retain the original H7 failure and transport qualifications. Do not claim a restart closes the original check.
+2. Continue Q5/Q7/Q8 from the existing requirement ledgers, checking named remaining behavior and visual variants. The beta milestone does not close the original goal.
+3. Keep Windows application/test/example execution, stable/main merge, production updater activation, Apple notarization and existing physical-input/security/first-launch handoffs held. Updates remain manual.
+
+## Frozen Beta 4 source preparation record
 
 The next source candidate is `0.1.0-beta.4` on `codex/beta4-source`, based on accepted `124b44b` with the seven documentation histories from root `909b50e` reconciled. Product code, format 16, assets, embedded model, notices and dependency versions are preserved. Only the application version and source/release documentation change.
 

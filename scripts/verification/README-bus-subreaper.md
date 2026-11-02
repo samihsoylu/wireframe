@@ -15,6 +15,8 @@ waitid(WNOWAIT), then consumes that exact child's waitpid status. It never treat
 Z as absent and sends no signals. Imported descendants are only kernel-adopted
 children of this supervisor, not unrelated container processes.
 
+Wait records retain any captured identity even when a check fails, alongside named `identityChecks`. A naturally exited adopted child may have different effective/saved/filesystem IDs only when its kernel wait UID, real UID/GID, current supervisor parent, PID and zombie state match. Such a row is explicitly `adoptedReapOnlyCredentialVariant`; every row sets `signalAuthorityFromWaitRecord=false`. The original direct child still requires every UID/GID slot and its launch start-time pin. Missing/unreadable or invalid real identity remains a fatal nonzero result. These records authorize no live-process signal.
+
 The direct child exit is transparent: ordinary exits retain their number;
 signals retain the signed child exit/raw status and use outer shell encoding
 128+signal. Adopted child raw nonzero/signals are retained separately; outer0
@@ -22,7 +24,7 @@ means direct bus exit0 plus complete reaping, not that all children exited0 or
 that native/service/archive acceptance passed. The parent must still consume the
 real outer terminal result and run unchanged strict PID-absence/archive checks.
 
-A valid original bus-stop-request or direct child exit starts the bounded
+A valid original bus-stop-request, direct child exit or fatal validation error starts the bounded
 shutdown deadline (default15s, maximum120s). Deadline failure returns124, records
 remaining direct children and does not claim reaping/absence. No signals or force
 cleanup occur. Parent retains failed scope and owns any separately authorized
@@ -84,3 +86,13 @@ reaping or actual service closure.
 The additional named test `BusSubreaperTests.test_real_dbus_session_daemon_is_adopted_reaped_and_absent` wraps the installed `dbus-run-session` and a finite Python holder. It records live holder/bus/daemon ancestry before ordinary stop, then requires the original bus child and adopted daemon to be genuinely reaped and absent. The daemon raw status is retained rather than assumed zero. Run only this named delta after its review; the six unchanged kernel fixtures already have retained acceptance.
 
 On 1 November 2026 this named test passed on Linux ARM64/UID65534, with actual bus/daemon raw waits0, all hierarchy PIDs absent and normal container/VM closure. It exercised no portal or product/UI. Source review2393934b and independent retained-runtime review0ada851c retain its scope. The late portal-SIGTERM adapter guard now has independent source acceptance and nine passing closed mocked scenarios. The full native service/archive case remains open.
+
+## Credential correction and actual kernel evaluation — 2 November 2026
+
+Core `09d24288…` and focused fixture `3665b8b5…` passed source review `b42dd2a5…` after correcting a fixture-only two-link stop request. The final fixture uses Linux atomic no-replace rename and preserves the core single-link check. Ten real credential cases passed with no skips in a dedicated isolated Root library test (`expected_uid/gid=0`). The seven unchanged regressions then passed separately as UID/GID65534 on the same changed core, including the real D-Bus session. The original seven tests are rerun here because the core changed.
+
+The Root library suite requires its separate explicit `WIREFRAME_BUS_SUBREAPER_CREDENTIAL_TEST_AUTHORIZED=1` and canonical Root-owned0700 `WIREFRAME_BUS_SUBREAPER_CREDENTIAL_TEST_ARTIFACTS`. Run only in an authorized isolated Linux fixture, never as an operational root CLI or a replacement for the UID65534 suite. Its finite child credential transitions need no setuid executable, installation or account changes. All ten actual original waits/reaps/PID-absence records are retained.
+
+A planned old-acb control records a real GID variant, a discarded wait identity and supervisor124; its one unit/container actually fails1 and is retained as a counterexample. It is not a passing test and does not establish the exact lost historical portal-child identity. Three complete namespace TARs and actual container exits0/0/1 are retained. All profiles are stopped and original configuration/context/old container state are preserved. Private evidence: `delivery/owned-bus-credential-kernel-20261102-41a8a6748f634170/REPORT.md`; qualified independent retained review17dafece accepts the kernel scope.
+
+The fresh S2 full native case failed before its first formal baseline stage; its retained failure remains accepted only for safe preservation/closure. Current kernel results do not pass that case. A separate strict-consumer/source-pin amendment and a new complete seven-stage portal/PDF run remain required. Windows execution remains held.

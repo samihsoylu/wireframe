@@ -278,18 +278,40 @@ def supervise(command, state_dir, *, study_run_id, expected_uid, expected_gid,
                 continue
             if event is not None:
                 identity_error = None
+                identity = None
+                identity_checks = {}
+                credential_variant = False
                 try:
                     identity = process_identity(event.si_pid)
-                    require(identity['ppid'] == os.getpid() and identity['state'] == 'Z' and
-                            identity['uids'] == [expected_uid] * 4 and
-                            identity['gids'] == [expected_gid] * 4, 'waitable child identity/credentials')
+                    identity_checks = {
+                        'eventPIDMatchesSnapshot': identity['pid'] == event.si_pid,
+                        'kernelParentIsSupervisor': identity['ppid'] == os.getpid(),
+                        'exitedZombie': identity['state'] == 'Z',
+                        'waitidRealUIDMatches': event.si_uid == expected_uid,
+                        'realUIDMatches': len(identity['uids']) == 4 and identity['uids'][0] == expected_uid,
+                        'realGIDMatches': len(identity['gids']) == 4 and identity['gids'][0] == expected_gid,
+                        'allUIDsMatch': identity['uids'] == [expected_uid] * 4,
+                        'allGIDsMatch': identity['gids'] == [expected_gid] * 4,
+                    }
+                    required = ['eventPIDMatchesSnapshot', 'kernelParentIsSupervisor',
+                                'exitedZombie', 'waitidRealUIDMatches', 'realUIDMatches', 'realGIDMatches']
+                    if event.si_pid == child:
+                        required += ['allUIDsMatch', 'allGIDsMatch']
+                    failed = [key for key in required if not identity_checks[key]]
+                    credential_variant = (event.si_pid != child and not failed and
+                                          not (identity_checks['allUIDsMatch'] and identity_checks['allGIDsMatch']))
+                    require(not failed, 'waitable child checks failed: ' + ','.join(failed))
                 except (OSError, ValueError) as exc:
-                    identity = None
+                    # Keep any captured kernel snapshot and every completed check.
+                    # A real waitid event authorizes natural waitpid only, never signals.
                     identity_error = str(exc)
                     add_error('waitable identity: ' + identity_error)
                 pid, raw_status = os.waitpid(event.si_pid, 0)
                 require(pid == event.si_pid, 'waitpid identity mismatch')
                 value = {'pid': pid, 'identity': identity, 'identityError': identity_error,
+                         'identityChecks': identity_checks,
+                         'adoptedReapOnlyCredentialVariant': credential_variant,
+                         'signalAuthorityFromWaitRecord': False,
                          'directChild': pid == child, 'rawWaitStatus': raw_status,
                          'exitCode': os.waitstatus_to_exitcode(raw_status),
                          'signal': os.WTERMSIG(raw_status) if os.WIFSIGNALED(raw_status) else None,

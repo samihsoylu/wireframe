@@ -241,6 +241,11 @@ impl WireframeApp {
     pub(super) fn review_focused(&self, ctx: &egui::Context) -> bool {
         self.reviews_visible() && ctx.memory(|m| m.focused()) == Some(self.review_input_id())
     }
+    pub(super) fn pending_review_focus(&self, ctx: &egui::Context) -> Option<egui::Id> {
+        let input = self.review_input_id();
+        (self.reviews_visible() && ctx.memory(|m| m.pending_focus()) == Some(input))
+            .then_some(input)
+    }
     fn review_input_id(&self) -> egui::Id {
         self.review
             .surfaces
@@ -257,7 +262,19 @@ impl WireframeApp {
             }
     }
     pub(super) fn review_shortcut(&mut self, ctx: &egui::Context, event: &egui::Event) -> bool {
-        if !self.review_focused(ctx) || self.canvas_input_blocked() {
+        if self.canvas_input_blocked() || self.present && self.presentation_view.settings_open {
+            return false;
+        }
+        let escape = matches!(event, egui::Event::Key { key: Key::Escape, pressed: true, modifiers, .. } if modifiers.is_none());
+        if escape && (egui::Popup::is_any_open(ctx) || ctx.any_popup_open()) {
+            return false;
+        }
+        // egui can clear focus before application shortcuts, including focus
+        // just assigned by reverse Tab. Consume that exact current-pass owner.
+        let escaped_field = escape
+            && self.reviews_visible()
+            && ctx.memory_mut(|m| m.take_focus_surrendered_by_escape(self.review_input_id()));
+        if !self.review_focused(ctx) && !escaped_field {
             return false;
         }
         if let egui::Event::Key {
@@ -272,8 +289,7 @@ impl WireframeApp {
             return true;
         }
         // Escape leaves the field, retaining its text. Cancel is explicit.
-        if matches!(event, egui::Event::Key { key: Key::Escape, pressed: true, modifiers, .. } if modifiers.is_none())
-        {
+        if escape {
             ctx.memory_mut(|m| m.surrender_focus(self.review_input_id()));
             return true;
         }

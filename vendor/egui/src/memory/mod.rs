@@ -503,6 +503,9 @@ pub(crate) struct Focus {
     /// The widget with keyboard focus (i.e. a text input field).
     focused_widget: Option<FocusWidget>,
 
+    /// The owner whose focus a plain Escape cleared in this pass.
+    surrendered_escape: Option<Id>,
+
     /// The ID of a widget that had keyboard focus during the previous frame.
     id_previous_frame: Option<Id>,
 
@@ -568,6 +571,7 @@ impl Focus {
     }
 
     fn begin_pass(&mut self, new_input: &crate::data::input::RawInput) {
+        self.surrendered_escape = None;
         self.id_two_frames_ago = self.id_previous_frame;
         self.id_previous_frame = self.focused();
         if let Some(id) = self.id_next_frame.take() {
@@ -597,6 +601,9 @@ impl Focus {
                     crate::Key::Tab if modifiers.shift_only() => Some(FocusDirection::Previous),
 
                     crate::Key::Escape if !modifiers.any() => {
+                        if self.surrendered_escape.is_none() {
+                            self.surrendered_escape = self.focused();
+                        }
                         self.focused_widget = None;
                         Some(FocusDirection::None)
                     }
@@ -896,6 +903,27 @@ impl Memory {
     /// Which widget has keyboard focus?
     pub fn focused(&self) -> Option<Id> {
         self.focus()?.focused()
+    }
+
+    /// Widget scheduled by keyboard navigation to receive focus next pass.
+    ///
+    /// Input ordering before `begin_pass` can use this without changing focus.
+    pub fn pending_focus(&self) -> Option<Id> {
+        self.focus()?.id_next_frame
+    }
+
+    /// Consume this widget's ownership of focus cleared by plain Escape.
+    ///
+    /// Valid only in the current pass, including focus applied by pending Tab
+    /// navigation. Consuming it prevents a later Escape from reusing the owner.
+    pub fn take_focus_surrendered_by_escape(&mut self, id: Id) -> bool {
+        let focus = self.focus_mut();
+        if focus.surrendered_escape == Some(id) {
+            focus.surrendered_escape = None;
+            true
+        } else {
+            false
+        }
     }
 
     /// Set an event filter for a widget.

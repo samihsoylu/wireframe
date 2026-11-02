@@ -405,6 +405,260 @@ fn formatted_surface_labels_round_trip_and_duplicate_callouts_have_surface_wide_
 }
 
 #[test]
+fn presentation_composer_escape_releases_focus_before_leaving_preview() {
+    let (ctx, mut app) = setup();
+    app.start_presentation();
+    app.presentation_view.settings_open = false;
+    frame(&mut app, &ctx, vec![]);
+    frame(&mut app, &ctx, vec![]);
+    app.begin_review(None, None);
+    frame(&mut app, &ctx, vec![]);
+    frame(
+        &mut app,
+        &ctx,
+        vec![egui::Event::Text("Keyboard review draft".into())],
+    );
+    assert!(app.review_focused(&ctx));
+    let document = app.editor.document.clone();
+    let history = app.editor.undo_name().map(str::to_owned);
+
+    frame(&mut app, &ctx, vec![key(Key::Escape, Modifiers::NONE)]);
+    assert!(app.present, "The first Escape belongs to the comment field");
+    assert!(!app.review_focused(&ctx));
+    assert_eq!(
+        app.review_surface().draft.as_ref().unwrap().text.value,
+        "Keyboard review draft"
+    );
+    assert_eq!(app.editor.document, document);
+    assert_eq!(app.editor.undo_name(), history.as_deref());
+
+    frame(&mut app, &ctx, vec![key(Key::Escape, Modifiers::NONE)]);
+    assert!(!app.present, "The next Escape may leave presentation");
+    assert_eq!(
+        app.review_surface().draft.as_ref().unwrap().text.value,
+        "Keyboard review draft"
+    );
+    assert_eq!(app.editor.document, document);
+    assert_eq!(app.editor.undo_name(), history.as_deref());
+}
+
+#[test]
+fn presentation_composer_escape_keeps_preceding_batched_text() {
+    let (ctx, mut app) = setup();
+    app.start_presentation();
+    app.presentation_view.settings_open = false;
+    frame(&mut app, &ctx, vec![]);
+    frame(&mut app, &ctx, vec![]);
+    app.begin_review(None, None);
+    frame(&mut app, &ctx, vec![]);
+    frame(
+        &mut app,
+        &ctx,
+        vec![
+            egui::Event::Text("Last typed text".into()),
+            key(Key::Escape, Modifiers::NONE),
+        ],
+    );
+    frame(&mut app, &ctx, vec![]);
+    assert!(app.present);
+    assert!(!app.review_focused(&ctx));
+    assert_eq!(
+        app.review_surface().draft.as_ref().unwrap().text.value,
+        "Last typed text"
+    );
+    assert!(app.editor.document.reviews.is_empty());
+    assert!(app.editor.undo_name().is_none());
+}
+
+#[test]
+fn presentation_composer_escape_after_pending_reverse_tab_keeps_preview() {
+    let (ctx, mut app) = setup();
+    app.start_presentation();
+    app.presentation_view.settings_open = false;
+    frame(&mut app, &ctx, vec![]);
+    frame(&mut app, &ctx, vec![]);
+    app.begin_review(None, None);
+    frame(&mut app, &ctx, vec![]);
+    frame(&mut app, &ctx, vec![egui::Event::Text("Fast draft".into())]);
+    frame(&mut app, &ctx, vec![key(Key::Tab, Modifiers::NONE)]);
+    frame(&mut app, &ctx, vec![key(Key::Tab, Modifiers::SHIFT)]);
+    // Escape arrives in the pass that applies reverse traversal, with no idle pass.
+    frame(&mut app, &ctx, vec![key(Key::Escape, Modifiers::NONE)]);
+    assert!(
+        app.present,
+        "Pending review focus must still own its Escape"
+    );
+    assert!(!app.review_focused(&ctx));
+    assert_eq!(
+        app.review_surface().draft.as_ref().unwrap().text.value,
+        "Fast draft"
+    );
+    assert!(app.editor.document.reviews.is_empty());
+    assert!(app.editor.undo_name().is_none());
+}
+
+#[test]
+fn presentation_composer_pending_focus_keeps_text_before_escape() {
+    let (ctx, mut app) = setup();
+    app.start_presentation();
+    app.presentation_view.settings_open = false;
+    frame(&mut app, &ctx, vec![]);
+    frame(&mut app, &ctx, vec![]);
+    app.begin_review(None, None);
+    frame(&mut app, &ctx, vec![]);
+    frame(&mut app, &ctx, vec![egui::Event::Text("Fast draft".into())]);
+    frame(&mut app, &ctx, vec![key(Key::Tab, Modifiers::NONE)]);
+    frame(&mut app, &ctx, vec![key(Key::Tab, Modifiers::SHIFT)]);
+    let document = app.editor.document.clone();
+    frame(
+        &mut app,
+        &ctx,
+        vec![
+            egui::Event::Text(" suffix".into()),
+            key(Key::Escape, Modifiers::NONE),
+        ],
+    );
+    frame(&mut app, &ctx, vec![]);
+    assert!(app.present);
+    assert!(!app.review_focused(&ctx));
+    assert_eq!(
+        app.review_surface().draft.as_ref().unwrap().text.value,
+        "Fast draft suffix"
+    );
+    assert_eq!(app.editor.document, document);
+    assert!(app.editor.undo_name().is_none());
+}
+
+#[test]
+fn presentation_composer_two_escapes_with_pending_focus_leave_preview() {
+    let (ctx, mut app) = setup();
+    app.start_presentation();
+    app.presentation_view.settings_open = false;
+    frame(&mut app, &ctx, vec![]);
+    frame(&mut app, &ctx, vec![]);
+    app.begin_review(None, None);
+    frame(&mut app, &ctx, vec![]);
+    frame(
+        &mut app,
+        &ctx,
+        vec![egui::Event::Text("Two Escapes".into())],
+    );
+    frame(&mut app, &ctx, vec![key(Key::Tab, Modifiers::NONE)]);
+    frame(&mut app, &ctx, vec![key(Key::Tab, Modifiers::SHIFT)]);
+    frame(
+        &mut app,
+        &ctx,
+        vec![
+            key(Key::Escape, Modifiers::NONE),
+            key(Key::Escape, Modifiers::NONE),
+        ],
+    );
+    // Both keys arrived together; drain the existing command-ordering boundary.
+    frame(&mut app, &ctx, vec![]);
+    assert!(!app.present, "One field owner cannot consume both Escapes");
+    assert_eq!(
+        app.review_surface().draft.as_ref().unwrap().text.value,
+        "Two Escapes"
+    );
+    assert!(app.editor.document.reviews.is_empty());
+    assert!(app.editor.undo_name().is_none());
+}
+
+#[test]
+fn presentation_composer_surrendered_escape_defers_to_higher_layers() {
+    for layer in ["settings", "advanced", "popup", "modal"] {
+        let (ctx, mut app) = setup();
+        app.start_presentation();
+        app.presentation_view.settings_open = false;
+        frame(&mut app, &ctx, vec![]);
+        frame(&mut app, &ctx, vec![]);
+        app.begin_review(None, None);
+        frame(&mut app, &ctx, vec![]);
+        frame(
+            &mut app,
+            &ctx,
+            vec![egui::Event::Text("Layer draft".into())],
+        );
+        assert!(app.review_focused(&ctx));
+        let document = app.editor.document.clone();
+        match layer {
+            "settings" => app.presentation_view.settings_open = true,
+            "advanced" => {
+                app.presentation_view.settings_open = true;
+                app.presentation_view.exclusions = Some(BTreeSet::new());
+            }
+            // Construct coexisting layer state to test key precedence. This is
+            // not a claim that ordinary popup navigation leaves the field focused.
+            "popup" => egui::Popup::open_id(&ctx, egui::Id::new("review-test-popup")),
+            "modal" => app.error = Some("Synthetic test error".into()),
+            _ => unreachable!(),
+        }
+        frame(&mut app, &ctx, vec![key(Key::Escape, Modifiers::NONE)]);
+        assert!(app.present, "layer={layer}");
+        assert_eq!(
+            app.review_surface().draft.as_ref().unwrap().text.value,
+            "Layer draft",
+            "layer={layer}"
+        );
+        assert_eq!(app.editor.document, document, "layer={layer}");
+        assert!(app.editor.undo_name().is_none(), "layer={layer}");
+        match layer {
+            "settings" => assert!(!app.presentation_view.settings_open),
+            "advanced" => {
+                assert!(app.presentation_view.settings_open);
+                assert!(app.presentation_view.exclusions.is_none());
+            }
+            // The frame helper does not draw these owners. Their key must remain
+            // available rather than being claimed by the review field receipt.
+            "popup" | "modal" => assert!(ctx.input(|i| i.events.iter().any(|event| {
+                matches!(
+                    event,
+                    egui::Event::Key {
+                        key: Key::Escape,
+                        pressed: true,
+                        ..
+                    }
+                )
+            }))),
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[test]
+fn presentation_composer_keeps_tab_navigation_and_arrow_editing() {
+    let (ctx, mut app) = setup();
+    app.start_presentation();
+    app.presentation_view.settings_open = false;
+    frame(&mut app, &ctx, vec![]);
+    frame(&mut app, &ctx, vec![]);
+    app.begin_review(None, None);
+    frame(&mut app, &ctx, vec![]);
+    frame(
+        &mut app,
+        &ctx,
+        vec![egui::Event::Text("Review draft".into())],
+    );
+    frame(&mut app, &ctx, vec![key(Key::ArrowLeft, Modifiers::NONE)]);
+    assert!(app.review_focused(&ctx));
+    frame(&mut app, &ctx, vec![key(Key::Tab, Modifiers::NONE)]);
+    assert!(!app.review_focused(&ctx), "Tab must leave the field");
+    frame(&mut app, &ctx, vec![key(Key::Tab, Modifiers::SHIFT)]);
+    // Reverse focus traversal is applied at the start of the next egui pass.
+    frame(&mut app, &ctx, vec![]);
+    assert!(app.review_focused(&ctx));
+    frame(&mut app, &ctx, vec![key(Key::Escape, Modifiers::NONE)]);
+    assert!(app.present);
+    assert!(!app.review_focused(&ctx));
+    assert_eq!(
+        app.review_surface().draft.as_ref().unwrap().text.value,
+        "Review draft"
+    );
+    assert!(app.editor.document.reviews.is_empty());
+    assert!(app.editor.undo_name().is_none());
+}
+
+#[test]
 fn presentation_composer_keeps_character_shortcuts_and_preserves_view_after_posting() {
     let (ctx, mut app) = setup();
     app.start_presentation();

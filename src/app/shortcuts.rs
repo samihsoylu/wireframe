@@ -9,7 +9,10 @@ impl WireframeApp {
     /// Later events wait for that command, preserving text-local Undo order.
     /// This must run before egui derives pointer/focus state from the events.
     pub(super) fn order_text_input(&mut self, ctx: &egui::Context, raw: &mut egui::RawInput) {
-        let text_focus = wireframe::text_entry::is_focused(ctx) || ctx.text_edit_focused();
+        let pending_review_focus = self.pending_review_focus(ctx);
+        let text_focus = wireframe::text_entry::is_focused(ctx)
+            || ctx.text_edit_focused()
+            || pending_review_focus.is_some();
         if self.save_busy()
             && (text_focus
                 || self.deferred_text_focus.is_some()
@@ -18,7 +21,8 @@ impl WireframeApp {
             // Disabled fields surrender focus. Keep their owner and input,
             // including new typing arriving while the worker is still busy.
             if self.deferred_text_focus.is_none() && text_focus {
-                self.deferred_text_focus = ctx.memory(|m| m.focused());
+                self.deferred_text_focus =
+                    pending_review_focus.or_else(|| ctx.memory(|m| m.focused()));
             }
             self.deferred_text_input.append(&mut raw.events);
             if !self.deferred_text_input.is_empty() {
@@ -59,7 +63,10 @@ impl WireframeApp {
             self.deferred_text_input = raw.events.split_off(boundary);
             ctx.request_repaint();
         }
-        if !wireframe::text_entry::is_focused(ctx) && !ctx.text_edit_focused() {
+        if !wireframe::text_entry::is_focused(ctx)
+            && !ctx.text_edit_focused()
+            && pending_review_focus.is_none()
+        {
             return;
         }
         let quick_focused =
@@ -97,7 +104,9 @@ impl WireframeApp {
                     modifiers,
                     pressed: true,
                     ..
-                } if (self.notes_editing() || self.review_focused(ctx))
+                } if (self.notes_editing()
+                    || self.review_focused(ctx)
+                    || pending_review_focus.is_some())
                     && index > 0
                     && (*key == Key::Escape || modifiers.command && *key == Key::Enter) =>
                 {

@@ -1,12 +1,19 @@
 # Changes
 
-## 0.1.0-beta.4 — Draft, not published
+## 0.1.0-beta.5 — In preparation
+
+- In presentation, Escape leaves the comment field first and keeps your draft. Press Escape again to return to the editor.
+- Preserve text typed immediately after returning to a comment with Tab or Shift+Tab.
+
+This beta is not published yet. Download and platform checks are still in progress. Updates are manual; Windows remains untested.
+
+## 0.1.0-beta.4 — Beta, published 1 November 2026
 
 - Search Wikimedia Commons images, preview before loading, and keep available image credits with the project.
 - Extract English text from screenshots on your device, correct the preview, and copy it without changing the drawing.
 - Include the application icon in Windows executables.
 
-Downloads, tested systems and remaining limitations will be finalized after review. This is a source-only draft; earlier candidate checks do not establish Beta 4 execution or acceptance. Updates remain manual, and Windows runtime testing remains on hold.
+See the [GitHub release](https://github.com/samihsoylu/wireframe/releases/tag/v0.1.0-beta.4) for downloads and tested systems. Updates remain manual, and Windows runtime testing remains on hold.
 
 ## 0.1.0-beta.2 — Beta
 

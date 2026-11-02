@@ -6,7 +6,7 @@ An independent evidence audit preserved all249 requirement identities/texts acro
 
 ## Order of work
 
-1. Verify one documented keyboard-only settings/review/popup route with layered Cancel/Escape and focus return. Source confirms presentation S/settings/Advanced rules and review Escape retains the draft while explicit Cancel discards it; do not assert a guessed Tab sequence. Tie this to presentation P04/review R10, keeping IME/real assistive output separate.
+1. Review the retained keyboard case before any successor run. Four formal saved graphs stayed unchanged through preset/aid focus, nested Advanced Cancel/Escape and page-link popup checks. The next Escape from an AX-observed focused New comment field returned to the editor, contrary to the predeclared focus-release expectation; the formal route stopped. Private `keyboard-settings-review-native-v1/REPORT.md` and `route-failure.json` retain the failure. Warm/cold preservation waits0 and exact scoped restoration are complete; cleanup AX Cancel is excluded from keyboard proof. The existing Reviewer is determining source defect versus overbroad expectation. No `review-escape`/`review-cancel` formal pass or P04/R10 closure. Do not repeat the failed case or infer a guessed Tab sequence; keep real IME/assistive output separate.
 2. Keep the actual active-edit resource boundary R11/R12 open. The source-supported Focus+Space route requires a Focus action the Mac control tool does not expose; a primary click commits the draft first and is not equivalent evidence. Continue this check only when a supported route can preserve the genuine live buffer; permanent deletion remains separate.
 3. Continue the other retained authorized questions below, reusing accepted evidence.
 

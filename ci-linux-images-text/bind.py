@@ -68,7 +68,7 @@ def snapshot(repo, commit):
 def build_binding(repo, commit, extra_required=()):
     manifest = snapshot(repo, commit)
     cargo = tomllib.loads((repo / 'Cargo.toml').read_text())
-    require(cargo['package']['name'] == 'wireframe' and cargo['package']['version'] == '0.1.0-beta.4',
+    require(cargo['package']['name'] == 'wireframe' and cargo['package']['version'] == '0.1.0-beta.5',
             'package/version requires controller review')
     require(not any(k in cargo for k in ['test', 'example', 'bench', 'workspace'])
             and cargo['package'].get('autotests', True) and cargo['package'].get('autoexamples', True),

@@ -1,15 +1,15 @@
-name: Beta4 Linux ARM64 build and private package (no native or full tests)
+name: Beta5 Linux ARM64 build and private package (no native or full tests)
 
 on:
   push:
-    branches: [codex/linux-beta4-build-only]
+    branches: [codex/linux-beta5-build-only]
     paths: [.github/workflows/linux-images-text.yml, 'ci-linux-images-text/**']
 
 permissions:
   contents: read
 
 concurrency:
-  group: linux-beta4-build-only-${{ github.ref }}
+  group: linux-beta5-build-only-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -31,7 +31,7 @@ jobs:
 
   execute:
     needs: binding
-    name: Beta4 Linux ARM64 build-package-static
+    name: Beta5 Linux ARM64 build-package-static
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 180
     strategy:
@@ -141,7 +141,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: beta4-linux-build-receipts-${{ github.sha }}
+          name: beta5-linux-build-receipts-${{ github.sha }}
           path: ci-work/receipts/
           if-no-files-found: error
           retention-days: 1
@@ -150,7 +150,7 @@ jobs:
         if: success() && matrix.group == 'release'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: beta4-linux-build-UNREVIEWED-${{ github.sha }}
+          name: beta5-linux-build-UNREVIEWED-${{ github.sha }}
           path: ci-work/artifacts/
           if-no-files-found: error
           compression-level: 0

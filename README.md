@@ -4,7 +4,7 @@ Turn rough ideas into clear wireframes. Sketch a landing page, plan a mobile scr
 
 [Releases](https://github.com/samihsoylu/wireframe/releases) · [Getting started](docs/GETTING-STARTED.md) · [Report an issue](https://github.com/samihsoylu/wireframe/issues)
 
-**[0.1.0 Beta 4 is available](https://github.com/samihsoylu/wireframe/releases/tag/v0.1.0-beta.4).** Download the Apple Silicon Mac DMG, portable Windows x86-64 EXE or Linux ARM64 archive. Windows builds are **untested**; Windows runtime testing remains on hold. This early beta has manual updates and remaining feature and platform checks.
+**[0.1.0 Beta 5 is available](https://github.com/samihsoylu/wireframe/releases/tag/v0.1.0-beta.5).** Download the Apple Silicon Mac DMG, portable Windows x86-64 EXE or Linux ARM64 archive. Windows builds are **untested**; Windows runtime testing remains on hold. This early beta has manual updates and remaining feature and platform checks.
 
 ## Make room for your ideas
 
@@ -19,7 +19,7 @@ Turn rough ideas into clear wireframes. Sketch a landing page, plan a mobile scr
 
 ## Install
 
-Choose the file for your computer from [Beta 4](https://github.com/samihsoylu/wireframe/releases/tag/v0.1.0-beta.4):
+Choose the file for your computer from [Beta 5](https://github.com/samihsoylu/wireframe/releases/tag/v0.1.0-beta.5):
 
 | Computer | Download | Install |
 |---|---|---|
@@ -28,7 +28,7 @@ Choose the file for your computer from [Beta 4](https://github.com/samihsoylu/wi
 | Linux ARM64 | `.tar.gz` | Extract it and run the included app; source and licences are included. |
 | Intel Mac | No packaged download | Build from source. |
 
-Beta 4 upgrades older project files when saved. Keep an original copy if you may return to Beta 3, which cannot open the updated format.
+Beta 5 keeps Beta 4's project format and upgrades older project files when saved. Keep an original copy if you may return to Beta 3, which cannot open the updated format.
 
 Each release lists its supported systems, changes and any known limitations. Only download an architecture that is listed for that release. See [installation help](docs/INSTALL.md), including the first-launch prompt on macOS.
 

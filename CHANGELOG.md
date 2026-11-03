@@ -1,11 +1,11 @@
 # Changes
 
-## 0.1.0-beta.5 — In preparation
+## 0.1.0-beta.5 — Beta, published 4 November 2026
 
 - In presentation, Escape leaves the comment field first and keeps your draft. Press Escape again to return to the editor.
 - Preserve text typed immediately after returning to a comment with Tab or Shift+Tab.
 
-This beta is not published yet. Download and platform checks are still in progress. Updates are manual; Windows remains untested.
+See the [GitHub release](https://github.com/samihsoylu/wireframe/releases/tag/v0.1.0-beta.5) for downloads and the [verification record](docs/BETA5-VERIFICATION.md) for tested scope. All eight public downloads are size/hash verified. Updates are manual; Windows remains untested.
 
 ## 0.1.0-beta.4 — Beta, published 1 November 2026
 

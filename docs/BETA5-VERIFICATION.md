@@ -1,6 +1,6 @@
 # Beta 5 verification record
 
-Status: **ready for the authorized Beta5 prerelease** after parent acceptance of source, exact Mac native and all three platform package/static checkpoints. Actual publication and public-download verification remain pending; no public release is claimed by this readiness record.
+Status: **[Beta5 published](https://github.com/samihsoylu/wireframe/releases/tag/v0.1.0-beta.5) on 4 November 2026; all eight actual anonymous public downloads verified.** Release433337095 is a prerelease from exact18e068b;233,409,837 downloaded bytes match prepared sizes/SHA-256. Published tag, body and server asset digests match. All four earlier beta release bodies/tags/asset identities, sizes and digests remain unchanged. No main/stable merge or updater activation occurred.
 
 Runtime and corresponding source are frozen at `18e068b52b97e8db652546337f43eef579f637e6`, version `0.1.0-beta.5`; Mac bundle short version0.1.0/build5. Later documentation does not change those packaged bytes. The source change fixes Escape ownership and text delivery after keyboard focus changes; the data format and dependencies are unchanged from Beta4.
 
@@ -19,7 +19,7 @@ Two local companion-checker schema assumptions failed before output creation; an
 
 ## Intended download identities
 
-Seven payloads plus combined SHA256SUMS are staged. All current prerelease candidate gates are accepted. Public metadata and actual downloads must still be checked after publication.
+Seven payloads plus combined SHA256SUMS are staged. All current prerelease candidate gates are accepted. Published metadata and all eight actual anonymous public downloads are now verified against these identities.
 
 | File | Bytes | SHA-256 |
 | --- | ---: | --- |

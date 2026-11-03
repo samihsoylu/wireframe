@@ -1,6 +1,6 @@
 # Wireframe — current state
 
-## Current plan and checkpoint — 3 November 2026
+## Current plan and checkpoint — 4 November 2026
 
 Owner: parent Engineer in this chat. Outcome: finish the remaining authorized behavior/release checks and publish the next GitHub beta when ready. Beta publication does not complete the original V01–V05/Q3–Q8 goal. Windows app/test/example execution stays held.
 
@@ -37,7 +37,7 @@ This checkpoint and [remaining checks](docs/verification/REMAINING-CHECKS.md) ar
 - Report product outcomes, uncertainty and next action concisely. Promise dates only when supportable. For a requested timed report, assemble from accepted records before the deadline and reserve final render/link checks; do not launch fresh app tests to write it.
 - Preserve holds: Windows execution; action-time permanent deletion; reference identity/terms; protected installation/first-launch and security handoffs; production updater/Keychain/feed; main/stable merge. Apple Developer membership/notarization is declined; updates remain manual. Existing-format project import remains the sole explicit feature deferral. Earlier Mac availability permission stands, but detect conflicting use before dependent input and close only the isolated test copy.
 
-Next action: complete exact Beta5 packages/release gates and authorized publication. Original Windows build-only run41736075988 and Linux release-only run41736981523 are active; poll those identities without restarting on observation timeouts. Mac companion ZIP and DMG are created/checked; exact independent package review is next. Reuse the successful isolated case; Windows execution remains held.
+Next action: create/check the GitHub Beta5 draft, publish the authorized prerelease, then verify actual tag/body/all eight anonymous public downloads and unchanged earlier betas. Source/native and exact Mac/Windows/Linux distribution scopes are accepted; Linux review7052117f closes the last candidate artifact gate. Readiness and staged manifest are in `delivery/beta5-release-v1`. Broader22 questions and Windows runtime hold remain unchanged.
 
 Evidence root: `/Users/samihsoylu/Documents/GitHub/wireframe-research/work/appearance-finishing-current/delivery`. Key records: `beta5-macos-build-artifact-review-v1/REPORT.md`, `review-escape-focus-fix-v1/parent-source-acceptance-v3.json`, `nested-component-remap-native-v1/REPORT.md`, `table-native-v1/REPORT.md`, `friendly-pdf-linux-full-case-s3-actual-v1/parent-acceptance.json`. Exact older identities remain in those records; do not edit sealed evidence for this plan update.
 

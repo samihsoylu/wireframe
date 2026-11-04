@@ -2,6 +2,8 @@
 // Copyright 2026 Wireframe contributors
 //! Named-file preparation and session handoff run away from the UI thread.
 mod menu;
+#[cfg(test)]
+pub(in crate::app) mod test_support;
 use super::*;
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 

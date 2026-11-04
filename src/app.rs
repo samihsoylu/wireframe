@@ -54,6 +54,8 @@ mod property_sections;
 mod quick_draw;
 mod recovery;
 mod review;
+#[cfg(test)]
+mod scenario_tests;
 mod screenshot_actions;
 mod screenshot_text;
 mod selection;
@@ -63,6 +65,8 @@ mod shortcut_tests;
 mod shortcuts;
 mod source_navigator;
 mod startup;
+#[cfg(test)]
+mod test_driver;
 mod text_session;
 mod toolbar;
 mod trash;

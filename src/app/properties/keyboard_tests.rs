@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
 use super::*;
-use eframe::App;
 
 fn frame(
     ctx: &egui::Context,
@@ -24,19 +23,12 @@ fn sized_frame_with_focus(
     events: Vec<egui::Event>,
     size: Vec2,
 ) -> (egui::FullOutput, Option<egui::Response>) {
-    let mut raw = egui::RawInput {
+    let raw = egui::RawInput {
         screen_rect: Some(Rect::from_min_size(Pos2::ZERO, size)),
         events,
         ..Default::default()
     };
-    app.raw_input_hook(ctx, &mut raw);
-    let mut focused_response = None;
-    let output = ctx.run_ui(raw, |ui| {
-        app.ui(ui, &mut eframe::Frame::_new_kittest());
-        focused_response = ctx
-            .memory(|m| m.focused())
-            .and_then(|id| ctx.read_response(id));
-    });
+    let (output, focused_response, _) = crate::app::test_driver::application_frame(ctx, app, raw);
     (output, focused_response)
 }
 fn key(key: Key) -> egui::Event {

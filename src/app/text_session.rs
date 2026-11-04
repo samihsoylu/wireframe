@@ -520,14 +520,12 @@ mod tests {
         app: &mut WireframeApp,
         events: Vec<egui::Event>,
     ) -> egui::FullOutput {
-        use eframe::App;
-        let mut raw = egui::RawInput {
+        let raw = egui::RawInput {
             screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(1200., 850.))),
             events,
             ..Default::default()
         };
-        app.raw_input_hook(ctx, &mut raw);
-        ctx.run_ui(raw, |ui| app.ui(ui, &mut eframe::Frame::_new_kittest()))
+        crate::app::test_driver::application_frame(ctx, app, raw).0
     }
 
     #[test]

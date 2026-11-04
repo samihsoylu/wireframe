@@ -1,9 +1,9 @@
 use epaint::Shape;
 
 use crate::{
-    Align2, AsIdSalt, Context, FocusDirection, Id, IdSalt, InnerResponse, Key, Modifiers,
-    NumExt as _, Painter, Popup, PopupCloseBehavior, Rect, Response, ScrollArea, Sense, Stroke,
-    TextStyle, TextWrapMode, Ui, UiBuilder, Vec2, WidgetInfo, WidgetText, WidgetType, epaint,
+    Align2, AsIdSalt, Context, Event, FocusDirection, Id, IdSalt, InnerResponse, Key, NumExt as _,
+    Painter, Popup, PopupCloseBehavior, Rect, Response, ScrollArea, Sense, Stroke, TextStyle,
+    TextWrapMode, Ui, UiBuilder, Vec2, WidgetInfo, WidgetText, WidgetType, epaint,
     style::{StyleModifier, WidgetVisuals},
     vec2,
 };
@@ -402,7 +402,23 @@ fn combo_box_dyn<'c, R>(
     // behind it win the first spatial Down search from the trigger.
     let keyboard_enter_popup = is_popup_open
         && button_response.has_focus()
-        && ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::ArrowDown));
+        && ui.input_mut(|i| {
+            // consume_key uses logical matching, which also accepts extra
+            // Shift/Alt. Preserve those shortcuts and key releases for callers.
+            let event_count = i.events.len();
+            i.events.retain(|event| {
+                !matches!(
+                    event,
+                    Event::Key {
+                        key: Key::ArrowDown,
+                        modifiers,
+                        pressed: true,
+                        ..
+                    } if modifiers.is_none()
+                )
+            });
+            i.events.len() != event_count
+        });
     if keyboard_enter_popup {
         ui.memory_mut(|m| {
             m.surrender_focus(button_id);

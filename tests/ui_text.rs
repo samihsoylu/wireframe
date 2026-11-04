@@ -318,6 +318,147 @@ fn shaped_combo_down_enters_open_options_without_visiting_background_controls() 
 }
 
 #[test]
+fn shaped_combo_down_keeps_modified_and_release_events_available() {
+    let ctx = egui::Context::default();
+    ctx.enable_accesskit();
+    let mut selected = 0usize;
+    let mut background_activations = 0;
+    let key = |key, modifiers, pressed, repeat| egui::Event::Key {
+        key,
+        physical_key: None,
+        pressed,
+        repeat,
+        modifiers,
+    };
+    let mut run = |mut events: Vec<egui::Event>, modifiers| {
+        let mut trigger = egui::Id::NULL;
+        let mut remaining = Vec::new();
+        events.push(egui::Event::ModifiersChanged(modifiers));
+        let output = ctx.run_ui(
+            egui::RawInput {
+                events,
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(700., 650.))),
+                ..Default::default()
+            },
+            |ui| {
+                ui.set_width(280.);
+                if ui.button("Background before").clicked() {
+                    background_activations += 1;
+                }
+                trigger = ui_text::combo_box(ui, "target", "No link", |ui| {
+                    for (index, name) in ["No link", "Link source", "Destination שלום"]
+                        .iter()
+                        .enumerate()
+                    {
+                        if ui_text::selectable_value(ui, &mut selected, index, name).clicked() {
+                            ui.close();
+                        }
+                    }
+                })
+                .response
+                .id;
+                remaining = ui.input(|i| i.events.clone());
+                if ui.button("Background after").clicked() {
+                    background_activations += 1;
+                }
+            },
+        );
+        let focus = ctx.memory(|m| m.focused());
+        let label = focus.and_then(|focused| {
+            output
+                .platform_output
+                .accesskit_update
+                .as_ref()
+                .unwrap()
+                .nodes
+                .iter()
+                .find(|(id, _)| *id == focused.accesskit_id())
+                .and_then(|(_, node)| node.label().map(str::to_owned))
+        });
+        output.drop_without_applying_deltas();
+        (
+            trigger,
+            focus,
+            label,
+            remaining,
+            selected,
+            background_activations,
+        )
+    };
+    let (trigger, ..) = run(vec![], egui::Modifiers::NONE);
+    run(vec![], egui::Modifiers::NONE);
+    ctx.memory_mut(|m| m.request_focus(trigger));
+    run(vec![], egui::Modifiers::NONE);
+    run(
+        vec![key(egui::Key::Enter, egui::Modifiers::NONE, true, false)],
+        egui::Modifiers::NONE,
+    );
+    run(vec![], egui::Modifiers::NONE);
+    for modifiers in [
+        egui::Modifiers::SHIFT,
+        egui::Modifiers::ALT,
+        egui::Modifiers::SHIFT | egui::Modifiers::ALT,
+        egui::Modifiers::CTRL,
+        egui::Modifiers::COMMAND,
+        egui::Modifiers::MAC_CMD,
+    ] {
+        let event = key(egui::Key::ArrowDown, modifiers, true, false);
+        // The frame's aggregate modifiers can differ from an earlier event's.
+        let (_, focus, _, remaining, value, background) =
+            run(vec![event.clone()], egui::Modifiers::NONE);
+        assert_eq!(
+            focus,
+            Some(trigger),
+            "modified Down must not enter the popup"
+        );
+        assert_eq!(
+            remaining,
+            vec![event, egui::Event::ModifiersChanged(egui::Modifiers::NONE)],
+            "modified Down belongs to its caller"
+        );
+        assert_eq!((value, background), (0, 0));
+        run(
+            vec![key(egui::Key::ArrowDown, modifiers, false, false)],
+            egui::Modifiers::NONE,
+        );
+    }
+    let release = key(egui::Key::ArrowDown, egui::Modifiers::NONE, false, false);
+    let (_, focus, _, remaining, value, background) =
+        run(vec![release.clone()], egui::Modifiers::NONE);
+    assert_eq!(focus, Some(trigger));
+    assert_eq!(
+        remaining,
+        vec![
+            release.clone(),
+            egui::Event::ModifiersChanged(egui::Modifiers::NONE)
+        ]
+    );
+    assert_eq!((value, background), (0, 0));
+
+    let shift = key(egui::Key::ArrowDown, egui::Modifiers::SHIFT, true, false);
+    // Subsequent presses while Down is held are normalized as repeats by
+    // InputState; the caller must receive those flags unchanged too.
+    let alt = key(egui::Key::ArrowDown, egui::Modifiers::ALT, true, true);
+    let plain = key(egui::Key::ArrowDown, egui::Modifiers::NONE, true, true);
+    let (_, _, label, remaining, value, background) = run(
+        vec![shift.clone(), plain, alt.clone(), release.clone()],
+        egui::Modifiers::SHIFT,
+    );
+    assert_eq!(label.as_deref(), Some("No link"));
+    assert_eq!(
+        remaining,
+        vec![
+            shift,
+            alt,
+            release,
+            egui::Event::ModifiersChanged(egui::Modifiers::SHIFT)
+        ]
+    );
+    assert_eq!((value, background), (0, 0));
+    assert!(egui::ComboBox::is_open(&ctx, trigger));
+}
+
+#[test]
 fn shaped_combo_retains_value_role_popup_selection_and_escape() {
     let ctx = egui::Context::default();
     ctx.enable_accesskit();

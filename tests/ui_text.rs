@@ -98,6 +98,105 @@ fn accessibility_keeps_full_names_and_noneditable_roles() {
 }
 
 #[test]
+fn shaped_combo_keyboard_tab_reaches_named_options_without_a_container_stop() {
+    let ctx = egui::Context::default();
+    ctx.enable_accesskit();
+    let names = ["No link", "Link source", "Destination שלום"];
+    let mut selected = 0usize;
+    let mut background_activations = 0;
+    let key = |key, shift| egui::Event::Key {
+        key,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: egui::Modifiers {
+            shift,
+            ..Default::default()
+        },
+    };
+    let mut run = |events| {
+        let mut trigger = egui::Id::NULL;
+        let output = ctx.run_ui(
+            egui::RawInput {
+                events,
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(700., 650.))),
+                ..Default::default()
+            },
+            |ui| {
+                ui.set_width(280.);
+                if ui.button("Background before").clicked() {
+                    background_activations += 1;
+                }
+                trigger = ui_text::combo_box(ui, "target", names[selected], |ui| {
+                    for (index, name) in names.iter().enumerate() {
+                        if ui_text::selectable_value(ui, &mut selected, index, name).clicked() {
+                            ui.close();
+                        }
+                    }
+                })
+                .response
+                .id;
+                if ui.button("Background after").clicked() {
+                    background_activations += 1;
+                }
+            },
+        );
+        let focus = ctx.memory(|m| m.focused());
+        let node = focus.and_then(|focused| {
+            output
+                .platform_output
+                .accesskit_update
+                .as_ref()
+                .unwrap()
+                .nodes
+                .iter()
+                .find(|(id, _)| *id == focused.accesskit_id())
+                .map(|(_, node)| (node.role(), node.label().map(str::to_owned)))
+        });
+        output.drop_without_applying_deltas();
+        (trigger, focus, node, selected, background_activations)
+    };
+    let (trigger, ..) = run(vec![]);
+    run(vec![]);
+    ctx.memory_mut(|m| m.request_focus(trigger));
+    run(vec![]);
+    run(vec![key(egui::Key::Enter, false)]);
+    run(vec![]);
+    for name in names {
+        run(vec![key(egui::Key::Tab, false)]);
+        let (_, _, node, value, background) = run(vec![]);
+        assert_eq!(
+            node,
+            Some((egui::accesskit::Role::Button, Some(name.into()))),
+            "each Tab must reach a named option, never the invisible popup background"
+        );
+        assert_eq!(value, 0, "moving focus must not choose an option");
+        assert_eq!(background, 0);
+    }
+    run(vec![key(egui::Key::Tab, true)]);
+    let (_, _, node, value, _) = run(vec![]);
+    assert_eq!(node.unwrap().1.as_deref(), Some("Link source"));
+    assert_eq!(value, 0);
+    run(vec![key(egui::Key::Tab, false)]);
+    run(vec![]);
+    run(vec![key(egui::Key::Enter, false)]);
+    let (_, focus, _, value, background) = run(vec![]);
+    assert_eq!(value, 2);
+    assert_eq!(background, 0);
+    assert!(!egui::ComboBox::is_open(&ctx, trigger));
+    assert_eq!(focus, Some(trigger), "selection returns to its picker");
+    run(vec![key(egui::Key::Enter, false)]);
+    run(vec![]);
+    run(vec![key(egui::Key::Tab, false)]);
+    run(vec![]);
+    run(vec![key(egui::Key::Escape, false)]);
+    let (_, focus, _, value, background) = run(vec![]);
+    assert_eq!((value, background), (2, 0));
+    assert!(!egui::ComboBox::is_open(&ctx, trigger));
+    assert_eq!(focus, Some(trigger), "Escape returns to its picker");
+}
+
+#[test]
 fn shaped_combo_retains_value_role_popup_selection_and_escape() {
     let ctx = egui::Context::default();
     ctx.enable_accesskit();

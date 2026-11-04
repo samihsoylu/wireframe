@@ -400,6 +400,9 @@ fn combo_box_dyn<'c, R>(
         });
     let inner = Popup::menu(&button_response)
         .id(popup_id)
+        // The popup background still consumes pointer clicks, but it has no
+        // keyboard action or visible focus cue. Tab belongs to its items.
+        .sense(Sense::CLICK)
         .width(button_response.rect.width())
         .close_behavior(close_behavior)
         .style(popup_style)

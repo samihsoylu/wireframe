@@ -45,6 +45,69 @@ fn focus_label(ctx: &egui::Context, out: &egui::FullOutput) -> Option<String> {
         .into_iter()
         .find_map(|(candidate, label)| (candidate == id).then_some(label))
 }
+
+#[test]
+fn reverse_tab_wrap_exposes_canvas_focus_to_keyboard_users() {
+    let ctx = egui::Context::default();
+    ctx.enable_accesskit();
+    let mut app = WireframeApp::workspace(&ctx, None);
+    app.show_library = true;
+    app.show_navigator = true;
+    let page = app.editor.page;
+    app.editor.add_page();
+    app.editor.switch_page(page);
+    app.editor.add(Kind::Button, 80., 70.);
+    let document = app.editor.document.clone();
+    app.quick_focus = true;
+    for _ in 0..3 {
+        frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+    }
+    let out = frame(&ctx, &mut app, vec![]);
+    assert!(app.quick_input_id.is_some());
+    assert_eq!(ctx.memory(|m| m.focused()), app.quick_input_id);
+    out.drop_without_applying_deltas();
+
+    for _ in 0..64 {
+        let mut tab = key(Key::Tab);
+        if let egui::Event::Key { modifiers, .. } = &mut tab {
+            modifiers.shift = true;
+        }
+        frame(&ctx, &mut app, vec![tab]).drop_without_applying_deltas();
+        // Reverse traversal schedules its destination for the following frame.
+        frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+        let out = frame(&ctx, &mut app, vec![]);
+        assert_eq!(app.editor.document, document);
+        if ctx.memory(|m| m.focused()) == app.canvas_focus_id {
+            assert_eq!(
+                focus_label(&ctx, &out).as_deref(),
+                Some("Drawing canvas"),
+                "the canvas reached by reverse wrap needs an identifiable focus target"
+            );
+            let canvas_outline = app.canvas_rect.shrink(1.);
+            let has_outline = |out: &egui::FullOutput| {
+                out.shapes.iter().any(|shape| {
+                    matches!(&shape.shape, egui::epaint::Shape::Rect(rect)
+                        if rect.rect == canvas_outline
+                        && rect.stroke.width > 0.
+                        && rect.stroke.color != Color32::TRANSPARENT)
+                })
+            };
+            assert!(has_outline(&out), "keyboard canvas focus must be visible");
+            out.drop_without_applying_deltas();
+            frame(&ctx, &mut app, vec![key(Key::Tab)]).drop_without_applying_deltas();
+            frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+            let out = frame(&ctx, &mut app, vec![]);
+            assert_ne!(ctx.memory(|m| m.focused()), app.canvas_focus_id);
+            assert!(!has_outline(&out), "the outline must follow actual focus");
+            assert_eq!(app.editor.document, document);
+            out.drop_without_applying_deltas();
+            return;
+        }
+        out.drop_without_applying_deltas();
+    }
+    panic!("reverse traversal did not reach the canvas with both panes visible");
+}
+
 #[test]
 fn inspector_popup_arrows_stay_above_background_controls_and_commit_one_edit() {
     let ctx = egui::Context::default();

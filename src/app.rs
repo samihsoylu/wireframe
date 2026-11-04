@@ -1198,6 +1198,17 @@ if ui.add_enabled(movable, egui::Button::new("Delete")).clicked(){self.editor.de
                 }
                 let (response, painter) =
                     ui.allocate_painter(ui.available_size(), Sense::click_and_drag());
+                response.widget_info(|| {
+                    egui::WidgetInfo::labeled(
+                        egui::WidgetType::Panel,
+                        response.enabled(),
+                        if self.present {
+                            "Presentation canvas"
+                        } else {
+                            "Drawing canvas"
+                        },
+                    )
+                });
                 self.canvas_rect = response.rect;
                 self.canvas_focus_id = Some(response.id);
                 let ctx = ui.ctx().clone();
@@ -1995,6 +2006,14 @@ if ui.add_enabled(movable, egui::Button::new("Delete")).clicked(){self.editor.de
                             ui.close();
                         }
                     });
+                }
+                if response.has_focus() {
+                    painter.rect_stroke(
+                        response.rect.shrink(1.),
+                        0.,
+                        Stroke::new(2., ui.visuals().selection.stroke.color),
+                        StrokeKind::Inside,
+                    );
                 }
             });
     }

@@ -599,6 +599,7 @@ impl WireframeApp {
                 }
                 egui::CollapsingHeader::new("Edit row links").show(ui, |ui| {
                     egui::ScrollArea::vertical()
+                        .scroll_to_focused(true)
                         .max_height(280.)
                         .show(ui, |ui| {
                             for row in 0..count {
@@ -699,6 +700,7 @@ impl WireframeApp {
                 .default_open(true)
                 .show(ui, |ui| {
                     egui::ScrollArea::vertical()
+                        .scroll_to_focused(true)
                         .max_height(280.)
                         .show(ui, |ui| {
                             for index in 0..count {
@@ -954,7 +956,7 @@ impl WireframeApp {
                             let labels:Vec<_>=source.split('\n').collect();
                             icons.resize(labels.len(),None);
                             egui::CollapsingHeader::new("Edit row icons").show(ui,|ui| {
-                                egui::ScrollArea::vertical().id_salt("row-icons").max_height(280.).show(ui,|ui| {
+                                egui::ScrollArea::vertical().scroll_to_focused(true).id_salt("row-icons").max_height(280.).show(ui,|ui| {
                                     for (row,label) in labels.iter().enumerate() {
                                         ui.push_id(row,|ui| {
                                             let label=wireframe::rich_text::RichText::parse(label,false).display_text(false);
@@ -973,7 +975,7 @@ impl WireframeApp {
                             links.resize(labels.len(),None);
                             // Keep partial URL input outside document history until Apply.
                             egui::CollapsingHeader::new(if spec.id=="app_bar" {"Edit icon links"} else if matches!(spec.id,"alert"|"date_picker"|"time_picker") {"Edit button links"} else if matches!(spec.id,"tabs"|"vertical_tabs") {"Edit tab links"} else if spec.id=="button_bar" {"Edit segment links"} else if matches!(spec.id,"breadcrumbs"|"link_bar"|"menu_bar") {"Edit item links"} else {"Edit row links"}).show(ui,|ui| {
-                                egui::ScrollArea::vertical().max_height(280.).show(ui,|ui| {
+                                egui::ScrollArea::vertical().scroll_to_focused(true).max_height(280.).show(ui,|ui| {
                                     for (row,label) in labels.iter().enumerate() {
                                         ui.push_id(row,|ui| {
                                             let label=wireframe::rich_text::RichText::parse(label,false).display_text(false);

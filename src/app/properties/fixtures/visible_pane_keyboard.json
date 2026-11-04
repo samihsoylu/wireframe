@@ -1,0 +1,97 @@
+{
+  "format_version": 16,
+  "title": "Visible pane keyboard check",
+  "next_id": 1000,
+  "settings": {
+    "sketch": false,
+    "font_size": 13.0
+  },
+  "pages": [
+    {
+      "id": 1,
+      "name": "Pane start",
+      "notes": "Tab must leave both page parents unchanged",
+      "parent": null,
+      "content": {
+        "nodes": [
+          {
+            "id": 10,
+            "origin": {
+              "x": 80.0,
+              "y": 70.0
+            },
+            "locked": false,
+            "markup": false,
+            "properties": {
+              "text": {
+                "type": "text",
+                "value": "Before"
+              }
+            },
+            "content": {
+              "type": "control",
+              "kind": "button",
+              "size": {
+                "width": {
+                  "fixed": 160.0
+                },
+                "height": {
+                  "fixed": 40.0
+                }
+              }
+            }
+          },
+          {
+            "id": 11,
+            "origin": {
+              "x": 380.0,
+              "y": 70.0
+            },
+            "locked": false,
+            "markup": false,
+            "properties": {
+              "border": {
+                "type": "choice",
+                "value": "none"
+              },
+              "fill": {
+                "type": "color",
+                "value": [
+                  0,
+                  255,
+                  255,
+                  255
+                ]
+              }
+            },
+            "content": {
+              "type": "control",
+              "kind": "rectangle",
+              "size": {
+                "width": {
+                  "fixed": 20.0
+                },
+                "height": {
+                  "fixed": 20.0
+                }
+              }
+            }
+          }
+        ]
+      },
+      "alternates": []
+    },
+    {
+      "id": 2,
+      "name": "Pane witness",
+      "notes": "Unchanged second page",
+      "parent": null,
+      "content": {
+        "nodes": []
+      },
+      "alternates": []
+    }
+  ],
+  "definitions": [],
+  "assets": []
+}

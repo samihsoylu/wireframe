@@ -806,7 +806,7 @@ impl WireframeApp {
         egui::Panel::right("inspector").resizable(true).default_size(300.).size_range(220.0..=400.0).frame(frame).show(ui,|ui|{
             if self.linked_destination_notice(ui) { return; }
             if page { self.page_inspector(ui); return; }
-            ui.add_space(10.);egui::ScrollArea::vertical().show(ui,|ui|{
+            ui.add_space(10.);egui::ScrollArea::vertical().scroll_to_focused(true).show(ui,|ui|{
                 let selected=self.editor.selected_views();
                 if selected.is_empty() && self.editor.editing_instance() {ui.heading("Component instance");ui.label("Select a child to change this instance. Reset returns a property to its source value.");return;}
                 ui.heading(if selected.len()==1{self.editor.selection_label(selected[0].id)}else{format!("{} controls",selected.len())});

@@ -130,7 +130,8 @@
     "src/widgets/drag_value.rs",
     "src/memory/mod.rs",
     "src/containers/combo_box.rs",
-    "src/widgets/slider.rs"
+    "src/widgets/slider.rs",
+    "src/containers/scroll_area.rs"
   ],
   "added_files": [
     "LICENSE-WIREFRAME",

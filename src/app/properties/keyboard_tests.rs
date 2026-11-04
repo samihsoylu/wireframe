@@ -8,13 +8,36 @@ fn frame(
     app: &mut WireframeApp,
     events: Vec<egui::Event>,
 ) -> egui::FullOutput {
+    sized_frame(ctx, app, events, Vec2::new(1360., 1000.))
+}
+fn sized_frame(
+    ctx: &egui::Context,
+    app: &mut WireframeApp,
+    events: Vec<egui::Event>,
+    size: Vec2,
+) -> egui::FullOutput {
+    sized_frame_with_focus(ctx, app, events, size).0
+}
+fn sized_frame_with_focus(
+    ctx: &egui::Context,
+    app: &mut WireframeApp,
+    events: Vec<egui::Event>,
+    size: Vec2,
+) -> (egui::FullOutput, Option<egui::Response>) {
     let mut raw = egui::RawInput {
-        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(1360., 1000.))),
+        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, size)),
         events,
         ..Default::default()
     };
     app.raw_input_hook(ctx, &mut raw);
-    ctx.run_ui(raw, |ui| app.ui(ui, &mut eframe::Frame::_new_kittest()))
+    let mut focused_response = None;
+    let output = ctx.run_ui(raw, |ui| {
+        app.ui(ui, &mut eframe::Frame::_new_kittest());
+        focused_response = ctx
+            .memory(|m| m.focused())
+            .and_then(|id| ctx.read_response(id));
+    });
+    (output, focused_response)
 }
 fn key(key: Key) -> egui::Event {
     egui::Event::Key {
@@ -272,6 +295,424 @@ fn visible_panes_reverse_to_selected_text_and_forward_to_quick_add() {
         }
     }
     panic!("forward route from selected text did not return to Quick Add");
+}
+
+#[test]
+fn every_inspector_keyboard_destination_stays_visible_in_short_windows() {
+    for size in [Vec2::new(1360., 900.), Vec2::new(1360., 700.)] {
+        let ctx = egui::Context::default();
+        ctx.enable_accesskit();
+        let mut app = WireframeApp::workspace(&ctx, None);
+        let project =
+            serde_json::from_str(include_str!("fixtures/visible_pane_keyboard.json")).unwrap();
+        app.editor = Editor::new(project);
+        app.editor.selection.insert(10);
+        app.show_library = true;
+        app.show_navigator = true;
+        let document = app.editor.document.clone();
+        app.quick_focus = true;
+        for _ in 0..3 {
+            sized_frame(&ctx, &mut app, vec![], size).drop_without_applying_deltas();
+        }
+        assert_eq!(ctx.memory(|m| m.focused()), app.quick_input_id);
+        let mut reached_canvas = false;
+        let mut reached_text = false;
+        let mut inspector_left = None;
+        let mut left_inspector = false;
+        let mut route = Vec::new();
+        for _ in 0..64 {
+            let mut tab = key(Key::Tab);
+            if let egui::Event::Key { modifiers, .. } = &mut tab {
+                modifiers.shift = true;
+            }
+            sized_frame(&ctx, &mut app, vec![tab], size).drop_without_applying_deltas();
+            for _ in 0..3 {
+                sized_frame(&ctx, &mut app, vec![], size).drop_without_applying_deltas();
+            }
+            let (out, focused_response) = sized_frame_with_focus(&ctx, &mut app, vec![], size);
+            assert_eq!(app.editor.document, document);
+            assert!(app.editor.undo_name().is_none());
+            assert!(app.editor.redo_name().is_none());
+            reached_canvas |= ctx.memory(|m| m.focused()) == app.canvas_focus_id;
+            if reached_canvas {
+                let id = ctx.memory(|m| m.focused()).expect("reverse destination");
+                let response = focused_response.expect("current painted focus response");
+                let node = out
+                    .platform_output
+                    .accesskit_update
+                    .as_ref()
+                    .unwrap()
+                    .nodes
+                    .iter()
+                    .find_map(|(candidate, node)| (*candidate == id.accesskit_id()).then_some(node))
+                    .expect("source destination exposed to accessibility");
+                route.push(format!(
+                    "{:?}/{:?}/{:?}",
+                    node.role(),
+                    node.label(),
+                    node.value()
+                ));
+                if Some(id) == app.canvas_focus_id {
+                    inspector_left = Some(response.rect.right());
+                } else if reached_text && response.rect.center().x < inspector_left.unwrap() {
+                    left_inspector = true;
+                    out.drop_without_applying_deltas();
+                    break;
+                }
+                assert!(
+                    ctx.content_rect().contains_rect(response.rect)
+                        && response
+                            .interact_rect
+                            .contains_rect(response.rect.shrink(1.)),
+                    "{size:?}: focused destination must be visible, rect={:?}, interact={:?}, viewport={:?}, route={route:?}",
+                    response.rect,
+                    response.interact_rect,
+                    ctx.content_rect()
+                );
+                reached_text |= node.role() == egui::accesskit::Role::MultilineTextInput
+                    && node.value() == Some("Before");
+            }
+            out.drop_without_applying_deltas();
+        }
+        assert!(
+            reached_text,
+            "{size:?}: selected text never reached; {route:?}"
+        );
+        assert!(
+            left_inspector,
+            "{size:?}: reverse route did not leave the inspector; {route:?}"
+        );
+        eprintln!("{size:?} complete reverse inspector route: {route:?}");
+        let mut returned_to_quick_add = false;
+        for _ in 0..96 {
+            sized_frame(&ctx, &mut app, vec![key(Key::Tab)], size).drop_without_applying_deltas();
+            for _ in 0..3 {
+                sized_frame(&ctx, &mut app, vec![], size).drop_without_applying_deltas();
+            }
+            let (out, response) = sized_frame_with_focus(&ctx, &mut app, vec![], size);
+            assert_eq!(app.editor.document, document);
+            assert!(app.editor.undo_name().is_none());
+            assert!(app.editor.redo_name().is_none());
+            let response = response.expect("current forward destination");
+            assert!(
+                ctx.content_rect().contains_rect(response.rect)
+                    && response
+                        .interact_rect
+                        .contains_rect(response.rect.shrink(1.)),
+                "{size:?}: forward destination must be visible: {response:?}"
+            );
+            returned_to_quick_add = Some(response.id) == app.quick_input_id;
+            out.drop_without_applying_deltas();
+            if returned_to_quick_add {
+                break;
+            }
+        }
+        assert!(
+            returned_to_quick_add,
+            "{size:?}: forward route did not return to Quick Add"
+        );
+    }
+}
+
+#[test]
+fn focus_reveal_respects_pointer_scroll_outside_focus_and_default_behavior() {
+    for reveal in [false, true] {
+        let ctx = egui::Context::default();
+        // AccessKit is deliberately disabled: focus visibility must not depend
+        // on an assistive-technology tree being enabled.
+        let draw = |events: Vec<egui::Event>, request: Option<bool>| {
+            let raw = egui::RawInput {
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(300., 220.))),
+                events,
+                ..Default::default()
+            };
+            let mut result = None;
+            ctx.run_ui(raw, |ui| {
+                let outside = ui.button("Outside scroll area");
+                if request == Some(true) {
+                    outside.request_focus();
+                }
+                let mut bottom = None;
+                let scroll = egui::ScrollArea::vertical()
+                    .max_height(150.)
+                    .scroll_to_focused(reveal)
+                    .show(ui, |ui| {
+                        for index in 0..30 {
+                            let response = ui.button(format!("Control {index}"));
+                            if index == 29 {
+                                if request == Some(false) {
+                                    response.request_focus();
+                                }
+                                bottom = Some(response);
+                            }
+                        }
+                    });
+                result = Some((scroll.state.offset.y, scroll.inner_rect, bottom.unwrap()));
+            })
+            .drop_without_applying_deltas();
+            result.unwrap()
+        };
+        draw(vec![], Some(false));
+        for _ in 0..3 {
+            draw(vec![], None);
+        }
+        let (offset, viewport, bottom) = draw(vec![], None);
+        assert_eq!(ctx.memory(|m| m.focused()), Some(bottom.id));
+        if !reveal {
+            assert_eq!(offset, 0.);
+            assert!(bottom.rect.top() > viewport.bottom());
+            continue;
+        }
+        assert!(offset > 0.);
+        assert!(viewport.contains_rect(bottom.rect));
+        draw(
+            vec![
+                egui::Event::PointerMoved(Pos2::new(bottom.rect.center().x, viewport.center().y)),
+                egui::Event::MouseWheel {
+                    unit: egui::MouseWheelUnit::Point,
+                    delta: Vec2::new(0., 150.),
+                    modifiers: Modifiers::NONE,
+                    phase: egui::TouchPhase::Move,
+                },
+            ],
+            None,
+        );
+        for _ in 0..30 {
+            draw(vec![], None);
+        }
+        let (scrolled_offset, viewport, bottom_after_scroll) = draw(vec![], None);
+        assert_eq!(ctx.memory(|m| m.focused()), Some(bottom.id));
+        assert!(
+            scrolled_offset < offset - 100.,
+            "pointer scroll must remain free: before={offset}, after={scrolled_offset}, viewport={viewport:?}"
+        );
+        assert!(bottom_after_scroll.rect.top() > viewport.bottom());
+        draw(vec![], Some(true));
+        for _ in 0..3 {
+            draw(vec![], None);
+        }
+        let (outside_offset, _, _) = draw(vec![], None);
+        assert_ne!(ctx.memory(|m| m.focused()), Some(bottom.id));
+        assert!(
+            (outside_offset - scrolled_offset).abs() < 0.1,
+            "outside focus must not scroll content even when its rectangle overlaps scrolled content"
+        );
+    }
+}
+
+#[test]
+fn selected_list_nested_focus_reveal_preserves_graph_history_and_pointer_scroll() {
+    let ctx = egui::Context::default();
+    ctx.enable_accesskit();
+    let size = Vec2::new(1360., 700.);
+    let mut app = WireframeApp::workspace(&ctx, None);
+    app.editor.add(Kind::List, 80., 70.);
+    let selected = *app.editor.selection.iter().next().unwrap();
+    app.editor
+        .set_control_property(
+            selected,
+            "text",
+            Value::Text(
+                (0..30)
+                    .map(|i| format!("Row {i:02}"))
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+            ),
+        )
+        .unwrap();
+    let document = app.editor.document.clone();
+    app.editor = Editor::new(document.clone());
+    app.editor.selection.insert(selected);
+    for _ in 0..3 {
+        sized_frame(&ctx, &mut app, vec![], size).drop_without_applying_deltas();
+    }
+    let out = sized_frame(&ctx, &mut app, vec![], size);
+    let header = out
+        .platform_output
+        .accesskit_update
+        .as_ref()
+        .unwrap()
+        .nodes
+        .iter()
+        .find_map(|(id, node)| (node.label() == Some("Edit row links")).then_some(*id))
+        .expect("actual selected List row-links disclosure");
+    out.drop_without_applying_deltas();
+    let focus = egui::Event::AccessKitActionRequest(egui::accesskit::ActionRequest {
+        action: egui::accesskit::Action::Focus,
+        target_node: header,
+        target_tree: egui::accesskit::TreeId::ROOT,
+        data: None,
+    });
+    sized_frame(&ctx, &mut app, vec![focus], size).drop_without_applying_deltas();
+    for _ in 0..4 {
+        sized_frame(&ctx, &mut app, vec![], size).drop_without_applying_deltas();
+    }
+    assert_eq!(ctx.memory(|m| m.focused()).unwrap().accesskit_id(), header);
+    sized_frame(&ctx, &mut app, vec![key(Key::Space)], size).drop_without_applying_deltas();
+    let mut rows = 0;
+    let mut last = None;
+    for _ in 0..96 {
+        sized_frame(&ctx, &mut app, vec![key(Key::Tab)], size).drop_without_applying_deltas();
+        for _ in 0..8 {
+            sized_frame(&ctx, &mut app, vec![], size).drop_without_applying_deltas();
+        }
+        let (out, response) = sized_frame_with_focus(&ctx, &mut app, vec![], size);
+        assert_eq!(app.editor.document, document);
+        assert!(app.editor.undo_name().is_none() && app.editor.redo_name().is_none());
+        let response = response.expect("current focused inspector row");
+        let node = out
+            .platform_output
+            .accesskit_update
+            .as_ref()
+            .unwrap()
+            .nodes
+            .iter()
+            .find_map(|(id, node)| (*id == response.id.accesskit_id()).then_some(node))
+            .expect("actual focused source node");
+        if node.role() == egui::accesskit::Role::ComboBox && node.value() == Some("No link") {
+            rows += 1;
+            assert!(
+                ctx.content_rect().contains_rect(response.rect)
+                    && response
+                        .interact_rect
+                        .contains_rect(response.rect.shrink(1.)),
+                "selected List row {rows} must be visible through both inspector clips: {response:?}"
+            );
+            last = Some(response);
+        }
+        out.drop_without_applying_deltas();
+        if rows == 30 {
+            break;
+        }
+    }
+    assert_eq!(rows, 30, "all actual row-link destinations must be reached");
+    let last = last.unwrap();
+    sized_frame(
+        &ctx,
+        &mut app,
+        vec![
+            egui::Event::PointerMoved(last.rect.center()),
+            egui::Event::MouseWheel {
+                unit: egui::MouseWheelUnit::Point,
+                phase: egui::TouchPhase::Move,
+                delta: Vec2::new(0., 180.),
+                modifiers: Modifiers::NONE,
+            },
+        ],
+        size,
+    )
+    .drop_without_applying_deltas();
+    for _ in 0..30 {
+        sized_frame(&ctx, &mut app, vec![], size).drop_without_applying_deltas();
+    }
+    let (out, response) = sized_frame_with_focus(&ctx, &mut app, vec![], size);
+    let response = response.unwrap();
+    assert_eq!(response.id, last.id);
+    assert!(
+        response.rect.top() > last.rect.top() + 100.,
+        "nested pointer scroll must stay free"
+    );
+    assert!(
+        !response
+            .interact_rect
+            .contains_rect(response.rect.shrink(1.))
+    );
+    assert_eq!(app.editor.document, document);
+    assert!(app.editor.undo_name().is_none() && app.editor.redo_name().is_none());
+    out.drop_without_applying_deltas();
+}
+
+#[test]
+fn nested_focus_reveal_keeps_the_destination_inside_both_scroll_viewports() {
+    for gap in [0., 350.] {
+        let ctx = egui::Context::default();
+        scroll_focus_fixture_frame(&ctx, true, true, false, gap);
+        for _ in 0..8 {
+            scroll_focus_fixture_frame(&ctx, false, true, false, gap);
+        }
+        let (_, bottom, _) = scroll_focus_fixture_frame(&ctx, false, true, false, gap);
+        assert_eq!(ctx.memory(|m| m.focused()), Some(bottom.id));
+        assert!(
+            ctx.content_rect().contains_rect(bottom.rect)
+                && bottom.interact_rect.contains_rect(bottom.rect.shrink(1.)),
+            "nested destination must be visible through both clips, gap={gap}: {bottom:?}"
+        );
+    }
+}
+
+#[test]
+fn focus_reveal_preserves_an_explicit_scroll_destination() {
+    for (nested, gap) in [(false, 0.), (true, 350.)] {
+        let ctx = egui::Context::default();
+        scroll_focus_fixture_frame(&ctx, true, nested, true, gap);
+        for _ in 0..8 {
+            scroll_focus_fixture_frame(&ctx, false, nested, true, gap);
+        }
+        let (top, _, offset) = scroll_focus_fixture_frame(&ctx, false, nested, true, gap);
+        assert_eq!(
+            offset, 0.,
+            "the explicit destination must take precedence, nested={nested}"
+        );
+        assert!(top.interact_rect.contains_rect(top.rect.shrink(1.)));
+    }
+}
+
+fn scroll_focus_fixture_frame(
+    ctx: &egui::Context,
+    request: bool,
+    nested: bool,
+    explicit: bool,
+    gap: f32,
+) -> (egui::Response, egui::Response, f32) {
+    let mut result = None;
+    ctx.run_ui(
+        egui::RawInput {
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(300., 250.))),
+            ..Default::default()
+        },
+        |ui| {
+            let outer = egui::ScrollArea::vertical()
+                .max_height(210.)
+                .scroll_to_focused(true)
+                .show(ui, |ui| {
+                    let parent_top =
+                        (nested && explicit).then(|| ui.button("Explicit parent destination"));
+                    if request && let Some(top) = &parent_top {
+                        ui.scroll_to_rect(top.rect, Some(egui::Align::TOP));
+                    }
+                    ui.add_space(gap);
+                    let controls = |ui: &mut egui::Ui| {
+                        let top = ui.button("Explicit top destination");
+                        for index in 0..30 {
+                            let _ = ui.button(format!("Row {index}"));
+                        }
+                        let bottom = ui.button("Focused destination");
+                        if request {
+                            bottom.request_focus();
+                            if explicit && !nested {
+                                ui.scroll_to_rect(top.rect, Some(egui::Align::TOP));
+                            }
+                        }
+                        (top, bottom)
+                    };
+                    let responses = if nested {
+                        egui::ScrollArea::vertical()
+                            .id_salt("nested")
+                            .max_height(90.)
+                            .scroll_to_focused(true)
+                            .show(ui, controls)
+                            .inner
+                    } else {
+                        controls(ui)
+                    };
+                    ui.add_space(200.);
+                    (parent_top.unwrap_or(responses.0), responses.1)
+                });
+            result = Some((outer.inner.0, outer.inner.1, outer.state.offset.y));
+        },
+    )
+    .drop_without_applying_deltas();
+    result.unwrap()
 }
 
 #[test]

@@ -361,6 +361,9 @@ pub struct ScrollArea {
 
     /// If false, `scroll_to_*` functions will not be animated
     animated: bool,
+
+    /// Reveal a newly focused content widget, without following retained focus.
+    scroll_to_focused: bool,
 }
 
 impl ScrollArea {
@@ -409,7 +412,23 @@ impl ScrollArea {
             content_margin: None,
             stick_to_end: Vec2b::FALSE,
             animated: true,
+            scroll_to_focused: false,
         }
+    }
+
+    /// Keep newly focused content widgets visible during keyboard navigation.
+    ///
+    /// Disabled by default. A widget that retains focus does not pull the viewport
+    /// back when the user scrolls with the pointer. Changes to focus outside this
+    /// scroll area's content are ignored.
+    ///
+    /// Enable this separately on nested scroll areas. Their resolved destination
+    /// is passed to enclosing areas so a child and its ancestors reveal the same
+    /// place. Explicit scroll destinations, including text caret requests, take
+    /// precedence over automatic reveal.
+    pub fn scroll_to_focused(mut self, enabled: bool) -> Self {
+        self.scroll_to_focused = enabled;
+        self
     }
 
     /// The maximum width of the outer frame of the scroll area.
@@ -726,6 +745,7 @@ impl ScrollArea {
             content_margin: _, // Used elsewhere
             stick_to_end,
             animated,
+            scroll_to_focused: _, // Used by show_viewport_dyn.
         } = self;
 
         let ctx = ui.ctx().clone();
@@ -1034,6 +1054,7 @@ impl ScrollArea {
             .content_margin
             .unwrap_or_else(|| ui.spacing().scroll.content_margin);
 
+        let scroll_to_focused = self.scroll_to_focused;
         let mut prepared = self.begin(ui);
         let id = prepared.id;
         let inner_rect = prepared.inner_rect;
@@ -1045,7 +1066,82 @@ impl ScrollArea {
             })
             .inner;
 
+        let mut focused_scroll_target = None;
+        let painted_offset = prepared.viewport.min.to_vec2();
+        if scroll_to_focused {
+            let content = &prepared.content_ui;
+            let ctx = content.ctx();
+            if let Some(focused) = ctx.memory(|memory| memory.focused()) {
+                // At this point the content closure is complete and no following
+                // sibling or scrollbar has been drawn. Same-layer widgets added
+                // after the content Ui belong to this scroll area's content.
+                let owns_focus = ctx.pass_state(|state| {
+                    match (
+                        state.widgets.order(content.unique_id()),
+                        state.widgets.order(focused),
+                    ) {
+                        (Some((layer, start)), Some((focused_layer, index))) => {
+                            layer == focused_layer && start < index
+                        }
+                        _ => false,
+                    }
+                });
+                if owns_focus
+                    && let Some(response) = ctx.read_response(focused)
+                    && response.gained_focus()
+                {
+                    let has_explicit_target =
+                        ctx.pass_state(|state| state.scroll_target.iter().any(Option::is_some));
+                    if !has_explicit_target && !content.clip_rect().contains_rect(response.rect) {
+                        content.scroll_to_rect_animation(
+                            response.rect,
+                            None,
+                            crate::style::ScrollAnimation::none(),
+                        );
+                    }
+                    focused_scroll_target = ctx.pass_state(|state| {
+                        state.scroll_target.iter().any(Option::is_some).then(|| {
+                            let mut rect = response.rect;
+                            for d in 0..2 {
+                                if let Some(target) = &state.scroll_target[d] {
+                                    rect.min[d] = target.range.min;
+                                    rect.max[d] = target.range.max;
+                                }
+                            }
+                            rect
+                        })
+                    });
+                }
+            }
+        }
+
+        let parent_has_explicit_target = prepared.saved_scroll_target.iter().any(Option::is_some);
         let (content_size, state) = prepared.end(ui);
+        if let Some(target) = focused_scroll_target
+            && !parent_has_explicit_target
+        {
+            // Propagate where the child will reveal the target, rather than the
+            // still-unscrolled widget rectangle. This also prevents an enclosing
+            // opt-in area from overriding a child's explicit caret destination.
+            let mut resolved_offset = state.offset;
+            for d in 0..2 {
+                if let Some(target) = state.offset_target[d] {
+                    resolved_offset[d] = target.target_offset;
+                }
+            }
+            let max_offset = (content_size - inner_rect.size()).max(Vec2::ZERO);
+            resolved_offset = resolved_offset.max(Vec2::ZERO).min(max_offset);
+            let visible_target = target
+                .translate(painted_offset - resolved_offset)
+                .intersect(inner_rect);
+            if visible_target.is_positive() {
+                ui.scroll_to_rect_animation(
+                    visible_target,
+                    None,
+                    crate::style::ScrollAnimation::none(),
+                );
+            }
+        }
         ScrollAreaOutput {
             inner,
             id,

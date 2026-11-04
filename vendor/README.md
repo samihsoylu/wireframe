@@ -47,3 +47,15 @@ The numeric drag-value widget discards its text buffer when Escape ends an edit.
 ## Popup arrow-key navigation
 
 Directional focus retains each widget’s paint layer and excludes candidates behind the current layer order. This prevents a popup option from moving focus into an obscured inspector field. Same-order layers remain eligible for nested-menu navigation; ordinary Tab traversal and pointer handling are unchanged. Keyboard activation or Escape restores focus to the combo-box button after its menu closes; pointer dismissal keeps its destination. A full-application inspector regression covers arrow navigation, bounds, selection, unchanged drawing data until activation one-step Undo/Redo, and cancellation preserving selection and Redo. This correction is GPL-3.0-only; upstream notices remain intact.
+
+## Inspector focus visibility
+
+The maintained egui scroll area adds an opt-in `scroll_to_focused` setting. It
+reveals a newly focused content widget using the current pass's widget order
+and layer, rather than geometric overlap with scrolled content. Retained focus
+does not override pointer scrolling, and focus in preceding siblings is ignored.
+The selected-control inspector and its nested row-link/icon lists enable this
+option; other scroll areas keep their existing behavior. Explicit and caret
+targets take precedence. Nested areas pass their resolved destination to their
+ancestors, preserving targets queued before entering a child. This addition is GPL-3.0-only; upstream notices
+and original-file hashes remain intact. Native acceptance is recorded separately.

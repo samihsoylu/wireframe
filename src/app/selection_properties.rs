@@ -553,6 +553,7 @@ impl WireframeApp {
         };
         egui::CollapsingHeader::new("Edit row icons").show(ui, |ui| {
             egui::ScrollArea::vertical()
+                .scroll_to_focused(true)
                 .id_salt("shared-row-icons")
                 .max_height(280.)
                 .show(ui, |ui| {

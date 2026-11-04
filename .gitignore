@@ -12,3 +12,7 @@ __pycache__/
 !tests/fixtures/text/**
 
 .tooling/
+
+# Private agent session notes
+/SESSION-SPEC.md
+/SESSION.md

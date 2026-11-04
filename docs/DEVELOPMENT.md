@@ -18,4 +18,4 @@ Tests cover document behavior, editing, history, persistence and rendering. Pass
 
 ## Project records
 
-The [current checkpoint](../SESSION-SPEC.md) records outstanding work and decisions. Detailed subsystem documents describe implementation contracts; the README and installation guide are written for people using the app. Completed changes belong in Git history.
+Operational session notes are maintained privately outside this repository. Detailed subsystem documents describe implementation contracts; the README and installation guide are written for people using the app. Completed changes belong in Git history.

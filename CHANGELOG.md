@@ -1,5 +1,9 @@
 # Changes
 
+## Unreleased
+
+- Keep the canvas text editor clear of the live preview when room is available. Fit the editor into smaller spaces while retaining text scrolling and keyboard controls.
+
 ## 0.1.0-beta.5 — Beta, published 4 November 2026
 
 - In presentation, Escape leaves the comment field first and keeps your draft. Press Escape again to return to the editor.

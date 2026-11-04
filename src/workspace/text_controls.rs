@@ -146,6 +146,16 @@ impl Editor {
     /// Render a text draft in an isolated projection. Recovery and history keep
     /// the committed project until the editing session is accepted.
     pub fn text_preview_scene(&self, id: Id, text: &str) -> Result<crate::render::Scene, String> {
+        self.text_preview_scene_and_bounds(id, text)
+            .map(|(scene, _)| scene)
+    }
+    /// Include the provisional target's bounds so its editor can leave the
+    /// actual draft visible, including aligned or automatically sized text.
+    pub fn text_preview_scene_and_bounds(
+        &self,
+        id: Id,
+        text: &str,
+    ) -> Result<(crate::render::Scene, Bounds), String> {
         let text = self.control_text_from_edit(id, text)?;
         let mut preview = Self::with_clock(self.document.clone(), self.clock);
         preview.date = self.date;
@@ -162,7 +172,14 @@ impl Editor {
             .ok_or("Text target no longer exists")?;
         control.text = text;
         preview.update_control(control);
-        preview.editing_scene()
+        let bounds = preview
+            .current()
+            .controls
+            .into_iter()
+            .find(|control| control.id == id)
+            .ok_or("Text target no longer exists")?
+            .bounds;
+        Ok((preview.editing_scene()?, bounds))
     }
     /// Prepare an editor session. Placeholder conversion is a committed operation,
     /// so cancelling the subsequent text draft leaves the conversion undoable.

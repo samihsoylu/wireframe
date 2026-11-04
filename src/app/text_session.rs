@@ -11,7 +11,7 @@ pub(super) struct TextEditView {
     context: Vec<Id>,
     definition: Option<Id>,
     library: Option<Id>,
-    position: Pos2,
+    bounds: Bounds,
     width: f32,
     multiline: bool,
     select_all: bool,
@@ -19,6 +19,8 @@ pub(super) struct TextEditView {
     field_id: Option<egui::Id>,
     menu_active: bool,
     pub(super) preview: Option<wireframe::render::Scene>,
+    painted_preview: Option<wireframe::render::Scene>,
+    pending_preview_bounds: Option<Bounds>,
 }
 
 impl TextEditView {
@@ -33,7 +35,97 @@ impl TextEditView {
     }
 }
 
+fn text_popup_layout(
+    ctx: &egui::Context,
+    target: Rect,
+    preferred_width: f32,
+    multiline: bool,
+) -> (Pos2, f32, usize) {
+    let viewport = ctx.content_rect().shrink(8.);
+    let style = ctx.global_style();
+    let line_height = egui::TextStyle::Body.resolve(&style).size * 1.4;
+    let count_height =
+        ctx.fonts_mut(|fonts| fonts.row_height(&egui::TextStyle::Small.resolve(&style)));
+    let padding = if multiline { 8. } else { 4. };
+    let chrome = egui::Frame::popup(&style).total_margin().sum().y
+        + style.spacing.item_spacing.y
+        + count_height
+        + padding
+        + 2.; // Leave room for rounded text metrics.
+    let preferred_rows = if multiline { 17 } else { 1 };
+    let width = preferred_width.min(viewport.width()).max(100.);
+    let height = chrome + line_height * preferred_rows as f32;
+    let gap = 8.;
+    let regions = [
+        Rect::from_min_max(
+            egui::pos2(
+                viewport.left(),
+                (target.bottom() + gap).clamp(viewport.top(), viewport.bottom()),
+            ),
+            viewport.max,
+        ),
+        Rect::from_min_max(
+            viewport.min,
+            egui::pos2(
+                viewport.right(),
+                (target.top() - gap).clamp(viewport.top(), viewport.bottom()),
+            ),
+        ),
+        Rect::from_min_max(
+            egui::pos2(
+                (target.right() + gap).clamp(viewport.left(), viewport.right()),
+                viewport.top(),
+            ),
+            viewport.max,
+        ),
+        Rect::from_min_max(
+            viewport.min,
+            egui::pos2(
+                (target.left() - gap).clamp(viewport.left(), viewport.right()),
+                viewport.bottom(),
+            ),
+        ),
+    ];
+    let full = regions
+        .iter()
+        .copied()
+        .find(|r| r.width() >= width && r.height() >= height);
+    let available = full.or_else(|| {
+        regions
+            .into_iter()
+            .filter(|r| r.width() >= 100. && r.height() >= chrome + line_height)
+            .max_by(|a, b| {
+                (a.width().min(width) * a.height().min(height))
+                    .total_cmp(&(b.width().min(width) * b.height().min(height)))
+            })
+    });
+    // A control filling the whole viewport leaves no separate editor space.
+    // Keep the existing bounded editor usable in that case.
+    let available = available.unwrap_or(viewport);
+    let width = width.min(available.width());
+    let rows =
+        (((available.height() - chrome) / line_height).floor() as usize).clamp(1, preferred_rows);
+    let height = chrome + line_height * rows as f32;
+    let position = egui::pos2(
+        target.left().clamp(
+            available.left(),
+            (available.right() - width).max(available.left()),
+        ),
+        target.top().clamp(
+            available.top(),
+            (available.bottom() - height).max(available.top()),
+        ),
+    );
+    (position, width, rows)
+}
+
 impl WireframeApp {
+    pub(super) fn canvas_text_preview_scene(&self) -> Option<&wireframe::render::Scene> {
+        self.text_edit_view
+            .as_ref()
+            .and_then(|view| view.painted_preview.as_ref())
+    }
+
     pub(super) fn canvas_text_menu_owner(&self) -> Option<egui::Id> {
         let view = self.text_edit_view.as_ref()?;
         (self.text_edit.is_some() && view.matches(&self.editor))
@@ -122,7 +214,7 @@ impl WireframeApp {
             context: self.editor.context.clone(),
             definition: self.editor.definition,
             library: self.editor.library,
-            position: self.screen([control.bounds.x, control.bounds.y]),
+            bounds: control.bounds,
             width: 750.,
             multiline: control.kind.multiline_text(),
             select_all: true,
@@ -130,6 +222,8 @@ impl WireframeApp {
             field_id: None,
             menu_active: false,
             preview: None,
+            painted_preview: None,
+            pending_preview_bounds: None,
         });
     }
 
@@ -153,6 +247,13 @@ impl WireframeApp {
         }
         let fresh = view.last_frame.is_none();
         view.last_frame = Some(ctx.cumulative_frame_nr());
+        // Publish the canvas preview together with its matching placement.
+        // Field input remains immediate; the requested repaint displays its
+        // new scene only after the popup can move clear of that same geometry.
+        if let Some(bounds) = view.pending_preview_bounds.take() {
+            view.bounds = bounds;
+            view.painted_preview = view.preview.clone();
+        }
         // Application menus temporarily own input without accepting this draft.
         // An ordinary click elsewhere still commits before changing context.
         let menu_active = self.save_busy()
@@ -170,18 +271,11 @@ impl WireframeApp {
         }
         let returning_from_menu = view.menu_active && !menu_active;
         view.menu_active = menu_active;
-        let viewport = ctx.content_rect().shrink(8.);
-        let width = view.width.min(viewport.width()).max(100.);
-        let height = if view.multiline { 350. } else { 54. };
-        let position = Pos2::new(
-            view.position.x.clamp(
-                viewport.left(),
-                (viewport.right() - width).max(viewport.left()),
-            ),
-            view.position.y.clamp(
-                viewport.top(),
-                (viewport.bottom() - height).max(viewport.top()),
-            ),
+        let (position, width, rows) = text_popup_layout(
+            ctx,
+            self.screen_rect(view.bounds),
+            view.width,
+            view.multiline,
         );
         let before = value.clone();
         let mut submit = false;
@@ -190,12 +284,18 @@ impl WireframeApp {
         let popup = egui::Area::new(egui::Id::new("canvas-text-session"))
             .order(egui::Order::Foreground)
             .fixed_pos(position)
+            // Placement already accounts for the current contents. Area's
+            // previous-size constraint can otherwise push a shrinking editor
+            // back over the preview before its new size is measured.
+            .constrain(false)
             .movable(false)
             .show(ctx, |ui| {
-                egui::Frame::popup(ui.style()).show(ui, |ui| {
-                    ui.set_width((width - 14.).max(80.));
+                let frame = egui::Frame::popup(ui.style());
+                let horizontal_margin = frame.total_margin().sum().x;
+                frame.show(ui, |ui| {
+                    ui.set_width((width - horizontal_margin).max(80.));
                     let field = if view.multiline {
-                        TextInput::multiline(&mut value).desired_rows(17)
+                        TextInput::multiline(&mut value).desired_rows(rows)
                     } else {
                         TextInput::singleline(&mut value)
                     };
@@ -228,9 +328,18 @@ impl WireframeApp {
                         });
                     cancel = !menu_active
                         && ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape));
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.small(value.graphemes(true).count().to_string());
-                    });
+                    // Use the count's intrinsic height instead of filling the
+                    // previous Area's remaining height when the field shrinks.
+                    ui.allocate_ui_with_layout(
+                        Vec2::new(
+                            ui.available_width(),
+                            ui.text_style_height(&egui::TextStyle::Small),
+                        ),
+                        egui::Layout::right_to_left(egui::Align::Center),
+                        |ui| {
+                            ui.small(value.graphemes(true).count().to_string());
+                        },
+                    );
                 });
             });
         let outside = !fresh
@@ -303,8 +412,11 @@ impl WireframeApp {
             ctx.request_repaint();
         } else {
             if value != before {
-                match self.editor.text_preview_scene(id, &value) {
-                    Ok(scene) => view.preview = Some(scene),
+                match self.editor.text_preview_scene_and_bounds(id, &value) {
+                    Ok((scene, bounds)) => {
+                        view.preview = Some(scene);
+                        view.pending_preview_bounds = Some(bounds);
+                    }
                     Err(error) => self.editor.error = Some(error),
                 }
                 ctx.request_repaint();
@@ -1047,6 +1159,104 @@ mod tests {
                 app.editor.redo();
                 assert_eq!(app.editor.document, edited);
             }
+        }
+    }
+
+    #[test]
+    fn canvas_text_popup_and_preview_grow_together_in_the_input_frame() {
+        fn check_growth(initial: &str, replacement: &str) {
+            let ctx = egui::Context::default();
+            let mut app = WireframeApp::workspace(&ctx, None);
+            app.editor.add(Kind::CheckboxGroup, 80., 70.);
+            let target = *app.editor.selection.iter().next().unwrap();
+            app.editor
+                .set_control_property(
+                    target,
+                    "text",
+                    wireframe::document::Value::Text(initial.into()),
+                )
+                .unwrap();
+            frame(&ctx, &mut app, vec![]);
+            let original = app.editor.document.clone();
+            app.begin_text_edit(target);
+            for _ in 0..3 {
+                frame(&ctx, &mut app, vec![]);
+            }
+            frame(&ctx, &mut app, vec![egui::Event::Paste(replacement.into())]);
+            // Check the actual canvas scene selector on the input frame, before
+            // another frame can hide a mismatched popup/preview pair.
+            for input_frame in [true, false] {
+                if !input_frame {
+                    frame(&ctx, &mut app, vec![]);
+                }
+                let scene = app.canvas_text_preview_scene().cloned().unwrap_or_else(|| {
+                    app.editor
+                        .editing_scene()
+                        .expect("committed fallback scene")
+                });
+                let preview = app.screen_rect(scene.bounds);
+                let popup = ctx
+                    .memory(|m| m.area_rect(egui::Id::new("canvas-text-session")))
+                    .unwrap();
+                assert!(
+                    !popup.intersects(preview),
+                    "input_frame={input_frame}: editor {popup:?} obscures painted preview {preview:?}"
+                );
+                assert!(ctx.content_rect().contains_rect(popup));
+                assert_eq!(app.editor.document, original);
+                assert_eq!(app.text_edit.as_ref().unwrap().1, replacement);
+                if !input_frame {
+                    assert!(scene.items.iter().any(|item| {
+                        matches!(&item.drawing, wireframe::render::Drawing::Glyph(g) if g.text.contains('B'))
+                    }));
+                }
+            }
+        }
+        check_growth("[ ] A", "[ ] A\n[ ] B");
+        let expanded = ('A'..='M')
+            .map(|letter| format!("[ ] {letter} long checkbox caption 0123456789"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        check_growth("[ ] A long checkbox caption 0123456789", &expanded);
+    }
+
+    #[test]
+    fn canvas_text_popup_leaves_the_provisional_control_uncovered() {
+        for (kind, x, y) in [
+            (Kind::Button, 80., 70.),
+            (Kind::Button, 850., 600.),
+            (Kind::Paragraph, 200., 240.),
+        ] {
+            let ctx = egui::Context::default();
+            let mut app = WireframeApp::workspace(&ctx, None);
+            app.editor.add(kind, x, y);
+            let target = *app.editor.selection.iter().next().unwrap();
+            frame(&ctx, &mut app, vec![]);
+            let original = app.editor.document.clone();
+            app.begin_text_edit(target);
+            for _ in 0..3 {
+                frame(&ctx, &mut app, vec![]);
+            }
+            frame(
+                &ctx,
+                &mut app,
+                vec![egui::Event::Paste("Placement draft".into())],
+            );
+            for _ in 0..3 {
+                frame(&ctx, &mut app, vec![]);
+            }
+            let popup = ctx
+                .memory(|m| m.area_rect(egui::Id::new("canvas-text-session")))
+                .expect("actual foreground editor rectangle");
+            let control = app.editor.current().controls[0].bounds;
+            let preview = app.screen_rect(control);
+            assert!(
+                !popup.intersects(preview),
+                "{kind:?}: editor {popup:?} obscures the live control {preview:?}"
+            );
+            assert!(ctx.content_rect().contains_rect(popup));
+            assert!(app.text_edit_view.as_ref().unwrap().preview.is_some());
+            assert_eq!(app.editor.document, original);
         }
     }
 

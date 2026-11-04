@@ -1834,9 +1834,8 @@ if ui.add_enabled(movable, egui::Button::new("Delete")).clicked(){self.editor.de
                 let drawing = if self.present {
                     self.editor.rendered_scene(self.editor.surface_id())
                 } else {
-                    self.text_edit_view
-                        .as_ref()
-                        .and_then(|view| view.preview.clone())
+                    self.canvas_text_preview_scene()
+                        .cloned()
                         .map_or_else(|| self.editor.editing_scene(), Ok)
                 };
                 match drawing {

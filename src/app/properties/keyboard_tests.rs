@@ -109,6 +109,172 @@ fn reverse_tab_wrap_exposes_canvas_focus_to_keyboard_users() {
 }
 
 #[test]
+fn reverse_tab_after_canvas_reaches_an_identifiable_visible_target() {
+    let ctx = egui::Context::default();
+    ctx.enable_accesskit();
+    let mut app = WireframeApp::workspace(&ctx, None);
+    app.show_library = true;
+    app.show_navigator = true;
+    let page = app.editor.page;
+    app.editor.add_page();
+    app.editor.switch_page(page);
+    app.editor.add(Kind::Button, 80., 70.);
+    let document = app.editor.document.clone();
+    app.quick_focus = true;
+    for _ in 0..3 {
+        frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+    }
+    let mut reached_canvas = false;
+    for _ in 0..64 {
+        let mut tab = key(Key::Tab);
+        if let egui::Event::Key { modifiers, .. } = &mut tab {
+            modifiers.shift = true;
+        }
+        frame(&ctx, &mut app, vec![tab]).drop_without_applying_deltas();
+        frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+        let out = frame(&ctx, &mut app, vec![]);
+        assert_eq!(app.editor.document, document);
+        if reached_canvas {
+            let id = ctx.memory(|m| m.focused()).expect("a focus destination");
+            assert_eq!(id, egui::Id::new("inspector").with("__resize"));
+            let response = ctx.read_response(id).expect("a live focus destination");
+            let node = out
+                .platform_output
+                .accesskit_update
+                .as_ref()
+                .unwrap()
+                .nodes
+                .iter()
+                .find_map(|(candidate, node)| (*candidate == id.accesskit_id()).then_some(node));
+            eprintln!(
+                "After canvas: name={:?}, role={:?}, rect={:?}, viewport={:?}",
+                focus_label(&ctx, &out),
+                node.map(|node| node.role()),
+                response.rect,
+                ctx.content_rect()
+            );
+            let node = node.expect("keyboard focus must be exposed to accessibility");
+            assert_eq!(node.role(), egui::accesskit::Role::Splitter);
+            assert_eq!(node.label(), Some("Resize panel width"));
+            assert!(
+                ctx.content_rect().contains_rect(response.rect),
+                "keyboard focus must remain visible in the window"
+            );
+            let has_focus_line = |out: &egui::FullOutput| {
+                out.shapes.iter().any(|shape| {
+                    matches!(&shape.shape, egui::epaint::Shape::LineSegment { points, stroke }
+                        if response.rect.contains(points[0])
+                        && response.rect.contains(points[1])
+                        && shape.clip_rect.contains(points[0])
+                        && shape.clip_rect.contains(points[1])
+                        && stroke.width == 2.
+                        && stroke.color == ctx.style_of(ctx.theme()).visuals.selection.stroke.color)
+                })
+            };
+            assert!(
+                has_focus_line(&out),
+                "keyboard divider focus must be visible"
+            );
+            out.drop_without_applying_deltas();
+            frame(&ctx, &mut app, vec![key(Key::Tab)]).drop_without_applying_deltas();
+            frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+            let out = frame(&ctx, &mut app, vec![]);
+            assert_ne!(ctx.memory(|m| m.focused()), Some(id));
+            assert!(!has_focus_line(&out), "the divider cue must follow focus");
+            assert_eq!(app.editor.document, document);
+            out.drop_without_applying_deltas();
+            return;
+        }
+        reached_canvas = ctx.memory(|m| m.focused()) == app.canvas_focus_id;
+        out.drop_without_applying_deltas();
+    }
+    panic!("reverse traversal did not pass the canvas with both panes visible");
+}
+
+#[test]
+fn visible_panes_reverse_to_selected_text_and_forward_to_quick_add() {
+    let ctx = egui::Context::default();
+    ctx.enable_accesskit();
+    let mut app = WireframeApp::workspace(&ctx, None);
+    app.show_library = true;
+    app.show_navigator = true;
+    let page = app.editor.page;
+    app.editor.add_page();
+    app.editor.switch_page(page);
+    app.editor.add(Kind::Button, 80., 70.);
+    let document = app.editor.document.clone();
+    app.quick_focus = true;
+    for _ in 0..3 {
+        frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+    }
+    let mut reached_canvas = false;
+    let mut reached_text = false;
+    let mut route = Vec::new();
+    for _ in 0..64 {
+        let mut tab = key(Key::Tab);
+        if let egui::Event::Key { modifiers, .. } = &mut tab {
+            modifiers.shift = true;
+        }
+        frame(&ctx, &mut app, vec![tab]).drop_without_applying_deltas();
+        frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+        let out = frame(&ctx, &mut app, vec![]);
+        assert_eq!(app.editor.document, document);
+        reached_canvas |= ctx.memory(|m| m.focused()) == app.canvas_focus_id;
+        if reached_canvas {
+            let id = ctx
+                .memory(|m| m.focused())
+                .expect("live reverse destination");
+            let node = out
+                .platform_output
+                .accesskit_update
+                .as_ref()
+                .unwrap()
+                .nodes
+                .iter()
+                .find_map(|(candidate, node)| (*candidate == id.accesskit_id()).then_some(node))
+                .expect("reverse destination exposed to accessibility");
+            route.push(format!(
+                "{:?}/{:?}/{:?}",
+                node.role(),
+                node.label(),
+                node.value()
+            ));
+            if node.role() == egui::accesskit::Role::MultilineTextInput
+                && node.value() == Some("Button")
+            {
+                let response = ctx.read_response(id).unwrap();
+                assert!(
+                    ctx.content_rect().contains_rect(response.rect),
+                    "text field is visible"
+                );
+                reached_text = true;
+            }
+        }
+        out.drop_without_applying_deltas();
+        if reached_text {
+            break;
+        }
+    }
+    assert!(
+        reached_text,
+        "reverse route did not reach selected Button text: {route:?}"
+    );
+    eprintln!("Reverse route after canvas: {route:?}");
+    for _ in 0..64 {
+        frame(&ctx, &mut app, vec![key(Key::Tab)]).drop_without_applying_deltas();
+        frame(&ctx, &mut app, vec![]).drop_without_applying_deltas();
+        let out = frame(&ctx, &mut app, vec![]);
+        assert_eq!(app.editor.document, document);
+        let reached_quick_add = ctx.memory(|m| m.focused()) == app.quick_input_id;
+        out.drop_without_applying_deltas();
+        if reached_quick_add {
+            return;
+        }
+    }
+    panic!("forward route from selected text did not return to Quick Add");
+}
+
+#[test]
 fn inspector_popup_arrows_stay_above_background_controls_and_commit_one_edit() {
     let ctx = egui::Context::default();
     ctx.enable_accesskit();

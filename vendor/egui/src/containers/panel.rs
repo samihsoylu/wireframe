@@ -864,14 +864,18 @@ impl Panel {
 
         parent_ui.expand_to_include_rect(visible_outer_rect);
 
-        let (resize_hover, is_resizing) = if resizable {
+        let (resize_hover, is_resizing, resize_focus) = if resizable {
             // Now we do the actual resize interaction, on top of all the contents,
             // otherwise its input could be eaten by the contents, e.g. a
             // `ScrollArea` on either side of the panel boundary.
             let resize_response = self.resize_panel(shifted_outer_rect, parent_ui);
-            (resize_response.hovered(), resize_response.dragged())
+            (
+                resize_response.hovered(),
+                resize_response.dragged(),
+                resize_response.has_focus(),
+            )
         } else {
-            (false, false)
+            (false, false, false)
         };
 
         if resize_hover || is_resizing {
@@ -902,7 +906,9 @@ impl Panel {
         // loses sight of the edge they are dragging. The dim idle separator does
         // get hidden once the panel is mostly slid off, since there it would just
         // be a stray dash hovering near the parent edge.
-        let stroke = if is_resizing {
+        let stroke = if resize_focus {
+            Stroke::new(2.0, parent_ui.visuals().selection.stroke.color)
+        } else if is_resizing {
             parent_ui.style().visuals.widgets.active.fg_stroke // highly visible
         } else if resize_hover {
             parent_ui.style().visuals.widgets.hovered.fg_stroke // highly visible
@@ -924,7 +930,13 @@ impl Panel {
             // contents | `inner_margin` | outline | separator line | `outer_margin`
             let outer_margin = f32::from(side.resize_margin(frame.outer_margin));
             let outline_edge = side.resize_pos(shifted_outer_rect) + side.sign() * outer_margin;
-            let line_pos = outline_edge - 0.5 * side.sign() * stroke.width;
+            let line_pos = if resize_focus {
+                // Draw focus as the final separator, inside the panel even when
+                // the idle separator is disabled and has no reserved margin.
+                side.resize_pos(shifted_outer_rect) + 0.5 * side.sign() * stroke.width
+            } else {
+                outline_edge - 0.5 * side.sign() * stroke.width
+            };
             let cross_range = shifted_outer_rect.range_along(side.cross_axis());
             if axis == 0 {
                 parent_ui.painter().vline(line_pos, cross_range, stroke);
@@ -996,7 +1008,7 @@ impl Panel {
         );
 
         let resize_id = self.resize_id();
-        let response = ui.interact(resize_rect, resize_id, Sense::click_and_drag());
+        let response = self.resize_response(ui, resize_rect);
 
         if response.double_clicked() {
             *is_expanded = true;
@@ -1026,9 +1038,10 @@ impl Panel {
             }
         }
 
-        // Invisible until hovered, so the handle doesn't read as a stray line at
-        // the edge of the screen.
-        let stroke = if response.dragged() {
+        // Focus must remain visible even without a pointer over the handle.
+        let stroke = if response.has_focus() {
+            Stroke::new(2.0, ui.visuals().selection.stroke.color)
+        } else if response.dragged() {
             ui.style().visuals.widgets.active.fg_stroke
         } else if response.hovered() {
             ui.style().visuals.widgets.hovered.fg_stroke
@@ -1087,9 +1100,24 @@ impl Panel {
 
         // Use `resize_id_source` so collapsed/expanded panels in
         // `show_switched` share one resize widget.
-        let resize_id = self.resize_id();
         let resize_rect = Rect::from_x_y_ranges(resize_x, resize_y).expand2(amount);
-        ui.interact(resize_rect, resize_id, Sense::click_and_drag())
+        self.resize_response(ui, resize_rect)
+    }
+
+    fn resize_response(&self, ui: &Ui, rect: Rect) -> Response {
+        let response = ui.interact(rect, self.resize_id(), Sense::click_and_drag());
+        response.widget_info(|| {
+            crate::WidgetInfo::labeled(
+                crate::WidgetType::ResizeHandle,
+                response.enabled(),
+                if self.side.axis() == 0 {
+                    "Resize panel width"
+                } else {
+                    "Resize panel height"
+                },
+            )
+        });
+        response
     }
 
     fn cursor_icon(&self, outer_size: f32) -> CursorIcon {

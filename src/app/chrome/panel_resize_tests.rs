@@ -2,6 +2,119 @@
 // Copyright 2026 Wireframe contributors
 use super::*;
 
+#[test]
+fn panel_dividers_expose_focus_without_changing_size_or_expansion() {
+    for show_separator in [true, false] {
+        for side in ["left", "right", "top", "bottom"] {
+            for initially_expanded in [true, false] {
+                let ctx = egui::Context::default();
+                ctx.enable_accesskit();
+                ctx.global_style_mut(|style| {
+                    style.visuals.widgets.noninteractive.bg_stroke.width = 2.;
+                });
+                let id = egui::Id::new(side);
+                let handle = id.with("__resize");
+                let mut expanded = initially_expanded;
+                let mut draw = || {
+                    ctx.run_ui(
+                        egui::RawInput {
+                            screen_rect: Some(Rect::from_min_size(
+                                Pos2::ZERO,
+                                Vec2::new(800., 600.),
+                            )),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            let panel = match side {
+                                "left" => egui::Panel::left(id),
+                                "right" => egui::Panel::right(id),
+                                "top" => egui::Panel::top(id),
+                                _ => egui::Panel::bottom(id),
+                            };
+                            panel
+                                .default_size(120.)
+                                .resizable(true)
+                                .show_separator_line(show_separator)
+                                .show_collapsible(ui, &mut expanded, |ui| {
+                                    ui.label("Panel contents");
+                                });
+                            egui::CentralPanel::default().show(ui, |_| {});
+                        },
+                    )
+                };
+                for _ in 0..6 {
+                    draw().drop_without_applying_deltas();
+                }
+                let before = ctx.read_response(handle).unwrap().rect;
+                ctx.memory_mut(|memory| memory.request_focus(handle));
+                let out = draw();
+                let response = ctx.read_response(handle).unwrap();
+                assert!(response.has_focus(), "{side}/{initially_expanded}");
+                assert_eq!(response.rect, before);
+                let node = out
+                    .platform_output
+                    .accesskit_update
+                    .as_ref()
+                    .unwrap()
+                    .nodes
+                    .iter()
+                    .find_map(|(candidate, node)| {
+                        (*candidate == handle.accesskit_id()).then_some(node)
+                    })
+                    .unwrap();
+                assert_eq!(node.role(), egui::accesskit::Role::Splitter);
+                assert_eq!(
+                    node.label(),
+                    Some(if matches!(side, "left" | "right") {
+                        "Resize panel width"
+                    } else {
+                        "Resize panel height"
+                    })
+                );
+                let has_focus_line = |out: &egui::FullOutput| {
+                    out.shapes.iter().any(|shape| {
+                    matches!(&shape.shape, egui::epaint::Shape::LineSegment { points, stroke }
+                        if response.rect.contains(points[0]) && response.rect.contains(points[1])
+                        && shape.clip_rect.contains(points[0]) && shape.clip_rect.contains(points[1])
+                        && stroke.width == 2.
+                        && stroke.color == ctx.style_of(ctx.theme()).visuals.selection.stroke.color)
+                })
+                };
+                assert!(
+                    has_focus_line(&out),
+                    "{side}/{initially_expanded} focus cue"
+                );
+                let final_edge_color = out.shapes.iter().rev().find_map(|shape| {
+                    if let egui::epaint::Shape::LineSegment { points, stroke } = &shape.shape
+                        && response.rect.contains(points[0])
+                        && response.rect.contains(points[1])
+                        && stroke.width > 0.
+                    {
+                        Some(stroke.color)
+                    } else {
+                        None
+                    }
+                });
+                assert_eq!(
+                    final_edge_color,
+                    Some(ctx.style_of(ctx.theme()).visuals.selection.stroke.color),
+                    "{side}/{initially_expanded}: the separator must not cover the focus cue"
+                );
+                out.drop_without_applying_deltas();
+                ctx.memory_mut(|memory| memory.surrender_focus(handle));
+                let out = draw();
+                assert!(
+                    !has_focus_line(&out),
+                    "{side}/{initially_expanded} stale cue"
+                );
+                assert_eq!(ctx.read_response(handle).unwrap().rect, before);
+                out.drop_without_applying_deltas();
+                assert_eq!(expanded, initially_expanded);
+            }
+        }
+    }
+}
+
 fn frame(ctx: &egui::Context, app: &mut WireframeApp, panel: &str, events: Vec<egui::Event>) {
     ctx.run_ui(
         egui::RawInput {

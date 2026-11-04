@@ -1,9 +1,9 @@
 use epaint::Shape;
 
 use crate::{
-    Align2, AsIdSalt, Context, Id, IdSalt, InnerResponse, Key, NumExt as _, Painter, Popup,
-    PopupCloseBehavior, Rect, Response, ScrollArea, Sense, Stroke, TextStyle, TextWrapMode, Ui,
-    UiBuilder, Vec2, WidgetInfo, WidgetText, WidgetType, epaint,
+    Align2, AsIdSalt, Context, FocusDirection, Id, IdSalt, InnerResponse, Key, Modifiers,
+    NumExt as _, Painter, Popup, PopupCloseBehavior, Rect, Response, ScrollArea, Sense, Stroke,
+    TextStyle, TextWrapMode, Ui, UiBuilder, Vec2, WidgetInfo, WidgetText, WidgetType, epaint,
     style::{StyleModifier, WidgetVisuals},
     vec2,
 };
@@ -398,6 +398,17 @@ fn combo_box_dyn<'c, R>(
         && ui.input(|i| {
             i.key_pressed(Key::Escape) || i.key_pressed(Key::Enter) || i.key_pressed(Key::Space)
         });
+    // Enter the popup in its focus order, instead of letting a nearer field
+    // behind it win the first spatial Down search from the trigger.
+    let keyboard_enter_popup = is_popup_open
+        && button_response.has_focus()
+        && ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::ArrowDown));
+    if keyboard_enter_popup {
+        ui.memory_mut(|m| {
+            m.surrender_focus(button_id);
+            m.move_focus(FocusDirection::Next);
+        });
+    }
     let inner = Popup::menu(&button_response)
         .id(popup_id)
         // The popup background still consumes pointer clicks, but it has no
@@ -424,6 +435,14 @@ fn combo_box_dyn<'c, R>(
         })
         .map(|r| r.inner);
 
+    if keyboard_enter_popup && ui.memory(|m| m.focused().is_none()) {
+        // There may be no enabled focusable items. Stop the pending traversal
+        // before widgets after the popup can take it.
+        ui.memory_mut(|m| {
+            m.request_focus(button_id);
+            m.move_focus(FocusDirection::None);
+        });
+    }
     if keyboard_close && !Popup::is_id_open(ui.ctx(), popup_id) {
         button_response.request_focus();
     }

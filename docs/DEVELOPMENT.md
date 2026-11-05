@@ -14,6 +14,28 @@ cargo test --locked
 cargo clippy --all-targets --locked -- -D warnings
 ```
 
+## Fast feedback
+
+```sh
+python3 scripts/check.py fast
+# With dependencies already cached:
+python3 scripts/check.py fast --offline
+```
+
+This host-headless lane builds only the root library and application test binaries, then runs seven arrow guards and five full-app scenarios (picker input/focus, interrupted drag/history, draft/save/reopen, async failure/ownership, and whole-control No link cancellation). It preserves the existing tests. Build and test phases are sequential, with two build jobs and two test threads by default; use `--jobs 1 --test-threads 1` for serial debugging.
+
+The command lists only those two executables and verifies every required name and result. Missing, duplicate, ignored, failed or incomplete required results fail the command; unselected tests are never reported as passed. There are no retries, automatic timeouts, tool installs or profile changes. Configure the same Rust/C/C++/SDK/CMake environment as an ordinary build; all `WIREFRAME_*` app overrides are removed from child processes. Cross-target `CARGO_BUILD_TARGET` is rejected because the lane executes host test binaries.
+
+A concise console result separates build, discovery and test execution time. The machine summary defaults to `target/check-fast.json`; choose another path with `--json PATH`. Check both the command's exit status and the summary's `status`. A new run replaces an old green report with `running` before building. Fixture/configuration and executable hashes identify the measured selection; timings describe that invocation, with no full-cold or whole-suite speed claim or fixed pass-time threshold.
+
+The runner checks each recorded executable hash immediately before and after its discovery and execution, then checks both executables and the recorded fixture/configuration inputs again before reporting success. Observed drift fails the command. These are point-in-time concurrency checks; they cannot establish an atomic snapshot or detect a change that is restored between checks. Avoid concurrent builds and source edits during the lane.
+
+Other tests, integration/vendor suites, native desktop/UI/clipboard/dialog behavior, visual checks, Windows desktop runtime and release builds are outside this command. Passing this lane is not release or native acceptance. The broader commands above remain separate checks. Runner contract tests use synthetic Cargo/libtest output:
+
+```sh
+python3 -m unittest discover -s scripts -p 'test_check.py'
+```
+
 Tests cover document behavior, editing, history, persistence and rendering. Passing tests or cross-compilation does not establish native desktop acceptance. See the [release checklist](RELEASE-CHECKLIST.md) for current limits and [packaging](PACKAGING.md) for distribution commands.
 
 ## Project records

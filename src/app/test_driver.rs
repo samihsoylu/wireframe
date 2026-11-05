@@ -31,6 +31,7 @@ pub(super) struct LiveNode {
     pub id: NodeId,
     pub role: Role,
     pub name: String,
+    pub value: Option<String>,
     pub rect: Option<Rect>,
     pub disabled: bool,
 }
@@ -168,6 +169,7 @@ impl Driver {
                             .or_else(|| node.value())
                             .unwrap_or_default()
                             .to_owned(),
+                        value: node.value().map(str::to_owned),
                         rect: node.bounds().map(|r| {
                             Rect::from_min_max(
                                 egui::pos2(r.x0 as f32, r.y0 as f32),
@@ -264,6 +266,26 @@ impl Driver {
             matches.len(),
             1,
             "expected one enabled {name:?}; {:?}\n{}",
+            self.nodes,
+            self.diagnostics()
+        );
+        matches[0].clone()
+    }
+
+    pub fn unique_combo_value(&self, value: &str) -> LiveNode {
+        let matches: Vec<_> = self
+            .nodes
+            .iter()
+            .filter(|node| {
+                node.role == Role::ComboBox
+                    && node.value.as_deref() == Some(value)
+                    && !node.disabled
+            })
+            .collect();
+        assert_eq!(
+            matches.len(),
+            1,
+            "expected one enabled ComboBox value {value:?}; {:?}\n{}",
             self.nodes,
             self.diagnostics()
         );

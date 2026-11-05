@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright 2026 Wireframe contributors
-//! Four bounded journeys through raw_input_hook + the actual application UI.
+//! Bounded journeys through raw_input_hook + the actual application UI.
 //! Existing regressions remain intact; these tests add no native-delivery claim.
 use super::test_driver::Driver;
 use super::*;
@@ -568,5 +568,166 @@ fn pilot_async_open_save_failure_and_stale_ownership() {
         copies.open_named(&original_path).unwrap().project(),
         &after_cancel,
         "local copy retains post-Cancel edits",
+    );
+}
+
+#[test]
+fn whole_control_no_link_enter_down_escape_preserves_graph_and_history() {
+    let mut d = Driver::new();
+    d.app.editor.add(Kind::TextArea, 100., 150.);
+    let source = *d.app.editor.selection.iter().next().unwrap();
+    d.app.editor.add(Kind::Button, 450., 150.);
+    // Start with empty history, then retain exactly one Undo and one Redo entry.
+    // No file, recovery, native backend or system clipboard is involved.
+    let original = d.app.editor.document.clone();
+    d.app.editor = Editor::new(original.clone());
+    d.app.editor.select(source, false);
+    d.app.editor.edit("Fixture committed text", |editor| {
+        editor
+            .set_control_property(
+                source,
+                "text",
+                Value::Text("Whole-control link fixture".into()),
+            )
+            .unwrap();
+    });
+    let before = d.app.editor.document.clone();
+    d.app.editor.edit("Fixture future text", |editor| {
+        editor
+            .set_control_property(source, "text", Value::Text("Retained Redo payload".into()))
+            .unwrap();
+    });
+    let redo_project = d.app.editor.document.clone();
+    d.app.editor.undo();
+    let selection = d.app.editor.selection.clone();
+    let page = d.app.editor.page;
+    let context = d.app.editor.context.clone();
+    let dirty = d.app.editor.dirty();
+    let preserved = |driver: &Driver, label: &str| {
+        driver.project(&before, label);
+        driver.check(
+            driver.app.editor.undo_name() == Some("Fixture committed text")
+                && driver.app.editor.redo_name() == Some("Fixture future text"),
+            "picker preserves both history branches",
+        );
+        driver.check(
+            driver.app.editor.selection == selection
+                && driver.app.editor.page == page
+                && driver.app.editor.context == context
+                && driver.app.editor.dirty() == dirty,
+            "picker preserves selection, page, context and dirty state",
+        );
+    };
+    d.idle(3);
+    let trigger = d.unique_combo_value("No link");
+    d.focus_action(trigger.id);
+    d.check(
+        d.focused() == Some(trigger.id),
+        "No link trigger receives fixture focus",
+    );
+    let current_trigger = d.unique_combo_value("No link");
+    d.check(
+        current_trigger.id == trigger.id,
+        "current No link target retains its identity",
+    );
+    let trigger_id = d.ctx.memory(|memory| memory.focused()).unwrap();
+    let whole_link_ids = d
+        .ctx
+        .data(|data| data.get_temp::<HashSet<egui::Id>>(egui::Id::new("whole-link-picker-count")));
+    d.check(
+        whole_link_ids.as_ref().map(HashSet::len) == Some(1)
+            && d.app.text_edit.is_none()
+            && d.app.editor.selection == HashSet::from([source]),
+        "current ComboBox is the selected TextArea whole-control link picker",
+    );
+    d.check(
+        current_trigger
+            .rect
+            .is_some_and(|rect| rect.intersects(d.ctx.content_rect())),
+        "current No link target is visible",
+    );
+    let target_open = |driver: &Driver| egui::ComboBox::is_open(&driver.ctx, trigger_id);
+    d.check(!target_open(&d), "No link starts closed");
+    preserved(&d, "fixture retains the exact baseline graph");
+
+    d.press(Key::Enter, Modifiers::NONE);
+    d.check(
+        target_open(&d),
+        "Enter opens the exact No link popup on the input frame",
+    );
+    preserved(&d, "Enter leaves the whole graph provisional");
+    d.release(Key::Enter, Modifiers::NONE);
+    d.check(
+        target_open(&d) && d.focused() == Some(trigger.id),
+        "Enter release retains trigger focus",
+    );
+    preserved(&d, "Enter release preserves graph and history");
+
+    d.press(Key::ArrowDown, Modifiers::NONE);
+    let option = d.focused();
+    d.check(
+        target_open(&d)
+            && option.is_some()
+            && option != Some(trigger.id)
+            && d.focus_name() == Some("No link"),
+        "first Down enters the No link option, not the identically valued trigger",
+    );
+    preserved(&d, "first Down preserves the complete graph");
+    d.release(Key::ArrowDown, Modifiers::NONE);
+    d.check(
+        target_open(&d) && d.focused() == option && d.focus_name() == Some("No link"),
+        "Down release neither advances nor closes the option",
+    );
+    preserved(&d, "Down release preserves graph and history");
+    eprintln!(
+        "headless whole-control No link: trigger={:?}, value={:?}, option={option:?}",
+        trigger.id, trigger.value
+    );
+
+    d.press(Key::Escape, Modifiers::NONE);
+    d.check(
+        !target_open(&d),
+        "Escape closes the exact whole-control No link popup on the input frame",
+    );
+    d.check(
+        d.focused() == Some(trigger.id),
+        "Escape returns focus to the No link trigger",
+    );
+    preserved(&d, "Escape does not apply a link or mutate the graph");
+    d.release(Key::Escape, Modifiers::NONE);
+    d.check(
+        !target_open(&d) && d.focused() == Some(trigger.id),
+        "Escape release keeps the target closed and focused",
+    );
+    preserved(
+        &d,
+        "Escape release retains the complete baseline and history",
+    );
+
+    // Inspect the actual retained history payloads, not just their labels.
+    d.app.editor.redo();
+    d.project(
+        &redo_project,
+        "retained Redo restores the complete future graph",
+    );
+    d.check(
+        d.app.editor.redo_name().is_none(),
+        "no extra Redo was inserted",
+    );
+    d.app.editor.undo();
+    preserved(&d, "Undo returns to the exact pre-picker baseline");
+    d.app.editor.undo();
+    d.project(
+        &original,
+        "retained original Undo restores the complete initial graph",
+    );
+    d.check(
+        d.app.editor.undo_name().is_none(),
+        "no hidden picker edit entered history",
+    );
+    d.app.editor.redo();
+    preserved(&d, "history round trip preserves both original branches");
+    eprintln!(
+        "headless No link Enter/Down/Escape closed the target and returned trigger focus; graph/history payloads retained"
     );
 }

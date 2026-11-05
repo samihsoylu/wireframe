@@ -57,3 +57,6 @@ objc2 = "=0.6.5"
 objc2-app-kit = { version = "=0.3.2", default-features = false, features = ["NSFont", "NSFontDescriptor", "NSLayoutManager", "objc2-core-foundation", "NSApplication", "NSMenu", "NSMenuItem", "NSEvent", "NSResponder", "NSCell", "NSView", "NSWindow", "NSColor", "NSColorSpace"] }
 objc2-foundation = { version = "=0.3.2", default-features = false, features = ["NSObject", "NSString", "NSURL", "NSArray", "NSUserDefaults", "NSRunLoop", "NSBundle", "NSError", "NSValue", "block2"] }
 raw-window-handle = "0.6.2"
+
+[profile.test.package."tiny-skia:0.12.0"]
+opt-level = 2

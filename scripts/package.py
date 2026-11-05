@@ -122,12 +122,41 @@ def mac_version_fields(version, build_number=None):
     return short, build
 
 
-def mac_bundle(binary, out, version, update_info=None, build_number=None):
+def diagnostic_bundle_info(run_id, root):
+    """Prepare only fresh owned marker state; never use normal application roots."""
+    if not re.fullmatch(r'[A-Za-z0-9-]{1,40}', run_id):
+        raise ValueError('Invalid diagnostic run ID')
+    root = Path(root)
+    if not root.is_absolute() or root.parent.resolve(strict=True) != root.parent:
+        raise ValueError('Diagnostic root must have a canonical absolute parent')
+    if root.exists() or root.is_symlink():
+        raise ValueError('Diagnostic root must be fresh')
+    root.mkdir(mode=0o700)
+    root.chmod(0o700)
+    identity = f'{sparkle.BUNDLE_ID}.diagnostic.{run_id}'
+    marker = {'version': 1, 'run_id': run_id, 'bundle_id': identity, 'root': str(root)}
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_NOFOLLOW', 0)
+    fd = os.open(root / 'diagnostic.json', flags, 0o600)
+    with os.fdopen(fd, 'w') as stream:
+        json.dump(marker, stream)
+    return {'CFBundleIdentifier': identity,
+            'CFBundleName': f'Wireframe Diagnostic {run_id}',
+            'CFBundleDisplayName': f'Wireframe Diagnostic {run_id}',
+            'WireframeDiagnostic': True, 'WireframeDiagnosticRunID': run_id,
+            'WireframeDiagnosticRoot': str(root), 'WireframeEnableUpdater': False}
+
+def mac_bundle(binary, out, version, update_info=None, build_number=None, diagnostic=None):
     # Stage completely before replacing a prior generated bundle. A download,
     # copy or signing failure leaves the prior bundle usable.
-    destination = out / 'Wireframe.app'
+    if diagnostic and update_info is not None:
+        raise ValueError('Diagnostic bundles cannot contain an updater configuration or payload')
+    diagnostic_info = diagnostic_bundle_info(*diagnostic) if diagnostic else None
+    bundle_name = diagnostic_info['CFBundleDisplayName'] + '.app' if diagnostic_info else 'Wireframe.app'
+    destination = out / bundle_name
+    if diagnostic and (destination.exists() or destination.is_symlink()):
+        raise ValueError('Diagnostic bundle destination must be fresh')
     with tempfile.TemporaryDirectory(prefix='.bundle-', dir=out) as temporary:
-        bundle = Path(temporary) / 'Wireframe.app'
+        bundle = Path(temporary) / bundle_name
         executable = bundle / 'Contents/MacOS/wireframe'
         executable.parent.mkdir(parents=True)
         shutil.copy2(binary, executable)
@@ -139,6 +168,7 @@ def mac_bundle(binary, out, version, update_info=None, build_number=None):
             'CFBundleIconFile':'Wireframe.icns',
             'LSMinimumSystemVersion':'12.0'}
         if update_info: info.update(update_info)
+        if diagnostic_info: info.update(diagnostic_info)
         (bundle / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
         resources = bundle / 'Contents/Resources'
         resources.mkdir()
@@ -169,7 +199,21 @@ def main():
         help='Build a Windows package with an installed target toolchain')
     parser.add_argument('--build-number', type=int,
         help='Positive macOS bundle build number, including beta iterations')
+    parser.add_argument('--diagnostic-run-id', help='Private keyboard-only diagnostic identity (requires --debug --no-archive)')
+    parser.add_argument('--diagnostic-root', type=Path, help='Fresh owned marker/trace directory')
+    parser.add_argument('--diagnostic-output', type=Path, help='Explicit private bundle output, never dist')
     args = parser.parse_args()
+    diagnostic_args = (args.diagnostic_run_id, args.diagnostic_root, args.diagnostic_output)
+    diagnostic = None
+    if any(value is not None for value in diagnostic_args):
+        if not all(value is not None for value in diagnostic_args):
+            parser.error('All three diagnostic options are required')
+        if not args.debug or not args.no_archive or args.target or args.updater_config or platform.system() != 'Darwin':
+            parser.error('Diagnostic packaging requires native macOS --debug --no-archive and no updater/target')
+        if args.diagnostic_output.resolve().is_relative_to((ROOT / 'dist').resolve()):
+            parser.error('Diagnostic output must be private, not dist')
+        diagnostic = (args.diagnostic_run_id, args.diagnostic_root)
+
     if args.updater_config and (args.target or platform.system() != 'Darwin'):
         parser.error('--updater-config requires a native macOS build')
     update_info = sparkle.configuration(args.updater_config) if args.updater_config else None
@@ -192,7 +236,7 @@ def main():
     if args.target:
         system = 'windows'
         machine = args.target.split('-')[0]
-    out = ROOT / 'dist'
+    out = args.diagnostic_output if diagnostic else ROOT / 'dist'
     out.mkdir(exist_ok=True)
     name = f'Wireframe-{version}-{system}-{machine}'
     if args.debug: name += '-debug'
@@ -202,7 +246,7 @@ def main():
     if args.target: target_dir /= args.target
     binary = target_dir / profile / ('wireframe.exe' if system == 'windows' else 'wireframe')
     if system == 'darwin':
-        payload = mac_bundle(binary, out, version, update_info, args.build_number)
+        payload = mac_bundle(binary, out, version, update_info, args.build_number, diagnostic=diagnostic)
     else:
         payload = out / name
         payload.mkdir(exist_ok=True)

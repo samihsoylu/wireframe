@@ -24,6 +24,12 @@ struct State {
 }
 impl State {
     fn request(&self) {
+        if let Some(trace) = super::diagnostic_trace(&self.ctx) {
+            trace.record(
+                "native_termination_request",
+                serde_json::json!({"pending":self.pending.get()}),
+            );
+        }
         if !self.pending.replace(true) {
             self.requested.set(true);
             self.ctx.request_repaint();
@@ -115,6 +121,12 @@ impl NativeTermination {
     pub(super) fn approve(&self) -> bool {
         if !self.state.pending.replace(false) {
             return false;
+        }
+        if let Some(trace) = super::diagnostic_trace(&self.state.ctx) {
+            trace.record(
+                "native_termination_approved",
+                serde_json::json!({"native":self.native}),
+            );
         }
         self.state.allowed.set(true);
         if self.native {

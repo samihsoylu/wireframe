@@ -199,7 +199,9 @@ impl WireframeApp {
         } else if target == "back:" {
             self.navigate_history(false);
         } else if target.starts_with("https://") || target.starts_with("http://") {
-            ctx.open_url(egui::OpenUrl::new_tab(target));
+            if self.environment.allow("external_url") {
+                ctx.open_url(egui::OpenUrl::new_tab(target));
+            }
         } else {
             self.status = "This link destination is not available".into();
         }

@@ -37,6 +37,10 @@ impl WireframeApp {
             && self.library_press.is_none()
     }
     pub(super) fn extract_asset_text(&mut self, ctx: &egui::Context, asset: Id) {
+        if !self.environment.allow("ocr") {
+            return;
+        }
+
         if !self.can_extract_screenshot() {
             return;
         }
@@ -45,6 +49,10 @@ impl WireframeApp {
         }
     }
     pub(super) fn choose_screenshot_text(&mut self, ctx: &egui::Context) {
+        if !self.environment.allow("ocr_dialog") {
+            return;
+        }
+
         if !self.can_extract_screenshot() {
             return;
         }

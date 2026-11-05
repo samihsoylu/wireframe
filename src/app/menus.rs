@@ -319,6 +319,10 @@ struct PendingTextCommand {
     session: String,
 }
 impl Menus {
+    pub(super) fn has_pending_text_command(&self) -> bool {
+        self.pending_text_command.is_some()
+    }
+
     pub(super) fn cancel_text_command(&mut self) {
         self.pending_text_command = None;
     }
@@ -476,6 +480,22 @@ impl WireframeApp {
             || self.drag.is_some()
     }
     pub(super) fn command_enabled(&self, ctx: &egui::Context, command: Command) -> bool {
+        if self.environment.diagnostic()
+            && !matches!(
+                command,
+                Command::Quit
+                    | Command::Close
+                    | Command::Undo
+                    | Command::Redo
+                    | Command::Copy
+                    | Command::Cut
+                    | Command::Paste
+                    | Command::SelectAll
+            )
+        {
+            return false;
+        }
+
         if self.startup_open.is_some() {
             return matches!(command, Command::Quit | Command::Close);
         }
@@ -548,11 +568,33 @@ impl WireframeApp {
         }
     }
     pub(super) fn run_command(&mut self, ctx: &egui::Context, command: Command) {
-        // Cached native enabled states are only presentation. Recheck after every
-        // command, since earlier commands in this frame can establish a modal.
-        if !self.command_enabled(ctx, command) {
+        if !self.environment.diagnostic() {
+            self.run_command_inner(ctx, command);
             return;
         }
+        let enabled = self.command_enabled(ctx, command);
+        self.run_command_inner(ctx, command);
+        let outcome = if !enabled {
+            "rejected"
+        } else if self.menus.pending_text_command.is_some()
+            || self.pending.is_some()
+            || self.save_busy()
+        {
+            "queued"
+        } else {
+            "returned"
+        };
+        self.diagnostic_command(ctx, "command_returned", command as u64, outcome);
+    }
+    fn run_command_inner(&mut self, ctx: &egui::Context, command: Command) {
+        // Cached native enabled states are only presentation. Recheck after every
+        // command, since earlier commands in this frame can establish a modal.
+        self.diagnostic_command(ctx, "command_received", command as u64, "received");
+        if !self.command_enabled(ctx, command) {
+            self.diagnostic_command(ctx, "command_rejected", command as u64, "rejected");
+            return;
+        }
+        self.diagnostic_command(ctx, "command_accepted", command as u64, "accepted");
         if command.editing() {
             let canvas_owner = self.canvas_text_menu_owner();
             // Menu enablement is cheap; validate the full draft only when an

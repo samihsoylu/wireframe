@@ -21,8 +21,9 @@ use egui::{Pos2, Rect, Theme, Vec2, ViewportBuilder, ViewportCommand, ViewportId
 pub use winit;
 
 pub mod clipboard;
-pub mod native_input;
+pub mod diagnostics;
 mod dropped_file;
+pub mod native_input;
 mod safe_area;
 mod window_settings;
 
@@ -109,6 +110,9 @@ pub struct State {
     current_custom_cursor: Option<(usize, CustomCursor)>,
 
     clipboard: clipboard::Clipboard,
+    diagnostic: Option<diagnostics::Bridge>,
+    last_diagnostic_event: u64,
+    previous_diagnostic_event: u64,
 
     /// If `true`, mouse inputs will be treated as touches.
     /// Useful for debugging touch support in egui.
@@ -145,15 +149,42 @@ impl State {
         theme: Option<winit::window::Theme>,
         max_texture_side: Option<usize>,
     ) -> Self {
+        Self::new_with_diagnostics(
+            egui_ctx,
+            viewport_id,
+            display_target,
+            native_pixels_per_point,
+            theme,
+            max_texture_side,
+            diagnostics::backend_configuration(),
+        )
+    }
+
+    fn new_with_diagnostics(
+        egui_ctx: egui::Context,
+        viewport_id: ViewportId,
+        display_target: &dyn HasDisplayHandle,
+        native_pixels_per_point: Option<f32>,
+        theme: Option<winit::window::Theme>,
+        max_texture_side: Option<usize>,
+        diagnostic: Option<diagnostics::Bridge>,
+    ) -> Self {
         profiling::function_scope!();
 
+        if let Some(bridge) = &diagnostic {
+            bridge.attach(&egui_ctx, viewport_id);
+        }
         let egui_input = egui::RawInput {
             focused: false, // winit will tell us when we have focus
             ..Default::default()
         };
 
         let mut slf = Self {
-            native_input: native_input::Queue::register(&egui_ctx, viewport_id),
+            native_input: native_input::Queue::register_with_diagnostics(
+                &egui_ctx,
+                viewport_id,
+                diagnostic.clone(),
+            ),
             viewport_id,
             start_time: web_time::Instant::now()
                 .checked_sub(web_time::Duration::from_secs_f64(egui_ctx.time()))
@@ -166,9 +197,13 @@ impl State {
             current_cursor_icon: None,
             current_custom_cursor: None,
 
-            clipboard: clipboard::Clipboard::new(
+            clipboard: clipboard::Clipboard::with_policy(
                 display_target.display_handle().ok().map(|h| h.as_raw()),
+                diagnostic.is_some(),
             ),
+            diagnostic,
+            last_diagnostic_event: 0,
+            previous_diagnostic_event: 0,
 
             simulate_touch_screen: false,
             pointer_touch_id: None,
@@ -216,6 +251,54 @@ impl State {
     /// that egui will use.
     pub fn set_max_texture_side(&mut self, max_texture_side: usize) {
         self.egui_input.max_texture_side = Some(max_texture_side);
+    }
+
+    /// Returns whether processing the command queued an input acknowledgement.
+    fn handle_output_command(&mut self, command: egui::OutputCommand) -> bool {
+        match command {
+                egui::OutputCommand::CopyText(text) => {
+                    self.clipboard.set_text(text);
+                }
+                // Wireframe addition, Copyright 2026 Wireframe contributors.
+                // SPDX-License-Identifier: GPL-3.0-only (this match arm)
+                egui::OutputCommand::CopyTextWithResult { request, text } => {
+                    let result = self.clipboard.set_text_checked(text);
+                    self.egui_input
+                        .events
+                        .push(egui::Event::ClipboardWriteResult { request, result });
+                    return true;
+                }
+                egui::OutputCommand::CopyImage(image) => {
+                    if let Some(bridge) = &self.diagnostic {
+                        bridge.record(diagnostics::Receipt::new(
+                            "denied_copy_image",
+                            self.viewport_id,
+                        ));
+                    } else {
+                        self.clipboard.set_image(&image);
+                    }
+                }
+                egui::OutputCommand::OpenUrl(open_url) => {
+                    if let Some(bridge) = &self.diagnostic {
+                        bridge.record(diagnostics::Receipt::new(
+                            "denied_open_url",
+                            self.viewport_id,
+                        ));
+                    } else {
+                        open_url_in_browser(&open_url.url);
+                    }
+                }
+        }
+        false
+    }
+
+    fn paste_from_clipboard(&mut self) {
+        if let Some(contents) = self.clipboard.get() {
+            let contents = contents.replace("\r\n", "\n");
+            if !contents.is_empty() {
+                self.egui_input.events.push(egui::Event::Paste(contents));
+            }
+        }
     }
 
     /// Fetches text from the clipboard and returns it.
@@ -290,6 +373,16 @@ impl State {
             .or_default()
             .native_pixels_per_point = Some(window.scale_factor() as f32);
 
+        if let Some(bridge) = &self.diagnostic {
+            bridge.begin_batch(
+                &self.egui_ctx,
+                self.viewport_id,
+                self.previous_diagnostic_event,
+                self.last_diagnostic_event,
+                self.egui_input.events.len(),
+            );
+            self.previous_diagnostic_event = self.last_diagnostic_event;
+        }
         self.egui_input.take()
     }
 
@@ -301,8 +394,51 @@ impl State {
         window: &Window,
         event: &winit::event::WindowEvent,
     ) -> EventResponse {
-        profiling::function_scope!(short_window_event_description(event));
         self.drain_native_input();
+        let sequence = self.diagnostic.as_ref().map(|bridge| {
+            let seq = bridge.next_event();
+            let mut receipt = diagnostics::Receipt::new("window_received", self.viewport_id);
+            receipt.seq = seq;
+            if let winit::event::WindowEvent::KeyboardInput { event, .. } = event {
+                receipt.pressed = Some(event.state == winit::event::ElementState::Pressed);
+                receipt.repeat = Some(event.repeat);
+                receipt.modifiers = self.modifiers;
+                receipt.physical_key = match event.physical_key { winit::keyboard::PhysicalKey::Code(code) => key_from_key_code(code), _ => None };
+                receipt.key = match &event.logical_key {
+                    winit::keyboard::Key::Named(winit::keyboard::NamedKey::Escape) => {
+                        Some(egui::Key::Escape)
+                    }
+                    winit::keyboard::Key::Named(winit::keyboard::NamedKey::Enter) => {
+                        Some(egui::Key::Enter)
+                    }
+                    winit::keyboard::Key::Named(winit::keyboard::NamedKey::ArrowDown) => {
+                        Some(egui::Key::ArrowDown)
+                    }
+                    _ => None,
+                };
+            }
+            bridge.record(receipt);
+            seq
+        });
+        let start = self.egui_input.events.len();
+        let response = self.on_window_event_inner(window, event);
+        if let (Some(bridge), Some(seq)) = (&self.diagnostic, sequence) {
+            for mapped in &self.egui_input.events[start..] {
+                bridge.input("mapped", self.viewport_id, seq, mapped);
+            }
+            if self.egui_input.events.len() > start {
+                self.last_diagnostic_event = seq;
+            }
+        }
+        response
+    }
+
+    fn on_window_event_inner(
+        &mut self,
+        window: &Window,
+        event: &winit::event::WindowEvent,
+    ) -> EventResponse {
+        profiling::function_scope!(short_window_event_description(event));
 
         #[cfg(feature = "accesskit")]
         if let Some(accesskit) = self.accesskit.as_mut() {
@@ -528,10 +664,12 @@ impl State {
             },
 
             // Things we completely ignore:
-            WindowEvent::ActivationTokenDone { .. } | WindowEvent::AxisMotion { .. } => EventResponse {
-                repaint: false,
-                consumed: false,
-            },
+            WindowEvent::ActivationTokenDone { .. } | WindowEvent::AxisMotion { .. } => {
+                EventResponse {
+                    repaint: false,
+                    consumed: false,
+                }
+            }
 
             // Wireframe addition, Copyright 2026 Wireframe contributors.
             // SPDX-License-Identifier: GPL-3.0-only (this match arm)
@@ -1038,12 +1176,7 @@ impl State {
                     self.egui_input.events.push(egui::Event::Copy);
                     return;
                 } else if is_paste_command(self.modifiers, active_key) {
-                    if let Some(contents) = self.clipboard.get() {
-                        let contents = contents.replace("\r\n", "\n");
-                        if !contents.is_empty() {
-                            self.egui_input.events.push(egui::Event::Paste(contents));
-                        }
-                    }
+                    self.paste_from_clipboard();
                     return;
                 }
             }
@@ -1083,7 +1216,10 @@ impl State {
     // Wireframe addition, Copyright 2026 Wireframe contributors.
     // SPDX-License-Identifier: GPL-3.0-only
     fn drain_native_input(&mut self) {
-        self.native_input.drain_into(&mut self.egui_input.events, || self.clipboard.get());
+        let last = self
+            .native_input
+            .drain_into(&mut self.egui_input.events, || self.clipboard.get());
+        self.last_diagnostic_event = self.last_diagnostic_event.max(last);
     }
 
     /// Call with the output given by `egui`.
@@ -1134,28 +1270,13 @@ impl State {
             mutable_text_under_cursor: _, // only used in eframe web
             ime,
             accesskit_update,
-            num_completed_passes: _,    // `egui::Context::run` handles this
-            request_discard_reasons: _, // `egui::Context::run` handles this
+            num_completed_passes: diagnostic_completed_passes,
+            request_discard_reasons: _,
         } = platform_output;
 
         for command in commands {
-            match command {
-                egui::OutputCommand::CopyText(text) => {
-                    self.clipboard.set_text(text);
-                }
-                // Wireframe addition, Copyright 2026 Wireframe contributors.
-                // SPDX-License-Identifier: GPL-3.0-only (this match arm)
-                egui::OutputCommand::CopyTextWithResult { request, text } => {
-                    let result = self.clipboard.set_text_checked(text);
-                    self.egui_input.events.push(egui::Event::ClipboardWriteResult { request, result });
-                    window.request_redraw();
-                }
-                egui::OutputCommand::CopyImage(image) => {
-                    self.clipboard.set_image(&image);
-                }
-                egui::OutputCommand::OpenUrl(open_url) => {
-                    open_url_in_browser(&open_url.url);
-                }
+            if self.handle_output_command(command) {
+                window.request_redraw();
             }
         }
 
@@ -1225,6 +1346,14 @@ impl State {
 
         #[cfg(not(feature = "accesskit"))]
         let _ = accesskit_update;
+        if let Some(bridge) = &self.diagnostic {
+            bridge.output_completed(
+                &self.egui_ctx,
+                self.viewport_id,
+                diagnostic_completed_passes,
+                diagnostic_completed_passes.saturating_sub(1),
+            );
+        }
     }
 
     /// Apply either a bitmap cursor (preferred when both `cursor_image`
@@ -2357,5 +2486,63 @@ pub fn short_window_event_description(event: &winit::event::WindowEvent) -> &'st
         WindowEvent::ThemeChanged { .. } => "WindowEvent::ThemeChanged",
         WindowEvent::Occluded { .. } => "WindowEvent::Occluded",
         WindowEvent::PanGesture { .. } => "WindowEvent::PanGesture",
+    }
+}
+
+#[cfg(test)]
+mod diagnostic_state_tests {
+    use super::*;
+    use std::sync::{Arc, Mutex};
+    #[derive(Default)]
+    struct Sink(Mutex<Vec<diagnostics::Receipt>>);
+    impl diagnostics::Observer for Sink {
+        fn record(&self, r: diagnostics::Receipt) { self.0.lock().unwrap().push(r); }
+        fn target(&self, _: &egui::Context, _: ViewportId) -> Option<egui::Id> { None }
+    }
+    struct NoDisplay;
+    impl HasDisplayHandle for NoDisplay {
+        fn display_handle(&self) -> Result<raw_window_handle::DisplayHandle<'_>, raw_window_handle::HandleError> {
+            Err(raw_window_handle::HandleError::NotSupported)
+        }
+    }
+    fn state(ctx: egui::Context, sink: Arc<Sink>) -> State {
+        State::new_with_diagnostics(ctx, ViewportId::ROOT, &NoDisplay, None, None, None,
+            Some(diagnostics::Bridge::new(sink)))
+    }
+    #[test]
+    fn diagnostic_state_routes_three_pastes_locally_and_denies_image_and_url_output() {
+        let ctx = egui::Context::default();
+        let sink = Arc::new(Sink::default());
+        let mut first = state(ctx.clone(), sink.clone());
+        let mut second = state(egui::Context::default(), Arc::new(Sink::default()));
+        first.handle_output_command(egui::OutputCommand::CopyText("local\r\ntext".into()));
+        assert_eq!(second.clipboard_text(), Some(String::new()));
+        // Keyboard path uses this exact helper; no native KeyEvent/window needed.
+        first.paste_from_clipboard();
+        assert_eq!(first.egui_input.events.remove(0), egui::Event::Paste("local\ntext".into()));
+        // Native menu path drains the same State-owned clipboard.
+        assert!(native_input::send(&ctx, ViewportId::ROOT, native_input::NativeInput::Paste));
+        first.drain_native_input();
+        assert_eq!(first.egui_input.events.remove(0), egui::Event::Paste("local\ntext".into()));
+        // eframe's RequestPaste action calls this State method.
+        assert_eq!(first.clipboard_text(), Some("local\r\ntext".into()));
+        first.handle_output_command(egui::OutputCommand::CopyImage(egui::ColorImage::filled([1,1], egui::Color32::RED)));
+        first.handle_output_command(egui::OutputCommand::OpenUrl(egui::OpenUrl::new_tab("https://invalid.example/")));
+        assert_eq!(first.clipboard_text(), Some("local\r\ntext".into()));
+        assert!(first.handle_output_command(egui::OutputCommand::CopyTextWithResult { request: 9, text: "cut".into() }));
+        assert!(matches!(&first.egui_input.events[0], egui::Event::ClipboardWriteResult { request: 9, result: Err(_) }));
+        assert_eq!(first.clipboard_text(), Some("local\r\ntext".into()));
+        let rows = sink.0.lock().unwrap();
+        assert!(rows.iter().any(|r| r.stage == "denied_copy_image"));
+        assert!(rows.iter().any(|r| r.stage == "denied_open_url"));
+        assert_eq!(rows.iter().filter(|r| r.stage == "native_paste_enqueued").count(),1);
+        assert_eq!(rows.iter().filter(|r| r.stage == "native_drained").count(),1);
+        assert_eq!(rows.iter().filter(|r| r.stage == "mapped").count(),1);
+        let seq=rows.iter().find(|r| r.stage == "native_paste_enqueued").unwrap().seq;
+        assert!(rows.iter().filter(|r| matches!(r.stage,"native_drained"|"mapped")).all(|r| r.seq == seq));
+        drop(rows);
+        drop(first);
+        assert!(!native_input::send(&ctx, ViewportId::ROOT, native_input::NativeInput::Paste));
+        assert_eq!(sink.0.lock().unwrap().last().unwrap().stage,"enqueue_failed");
     }
 }

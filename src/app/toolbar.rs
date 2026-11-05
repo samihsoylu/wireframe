@@ -21,7 +21,7 @@ impl WireframeApp {
                     .inner_margin(egui::Margin::symmetric(10, 2)),
             )
             .show(ui, |ui| {
-                let palette = chrome::toolbar_palette();
+                let palette = chrome::toolbar_palette_for(self.environment.diagnostic());
                 *ui.visuals_mut() = egui::Visuals::dark();
                 ui.visuals_mut().disabled_alpha = 0.4;
                 ui.visuals_mut().selection.stroke.color = palette.selected;

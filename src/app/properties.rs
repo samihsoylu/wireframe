@@ -392,7 +392,7 @@ impl WireframeApp {
         };
         let mut creation = None;
         let mut picked = false;
-        ui_text::combo_box(ui, "target", caption.unwrap_or(&title), |ui| {
+        let link_response = ui_text::combo_box(ui, "target", caption.unwrap_or(&title), |ui| {
             if ui_text::selectable_value(ui, &mut draft, None, "No link").clicked() {
                 picked = true;
                 ui.close();
@@ -431,6 +431,9 @@ impl WireframeApp {
                 ui.close();
             }
         });
+        if let Some(trace) = self.environment.trace() {
+            trace.target_for_source(ui.ctx(), id, link_response.response.id);
+        }
         let apply = if let Some(Link::Url(url)) = &mut draft {
             ui.add(TextInput::singleline(url).hint_text("https://…"));
             let mut cancelled = false;

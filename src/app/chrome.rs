@@ -113,3 +113,11 @@ pub(super) fn panel_header(
 
 #[cfg(test)]
 mod panel_resize_tests;
+
+pub(super) fn toolbar_palette_for(diagnostic: bool) -> ToolbarPalette {
+    if diagnostic {
+        ToolbarPalette::default()
+    } else {
+        toolbar_palette()
+    }
+}

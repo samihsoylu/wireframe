@@ -28,6 +28,13 @@ impl WireframeApp {
         }
     }
     pub(super) fn pdf_export_dialog(&mut self, ctx: &egui::Context) {
+        if self.environment.diagnostic() {
+            if self.pdf_options.is_some() {
+                self.environment.allow("pdf_dialog");
+            }
+            return;
+        }
+
         let Some(options) = &mut self.pdf_options else {
             return;
         };

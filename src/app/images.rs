@@ -11,6 +11,10 @@ use super::crop::{CropEdit, CropPreview};
 
 impl WireframeApp {
     pub(super) fn start_image_split(&mut self, id: Id) -> Result<(), String> {
+        if !self.environment.allow("image_split") {
+            return Err("Image processing is unavailable in diagnostic mode".into());
+        }
+
         let edit = (|| {
             let (full, _, crop) = self.editor.image_split_geometry(id)?;
             Ok::<_, String>(CropEdit {
@@ -361,6 +365,10 @@ impl WireframeApp {
         });
     }
     pub(super) fn start_image_import(&mut self, target: impl Into<ImageImportTarget>) {
+        if !self.environment.allow("image_dialog") {
+            return;
+        }
+
         let target = target.into();
         self.editor.commit();
         if let Some(path) = self.menus.with_dialog(|| {
@@ -372,6 +380,10 @@ impl WireframeApp {
         }
     }
     fn import_image_file(&mut self, target: ImageImportTarget, path: &std::path::Path) {
+        if !self.environment.allow("image_read") {
+            return;
+        }
+
         match Prepared::read(path) {
             Ok(image) => {
                 let conflict = self

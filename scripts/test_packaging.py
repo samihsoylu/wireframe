@@ -42,6 +42,67 @@ def write_file(path, data, mode=0o644):
     path.chmod(mode)
 
 
+class DiagnosticIdentityTests(unittest.TestCase):
+    def test_fresh_private_marker_matches_bundle_and_run(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve() / 'owned'
+            info = package.diagnostic_bundle_info('run-1', root)
+            self.assertEqual(info['CFBundleIdentifier'], 'nl.samihsoylu.wireframe.diagnostic.run-1')
+            self.assertTrue(info['WireframeDiagnostic'])
+            self.assertFalse(info['WireframeEnableUpdater'])
+            marker = json.loads((root / 'diagnostic.json').read_text())
+            self.assertEqual(marker, {'version': 1, 'run_id': 'run-1', 'bundle_id': info['CFBundleIdentifier'], 'root': str(root)})
+            self.assertEqual(stat.S_IMODE(root.stat().st_mode), 0o700)
+            self.assertEqual(stat.S_IMODE((root / 'diagnostic.json').stat().st_mode), 0o600)
+            with self.assertRaises(ValueError):
+                package.diagnostic_bundle_info('run-1', root)
+
+    def test_synthetic_bundle_has_private_identity_and_no_updater_payload(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            source = base / 'source'
+            write_file(source / 'assets/app-icon/Wireframe.icns', b'icon fixture')
+            write_file(source / 'LICENSE', b'license fixture')
+            binary = base / 'dummy-binary'
+            binary.write_bytes(b'non-executable test fixture')
+            with patch.object(package, 'ROOT', source), patch.object(package, 'run') as native, patch('sparkle.embed', side_effect=AssertionError('updater factory')):
+                bundle = package.mac_bundle(binary, base, '0.1.0', diagnostic=('run-2', base / 'owned'))
+            self.assertEqual(bundle.name, 'Wireframe Diagnostic run-2.app')
+            info = plistlib.loads((bundle / 'Contents/Info.plist').read_bytes())
+            self.assertEqual(info['CFBundleIdentifier'], 'nl.samihsoylu.wireframe.diagnostic.run-2')
+            self.assertEqual(info['WireframeDiagnosticRunID'], 'run-2')
+            self.assertEqual(info['WireframeDiagnosticRoot'], str(base / 'owned'))
+            self.assertFalse(info['WireframeEnableUpdater'])
+            self.assertNotIn('SUPublicEDKey', info)
+            self.assertFalse((bundle / 'Contents/Frameworks').exists())
+            self.assertEqual(native.call_count, 2)  # signing commands were mocked
+
+    def test_diagnostic_cli_refuses_production_distribution_before_building(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            for output in [base / 'dist', base / 'dist/private']:
+                with self.subTest(output=output), patch.object(package, 'ROOT', base), patch.object(package.platform, 'system', return_value='Darwin'), patch.object(package, 'run', side_effect=AssertionError('build must not start')), patch('sys.argv', ['package.py', '--debug', '--no-archive', '--diagnostic-run-id', 'run-1', '--diagnostic-root', str(base / 'owned'), '--diagnostic-output', str(output)]), self.assertRaises(SystemExit) as error:
+                    package.main()
+                self.assertEqual(error.exception.code, 2)
+
+    def test_diagnostic_updater_is_rejected_before_marker_or_copy(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve() / 'owned'
+            with self.assertRaises(ValueError), patch.object(package, 'run', side_effect=AssertionError('native command')):
+                package.mac_bundle(Path('unused'), Path(temporary), '0.1.0', update_info={}, diagnostic=('run-1', root))
+            self.assertFalse(root.exists())
+
+    def test_invalid_identity_and_redirected_root_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            for run in ['', 'bad.name', '../escape', 'x' * 41]:
+                with self.assertRaises(ValueError):
+                    package.diagnostic_bundle_info(run, base / 'unused')
+            (base / 'redirect').symlink_to(base, target_is_directory=True)
+            with self.assertRaises(ValueError):
+                package.diagnostic_bundle_info('run-1', base / 'redirect' / 'owned')
+
+
 class ArchiveTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()

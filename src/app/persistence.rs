@@ -123,6 +123,10 @@ impl WireframeApp {
         }
     }
     pub(super) fn enable_persistence(&mut self, ctx: &egui::Context, root: PathBuf) {
+        if !self.environment.allow("persistence_start") {
+            return;
+        }
+
         self.load_version_preferences(&root);
         self.load_viewport_preferences(&root);
         self.load_panel_preferences(&root);
@@ -566,6 +570,10 @@ impl WireframeApp {
         }
     }
     pub(super) fn set_save_mode(&mut self, enabled: bool) {
+        if !self.environment.allow("save_settings") {
+            return;
+        }
+
         let p = self.persistence.as_mut().unwrap();
         let result = (|| {
             let bytes = serde_json::to_vec_pretty(&Settings { automatic: enabled })

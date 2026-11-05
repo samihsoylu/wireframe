@@ -292,7 +292,9 @@ impl WireframeApp {
                                 })
                                 .color(Color32::WHITE),
                             )
-                            .fill(chrome::toolbar_palette().selected),
+                            .fill(
+                                chrome::toolbar_palette_for(self.environment.diagnostic()).selected,
+                            ),
                         )
                         .on_hover_text("Command/Ctrl+Enter")
                         .clicked()

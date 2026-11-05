@@ -29,6 +29,7 @@ define_class!(
         #[unsafe(method(performWireframeCommand:))]
         fn command(&self, sender: &NSMenuItem) {
             if let Some(command) = Command::from_id(sender.tag() as u64) {
+                if let Some(trace)=super::super::diagnostic_trace(&self.ivars().ctx) {trace.record("native_menu_callback",serde_json::json!({"command":command as u64,"enabled":self.enabled_for(sender)}));}
                 if !self.enabled_for(sender) { return; }
                 let input = command.native_input();
                 let release = match &input {

@@ -17,7 +17,11 @@ pub enum NativeInput {
     Paste,
 }
 
-type Pending = Mutex<VecDeque<NativeInput>>;
+struct Pending {
+    queue: Mutex<VecDeque<(u64, NativeInput)>>,
+    diagnostic: Option<crate::diagnostics::Bridge>,
+    viewport: ViewportId,
+}
 
 fn key(viewport: ViewportId) -> Id {
     Id::new(("wireframe-native-input", viewport))
@@ -37,12 +41,30 @@ pub fn is_available(ctx: &Context, viewport: ViewportId) -> bool {
 /// or when no native window backend is attached (for example in headless tests).
 pub fn send(ctx: &Context, viewport: ViewportId, input: NativeInput) -> bool {
     let Some(pending) = pending(ctx, viewport) else {
+        if let Some(bridge) = crate::diagnostics::Bridge::for_context(ctx, viewport) {
+            let seq = bridge.next_event();
+            bridge.record(crate::diagnostics::Receipt {
+                seq,
+                ..crate::diagnostics::Receipt::new("enqueue_failed", viewport)
+            });
+        }
         return false;
     };
+    let seq = pending.diagnostic.as_ref().map_or(0, |b| b.next_event());
+    if let Some(bridge) = &pending.diagnostic {
+        match &input {
+            NativeInput::Event(event) => bridge.input("native_enqueued", viewport, seq, event),
+            NativeInput::Paste => bridge.record(crate::diagnostics::Receipt {
+                seq,
+                ..crate::diagnostics::Receipt::new("native_paste_enqueued", viewport)
+            }),
+        }
+    }
     pending
+        .queue
         .lock()
         .unwrap_or_else(|e| e.into_inner())
-        .push_back(input);
+        .push_back((seq, input));
     ctx.request_repaint_of(viewport);
     true
 }
@@ -50,8 +72,23 @@ pub fn send(ctx: &Context, viewport: ViewportId, input: NativeInput) -> bool {
 pub(crate) struct Queue(Arc<Pending>);
 
 impl Queue {
+    #[cfg(test)]
     pub(crate) fn register(ctx: &Context, viewport: ViewportId) -> Self {
-        let queue = Self(Arc::new(Mutex::new(VecDeque::new())));
+        Self::register_with_diagnostics(ctx, viewport, None)
+    }
+    pub(crate) fn register_with_diagnostics(
+        ctx: &Context,
+        viewport: ViewportId,
+        diagnostic: Option<crate::diagnostics::Bridge>,
+    ) -> Self {
+        if let Some(bridge) = &diagnostic {
+            bridge.attach(ctx, viewport);
+        }
+        let queue = Self(Arc::new(Pending {
+            queue: Mutex::new(VecDeque::new()),
+            diagnostic,
+            viewport,
+        }));
         ctx.data_mut(|data| data.insert_temp(key(viewport), Arc::downgrade(&queue.0)));
         queue
     }
@@ -60,19 +97,37 @@ impl Queue {
         &self,
         events: &mut Vec<Event>,
         mut paste: impl FnMut() -> Option<String>,
-    ) {
+    ) -> u64 {
         // Release the queue lock before accessing platform clipboard APIs.
-        let pending = std::mem::take(&mut *self.0.lock().unwrap_or_else(|e| e.into_inner()));
-        for input in pending {
+        let pending = std::mem::take(&mut *self.0.queue.lock().unwrap_or_else(|e| e.into_inner()));
+        let mut last = 0;
+        for (seq, input) in pending {
+            last = last.max(seq);
+            if let Some(bridge) = &self.0.diagnostic {
+                bridge.record(crate::diagnostics::Receipt {
+                    seq,
+                    ..crate::diagnostics::Receipt::new("native_drained", self.0.viewport)
+                });
+            }
             match input {
-                NativeInput::Event(event) => events.push(event),
+                NativeInput::Event(event) => {
+                    if let Some(bridge) = &self.0.diagnostic {
+                        bridge.input("mapped", self.0.viewport, seq, &event);
+                    }
+                    events.push(event);
+                }
                 NativeInput::Paste => {
                     if let Some(text) = paste().filter(|s| !s.is_empty()) {
-                        events.push(Event::Paste(text.replace("\r\n", "\n")));
+                        let event = Event::Paste(text.replace("\r\n", "\n"));
+                        if let Some(bridge) = &self.0.diagnostic {
+                            bridge.input("mapped", self.0.viewport, seq, &event);
+                        }
+                        events.push(event);
                     }
                 }
             }
         }
+        last
     }
 }
 

@@ -17,6 +17,8 @@ mod components;
 #[cfg(test)]
 mod creation_tests;
 mod crop;
+mod diagnostics;
+pub(crate) mod environment;
 #[cfg(test)]
 mod export_tests;
 mod fonts;
@@ -137,6 +139,7 @@ enum Drag {
     },
 }
 pub struct WireframeApp {
+    environment: environment::AppEnvironment,
     menus: menus::Menus,
     compositor: Option<std::sync::Arc<wireframe::render::compositor::Compositor>>,
     editor: Editor,
@@ -326,6 +329,7 @@ impl WireframeApp {
             }
         }
         Self {
+            environment: environment::AppEnvironment::Normal,
             menus: menus::Menus::default(),
             compositor: None,
             editor: Editor::default(),
@@ -419,7 +423,14 @@ impl WireframeApp {
         }
     }
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let mut app = Self::workspace(&cc.egui_ctx, storage::recovery_path());
+        Self::new_with_environment(cc, environment::AppEnvironment::Normal)
+    }
+    pub(crate) fn new_with_environment(
+        cc: &eframe::CreationContext<'_>,
+        environment: environment::AppEnvironment,
+    ) -> Self {
+        let normal_environment = environment.clone();
+        let mut app = Self::workspace_in(&cc.egui_ctx, environment, storage::recovery_path);
         if let Some(gl) = cc.gl.as_deref() {
             match wireframe::render::compositor::Compositor::install(&cc.egui_ctx, gl) {
                 Ok(compositor) => app.compositor = Some(compositor),
@@ -430,34 +441,40 @@ impl WireframeApp {
                 }
             }
         }
-        if let Some(path) = storage::recovery_path().and_then(|p| p.parent().map(|p| p.to_owned()))
-        {
-            app.load_palette_defaults(&path);
-            app.load_reviewer(&path);
-            app.load_image_export_preferences(&path);
-            app.editor = app.new_editor();
-            app.enable_persistence(&cc.egui_ctx, path);
-        }
-        let args: Vec<_> = std::env::args_os().skip(1).collect();
-        #[cfg(target_os = "macos")]
-        let update_project = updates::take_reopened_project(!args.is_empty());
-        if args.iter().any(|a| a == "--demo") {
-            app.editor = Editor::new(Project::try_from(example_document()).expect("valid example"));
-        } else if let Some(path) = args.first() {
-            app.start_startup_open(PathBuf::from(path), &cc.egui_ctx);
-        }
-        #[cfg(target_os = "macos")]
-        if let Some(path) = update_project {
-            app.start_startup_open(path, &cc.egui_ctx);
-        }
+        normal_environment.normal_only(|| {
+            if let Some(path) =
+                storage::recovery_path().and_then(|p| p.parent().map(|p| p.to_owned()))
+            {
+                app.load_palette_defaults(&path);
+                app.load_reviewer(&path);
+                app.load_image_export_preferences(&path);
+                app.editor = app.new_editor();
+                app.enable_persistence(&cc.egui_ctx, path);
+            }
+            let args: Vec<_> = std::env::args_os().skip(1).collect();
+            #[cfg(target_os = "macos")]
+            let update_project = updates::take_reopened_project(!args.is_empty());
+            if args.iter().any(|a| a == "--demo") {
+                app.editor =
+                    Editor::new(Project::try_from(example_document()).expect("valid example"));
+            } else if let Some(path) = args.first() {
+                app.start_startup_open(PathBuf::from(path), &cc.egui_ctx);
+            }
+            #[cfg(target_os = "macos")]
+            if let Some(path) = update_project {
+                app.start_startup_open(path, &cc.egui_ctx);
+            }
+        });
         app.init_menus(cc);
         #[cfg(target_os = "macos")]
         {
             app.native_termination = native_termination::NativeTermination::new(&cc.egui_ctx);
-            match updates::Updates::start(app.native_termination.is_some()) {
-                Ok(updates) => app.updates = updates,
-                Err(error) => app.error = Some(format!("Updates are unavailable. {error}")),
-            }
+            normal_environment.normal_only(|| {
+                match updates::Updates::start(app.native_termination.is_some()) {
+                    Ok(updates) => app.updates = updates,
+                    Err(error) => app.error = Some(format!("Updates are unavailable. {error}")),
+                }
+            });
         }
         app
     }
@@ -493,6 +510,10 @@ impl WireframeApp {
         }
     }
     fn save(&mut self, choose: bool) -> bool {
+        if !self.environment.allow("save") {
+            return false;
+        }
+
         if self.save_busy() || self.startup_open.is_some() {
             return false;
         }
@@ -531,6 +552,10 @@ impl WireframeApp {
         }
     }
     fn choose_save_path(&self) -> Option<PathBuf> {
+        if !self.environment.allow("save_dialog") {
+            return None;
+        }
+
         #[cfg(test)]
         {
             self.save_dialog_choice.clone()
@@ -550,6 +575,12 @@ impl WireframeApp {
         })
     }
     fn request(&mut self, pending: Pending, ctx: &egui::Context) {
+        if self.environment.diagnostic() && !matches!(&pending, Pending::Quit) {
+            self.environment.allow("file_request");
+            return;
+        }
+        self.diagnostic_stage("close_or_request_received");
+
         self.dismiss_recoveries();
         if self.startup_open.is_some() {
             if matches!(pending, Pending::Quit) {
@@ -641,6 +672,7 @@ impl WireframeApp {
                 {
                     return;
                 }
+                self.diagnostic_stage("close_sent");
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
             Pending::Restore(id) => {
@@ -662,6 +694,13 @@ impl WireframeApp {
     }
     /// Shared with the full UI so modal drop refusal is checked before Open.
     fn open_dropped_project(&mut self, ctx: &egui::Context) {
+        if self.environment.diagnostic() {
+            if ctx.input(|i| !i.raw.dropped_files.is_empty()) {
+                self.environment.allow("dropped_project");
+            }
+            return;
+        }
+
         if !(self.startup_open.is_some()
             || self.save_busy()
             || self.present && self.presentation_view.settings_open)
@@ -684,6 +723,10 @@ impl WireframeApp {
         }
     }
     fn open(&mut self, ctx: &egui::Context) {
+        if !self.environment.allow("open_dialog") {
+            return;
+        }
+
         if let Some(path) = self.menus.with_dialog(|| {
             rfd::FileDialog::new()
                 .add_filter("Wireframe project", &["wireframe"])
@@ -693,6 +736,10 @@ impl WireframeApp {
         }
     }
     fn export(&mut self, png: bool) {
+        if !self.environment.allow("export_dialog") {
+            return;
+        }
+
         if !self.finish_page_notes() {
             return;
         }
@@ -2117,12 +2164,37 @@ impl eframe::App for WireframeApp {
     }
 
     fn raw_input_hook(&mut self, ctx: &egui::Context, raw: &mut egui::RawInput) {
+        self.diagnostic_input(ctx, raw, "hook_enter");
         self.deliver_menu_text_command(ctx, raw);
         self.order_text_input(ctx, raw);
         self.prepare_viewport_input(ctx, raw);
+        self.diagnostic_input(ctx, raw, "hook_exit");
     }
 
     fn on_exit(&mut self, gl: Option<&eframe::glow::Context>) {
+        self.diagnostic_stage("on_exit_enter");
+        if let Some(trace) = self.environment.trace() {
+            use sha2::{Digest, Sha256};
+            let graph = self.editor.document.encode().ok().map(|bytes| {
+                Sha256::digest(bytes)
+                    .iter()
+                    .map(|b| format!("{b:02x}"))
+                    .collect::<String>()
+            });
+            if self.editor.dirty()
+                || self.diagnostic_jobs() != 0
+                || graph.as_deref().is_none_or(|hash| !trace.is_baseline(hash))
+                || self.editor.undo_name().is_some()
+                || self.editor.redo_name().is_some()
+                || self.pending_cut.is_some()
+                || self.menus.has_pending_text_command()
+                || !self.deferred_text_input.is_empty()
+                || !self.deferred_cut_input.is_empty()
+                || self.deferred_text_focus.is_some()
+            {
+                trace.invalid("unexpected_dirty_or_jobs_at_exit");
+            }
+        }
         self.screenshot_text = None;
         self.startup_open = None;
         if let (Some(compositor), Some(gl)) = (self.compositor.take(), gl) {
@@ -2135,10 +2207,16 @@ impl eframe::App for WireframeApp {
             job.cancel();
             let _ = job.finish();
         }
+        self.diagnostic_stage("export_drains_complete");
         self.remember_version_view();
         self.remember_viewports(true);
         self.remember_presentation();
+        self.diagnostic_stage("preferences_complete");
         self.shutdown_persistence();
+        self.diagnostic_stage("persistence_complete");
+        if let Some(trace) = self.environment.trace() {
+            trace.finish();
+        }
     }
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.image_import_dialog(ui.ctx());
@@ -2154,7 +2232,9 @@ impl eframe::App for WireframeApp {
         self.capture_window_close(&ctx);
         self.open_dropped_project(&ctx);
         #[cfg(debug_assertions)]
-        if let Ok(path) = std::env::var("WIREFRAME_INPUT_TRACE") {
+        if !self.environment.diagnostic()
+            && let Ok(path) = std::env::var("WIREFRAME_INPUT_TRACE")
+        {
             let pointer_events = ctx.input(|i| {
                 i.events
                     .iter()
@@ -2197,6 +2277,7 @@ impl eframe::App for WireframeApp {
             wireframe::fonts::install_project(&ctx, self.editor.document.font.as_deref());
             self.installed_font = self.editor.document.font.clone();
             ctx.request_discard("Project font changed");
+            self.diagnostic_snapshot(&ctx);
             return;
         }
         if !self.present {
@@ -2238,6 +2319,7 @@ impl eframe::App for WireframeApp {
         self.remember_presentation();
         self.sync_recovery(false);
         self.update_menus(&ctx);
+        self.diagnostic_snapshot(&ctx);
         ctx.request_repaint_after(Duration::from_secs(2));
     }
 }
@@ -3990,4 +4072,8 @@ mod tests {
         app.editor.undo();
         assert_eq!(app.editor.document, before);
     }
+}
+
+fn diagnostic_trace(ctx: &egui::Context) -> Option<std::sync::Arc<diagnostics::Trace>> {
+    ctx.data(|d| d.get_temp(egui::Id::new("wireframe-diagnostic-trace")))
 }

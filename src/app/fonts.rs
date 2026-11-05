@@ -15,6 +15,13 @@ pub(super) struct FontImport {
 
 impl WireframeApp {
     pub(super) fn font_dialog(&mut self, ctx: &egui::Context) {
+        if self.environment.diagnostic() {
+            if self.font_import.is_some() {
+                self.environment.allow("font_dialog");
+            }
+            return;
+        }
+
         let Some(draft) = &mut self.font_import else {
             return;
         };

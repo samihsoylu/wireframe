@@ -69,6 +69,10 @@ impl Opening {
 }
 impl WireframeApp {
     pub(super) fn start_startup_open(&mut self, path: PathBuf, ctx: &egui::Context) {
+        if !self.environment.allow("startup_open") {
+            return;
+        }
+
         self.dismiss_recoveries();
         let copies = self.startup_copies();
         let source = path.clone();

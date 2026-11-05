@@ -162,6 +162,10 @@ impl WireframeApp {
         }
     }
     pub(super) fn open_image_export(&mut self) {
+        if !self.environment.allow("image_export") {
+            return;
+        }
+
         if self.image_export.job.is_some() {
             return;
         }
@@ -206,6 +210,10 @@ impl WireframeApp {
         request: Request,
         destination: Destination,
     ) -> Result<(), String> {
+        if !self.environment.allow("image_export_worker") {
+            return Err("Export is unavailable in diagnostic mode".into());
+        }
+
         if self.image_export.job.is_some() {
             return Err("An image export is already running".into());
         }
@@ -223,6 +231,10 @@ impl WireframeApp {
         Ok(())
     }
     fn choose_image_destination(&mut self) {
+        if !self.environment.allow("image_export_dialog") {
+            return;
+        }
+
         let Some(draft) = &self.image_export.draft else {
             return;
         };

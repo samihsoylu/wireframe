@@ -434,6 +434,10 @@ impl Review {
 }
 impl WireframeApp {
     pub(super) fn start_web_image(&mut self, ids: Vec<Id>) {
+        if !self.environment.allow("network") {
+            return;
+        }
+
         self.end_pointer_gestures();
         self.editor.commit();
         self.web_image = Some(Review {
@@ -463,6 +467,10 @@ impl WireframeApp {
         });
     }
     pub(super) fn start_image_search(&mut self, ids: Vec<Id>) {
+        if !self.environment.allow("network") {
+            return;
+        }
+
         self.start_web_image(ids);
         self.web_image.as_mut().unwrap().search_mode = true;
     }

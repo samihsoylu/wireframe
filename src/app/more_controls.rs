@@ -129,6 +129,10 @@ impl Browser {
 }
 impl WireframeApp {
     pub(super) fn open_more_controls(&mut self) {
+        if !self.environment.allow("control_import") {
+            return;
+        }
+
         if self.canvas_input_blocked() || self.image_crop.is_some() || !self.finish_page_notes() {
             return;
         }
@@ -136,6 +140,13 @@ impl WireframeApp {
         self.more_controls = Some(Browser::default());
     }
     pub(super) fn more_controls_dialog(&mut self, ctx: &egui::Context) {
+        if self.environment.diagnostic() {
+            if self.more_controls.is_some() {
+                self.environment.allow("control_import_dialog");
+            }
+            return;
+        }
+
         let Some(mut browser) = self.more_controls.take() else {
             return;
         };

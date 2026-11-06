@@ -9,12 +9,9 @@ import stat
 import struct
 import tomllib
 import zipfile
+import package as packaging
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE_DIRECTORIES = ('src', 'tests', 'examples', 'scripts', 'assets', 'vendor',
-                      'docs', 'licenses', '.github')
-SOURCE_FILES = ('Cargo.toml', 'Cargo.lock', 'build.rs', 'LICENSE', 'README.md', 'CHANGELOG.md',
-                'SESSION-SPEC.md', 'THIRD_PARTY_NOTICES.md')
 
 
 def require(condition, message):
@@ -210,33 +207,54 @@ def verify(artifact_dir, source_commit):
                 f'Checksum mismatch: {path.name}')
         identities[path.name] = {'bytes': path.stat().st_size, 'sha256': digest}
 
-    source_paths = [ROOT / path for path in SOURCE_FILES]
-    for directory in SOURCE_DIRECTORIES:
-        source_paths.extend(path for path in (ROOT / directory).rglob('*')
-                            if path.is_file() and '__pycache__' not in path.parts and path.suffix != '.pyc')
+    inventory = packaging.approved_inventory()
+    source_paths = [ROOT / name for name in inventory]
     with zipfile.ZipFile(archive) as package:
         require(package.testzip() is None, 'ZIP CRC failure')
         entries = package.infolist()
         require(len({entry.filename for entry in entries}) == len(entries), 'Duplicate ZIP paths')
+        destinations = set()
         for entry in entries:
             path = PurePosixPath(entry.filename)
             require(not path.is_absolute() and '..' not in path.parts and '\\' not in entry.filename
                     and path.parts[0] == name and ':' not in entry.filename, f'Unsafe ZIP path: {entry.filename}')
             require(not stat.S_ISLNK(entry.external_attr >> 16), f'Unexpected ZIP symlink: {entry.filename}')
+            key = packaging.destination_key(entry.filename.rstrip('/'))
+            require(key not in destinations, f'Conflicting ZIP destination: {entry.filename}')
+            destinations.add(key)
+            require(not packaging.private_path(entry.filename), f'Private package entry: {entry.filename}')
+        packaging.validate_inventory_paths({entry.filename: None for entry in entries if not entry.is_dir()})
         require(package.read(f'{name}/{name}/wireframe.exe') == payload, 'Archived EXE differs from portable EXE')
         expected_source = {f'{name}/source/{path.relative_to(ROOT).as_posix()}' for path in source_paths}
+        expected_source.add(f'{name}/source/{packaging.SOURCE_MANIFEST}')
         actual_source = {entry.filename for entry in entries
                          if entry.filename.startswith(f'{name}/source/') and not entry.is_dir()}
         require(actual_source == expected_source, 'Corresponding-source file set differs from checkout')
+        require(package.read(f'{name}/source/{packaging.SOURCE_MANIFEST}') == packaging.source_manifest_bytes(inventory),
+                'Corresponding-source inventory differs from checkout')
+        manifest_entry = package.getinfo(f'{name}/source/{packaging.SOURCE_MANIFEST}')
+        require(manifest_entry.create_system == 3 and (manifest_entry.external_attr >> 16) == (stat.S_IFREG | 0o644),
+                'Corresponding-source inventory permissions differ')
         for path in source_paths:
             require(not path.is_symlink(), f'Windows source contains symlink: {path}')
             relative = path.relative_to(ROOT).as_posix()
             require(package.read(f'{name}/source/{relative}') == path.read_bytes(), f'Source mismatch: {relative}')
-        for directory in ('licenses', 'assets'):
-            for path in (ROOT / directory).rglob('*'):
-                if path.is_file():
-                    relative = path.relative_to(ROOT).as_posix()
-                    require(package.read(f'{name}/{relative}') == path.read_bytes(), f'Reader payload mismatch: {relative}')
+            item = package.getinfo(f'{name}/source/{relative}')
+            require(item.create_system == 3 and (item.external_attr >> 16) == (stat.S_IFREG | inventory[relative]['mode']),
+                    f'Source permissions differ from Git inventory: {relative}')
+        reader_names = {relative for relative in inventory
+                        if any(relative == root or relative.startswith(root + '/') for root in packaging.READER_ROOTS)}
+        actual_readers = {entry.filename[len(name) + 1:] for entry in entries if not entry.is_dir()
+                          and any(entry.filename == f'{name}/{root}' or entry.filename.startswith(f'{name}/{root}/')
+                                  for root in packaging.READER_ROOTS)}
+        require(actual_readers == reader_names, 'Reader file set differs from approved inventory')
+        # Markdown reader links are deliberately relocated; assets and legal bytes stay exact.
+        for relative in reader_names:
+            item = package.getinfo(f'{name}/{relative}')
+            require(item.create_system == 3 and (item.external_attr >> 16) == (stat.S_IFREG | inventory[relative]['mode']),
+                    f'Reader permissions differ from Git inventory: {relative}')
+            if relative.startswith(('licenses/', 'assets/')):
+                require(package.read(f'{name}/{relative}') == (ROOT / relative).read_bytes(), f'Reader payload mismatch: {relative}')
         require(package.read(f'{name}/LICENSE') == (ROOT / 'LICENSE').read_bytes(), 'Missing product license')
         manifest = json.loads(package.read(f'{name}/licenses/manifest.json'))
         require(manifest, 'Empty dependency notice manifest')
@@ -248,7 +266,8 @@ def verify(artifact_dir, source_commit):
     return {'source_commit': source_commit, 'version': version, 'platform': 'Windows x86-64',
             'status': 'UNTESTED ON WINDOWS — static package inspection only',
             'runtime_tests_performed': False, 'application_launched': False,
-            'windows_icon_resource_verified': pe['icon_resource']['verified'], 'source_files_matched': len(source_paths),
+            'windows_icon_resource_verified': pe['icon_resource']['verified'], 'source_files_matched': len(source_paths) + 1,
+            'source_inventory_verified': True,
             'dependency_notices': len(manifest), 'zip_entries': len(entries), 'pe': pe,
             'artifacts': identities}
 

@@ -176,8 +176,10 @@ class CorrespondingSourceTests(unittest.TestCase):
     def test_archive_contains_build_source_and_verifier_rejects_its_removal(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / 'checkout'; root.mkdir()
-            for directory in verifier.SOURCE_DIRECTORIES: (root / directory).mkdir()
-            for filename in verifier.SOURCE_FILES: (root / filename).write_text('fixture\n')
+            for directory in ['src', 'scripts', 'assets', 'licenses', 'docs', 'vendor']: (root / directory).mkdir()
+            for filename in ['Cargo.toml', 'Cargo.lock', 'build.rs', 'LICENSE', 'README.md', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md',
+                             'src/main.rs', 'scripts/package.py']:
+                (root / filename).write_text('fixture\n')
             (root / 'Cargo.toml').write_text('[package]\nname="wireframe"\nversion="0.1.0-test"\n')
             build = b'fn main() { /* fixture build source */ }\n'; (root / 'build.rs').write_bytes(build)
             icons = root / 'assets/app-icon'; icons.mkdir()
@@ -185,27 +187,59 @@ class CorrespondingSourceTests(unittest.TestCase):
             license_dir = root / 'licenses/example'; license_dir.mkdir()
             (license_dir / 'LICENSE').write_text('Example terms\n')
             (root / 'licenses/manifest.json').write_text(json.dumps([{'name':'example','files':['example/LICENSE']}]))
+            with patch.object(package, 'ROOT', root):
+                inventory = {path.relative_to(root).as_posix(): package.source_entry(path.relative_to(root).as_posix())
+                             for path in sorted(root.rglob('*')) if path.is_file()}
+                inventory['scripts/package.py']['mode'] = 0o755
+                (root / package.SOURCE_MANIFEST).write_bytes(package.source_manifest_bytes(inventory))
+            # These local files must never become package inputs, even without Git.
+            (root / 'SESSION-SPEC.md').write_text('private session fixture')
+            (root / 'assets/private-sentinel.txt').write_text('private asset fixture')
+            (root / 'docs/TEAM-EXECUTION-PLAN.md').write_text('private plan fixture')
             out = Path(temporary) / 'dist'; out.mkdir()
             name = 'Wireframe-0.1.0-test-windows-x86_64'
             staging = Path(temporary) / name; staging.mkdir()
-            with patch.object(package, 'ROOT', root): package.copy_corresponding_source(staging / 'source')
+            with patch.object(package, 'ROOT', root):
+                package.copy_corresponding_source(staging / 'source')
+                package.copy_readers(staging, inventory)
             self.assertEqual((staging / 'source/build.rs').read_bytes(), build)
             self.assertEqual((staging / 'source/assets/app-icon/Wireframe.ico').read_bytes(), ICON)
             self.assertEqual((staging / 'source/assets/app-icon/windows.rc').read_text(), '1 ICON "Wireframe.ico"\n')
-            for directory in ['assets','licenses']: shutil.copytree(root / directory, staging / directory)
-            shutil.copyfile(root / 'LICENSE', staging / 'LICENSE')
+            self.assertFalse((staging / 'source/SESSION-SPEC.md').exists())
+            self.assertFalse((staging / 'assets/private-sentinel.txt').exists())
             exe = out / (name + '.exe'); image, _ = pe_fixture()
             image.extend(b'\0' * (1024 * 1024 + 1 - len(image))); exe.write_bytes(image)
             payload = staging / name; payload.mkdir(); shutil.copyfile(exe, payload / 'wireframe.exe')
             archive = out / (name + '.zip')
-            package.write_archive(staging, archive, 'windows', name)
+            # Simulate a host which loses executable bits, after source staging.
+            (staging / 'source/scripts/package.py').chmod(0o644)
+            package.write_archive(staging, archive, 'windows', name, inventory)
             def checksums():
                 for p in [exe,archive]:p.with_suffix(p.suffix+'.sha256').write_text(verifier.sha256(p.read_bytes())+'  '+p.name+'\n')
             checksums()
-            with patch.object(verifier,'ROOT',root):
+            with patch.object(verifier,'ROOT',root), patch.object(package, 'ROOT', root):
                 report = verifier.verify(out,'a'*40)
                 self.assertTrue(report['windows_icon_resource_verified'])
                 self.assertFalse(report['runtime_tests_performed']); self.assertFalse(report['application_launched'])
+                with zipfile.ZipFile(archive) as z:
+                    preserved = [(copy.copy(info), z.read(info)) for info in z.infolist()]
+                for invalid_mode in [0o100644, 0o040755]:
+                    with zipfile.ZipFile(archive, 'w') as z:
+                        for original, value in preserved:
+                            info = copy.copy(original)
+                            if info.filename == name + '/source/scripts/package.py':
+                                info.external_attr = (invalid_mode << 16)
+                            z.writestr(info, value)
+                    checksums()
+                    with self.subTest(mode=invalid_mode), self.assertRaisesRegex(ValueError, 'Source permissions differ'):
+                        verifier.verify(out, 'a' * 40)
+                package.write_archive(staging, archive, 'windows', name, inventory)
+                with zipfile.ZipFile(archive, 'a') as z:
+                    z.writestr(name + '/docs/session.md', b'private fixture')
+                checksums()
+                with self.assertRaisesRegex(ValueError, 'Private package entry'):
+                    verifier.verify(out, 'a' * 40)
+                package.write_archive(staging, archive, 'windows', name, inventory)
                 with zipfile.ZipFile(archive) as z: entries = {n:z.read(n) for n in z.namelist() if n != name+'/source/build.rs'}
                 with zipfile.ZipFile(archive,'w') as z:
                     for n,value in entries.items():z.writestr(n,value)

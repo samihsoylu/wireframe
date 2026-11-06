@@ -73,8 +73,9 @@ class UpdaterTests(unittest.TestCase):
         (bundle / 'previous').write_bytes(b'prior usable build')
         with patch.object(package, 'ROOT', self.root), patch('package.run'), \
              patch('sparkle.embed', side_effect=ValueError('download failed')):
+            inventory = {name: package.source_entry(name) for name in ['LICENSE', 'assets/app-icon/Wireframe.icns']}
             with self.assertRaisesRegex(ValueError, 'download failed'):
-                package.mac_bundle(binary, self.root, '0.1.0', self.configure(self.valid))
+                package.mac_bundle(binary, self.root, '0.1.0', self.configure(self.valid), inventory=inventory)
         self.assertEqual((bundle / 'previous').read_bytes(), b'prior usable build')
         self.assertEqual(list(self.root.glob('.bundle-*')), [])
 
@@ -87,7 +88,8 @@ class UpdaterTests(unittest.TestCase):
         stale = self.root / 'Wireframe.app/Contents/Frameworks/Sparkle.framework'
         stale.mkdir(parents=True)
         with patch.object(package, 'ROOT', self.root), patch('package.run'), patch('sparkle.embed') as embed:
-            bundle = package.mac_bundle(binary, self.root, '0.1.0')
+            inventory = {name: package.source_entry(name) for name in ['LICENSE', 'assets/app-icon/Wireframe.icns']}
+            bundle = package.mac_bundle(binary, self.root, '0.1.0', inventory=inventory)
         embed.assert_not_called()
         self.assertFalse(stale.exists())
         info = plistlib.loads((bundle / 'Contents/Info.plist').read_bytes())

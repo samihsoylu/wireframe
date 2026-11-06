@@ -5,27 +5,191 @@ import argparse
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import platform
 import plistlib
 import re
 import shutil
+import stat
 import subprocess
 import tarfile
 import tempfile
+import unicodedata
 import zipfile
 from urllib.parse import quote, unquote, urlsplit, urlunsplit
 import sparkle
 
 ROOT = Path(__file__).resolve().parents[1]
+SOURCE_MANIFEST = 'PACKAGE-SOURCE.json'
+PRIVATE_NOTES = {'SESSION.md', 'SESSION-SPEC.md', 'TEAM-EXECUTION-PLAN.md',
+                 'TEST-STRATEGY-AUDIT.md', 'TEST-STRATEGY-INVENTORY.json'}
+READER_ROOTS = ('LICENSE', 'README.md', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md',
+                'licenses', 'assets', 'docs', '.github')
 
-def copy_corresponding_source(destination):
-    destination.mkdir(exist_ok=True)
-    for path in ('src','tests','examples','scripts','assets','vendor','docs','licenses','.github'):
-        shutil.copytree(ROOT / path, destination / path, dirs_exist_ok=True, symlinks=True,
-            ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
-    for path in ('Cargo.toml','Cargo.lock','build.rs','LICENSE','README.md','CHANGELOG.md','SESSION-SPEC.md','THIRD_PARTY_NOTICES.md'):
-        shutil.copyfile(ROOT / path, destination / path)
+def destination_key(name):
+    return unicodedata.normalize('NFC', name).casefold()
+
+
+def private_path(name):
+    return destination_key(PurePosixPath(name).name) in {destination_key(note) for note in PRIVATE_NOTES}
+
+
+def approved_path(name):
+    if not isinstance(name, str):
+        return False
+    path = PurePosixPath(name)
+    return (bool(name) and not path.is_absolute()
+            and '\\' not in name and ':' not in name
+            and all(ord(character) >= 32 and ord(character) != 127 for character in name)
+            and all(part not in ('', '.', '..') and destination_key(part) != '.git'
+                    and not part.endswith((' ', '.')) for part in name.split('/'))
+            and not private_path(name) and destination_key(name) != destination_key(SOURCE_MANIFEST))
+
+
+def validate_inventory_paths(files):
+    destinations = {}
+    for name in files:
+        if not approved_path(name):
+            raise ValueError(f'Invalid source inventory path: {name}')
+        parts = name.split('/')
+        for length in range(1, len(parts) + 1):
+            prefix = '/'.join(parts[:length])
+            identity = (prefix, length == len(parts))
+            previous = destinations.setdefault(destination_key(prefix), identity)
+            if previous != identity:
+                raise ValueError(f'Conflicting source inventory destination: {name}')
+
+
+def unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f'Duplicate source inventory key: {key}')
+        result[key] = value
+    return result
+
+
+def source_entry(name):
+    path = ROOT / name
+    # A tracked path must never redirect a recursive copy through a local link.
+    if any(parent.is_symlink() for parent in path.parents if parent != ROOT and ROOT in parent.parents):
+        raise ValueError(f'Source parent is a symlink: {name}')
+    mode = path.lstat().st_mode
+    if stat.S_ISLNK(mode):
+        target = os.readlink(path)
+        if os.path.isabs(target) or not path.resolve(strict=True).is_relative_to(ROOT.resolve()):
+            raise ValueError(f'Source link leaves the source tree: {name}')
+        data = os.fsencode(target)
+        return {'mode': stat.S_IMODE(mode), 'sha256': hashlib.sha256(data).hexdigest(), 'link': target}
+    if not stat.S_ISREG(mode):
+        raise ValueError(f'Unsupported source entry: {name}')
+    return {'mode': stat.S_IMODE(mode), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+
+
+def matches_entry(name, entry):
+    if not isinstance(entry, dict) or type(entry.get('mode')) is not int:
+        return False
+    actual = source_entry(name)
+    allowed = {0o777} if 'link' in actual else {0o644, 0o755}
+    # Inventory permissions are canonical Git permissions, independent of the
+    # host's executable-bit support (notably Windows/core.filemode=false).
+    actual['mode'] = entry['mode']
+    return entry['mode'] in allowed and actual == entry
+
+
+def approved_inventory(require_clean=True):
+    """Use a reviewed Git tree, or the inventory shipped with Gitless source.
+
+    Untracked/ignored files are never inputs. Archives carry this public, hashed
+    inventory so repackaging needs neither local Git nor operational notes.
+    """
+    if (ROOT / '.git').exists():
+        def git(*args):
+            return subprocess.check_output(['git', '-C', str(ROOT), *args])
+        if require_clean:
+            result = subprocess.run(['git', '-C', str(ROOT), 'diff', '--no-ext-diff',
+                                     '--no-textconv', '--quiet', 'HEAD', '--'], check=False)
+            if result.returncode:
+                raise ValueError('Packaging requires a clean frozen tracked source tree')
+        files = {}
+        for row in git('ls-tree', '-rz', '--full-tree', 'HEAD').split(b'\0'):
+            if not row:
+                continue
+            header, raw = row.split(b'\t', 1)
+            mode, kind, _ = header.split()
+            name = raw.decode('utf-8')
+            if private_path(name):
+                continue
+            if not approved_path(name) or kind != b'blob' or mode not in (b'100644', b'100755', b'120000'):
+                raise ValueError(f'Unsupported tracked source: {name}')
+            files[name] = source_entry(name)
+            if ('link' in files[name]) != (mode == b'120000'):
+                raise ValueError(f'Source type differs from Git: {name}')
+            files[name]['mode'] = 0o777 if mode == b'120000' else int(mode, 8) & 0o777
+    else:
+        manifest = ROOT / SOURCE_MANIFEST
+        if not manifest.is_file() or manifest.is_symlink():
+            raise ValueError('No approved source inventory; use a frozen Git checkout or shipped source manifest')
+        data = json.loads(manifest.read_text(), object_pairs_hook=unique_object)
+        if (not isinstance(data, dict) or set(data) != {'format', 'files'}
+                or type(data['format']) is not int or data['format'] != 1 or not isinstance(data['files'], dict)):
+            raise ValueError('Invalid source inventory')
+        files = data['files']
+    validate_inventory_paths(files)
+    for name, entry in files.items():
+        if not matches_entry(name, entry):
+            raise ValueError(f'Source inventory mismatch: {name}')
+    required = ('Cargo.toml', 'Cargo.lock', 'build.rs', 'LICENSE', 'README.md',
+                'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md', 'licenses/manifest.json',
+                'scripts/package.py', 'src/main.rs')
+    if any(name not in files for name in required):
+        raise ValueError('Approved source inventory lacks required build or legal files')
+    for name, entry in files.items():
+        if 'link' in entry:
+            target = Path(os.path.normpath(ROOT / name / '..' / entry['link'])).relative_to(ROOT).as_posix()
+            if target not in files and not any(path.startswith(target + '/') for path in files):
+                raise ValueError(f'Source link target is not approved: {name}')
+    # A tracked manifest must not point to an omitted licence, even in Gitless source.
+    notices = json.loads((ROOT / 'licenses/manifest.json').read_text())
+    if not isinstance(notices, list) or not notices:
+        raise ValueError('Approved source inventory lacks dependency notices')
+    for notice in notices:
+        if not notice['files'] or any('licenses/' + name not in files for name in notice['files']):
+            raise ValueError('Approved source inventory lacks dependency licence files')
+    return files
+
+
+def copy_approved_files(destination, inventory, roots=None):
+    """The same allowlist governs source, readers and bundled assets."""
+    validate_inventory_paths(inventory)
+    for name, entry in inventory.items():
+        if roots is not None and not any(name == root or name.startswith(root + '/') for root in roots):
+            continue
+        if not matches_entry(name, entry):
+            raise ValueError(f'Source changed after inventory: {name}')
+        target = destination / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        for parent in PurePosixPath(name).parents:
+            if str(parent) != '.':
+                (destination / str(parent)).chmod(stat.S_IMODE((ROOT / str(parent)).stat().st_mode))
+        shutil.copy2(ROOT / name, target, follow_symlinks=False)
+        if 'link' not in entry:
+            target.chmod(entry['mode'])
+
+
+def copy_corresponding_source(destination, inventory=None):
+    inventory = approved_inventory() if inventory is None else inventory
+    destination.mkdir()
+    copy_approved_files(destination, inventory)
+    (destination / SOURCE_MANIFEST).write_bytes(source_manifest_bytes(inventory))
+
+
+def source_manifest_bytes(inventory):
+    return (json.dumps({'format': 1, 'files': inventory}, indent=2) + '\n').encode('utf-8')
+
+
+def copy_readers(destination, inventory):
+    copy_approved_files(destination, inventory, READER_ROOTS)
 
 def run(*args):
     env = os.environ.copy()
@@ -41,7 +205,7 @@ def copy_payload(payload, destination):
 def rewrite_documentation_links(staging):
     """Keep reader copies usable when code lives in corresponding source."""
     staging = staging.resolve()
-    documents = [staging / name for name in ('README.md', 'SESSION-SPEC.md', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md')]
+    documents = [staging / name for name in ('README.md', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md')]
     documents.extend((staging / 'docs').rglob('*.md'))
     for document in documents:
         if not document.is_file():
@@ -66,6 +230,11 @@ def rewrite_documentation_links(staging):
             target = urlunsplit(('', '', quote(path, safe='/@._-'), url.query, url.fragment))
             return '](' + ('<' + target + '>' if angled else target) + ')'
         text = document.read_text()
+        # Removed operational records are not distributed reader destinations.
+        def public_link(match):
+            url = urlsplit(match[2].strip('<>'))
+            return match[1] if not (url.scheme or url.netloc) and private_path(unquote(url.path)) else match[0]
+        text = re.sub(r'\[([^]\n]+)\]\(([^)\n]+)\)', public_link, text)
         revised = re.sub(r'\]\(([^)\n]+)\)', relocate, text)
         if revised != text:
             document.write_text(revised)
@@ -86,14 +255,14 @@ def installer_notices(text, archive_name):
     body = re.sub(r'\[([^]\n]+)\]\(([^)\n]+)\)', describe_location, body)
     return title + '\n\n' + introduction + '\n' + body
 
-def write_archive(staging, archive, system, name):
+def write_archive(staging, archive, system, name, inventory=None):
     # A refused or interrupted archive must not replace a prior good artifact.
     with tempfile.TemporaryDirectory(prefix='.archive-', dir=archive.parent) as temporary:
         candidate = Path(temporary) / archive.name
-        _write_archive(staging, candidate, system, name)
+        _write_archive(staging, candidate, system, name, inventory)
         os.replace(candidate, archive)
 
-def _write_archive(staging, archive, system, name):
+def _write_archive(staging, archive, system, name, inventory=None):
     if system == 'darwin':
         if staging.name != name:
             raise ValueError('macOS archive staging must use the package name')
@@ -104,12 +273,26 @@ def _write_archive(staging, archive, system, name):
         with tarfile.open(archive, 'w:gz') as tar:
             tar.add(staging, arcname=name)
     else:
+        if inventory is not None:
+            validate_inventory_paths(inventory)
         # Cargo sources can carry timestamps outside ZIP's date range.
         with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, strict_timestamps=False) as zip_file:
             for path in sorted(staging.rglob('*')):
                 if path.is_symlink():
                     raise ValueError(f'Windows packages cannot contain symlinks: {path}')
-                if path.is_file(): zip_file.write(path, Path(name) / path.relative_to(staging))
+                if path.is_file():
+                    relative = path.relative_to(staging).as_posix()
+                    source_name = relative.removeprefix('source/')
+                    canonical = (inventory or {}).get(source_name if relative.startswith('source/') else relative)
+                    mode = canonical['mode'] if canonical else stat.S_IMODE(path.stat().st_mode)
+                    if relative == 'source/' + SOURCE_MANIFEST:
+                        mode = 0o644
+                    info = zipfile.ZipInfo.from_file(path, str(PurePosixPath(name) / relative), strict_timestamps=False)
+                    info.create_system = 3
+                    info.external_attr = (stat.S_IFREG | mode) << 16
+                    info.compress_type = zipfile.ZIP_DEFLATED
+                    with path.open('rb') as incoming, zip_file.open(info, 'w') as outgoing:
+                        shutil.copyfileobj(incoming, outgoing)
 
 def mac_version_fields(version, build_number=None):
     # Apple bundle versions are numeric; the archive/Cargo version keeps beta labels.
@@ -145,11 +328,12 @@ def diagnostic_bundle_info(run_id, root):
             'WireframeDiagnostic': True, 'WireframeDiagnosticRunID': run_id,
             'WireframeDiagnosticRoot': str(root), 'WireframeEnableUpdater': False}
 
-def mac_bundle(binary, out, version, update_info=None, build_number=None, diagnostic=None):
+def mac_bundle(binary, out, version, update_info=None, build_number=None, diagnostic=None, inventory=None):
     # Stage completely before replacing a prior generated bundle. A download,
     # copy or signing failure leaves the prior bundle usable.
     if diagnostic and update_info is not None:
         raise ValueError('Diagnostic bundles cannot contain an updater configuration or payload')
+    inventory = approved_inventory() if inventory is None else inventory
     diagnostic_info = diagnostic_bundle_info(*diagnostic) if diagnostic else None
     bundle_name = diagnostic_info['CFBundleDisplayName'] + '.app' if diagnostic_info else 'Wireframe.app'
     destination = out / bundle_name
@@ -172,9 +356,8 @@ def mac_bundle(binary, out, version, update_info=None, build_number=None, diagno
         (bundle / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
         resources = bundle / 'Contents/Resources'
         resources.mkdir()
-        shutil.copyfile(ROOT / 'assets/app-icon/Wireframe.icns', resources / 'Wireframe.icns')
-        shutil.copyfile(ROOT / 'LICENSE', resources / 'LICENSE')
-        shutil.copytree(ROOT / 'assets', resources / 'assets')
+        copy_approved_files(resources, inventory, ('assets', 'LICENSE'))
+        shutil.copyfile(resources / 'assets/app-icon/Wireframe.icns', resources / 'Wireframe.icns')
         if update_info: sparkle.embed(bundle, ROOT / '.tooling' / 'sparkle')
         # Local ad-hoc signing is not Developer ID signing or notarization.
         run('codesign', '--force', '--deep', '--sign', '-', str(bundle))
@@ -224,6 +407,7 @@ def main():
             parser.error('--build-number must match the updater configuration build')
     if os.environ.get('CARGO_BUILD_TARGET') and not args.target:
         parser.error('Use --target explicitly instead of CARGO_BUILD_TARGET when packaging')
+    inventory = approved_inventory(require_clean=not args.no_archive)
     profile = 'debug' if args.debug else 'release'
     build = ['cargo', 'build', '--locked']
     if args.target: build.extend(['--target', args.target])
@@ -246,7 +430,7 @@ def main():
     if args.target: target_dir /= args.target
     binary = target_dir / profile / ('wireframe.exe' if system == 'windows' else 'wireframe')
     if system == 'darwin':
-        payload = mac_bundle(binary, out, version, update_info, args.build_number, diagnostic=diagnostic)
+        payload = mac_bundle(binary, out, version, update_info, args.build_number, diagnostic=diagnostic, inventory=inventory)
     else:
         payload = out / name
         payload.mkdir(exist_ok=True)
@@ -262,18 +446,13 @@ def main():
     staging.mkdir(parents=True)
     if payload.is_dir():
         copy_payload(payload, staging / payload.name)
-    for path in ('LICENSE','README.md','CHANGELOG.md','SESSION-SPEC.md','THIRD_PARTY_NOTICES.md'):
-        shutil.copyfile(ROOT / path, staging / path)
-    shutil.copytree(ROOT / 'licenses', staging / 'licenses', dirs_exist_ok=True)
-    shutil.copytree(ROOT / 'assets', staging / 'assets', dirs_exist_ok=True)
-    shutil.copytree(ROOT / 'docs', staging / 'docs', dirs_exist_ok=True)
-    shutil.copytree(ROOT / '.github', staging / '.github', dirs_exist_ok=True)
+    copy_readers(staging, inventory)
     # Include this product's corresponding source and build scripts with every package.
     source = staging / 'source'
-    copy_corresponding_source(source)
+    copy_corresponding_source(source, inventory)
     rewrite_documentation_links(staging)
     archive = out / (name + ('.tar.gz' if system == 'linux' else '.zip'))
-    write_archive(staging, archive, system, name)
+    write_archive(staging, archive, system, name, inventory)
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     archive.with_suffix(archive.suffix + '.sha256').write_text(f'{digest}  {archive.name}\n')
     print(json.dumps({'archive':str(archive),'sha256':digest,'profile':profile}))

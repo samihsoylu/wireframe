@@ -42,6 +42,173 @@ def write_file(path, data, mode=0o644):
     path.chmod(mode)
 
 
+class SourceInventoryTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.base = Path(self.temporary.name)
+        self.root = self.base / 'checkout'
+        self.root.mkdir()
+        files = {
+            'Cargo.toml': b'[package]\nname="wireframe"\nversion="0.1.0-beta.6"\n',
+            'Cargo.lock': b'fixture lock\n', 'build.rs': b'fn main() {}\n',
+            'LICENSE': b'product licence\n', 'README.md': b'[patches](vendor/README.md)\n',
+            'CHANGELOG.md': b'changes\n',
+            'THIRD_PARTY_NOTICES.md': b'[licence](licenses/item/LICENSE)\n',
+            'licenses/manifest.json': b'[{"name":"item","files":["item/LICENSE"]}]',
+            'licenses/item/LICENSE': b'dependency licence\n',
+            'src/main.rs': b'fn main() {}\n', 'scripts/package.py': b'# build input\n',
+            'docs/guide.md': b'[source](../src/main.rs)\n[current plan](../sEsSion%2DsPeC.md)\n[public history](https://example.test/SESSION-SPEC.md)\n',
+            'vendor/README.md': b'vendor patch notes\n',
+            'vendor/patched.rs': b'local tracked vendor changes\n',
+            'assets/app-icon/Wireframe.icns': b'icon fixture',
+            '.gitignore': b'SESSION*\nTEAM-EXECUTION-PLAN.md\nTEST-STRATEGY-*\nprivate-sentinel*\n',
+        }
+        for name, data in files.items():
+            write_file(self.root / name, data, 0o755 if name == 'scripts/package.py' else 0o644)
+        self.git('init', '-q')
+        self.git('add', '.')
+        self.git('-c', 'user.name=Packaging Fixture', '-c', 'user.email=fixture@example.invalid',
+                 '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'fixture')
+        self.root_patch = patch.object(package, 'ROOT', self.root)
+        self.root_patch.start()
+        self.addCleanup(self.root_patch.stop)
+
+    def git(self, *args):
+        return subprocess.check_output(['git', '-C', str(self.root), *args], stderr=subprocess.PIPE)
+
+    def stage(self):
+        inventory = package.approved_inventory()
+        destination = self.base / 'staging'
+        destination.mkdir()
+        package.copy_readers(destination, inventory)
+        package.copy_corresponding_source(destination / 'source', inventory)
+        package.rewrite_documentation_links(destination)
+        return destination, inventory
+
+    def test_absent_notes_and_private_recursive_inputs_never_ship(self):
+        for name in ['SESSION.md', 'SESSION-SPEC.md', 'docs/verification/TEAM-EXECUTION-PLAN.md',
+                     'docs/verification/TEST-STRATEGY-AUDIT.md', 'docs/verification/TEST-STRATEGY-INVENTORY.json']:
+            write_file(self.root / name, b'private fixture sentinel')
+        for directory in ['src', 'tests', 'examples', 'scripts', 'assets', 'vendor', 'docs', 'licenses', '.github']:
+            write_file(self.root / directory / 'private-sentinel.txt', b'ignored private fixture')
+            write_file(self.root / directory / 'untracked.txt', b'unapproved fixture')
+        destination, inventory = self.stage()
+        names = [p.relative_to(destination).as_posix() for p in destination.rglob('*')]
+        self.assertFalse(any('sentinel' in name or 'untracked' in name or Path(name).name in package.PRIVATE_NOTES for name in names))
+        for name in inventory:
+            self.assertEqual((destination / 'source' / name).read_bytes(), (self.root / name).read_bytes())
+        self.assertEqual((destination / 'licenses/item/LICENSE').read_bytes(), b'dependency licence\n')
+        self.assertEqual((destination / 'README.md').read_text(), '[patches](source/vendor/README.md)\n')
+        self.assertEqual((destination / 'docs/guide.md').read_text(), '[source](../source/src/main.rs)\ncurrent plan\n[public history](https://example.test/SESSION-SPEC.md)\n')
+        self.assertEqual(stat.S_IMODE((destination / 'source/scripts/package.py').stat().st_mode), 0o755)
+        self.assertFalse((destination / 'source/SESSION-SPEC.md').exists())
+
+    def test_absent_notes_package_and_gitless_repackage_with_same_inventory(self):
+        destination, expected = self.stage()
+        with patch.object(package, 'ROOT', destination / 'source'), patch.object(package.subprocess, 'check_output', side_effect=AssertionError('Git must not be needed')):
+            actual = package.approved_inventory()
+            self.assertEqual(actual, expected)
+            package.copy_corresponding_source(self.base / 'repackaged', actual)
+        self.assertEqual((self.base / 'repackaged' / package.SOURCE_MANIFEST).read_bytes(),
+                         (destination / 'source' / package.SOURCE_MANIFEST).read_bytes())
+
+    def test_dirty_tracked_source_stops_before_build(self):
+        write_file(self.root / 'vendor/patched.rs', b'uncommitted tracked change')
+        with patch.object(package, 'run', side_effect=AssertionError('build must not start')), \
+             patch('sys.argv', ['package.py']), self.assertRaisesRegex(ValueError, 'clean frozen'):
+            package.main()
+
+    def test_git_modes_and_windows_zip_permissions_ignore_lossy_host_stat(self):
+        self.git('config', 'core.filemode', 'false')
+        (self.root / 'scripts/package.py').chmod(0o644)
+        destination, inventory = self.stage()
+        self.assertEqual(inventory['scripts/package.py']['mode'], 0o755)
+        self.assertEqual(stat.S_IMODE((destination / 'source/scripts/package.py').stat().st_mode), 0o755)
+        # Windows may report this mode even after chmod; ZIP permissions must
+        # still come from Git, rather than ZipInfo's host-stat default.
+        (destination / 'source/scripts/package.py').chmod(0o644)
+        with patch.object(package, 'ROOT', destination / 'source'):
+            self.assertEqual(package.approved_inventory(), inventory)
+            package.copy_corresponding_source(self.base / 'gitless-restaged')
+        self.assertEqual(stat.S_IMODE((self.base / 'gitless-restaged/scripts/package.py').stat().st_mode), 0o755)
+        archive = self.base / 'synthetic-windows.zip'
+        package.write_archive(destination, archive, 'windows', 'Fixture', inventory)
+        with zipfile.ZipFile(archive) as packaged:
+            info = packaged.getinfo('Fixture/source/scripts/package.py')
+            self.assertEqual(info.create_system, 3)
+            self.assertEqual(stat.S_IMODE(info.external_attr >> 16), 0o755)
+            manifest = json.loads(packaged.read('Fixture/source/' + package.SOURCE_MANIFEST))
+            self.assertEqual(manifest['files']['scripts/package.py']['mode'], 0o755)
+
+    def test_casefolded_private_names_and_destination_aliases_are_rejected(self):
+        destination, inventory = self.stage()
+        source = destination / 'source'
+        manifest = source / package.SOURCE_MANIFEST
+        for name in ['session.md', 'Session-Spec.md', 'docs/team-execution-plan.MD',
+                     'docs/test-strategy-audit.Md', '.GIT/config', 'docs/trailing.']:
+            manifest.write_text(json.dumps({'format': 1, 'files': {**inventory, name: {}}}))
+            with self.subTest(name=name), patch.object(package, 'ROOT', source), self.assertRaises(ValueError):
+                package.approved_inventory()
+        for additions in [{'README.MD': {}}, {'DOCS/other.md': {}},
+                          {'docs/caf\u00e9.md': {}, 'docs/cafe\u0301.md': {}}]:
+            manifest.write_text(json.dumps({'format': 1, 'files': {**inventory, **additions}}))
+            with self.subTest(additions=additions), patch.object(package, 'ROOT', source), self.assertRaisesRegex(ValueError, 'Conflicting'):
+                package.approved_inventory()
+        for name in ['session.md', 'Session-Spec.md', 'TEAM-execution-plan.md']:
+            self.assertFalse(package.approved_path(name))
+
+    def test_missing_inventory_and_changed_or_missing_legal_input_fail_closed(self):
+        destination, _ = self.stage()
+        source = destination / 'source'
+        with patch.object(package, 'ROOT', source):
+            write_file(source / 'licenses/item/LICENSE', b'changed')
+            with self.assertRaisesRegex(ValueError, 'inventory mismatch'):
+                package.approved_inventory()
+            (source / package.SOURCE_MANIFEST).unlink()
+            with self.assertRaisesRegex(ValueError, 'No approved source inventory'):
+                package.approved_inventory()
+        manifest = json.loads((destination / 'source' / 'licenses/manifest.json').read_text())
+        manifest[0]['files'].append('missing/LICENSE')
+        write_file(self.root / 'licenses/manifest.json', json.dumps(manifest).encode())
+        with self.assertRaisesRegex(ValueError, 'dependency licence'):
+            package.approved_inventory(require_clean=False)
+
+    def test_gitless_manifest_rejects_private_traversal_and_duplicate_entries(self):
+        destination, inventory = self.stage()
+        source = destination / 'source'
+        manifest = source / package.SOURCE_MANIFEST
+        for name in ['SESSION-SPEC.md', 'SESSION.md', 'docs/verification/TEAM-EXECUTION-PLAN.md',
+                     'docs/verification/TEST-STRATEGY-AUDIT.md', '../outside', '/absolute', 'docs//alias', '.git/config']:
+            with self.subTest(name=name), patch.object(package, 'ROOT', source):
+                manifest.write_text(json.dumps({'format': 1, 'files': {**inventory, name: {}}}))
+                with self.assertRaises(ValueError):
+                    package.approved_inventory()
+        manifest.write_text('{"format":1,"files":{},"files":{}}')
+        with patch.object(package, 'ROOT', source), self.assertRaisesRegex(ValueError, 'Duplicate'):
+            package.approved_inventory()
+        for data in [{'format': True, 'files': inventory}, {'format': 1, 'files': []}, []]:
+            manifest.write_text(json.dumps(data))
+            with patch.object(package, 'ROOT', source), self.assertRaisesRegex(ValueError, 'Invalid source inventory'):
+                package.approved_inventory()
+
+    @unittest.skipIf(os.name == 'nt', 'Link fixture needs POSIX symlink creation')
+    def test_source_symlinks_and_directory_modes_preserved_and_redirects_rejected(self):
+        (self.root / 'docs/alias.md').symlink_to('guide.md')
+        (self.root / 'docs').chmod(0o775)
+        self.git('add', 'docs/alias.md')
+        self.git('-c', 'user.name=Packaging Fixture', '-c', 'user.email=fixture@example.invalid',
+                 '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'link fixture')
+        destination, inventory = self.stage()
+        self.assertEqual(os.readlink(destination / 'source/docs/alias.md'), 'guide.md')
+        self.assertEqual(os.readlink(destination / 'docs/alias.md'), 'guide.md')
+        self.assertEqual(stat.S_IMODE((destination / 'source/docs').stat().st_mode), 0o775)
+        (self.root / 'docs/alias.md').unlink()
+        (self.root / 'docs/alias.md').symlink_to(self.base)
+        with self.assertRaisesRegex(ValueError, 'leaves the source tree'):
+            package.copy_approved_files(self.base / 'refused', inventory)
+
+
 class DiagnosticIdentityTests(unittest.TestCase):
     def test_fresh_private_marker_matches_bundle_and_run(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -66,7 +233,9 @@ class DiagnosticIdentityTests(unittest.TestCase):
             binary = base / 'dummy-binary'
             binary.write_bytes(b'non-executable test fixture')
             with patch.object(package, 'ROOT', source), patch.object(package, 'run') as native, patch('sparkle.embed', side_effect=AssertionError('updater factory')):
-                bundle = package.mac_bundle(binary, base, '0.1.0', diagnostic=('run-2', base / 'owned'))
+                inventory = {name: package.source_entry(name) for name in ['assets/app-icon/Wireframe.icns', 'LICENSE']}
+                write_file(source / 'assets/private-sentinel.txt', b'private fixture')
+                bundle = package.mac_bundle(binary, base, '0.1.0', diagnostic=('run-2', base / 'owned'), inventory=inventory)
             self.assertEqual(bundle.name, 'Wireframe Diagnostic run-2.app')
             info = plistlib.loads((bundle / 'Contents/Info.plist').read_bytes())
             self.assertEqual(info['CFBundleIdentifier'], 'nl.samihsoylu.wireframe.diagnostic.run-2')
@@ -75,6 +244,7 @@ class DiagnosticIdentityTests(unittest.TestCase):
             self.assertFalse(info['WireframeEnableUpdater'])
             self.assertNotIn('SUPublicEDKey', info)
             self.assertFalse((bundle / 'Contents/Frameworks').exists())
+            self.assertFalse((bundle / 'Contents/Resources/assets/private-sentinel.txt').exists())
             self.assertEqual(native.call_count, 2)  # signing commands were mocked
 
     def test_diagnostic_cli_refuses_production_distribution_before_building(self):
@@ -178,6 +348,7 @@ class ArchiveTests(unittest.TestCase):
         archive.write_bytes(b'previous companion')
         metadata = json.dumps({'packages': [{'version': '0.1.0'}], 'target_directory': str(self.root / 'target')})
         with patch.object(package, 'ROOT', self.root), \
+             patch.object(package, 'approved_inventory', return_value={}), \
              patch.object(package, 'run'), \
              patch.object(package.subprocess, 'check_output', return_value=metadata), \
              patch.object(package.platform, 'system', return_value='Darwin'), \

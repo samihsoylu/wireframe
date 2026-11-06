@@ -1,8 +1,11 @@
 # Changes
 
-## Unreleased
+## 0.1.0-beta.6 — Candidate, not published
 
 - Keep the canvas text editor clear of the live preview when room is available. Fit the editor into smaller spaces while retaining text scrolling and keyboard controls.
+- Keep focused inspector controls in view while navigating with the keyboard, and show focus on the canvas and panel dividers.
+- Use Down to enter link pickers while preserving modified arrow-key navigation.
+- Reduce work when recording Undo steps in projects with large images.
 
 ## 0.1.0-beta.5 — Beta, published 4 November 2026
 

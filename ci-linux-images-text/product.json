@@ -1,6 +1,6 @@
 {
   "armed": true,
-  "productCommit": "dee3e43aa589024be3e440f119a139050486910b",
+  "productCommit": "75b316c0d2af4fe9380c5f6484169331b7ca8231",
   "version": "0.1.0-beta.6",
   "sourceManifest": {
     ".gitattributes": {
@@ -4925,8 +4925,8 @@
     },
     "scripts/package.py": {
       "mode": "0o644",
-      "bytes": 24648,
-      "sha256": "429d7900e3c56a7ced475eee3b65b42fa25922372ed4a5a2cb5432c37f26b9a7"
+      "bytes": 24660,
+      "sha256": "7fd08736590968caaf6af7f905bfd70ca7b1b9dd0a0938214dec8832fc9cf736"
     },
     "scripts/sparkle.py": {
       "mode": "0o644",
@@ -4945,8 +4945,8 @@
     },
     "scripts/test_packaging.py": {
       "mode": "0o644",
-      "bytes": 27946,
-      "sha256": "bc3c4141ca1b6d0b122bcdbce785278efc79b6296a0d957bfd2969afc0bbc977"
+      "bytes": 28983,
+      "sha256": "93fb49d9019d92919881710c085e104066b3592da6de026bb299f96fee621794"
     },
     "scripts/test_pe_report_order.py": {
       "mode": "0o644",
@@ -10133,5 +10133,5 @@
   "platformExcludedTargets": {
     "interface_typography": "Source file explicitly cfg(target_os=macos); separate platform acceptance"
   },
-  "reviewEvidenceSHA256": "5783cd27961529dc6a830557a76ab5d893552e59760cb47429b0bbdee2c346e9"
+  "reviewEvidenceSHA256": "bed5318445314a4eb02169b2f40009c4e6f12301600f00a4383bb1f0dc44570f"
 }

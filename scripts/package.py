@@ -229,14 +229,14 @@ def rewrite_documentation_links(staging):
             path = Path(os.path.relpath(source, document.parent)).as_posix()
             target = urlunsplit(('', '', quote(path, safe='/@._-'), url.query, url.fragment))
             return '](' + ('<' + target + '>' if angled else target) + ')'
-        text = document.read_text()
+        original = document.read_text()
         # Removed operational records are not distributed reader destinations.
         def public_link(match):
             url = urlsplit(match[2].strip('<>'))
             return match[1] if not (url.scheme or url.netloc) and private_path(unquote(url.path)) else match[0]
-        text = re.sub(r'\[([^]\n]+)\]\(([^)\n]+)\)', public_link, text)
+        text = re.sub(r'\[([^]\n]+)\]\(([^)\n]+)\)', public_link, original)
         revised = re.sub(r'\]\(([^)\n]+)\)', relocate, text)
-        if revised != text:
+        if revised != original:
             document.write_text(revised)
 
 def installer_notices(text, archive_name):

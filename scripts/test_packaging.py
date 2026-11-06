@@ -316,6 +316,20 @@ class ArchiveTests(unittest.TestCase):
                          text.replace('(vendor/README.md#patches)', '(source/vendor/README.md#patches)'))
         self.assertEqual((self.staging / 'source/THIRD_PARTY_NOTICES.md').read_text(), text)
 
+    def test_private_note_only_links_are_written_without_other_relocations(self):
+        original = 'See [current plan](SESSION-SPEC.md). [Public history](https://example.test/SESSION-SPEC.md).\n'
+        write_file(self.staging / 'README.md', original.encode())
+        write_file(self.staging / 'source/README.md', original.encode())
+        write_file(self.staging / 'docs/guide.md', b'See [current plan](../sEsSion%2DsPeC.md).\n')
+        package.rewrite_documentation_links(self.staging)
+        self.assertEqual((self.staging / 'README.md').read_text(),
+                         'See current plan. [Public history](https://example.test/SESSION-SPEC.md).\n')
+        self.assertEqual((self.staging / 'docs/guide.md').read_text(), 'See current plan.\n')
+        self.assertEqual((self.staging / 'source/README.md').read_text(), original)
+        before = (self.staging / 'README.md').read_bytes()
+        package.rewrite_documentation_links(self.staging)
+        self.assertEqual((self.staging / 'README.md').read_bytes(), before)
+
     def test_installer_notices_describe_zip_locations_and_keep_upstream_links(self):
         text = '# Notices\n\nCopyright retained. [changes](source/vendor/README.md#patches), [license](licenses/item/LICENSE), [upstream](https://example.test/license).\n'
         actual = package.installer_notices(text, 'Wireframe source.zip')

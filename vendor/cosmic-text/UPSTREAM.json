@@ -57,5 +57,10 @@
     "src/font/mod.rs",
     "src/font/system.rs",
     "src/swash.rs"
+  ],
+  "added_files": [
+    "LICENSE-WIREFRAME",
+    "UPSTREAM.json",
+    "screenshots/.gitattributes"
   ]
 }

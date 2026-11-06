@@ -1,0 +1,2 @@
+# Keep vendored README screenshots as ordinary Git binary blobs.
+*.png -filter -diff -merge -text

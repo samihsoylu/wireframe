@@ -21,7 +21,7 @@ import verify_package as package
 P = Path(__file__).resolve().parent
 GIB = 1024**3
 RESERVE, FREE_GATE, STABLE_CAP = GIB, 10 * GIB, 8 * GIB
-PACKAGE = 'Wireframe-0.1.0-beta.5-linux-aarch64'
+PACKAGE = 'Wireframe-0.1.0-beta.6-linux-aarch64'
 
 
 def source_identity(repo, binding):
@@ -84,6 +84,8 @@ def main():
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(data)
                 path.chmod(modes[name])
+            (source / 'PACKAGE-SOURCE.json').write_bytes(package.source_manifest_bytes(contents, modes))
+            (source / 'PACKAGE-SOURCE.json').chmod(0o644)
         else:
             previous = json.loads((receipts / 'prepare.json').read_text())
             require(previous['success'] and all(previous[k] == stage[k] for k in

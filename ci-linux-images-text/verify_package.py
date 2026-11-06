@@ -13,13 +13,14 @@ import struct
 import subprocess
 import sys
 import tarfile
+import unicodedata
 from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
 COMMIT = None
-NAME = 'Wireframe-0.1.0-beta.5-linux-aarch64'
-TOP = ('Cargo.toml', 'Cargo.lock', 'LICENSE', 'README.md', 'CHANGELOG.md',
-       'SESSION-SPEC.md', 'THIRD_PARTY_NOTICES.md')
-READER_TOP = ('LICENSE', 'README.md', 'CHANGELOG.md', 'SESSION-SPEC.md', 'THIRD_PARTY_NOTICES.md')
+NAME = 'Wireframe-0.1.0-beta.6-linux-aarch64'
+TOP = ('Cargo.toml', 'Cargo.lock', 'build.rs', 'LICENSE', 'README.md', 'CHANGELOG.md',
+       'THIRD_PARTY_NOTICES.md')
+READER_TOP = ('LICENSE', 'README.md', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md')
 SOURCE_DIRS = ('src', 'tests', 'examples', 'scripts', 'assets', 'vendor', 'docs', 'licenses', '.github')
 READER_DIRS = ('assets', 'licenses', 'docs', '.github')
 LINK = re.compile(r'\]\(([^)\n]+)\)')
@@ -131,6 +132,9 @@ def git_frozen(repo, manifest_path):
 
 
 def verify_frozen_source(source, contents, modes, directory_modes):
+    manifest = source / 'PACKAGE-SOURCE.json'
+    require(manifest.is_file() and not manifest.is_symlink()
+            and manifest.read_bytes() == source_manifest_bytes(contents, modes), 'Frozen public source inventory differs')
     for name, data in contents.items():
         path = source / name
         require(path.is_file() and not path.is_symlink(), f'Missing/linked frozen input: {name}')
@@ -161,16 +165,43 @@ def verify_frozen_source(source, contents, modes, directory_modes):
     require(all(int(mode, 8) in (0o755, 0o775) for mode in directory_modes.values()), 'Only 0755/0775 preserved directory modes are supported')
 
 
+def source_inventory(contents, modes):
+    private = {'SESSION.md', 'SESSION-SPEC.md', 'TEAM-EXECUTION-PLAN.md',
+               'TEST-STRATEGY-AUDIT.md', 'TEST-STRATEGY-INVENTORY.json'}
+    destinations = {}
+    for name in contents:
+        safe_name(name)
+        require(unicodedata.normalize('NFC', name).casefold() != 'package-source.json', 'Reserved source inventory path')
+        parts = name.split('/')
+        for length in range(1, len(parts) + 1):
+            prefix = '/'.join(parts[:length])
+            key = unicodedata.normalize('NFC', prefix).casefold()
+            require(not parts[length - 1].endswith((' ', '.'))
+                    and unicodedata.normalize('NFC', parts[length - 1]).casefold() != '.git', 'Ambiguous source destination')
+            identity = (prefix, length == len(parts))
+            require(destinations.setdefault(key, identity) == identity, 'Conflicting source destinations')
+    return {name: {'mode': modes[name], 'sha256': digest(data)} for name, data in contents.items()
+            if unicodedata.normalize('NFC', PurePosixPath(name).name).casefold() not in {note.casefold() for note in private}}
+
+
+def source_manifest_bytes(contents, modes):
+    return (json.dumps({'format': 1, 'files': source_inventory(contents, modes)}, indent=2) + '\n').encode('utf-8')
+
+
 def expected_package(contents, modes, binary_data, directory_modes=None):
     directory_modes = directory_modes or {}
     files = {}
-    source_files = set(contents) - {'.gitignore', '.gitattributes'}
+    private = {'SESSION.md', 'SESSION-SPEC.md', 'TEAM-EXECUTION-PLAN.md',
+               'TEST-STRATEGY-AUDIT.md', 'TEST-STRATEGY-INVENTORY.json'}
+    source_files = set(source_inventory(contents, modes))
+    manifest = source_manifest_bytes(contents, modes)
     require(set(TOP).issubset(source_files), 'Missing required corresponding-source top files')
     for name in source_files:
-        files['source/' + name] = (contents[name], 0o644 if name in TOP else modes[name])
+        files['source/' + name] = (contents[name], modes[name])
+    files['source/PACKAGE-SOURCE.json'] = (manifest, 0o644)
     for name in READER_TOP:
-        files[name] = (contents[name], 0o644)
-    for name in contents:
+        files[name] = (contents[name], modes[name])
+    for name in source_files:
         if name.split('/')[0] in READER_DIRS:
             files[name] = (contents[name], modes[name])
     files[NAME + '/wireframe'] = (binary_data, 0o755)
@@ -182,6 +213,10 @@ def expected_package(contents, modes, binary_data, directory_modes=None):
     links, rewritten = [], []
     for document in documents:
         original = files[document][0].decode('utf-8').replace('\r\n', '\n').replace('\r', '\n')
+        def public_link(match):
+            url = urlsplit(match[2].strip('<>'))
+            return match[1] if not (url.scheme or url.netloc) and unicodedata.normalize('NFC', PurePosixPath(unquote(url.path)).name).casefold() in {note.casefold() for note in private} else match[0]
+        original = re.sub(r'\[([^]\n]+)\]\(([^)\n]+)\)', public_link, original)
         def relocate(match):
             raw = match[1]
             angled = raw.startswith('<') and raw.endswith('>')
@@ -200,7 +235,7 @@ def expected_package(contents, modes, binary_data, directory_modes=None):
             target = urlunsplit(('', '', quote(local, safe='/@._-'), url.query, url.fragment))
             return '](' + ('<' + target + '>' if angled else target) + ')'
         revised = LINK.sub(relocate, original)
-        if revised != original:
+        if revised.encode('utf-8') != files[document][0]:
             files[document] = (revised.encode('utf-8'), files[document][1])
             rewritten.append(document)
         for raw in LINK.findall(revised):
@@ -361,7 +396,7 @@ def main():
               'archive_entry_tree_sha256': digest(json.dumps(archive_tree, sort_keys=True, separators=(',', ':')).encode()),
               'archive_directory_modes': directory_modes,
               'filtered_directory_modes': '0755 from exclusive validated-member materialization and process umask022',
-              'frozen_inputs_exact_git_bytes_modes': len(contents), 'corresponding_source_files_exact': len(set(contents) - {'.gitignore', '.gitattributes'}),
+              'frozen_inputs_exact_git_bytes_modes': len(contents), 'corresponding_source_files_exact': sum(name.startswith(NAME + '/source/') and item['kind'] == 'file' for name, item in wanted.items()),
               'reader_assets_licenses_exact': reader_count, 'reader_markdown_exact': sum(n in READER_TOP[1:] or (n.startswith('docs/') and n.endswith('.md')) for n in contents),
               'reader_markdown_changed_by_relocation': rewritten, 'local_reader_links_valid': len(links),
               'dependency_notice_records': len(notices), 'notice_file_references_valid': len(notice_files),

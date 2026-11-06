@@ -68,7 +68,7 @@ def snapshot(repo, commit):
 def build_binding(repo, commit, extra_required=()):
     manifest = snapshot(repo, commit)
     cargo = tomllib.loads((repo / 'Cargo.toml').read_text())
-    require(cargo['package']['name'] == 'wireframe' and cargo['package']['version'] == '0.1.0-beta.5',
+    require(cargo['package']['name'] == 'wireframe' and cargo['package']['version'] == '0.1.0-beta.6',
             'package/version requires controller review')
     require(not any(k in cargo for k in ['test', 'example', 'bench', 'workspace'])
             and cargo['package'].get('autotests', True) and cargo['package'].get('autoexamples', True),
@@ -122,10 +122,12 @@ def build_binding(repo, commit, extra_required=()):
     require(len(notices) == 410, 'notice inventory changed; review required')
     return {'armed': False, 'productCommit': commit, 'version': cargo['package']['version'],
             'sourceManifest': manifest, 'sourceFiles': len(manifest),
-            'packagedSourceFiles': len(set(manifest) - {'.gitignore', '.gitattributes'}),
+            'packagedSourceFiles': sum(Path(name).name.casefold() not in {'session.md', 'session-spec.md',
+                'team-execution-plan.md', 'test-strategy-audit.md', 'test-strategy-inventory.json'}
+                for name in manifest) + 1,
             'rootLockSHA256': sha(repo / 'Cargo.lock'),
             'ocrLockSHA256': sha(repo / 'vendor/wireframe-ocr/Cargo.lock'),
-            'noticeRecords': len(notices), 'groups': groups,
+            'noticeRecords': len(notices), 'groups': {'release': []},
             'requiredPassedIdentities': sorted(set(required)),
             'integrationTargets': integrations, 'exampleTargets': examples,
             'allowedIgnored': policy['allowedIgnored'],

@@ -313,6 +313,177 @@ impl Driver {
         self.click_point(rect.center());
     }
 
+    /// Distinguish a newly opened menu action from its still-present toolbar peer.
+    pub fn click_menu_action(&mut self, menu: &str, name: &str) {
+        self.frame(Vec::new());
+        self.check(
+            !egui::Popup::is_any_open(&self.ctx),
+            "menu targeting starts closed",
+        );
+        let toolbar = self.unique(name);
+        self.check(
+            toolbar.role == Role::Button,
+            "pre-existing action is a toolbar button",
+        );
+        let old_ids: Vec<_> = self
+            .nodes
+            .iter()
+            .filter(|node| node.name == name && !node.disabled)
+            .map(|node| node.id)
+            .collect();
+        self.click(menu);
+        self.frame(Vec::new());
+        let added: Vec<_> = self
+            .nodes
+            .iter()
+            .filter(|node| {
+                node.name == name
+                    && node.role == Role::Button
+                    && !node.disabled
+                    && !old_ids.contains(&node.id)
+            })
+            .cloned()
+            .collect();
+        assert_eq!(
+            added.len(),
+            1,
+            "expected one newly observed menu {name:?}; old={old_ids:?}; nodes={:?}\n{}",
+            self.nodes,
+            self.diagnostics()
+        );
+        let target = added[0].clone();
+        // Re-read a complete current frame; neither identity nor bounds may be stale.
+        self.frame(Vec::new());
+        self.check(
+            egui::Popup::is_any_open(&self.ctx),
+            "observed menu remains open",
+        );
+        let current: Vec<_> = self
+            .nodes
+            .iter()
+            .filter(|node| {
+                node.name == name
+                    && node.role == Role::Button
+                    && !node.disabled
+                    && !old_ids.contains(&node.id)
+            })
+            .collect();
+        assert_eq!(
+            current.len(),
+            1,
+            "menu target must remain unique; {:?}\n{}",
+            self.nodes,
+            self.diagnostics()
+        );
+        self.check(
+            current[0].id == target.id && current[0].rect == target.rect,
+            "current menu identity and bounds revalidated",
+        );
+        self.check(
+            self.nodes
+                .iter()
+                .filter(|node| {
+                    node.id == toolbar.id
+                        && node.name == name
+                        && node.role == Role::Button
+                        && !node.disabled
+                })
+                .count()
+                == 1,
+            "toolbar peer remains separately present",
+        );
+        let rect = current[0].rect.expect("current menu action has bounds");
+        self.check(
+            rect.is_positive() && Rect::from_min_size(Pos2::ZERO, self.size).contains_rect(rect),
+            "menu target is visible",
+        );
+        eprintln!(
+            "OBSERVED_MENU_ACTION menu={menu:?} action={name:?} toolbar={:?} menu_target={:?} bounds={rect:?}",
+            toolbar.id, target.id
+        );
+        self.click_point(rect.center());
+    }
+
+    fn visible_button(&self, name: &str) -> Option<LiveNode> {
+        let mut matches = self
+            .nodes
+            .iter()
+            .filter(|node| node.name == name && node.role == Role::Button && !node.disabled);
+        let node = matches.next()?;
+        if matches.next().is_some()
+            || !node.rect.is_some_and(|rect| {
+                rect.is_positive() && Rect::from_min_size(Pos2::ZERO, self.size).contains_rect(rect)
+            })
+        {
+            return None;
+        }
+        Some(node.clone())
+    }
+
+    fn dialog_ready(&self, message: &str, actions: &[&str]) -> bool {
+        self.ctx.memory(|m| m.top_modal_layer()).is_some()
+            // A static Label is observed content, not an enabled action.
+            && self.nodes.iter().filter(|node| {
+                node.role == Role::Label && node.name == message
+            }).count() == 1
+            && actions.iter().all(|name| self.visible_button(name).is_some())
+    }
+
+    /// Wait for exact dialog content and live actions, then revalidate the target.
+    pub fn click_dialog_action(&mut self, message: &str, actions: &[&str], action: &str) {
+        self.check(
+            actions.contains(&action),
+            "requested action belongs to dialog contract",
+        );
+        self.frame(Vec::new());
+        self.until(
+            "dialog content and enabled visible actions ready",
+            16,
+            |d| d.dialog_ready(message, actions),
+        );
+        let target = self.visible_button(action).unwrap();
+        self.frame(Vec::new());
+        self.check(
+            self.dialog_ready(message, actions),
+            "dialog remains current",
+        );
+        let current = self.visible_button(action).unwrap();
+        self.check(
+            current.id == target.id && current.rect == target.rect,
+            "dialog action identity and bounds revalidated",
+        );
+        eprintln!(
+            "OBSERVED_DIALOG_ACTION message={message:?} action={action:?} target={:?} bounds={:?}",
+            current.id, current.rect
+        );
+        self.click_point(current.rect.unwrap().center());
+    }
+
+    /// Observe the captured dialog gone and its underlying action available.
+    pub fn wait_dialog_dismissed(&mut self, message: &str, next_action: &str) {
+        self.frame(Vec::new());
+        self.until(
+            "captured dialog dismissed and underlying action ready",
+            16,
+            |d| {
+                !d.nodes.iter().any(|node| node.name == message)
+                    && d.visible_button(next_action).is_some()
+            },
+        );
+    }
+
+    pub fn wait_document_ready(&mut self) {
+        self.frame(Vec::new());
+        self.until("document commands ready after modal dismissal", 16, |d| {
+            d.ctx.memory(|m| m.top_modal_layer()).is_none()
+                && d.app.error.is_none()
+                && d.app.trash.is_none()
+                && d.app.startup_open.is_none()
+                && !d.app.save_busy()
+                && !egui::Popup::is_any_open(&d.ctx)
+        });
+    }
+
     pub fn focused(&self) -> Option<NodeId> {
         self.ctx
             .memory(|memory| memory.focused())

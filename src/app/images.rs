@@ -785,4 +785,389 @@ mod tests {
         app.editor.redo();
         assert_eq!(app.editor.document, after);
     }
+    // One joined normal-mode journey, not native input/chooser/process evidence.
+    #[test]
+    fn image_workflow_save_history_permanent_removal_and_fresh_reopen() {
+        use super::super::test_driver::Driver;
+        use sha2::{Digest, Sha256};
+        use wireframe::{document::Asset, render::Drawing, workspace::Editor};
+
+        fn text_graph(before: &Project, id: Id, text: &str) -> Project {
+            let mut expected = before.clone();
+            let node = expected.pages[0]
+                .content
+                .nodes
+                .iter_mut()
+                .find(|n| n.id == id)
+                .unwrap();
+            node.properties
+                .insert("text".into(), Value::Text(text.into()));
+            expected
+        }
+        fn draft(d: &mut Driver, id: Id, text: &str) {
+            // Explicit fixture selection; entry/typing/acceptance use full app frames.
+            d.app.editor.select(id, false);
+            d.idle(3);
+            let bounds = d
+                .app
+                .editor
+                .current()
+                .controls
+                .into_iter()
+                .find(|c| c.id == id)
+                .unwrap()
+                .bounds;
+            d.click_point(
+                d.app
+                    .screen([bounds.x + bounds.w / 2., bounds.y + bounds.h / 2.]),
+            );
+            d.tap(Key::Enter, Modifiers::NONE);
+            d.until("canvas text editor owns focus", 16, |d| {
+                d.app
+                    .text_edit
+                    .as_ref()
+                    .is_some_and(|(owner, _)| *owner == id)
+                    && wireframe::text_entry::is_focused(&d.ctx)
+            });
+            d.tap(Key::A, Modifiers::COMMAND);
+            d.frame(vec![egui::Event::Paste(text.into())]);
+            d.check(
+                d.app.text_edit.as_ref().map(|(_, value)| value.as_str()) == Some(text),
+                "exact provisional text",
+            );
+        }
+        fn edit(d: &mut Driver, id: Id, text: &str) {
+            draft(d, id, text);
+            d.tap(Key::Enter, Modifiers::NONE);
+            d.until("text commit completes", 16, |d| d.app.text_edit.is_none());
+            d.check(
+                d.app.editor.undo_name() == Some("Edit text") && d.app.error.is_none(),
+                "one committed Edit text action",
+            );
+        }
+        fn checkpoint(d: &Driver, expected: &Project, label: &str) {
+            d.project(expected, label); // Includes every page, property, ID and asset byte.
+            eprintln!(
+                "INTEGRATED_IMAGE {}",
+                serde_json::json!({
+                    "stage": label, "sketch": expected.settings.sketch,
+                    "expected": expected, "encoded_sha256": Sha256::digest(expected.encode().unwrap()).iter().map(|byte| format!("{byte:02x}")).collect::<String>(),
+                    "undo": d.app.editor.undo_name(), "redo": d.app.editor.redo_name(),
+                    "dirty": d.app.editor.dirty(), "error": d.app.error,
+                })
+            );
+        }
+        fn save(d: &mut Driver, path: &std::path::Path, expected: &Project) {
+            d.check(
+                !d.app.save_busy(),
+                "each Save starts without an outstanding request",
+            );
+            d.frame(vec![egui::Event::AppCommand(menus::Command::Save as u64)]);
+            // poll_saves precedes shortcut dispatch: this busy edge belongs to
+            // this invocation, even when the file and editor were already clean.
+            d.until("this Save command dispatches a worker request", 16, |d| {
+                d.app.save_busy()
+            });
+            d.wait_io("real manual-worker Save completes", |d| {
+                !d.app.save_busy()
+                    && !d.app.editor.dirty()
+                    && ProjectStore
+                        .load(path)
+                        .is_ok_and(|saved| saved == *expected)
+            });
+            d.project_value(
+                &ProjectStore.load(path).unwrap(),
+                expected,
+                "actual saved whole graph",
+            );
+            assert_eq!(
+                std::fs::read(path).unwrap(),
+                expected.encode().unwrap(),
+                "actual saved bytes"
+            );
+            d.check(
+                !d.app.editor.dirty() && d.app.error.is_none(),
+                "saved graph clean without error",
+            );
+            d.until("Save input and modal fully released", 16, |d| {
+                d.app.deferred_text_input.is_empty()
+                    && d.app.deferred_text_focus.is_none()
+                    && d.ctx.memory(|m| m.top_modal_layer()).is_none()
+            });
+        }
+        fn reopen(d: &mut Driver, path: &std::path::Path, expected: &Project) -> Driver {
+            d.finish_session("release real persistence owner");
+            let mut fresh = d.fresh();
+            fresh.enable_manual_persistence();
+            fresh.app.editor.mark_saved();
+            fresh.drop_project(path.to_path_buf());
+            fresh.wait_io("fresh drop-Open reads actual file", |d| {
+                d.app.startup_open.is_none() && d.app.file.as_deref() == Some(path)
+            });
+            checkpoint(&fresh, expected, "fresh app/context Open");
+            fresh.check(
+                !fresh.app.editor.dirty()
+                    && fresh.app.error.is_none()
+                    && fresh.app.editor.undo_name().is_none()
+                    && fresh.app.editor.redo_name().is_none(),
+                "fresh clean empty history",
+            );
+            fresh.wait_document_ready();
+            fresh
+        }
+        fn removed(before: &Project) -> Project {
+            let mut expected = before.clone();
+            expected.assets.retain(|asset| asset.id != 46);
+            expected.removed_assets.insert(46);
+            expected.next_id = 49;
+            expected
+        }
+
+        let public =
+            wireframe::document::decode(include_bytes!("../../examples/demo.wireframe")).unwrap();
+        assert_eq!(
+            public
+                .pages
+                .iter()
+                .map(|p| (p.id, p.content.nodes.len()))
+                .collect::<Vec<_>>(),
+            vec![(1, 7), (9, 11), (21, 11), (33, 11)]
+        );
+        assert_eq!(public.next_id, 45);
+        assert!(public.assets.is_empty());
+        for sketch in [false, true] {
+            let mut original = public.clone();
+            original.settings.sketch = sketch; // Style fixture precedes every oracle/history baseline.
+            let mut d = Driver::new();
+            d.app.editor = Editor::new(original.clone());
+            let path = d.path("Public demo image journey.wireframe");
+            ProjectStore.save(&path, &original).unwrap();
+            d.app.file = Some(path.clone());
+            d.enable_manual_persistence();
+            d.app.editor.mark_saved();
+            checkpoint(&d, &original, "public four-page baseline");
+
+            let first = text_graph(&original, 6, "Ask our team");
+            edit(&mut d, 6, "Ask our team");
+            checkpoint(&d, &first, "first committed Landing edit");
+            // Actual in-window menu action, with the document endpoint names checked.
+            d.click_menu_action("Edit", "Undo");
+            checkpoint(&d, &original, "menu Undo exact baseline");
+            d.check(
+                d.app.editor.undo_name().is_none() && d.app.editor.redo_name() == Some("Edit text"),
+                "Undo endpoint",
+            );
+            d.click_menu_action("Edit", "Redo");
+            checkpoint(&d, &first, "menu Redo exact edit");
+            d.tap(Key::Z, Modifiers::COMMAND);
+            checkpoint(&d, &original, "Undo before branch");
+            let branch = text_graph(&original, 6, "Talk with us");
+            edit(&mut d, 6, "Talk with us");
+            checkpoint(&d, &branch, "new branch excludes abandoned text");
+            d.check(
+                d.app.editor.redo_name().is_none(),
+                "branch discards actual Redo",
+            );
+
+            let rgba = image::RgbaImage::from_fn(120, 80, |x, y| {
+                image::Rgba(if x < 60 {
+                    [255, 0, 0, 255]
+                } else if y < 40 {
+                    [0, 255, 0, 255]
+                } else {
+                    [0, 0, 255, 0]
+                })
+            });
+            let mut encoded = Cursor::new(Vec::new());
+            rgba.write_to(&mut encoded, image::ImageFormat::Png)
+                .unwrap();
+            let primary = encoded.into_inner();
+            let secondary = picture(140).bytes;
+            let mut with_images = branch.clone();
+            for (node_id, asset_id, x, name, bytes) in [
+                (45, 46, 600., "primary-alpha.png", &primary),
+                (47, 48, 800., "unrelated.png", &secondary),
+            ] {
+                // Headless fixture/import boundary, never a native catalog/chooser claim.
+                let mut node = wireframe::catalog::get("image")
+                    .unwrap()
+                    .create(node_id, Point::new(x, 450.));
+                node.properties
+                    .insert("image".into(), Value::Asset(asset_id));
+                with_images.pages[0].content.nodes.push(node);
+                with_images.assets.push(Asset {
+                    attribution: None,
+                    id: asset_id,
+                    trashed: false,
+                    name: name.into(),
+                    media_type: "image/png".into(),
+                    bytes: bytes.clone(),
+                });
+                with_images.next_id = asset_id + 1;
+                let image_path = d.path(name);
+                std::fs::write(&image_path, bytes).unwrap();
+                d.app.editor.add(Kind::Image, x, 450.);
+                d.app
+                    .import_image_file(ImageTarget::Control(node_id).into(), &image_path);
+                d.check(
+                    d.app.error.is_none() && d.app.image_import.is_none(),
+                    "local owned image import succeeds",
+                );
+            }
+            checkpoint(
+                &d,
+                &with_images,
+                "two independently prescribed image assets",
+            );
+            let scene = d.app.editor.rendered_scene(1).unwrap();
+            let primary_image = scene
+                .items
+                .iter()
+                .find_map(|item| match &item.drawing {
+                    Drawing::Image { data, .. } if data.pixels.size == [120, 80] => Some(data),
+                    _ => None,
+                })
+                .unwrap();
+            assert_eq!(
+                primary_image.pixels.pixels[10 * 120 + 10].to_array(),
+                [255, 0, 0, 255]
+            );
+            assert_eq!(
+                primary_image.pixels.pixels[10 * 120 + 100].to_array(),
+                [0, 255, 0, 255]
+            );
+            assert_eq!(primary_image.pixels.pixels[70 * 120 + 100].a(), 0);
+            assert!(scene.svg().contains("data:image/png;base64,"));
+
+            let edit_one = text_graph(&with_images, 6, "Image history one");
+            let edit_two = text_graph(&edit_one, 7, "Image history two");
+            edit(&mut d, 6, "Image history one");
+            checkpoint(&d, &edit_one, "first image-bearing text snapshot");
+            edit(&mut d, 7, "Image history two");
+            checkpoint(&d, &edit_two, "second image-bearing text snapshot");
+            draft(&mut d, 6, "PROVISIONAL MUST NOT SAVE");
+            save(&mut d, &path, &edit_two);
+            d.check(
+                d.app.text_edit.as_ref().map(|(_, text)| text.as_str())
+                    == Some("PROVISIONAL MUST NOT SAVE"),
+                "Save leaves draft provisional",
+            );
+            d.tap(Key::Escape, Modifiers::NONE);
+            checkpoint(&d, &edit_two, "Save excludes and Escape cancels draft");
+            for expected in [&edit_one, &with_images] {
+                d.tap(Key::Z, Modifiers::COMMAND);
+                checkpoint(&d, expected, "image-bearing Undo");
+            }
+            for expected in [&edit_one, &edit_two] {
+                d.tap(Key::Z, Modifiers::COMMAND | Modifiers::SHIFT);
+                checkpoint(&d, expected, "image-bearing Redo");
+            }
+            save(&mut d, &path, &edit_two);
+            let mut opened = reopen(&mut d, &path, &edit_two);
+            let later_one = text_graph(&edit_two, 6, "Surviving history one");
+            let later_two = text_graph(&later_one, 7, "Surviving history two");
+            edit(&mut opened, 6, "Surviving history one");
+            edit(&mut opened, 7, "Surviving history two");
+            checkpoint(
+                &opened,
+                &later_two,
+                "fresh live segment has unrelated history",
+            );
+            let mut trashed = later_two.clone();
+            trashed
+                .assets
+                .iter_mut()
+                .find(|asset| asset.id == 46)
+                .unwrap()
+                .trashed = true;
+            opened.app.move_asset_to_trash(46); // Owned method boundary; modal interaction is full UI.
+            checkpoint(&opened, &trashed, "only primary image moved to Trash");
+            opened.click("Trash");
+            opened.click("Delete Permanently");
+            let confirmation =
+                "Permanently delete the selected item? This operation cannot be undone.";
+            opened.click_dialog_action(confirmation, &["Cancel", "Delete"], "Cancel");
+            opened.wait_dialog_dismissed(confirmation, "Delete Permanently");
+            checkpoint(
+                &opened,
+                &trashed,
+                "confirmation Cancel preserves graph and history",
+            );
+            opened.check(
+                opened.app.editor.undo_name() == Some("Move images to Trash")
+                    && opened.app.editor.redo_name().is_none(),
+                "Cancel preserves both history endpoints",
+            );
+            opened.click("Delete Permanently");
+            opened.click_dialog_action(confirmation, &["Cancel", "Delete"], "Delete");
+            opened.wait_document_ready();
+            let permanent = removed(&later_two);
+            checkpoint(
+                &opened,
+                &permanent,
+                "only confirmed asset permanently removed",
+            );
+            opened.check(
+                opened.app.trash.is_none(),
+                "single-item Trash closes after deletion",
+            );
+            let unavailable = opened.app.editor.rendered_scene(1).unwrap();
+            let labels: String = unavailable
+                .items
+                .iter()
+                .filter_map(|item| match &item.drawing {
+                    Drawing::Glyph(g) => Some(g.text.as_str()),
+                    _ => None,
+                })
+                .collect();
+            assert!(labels.contains("Image unavailable"));
+            // The removed asset's retention action is deliberately invalidated, not replayed.
+            opened.tap(Key::Z, Modifiers::COMMAND);
+            opened.check(
+                opened.app.error.as_deref()
+                    == Some(
+                        "Cannot undo Move images to Trash: the resource was permanently deleted",
+                    ),
+                "exact invalidated history notice",
+            );
+            opened.click_dialog_action(
+                "Cannot undo Move images to Trash: the resource was permanently deleted",
+                &["OK"],
+                "OK",
+            );
+            opened.wait_document_ready();
+            checkpoint(
+                &opened,
+                &permanent,
+                "invalidated retention snapshot cannot resurrect bytes",
+            );
+            for expected in [removed(&later_one), removed(&edit_two)] {
+                opened.tap(Key::Z, Modifiers::COMMAND);
+                checkpoint(
+                    &opened,
+                    &expected,
+                    "surviving unrelated Undo after permanent removal",
+                );
+            }
+            opened.check(
+                opened.app.editor.undo_name().is_none(),
+                "finite permanent Undo endpoint",
+            );
+            for expected in [removed(&later_one), permanent.clone()] {
+                opened.tap(Key::Z, Modifiers::COMMAND | Modifiers::SHIFT);
+                checkpoint(
+                    &opened,
+                    &expected,
+                    "surviving unrelated Redo without resurrection",
+                );
+            }
+            opened.check(
+                opened.app.editor.redo_name().is_none(),
+                "finite permanent Redo endpoint",
+            );
+            save(&mut opened, &path, &permanent);
+            let mut final_open = reopen(&mut opened, &path, &permanent);
+            final_open.finish_session("final real persistence owner closes");
+        }
+    }
 }

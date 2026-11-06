@@ -81,6 +81,9 @@ impl Editor {
         // Undo nor Redo may restore removed content from an older full snapshot.
         let mut history = self.history.clone();
         for change in &mut history {
+            // Length metadata is valid only beside its immutable snapshot.
+            change.before_asset_lengths = None;
+            change.after_asset_lengths = None;
             for snapshot in [&mut change.before, &mut change.after] {
                 remove_content(
                     &mut snapshot.document,
@@ -111,12 +114,16 @@ impl Editor {
             } else {
                 no_remaining_change
             };
-            change.bytes = serde_json::to_vec(&change.before.document)
-                .map_err(|e| e.to_string())?
-                .len()
-                + serde_json::to_vec(&change.after.document)
-                    .map_err(|e| e.to_string())?
-                    .len();
+            let before_size =
+                history_bytes::measure(&change.before.document, None).map_err(|e| e.to_string())?;
+            let after_size = history_bytes::measure(
+                &change.after.document,
+                Some((&change.before.document, &before_size.assets)),
+            )
+            .map_err(|e| e.to_string())?;
+            change.bytes = before_size.bytes + after_size.bytes;
+            change.before_asset_lengths = Some(before_size.assets);
+            change.after_asset_lengths = Some(after_size.assets);
         }
         let mut pending = self.pending.clone();
         if let Some((_, snapshot)) = &mut pending {

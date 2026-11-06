@@ -33,6 +33,7 @@ pub use library_transfer::{
 pub use project_copy::{PreparedProjectCopy, ProjectCopyCounts};
 pub use project_library_import::ProjectLibraryImportPlan;
 pub use project_page_import::{PageImportChoice, PageImportEntry, PageImportPlan};
+mod history_bytes;
 mod images;
 mod links;
 mod locking;
@@ -103,6 +104,8 @@ struct Change {
     before: Snapshot,
     after: Snapshot,
     bytes: usize,
+    before_asset_lengths: Option<history_bytes::AssetLengths>,
+    after_asset_lengths: Option<history_bytes::AssetLengths>,
     page_history: Option<trash::PageHistory>,
 }
 pub struct Editor {
@@ -353,16 +356,33 @@ impl Editor {
         }
         self.retain_visible_selection();
         self.history.truncate(self.cursor);
-        let bytes = serde_json::to_vec(&before.document).map_or(0, |v| v.len())
-            + serde_json::to_vec(&self.document).map_or(0, |v| v.len());
+        let reuse = self.history.last().and_then(|change| {
+            change
+                .after_asset_lengths
+                .as_ref()
+                .map(|lengths| (&change.after.document, lengths))
+        });
+        let (before_bytes, before_asset_lengths) =
+            history_bytes::normal(history_bytes::measure(&before.document, reuse));
+        let (after_bytes, after_asset_lengths) = history_bytes::normal(history_bytes::measure(
+            &self.document,
+            before_asset_lengths
+                .as_ref()
+                .map(|lengths| (&before.document, lengths)),
+        ));
         self.history.push(Change {
             invalidated: false,
             name,
             before,
             after: self.snapshot(),
-            bytes,
+            bytes: before_bytes + after_bytes,
+            before_asset_lengths,
+            after_asset_lengths,
             page_history,
         });
+        self.trim_recorded_history();
+    }
+    fn trim_recorded_history(&mut self) {
         let mut bytes: usize = self.history.iter().map(|c| c.bytes).sum();
         while self.history.len() > 1 && (self.history.len() > 100 || bytes > 64 * 1024 * 1024) {
             bytes = bytes.saturating_sub(self.history.remove(0).bytes);

@@ -1,0 +1,93 @@
+name: Linux fast feedback (12 selected checks)
+
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fast-feedback-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fast:
+    name: Headless Linux; 7 arrow guards + 5 app scenarios
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    env:
+      RUSTUP_TOOLCHAIN: 1.99.0
+      CARGO_BUILD_JOBS: '2'
+      CMAKE_BUILD_PARALLEL_LEVEL: '2'
+      CARGO_INCREMENTAL: '0'
+      CARGO_TERM_COLOR: never
+      RUST_BACKTRACE: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONUNBUFFERED: '1'
+      DISPLAY: ''
+      WAYLAND_DISPLAY: ''
+    steps:
+      - name: Check out candidate source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      # Explicit bash uses -e and pipefail: tee must not hide a failing command.
+      - name: Check runner accounting with synthetic fixtures
+        run: |
+          mkdir -p fast-feedback
+          python3 -m unittest discover -s scripts -p 'test_check.py' -v 2>&1 | tee fast-feedback/runner-tests.log
+
+      - name: Install Linux build dependencies (no desktop session)
+        run: |
+          sudo apt-get update 2>&1 | tee fast-feedback/dependencies.log
+          sudo apt-get install --no-install-recommends -y \
+            build-essential cmake pkg-config libssl-dev \
+            libx11-dev libxi-dev libxrandr-dev libxcursor-dev \
+            libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+            libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev \
+            libgl1-mesa-dev libegl1-mesa-dev 2>&1 | tee -a fast-feedback/dependencies.log
+
+      - name: Install pinned Rust compiler and record toolchain
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal 2>&1 | tee fast-feedback/toolchain.log
+          {
+            git rev-parse HEAD
+            uname -sm
+            python3 --version
+            rustc --version --verbose
+            cargo --version
+            cc --version
+            c++ --version
+            cmake --version
+            pkg-config --version
+            df -h .
+          } 2>&1 | tee -a fast-feedback/toolchain.log
+
+      - name: Run exactly 12 selected headless checks; no full-suite or native acceptance
+        timeout-minutes: 35
+        run: |
+          python3 scripts/check.py fast --jobs 2 --test-threads 2 --json fast-feedback/summary.json 2>&1 | tee fast-feedback/fast.log
+
+      # Never upload target binaries, the workspace, home directories or app data.
+      # Upload is best effort on cancellation/job timeout; Actions logs remain separate.
+      - name: Retain fast-lane accounting and diagnostics, including failures
+        if: ${{ always() }}
+        timeout-minutes: 3
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: linux-fast-feedback-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            fast-feedback/runner-tests.log
+            fast-feedback/dependencies.log
+            fast-feedback/toolchain.log
+            fast-feedback/fast.log
+            fast-feedback/summary.json
+          if-no-files-found: warn
+          retention-days: 14

@@ -149,17 +149,64 @@ def digest(path):
     return result.hexdigest()
 
 
+def git_stderr(raw):
+    # Filter failures can echo configured commands/URLs containing credentials.
+    redacted = bool(re.search(r'filter|[a-z][a-z0-9+.-]*://|password|token|credential|authorization', raw, re.I))
+    return {'stderr': '[redacted sensitive Git diagnostics]' if redacted else raw[:1024],
+            'stderr_redacted': redacted, 'stderr_truncated': len(raw) > 1024}
+
+
+def tracked_paths(output):
+    # --no-renames makes each name-status record exactly status NUL path NUL.
+    fields = output.split('\0')
+    if not output:
+        return {'paths': [], 'complete': True, 'truncated': False}
+    if fields[-1] != '' or len(fields) % 2 != 1 or any(
+            not re.fullmatch(r'[ADMTUXB]', fields[i]) or not fields[i + 1]
+            for i in range(0, len(fields) - 1, 2)):
+        return {'paths': [], 'complete': False, 'truncated': False, 'error': 'malformed tracked name-status output'}
+    count = (len(fields) - 1) // 2
+    paths = [{'status': fields[i], 'path': fields[i + 1][:512],
+              'path_truncated': len(fields[i + 1]) > 512}
+             for i in range(0, min(count, 32) * 2, 2)]
+    truncated = count > 32 or any(item['path_truncated'] for item in paths)
+    return {'paths': paths, 'complete': not truncated, 'truncated': truncated}
+
+
 def source_identity():
     files = ['Cargo.toml', 'Cargo.lock', 'src/app/scenario_tests.rs', 'src/app/test_driver.rs', 'src/arrows.rs']
     identity = {'fixture_and_config_sha256': {name: digest(ROOT / name) for name in files},
                 'runner_sha256': digest(Path(__file__).resolve())}
-    try:
-        revision = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=ROOT, capture_output=True, text=True)
-        dirty = subprocess.run(['git', 'diff', '--quiet', 'HEAD'], cwd=ROOT, capture_output=True)
-        identity.update(git_head=revision.stdout.strip() if revision.returncode == 0 else None,
-                        tracked_dirty=dirty.returncode != 0)
-    except OSError:
-        identity.update(git_head=None, tracked_dirty=None)
+    identity.update(git_head=None, tracked_dirty=None, git={})
+    commands = [
+        ('revision', ['git', 'rev-parse', 'HEAD']),
+        ('diff', ['git', 'diff', '--quiet', 'HEAD', '--']),
+        ('tracked_paths', ['git', 'diff', '--name-status', '-z', '--no-renames',
+                           '--no-ext-diff', '--no-textconv', 'HEAD', '--']),
+    ]
+    for name, command in commands:
+        try:
+            probe = subprocess.run(command, cwd=ROOT, capture_output=True, text=True,
+                                   encoding='utf-8', errors='replace')
+        except OSError as error:
+            # No process stderr exists, and exception text can contain private paths.
+            outcome = {'returncode': None, 'stderr': None, 'spawn_error': type(error).__name__,
+                       'spawn_errno': error.errno}
+        else:
+            outcome = {'returncode': probe.returncode, **git_stderr(probe.stderr)}
+            if name == 'revision' and probe.returncode == 0:
+                revision = probe.stdout.strip()
+                if re.fullmatch(r'[0-9a-fA-F]{40}|[0-9a-fA-F]{64}', revision):
+                    identity['git_head'] = revision
+                else:
+                    outcome['error'] = 'malformed revision output'
+            elif name == 'diff':
+                identity['tracked_dirty'] = {0: False, 1: True}.get(probe.returncode)
+            elif name == 'tracked_paths' and probe.returncode == 0:
+                outcome.update(tracked_paths(probe.stdout))
+        if name == 'tracked_paths' and 'paths' not in outcome:
+            outcome.update(paths=[], complete=False, truncated=False)
+        identity['git'][name] = outcome
     return identity
 
 

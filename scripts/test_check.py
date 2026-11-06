@@ -90,6 +90,120 @@ class AccountingTests(unittest.TestCase):
                 check.execution(text, 0, self.names, total)
 
 
+class SourceIdentityTests(unittest.TestCase):
+    revision = 'a' * 40
+
+    def identity(self, responses):
+        with patch.object(check, 'digest', return_value='b' * 64), \
+             patch.object(check.subprocess, 'run', side_effect=responses) as run:
+            identity = check.source_identity()
+        return identity, run.call_args_list
+
+    def test_diff_clean_dirty_error_and_signal_remain_distinct(self):
+        for code, expected in [(0, False), (1, True), (128, None), (-15, None)]:
+            with self.subTest(code=code):
+                identity, calls = self.identity([
+                    completed(self.revision + '\n'),
+                    completed(returncode=code, stderr='fatal: cannot read index\n' if code == 128 else ''),
+                    completed(),
+                ])
+                self.assertIs(identity['tracked_dirty'], expected)
+                self.assertEqual(identity['git_head'], self.revision)
+                self.assertEqual(identity['git']['diff']['returncode'], code)
+                self.assertEqual(len(calls), 3)
+                self.assertNotIn('stdout', identity['git']['diff'])
+                if code == 128:
+                    self.assertEqual(identity['git']['diff']['stderr'], 'fatal: cannot read index\n')
+
+    def test_revision_error_signal_spawn_and_malformed_output_are_separate(self):
+        cases = [completed(returncode=128, stderr='fatal: bad revision\n'),
+                 completed(returncode=-15), FileNotFoundError(2, 'private exception text'),
+                 completed('not-a-revision')]
+        for revision in cases:
+            with self.subTest(revision=revision):
+                identity, _ = self.identity([revision, completed(), completed()])
+                self.assertIsNone(identity['git_head'])
+                self.assertIs(identity['tracked_dirty'], False)
+                self.assertTrue(identity['git']['tracked_paths']['complete'])
+                if isinstance(revision, OSError):
+                    self.assertEqual(identity['git']['revision']['spawn_error'], 'FileNotFoundError')
+                elif revision.returncode == 0:
+                    self.assertEqual(identity['git']['revision']['error'], 'malformed revision output')
+                else:
+                    self.assertEqual(identity['git']['revision']['returncode'], revision.returncode)
+                self.assertNotIn('private exception text', json.dumps(identity))
+
+    def test_diff_spawn_failure_is_unknown_without_erasing_other_outcomes(self):
+        identity, _ = self.identity([completed(self.revision), PermissionError(13, 'private path'),
+                                     completed('M\0src/example.rs\0')])
+        self.assertIsNone(identity['tracked_dirty'])
+        self.assertEqual(identity['git_head'], self.revision)
+        self.assertEqual(identity['git']['diff']['spawn_errno'], 13)
+        self.assertIsNone(identity['git']['diff']['returncode'])
+        self.assertIsNone(identity['git']['diff']['stderr'])
+        self.assertTrue(identity['git']['tracked_paths']['complete'])
+        self.assertNotIn('private path', json.dumps(identity))
+
+    def test_tracked_metadata_preserves_status_and_unusual_names_only(self):
+        name = 'src/name with spaces\tand\nnewline.rs'
+        identity, calls = self.identity([completed(self.revision), completed(returncode=1),
+                                         completed('M\0' + name + '\0D\0removed.rs\0')])
+        metadata = identity['git']['tracked_paths']
+        self.assertEqual(metadata['returncode'], 0)
+        self.assertTrue(metadata['complete'])
+        self.assertEqual(metadata['paths'], [
+            {'status': 'M', 'path': name, 'path_truncated': False},
+            {'status': 'D', 'path': 'removed.rs', 'path_truncated': False},
+        ])
+        self.assertEqual(calls[2].args[0], ['git', 'diff', '--name-status', '-z', '--no-renames',
+                         '--no-ext-diff', '--no-textconv', 'HEAD', '--'])
+        self.assertNotIn('config', str(calls))
+
+    def test_tracked_metadata_failures_are_not_empty_success(self):
+        for probe in [completed(returncode=128, stderr='fatal: bad index\n'),
+                      completed(returncode=-15), FileNotFoundError(2, 'missing'),
+                      completed('M\0unterminated'), completed('file contents, not name-status'),
+                      completed('R100\0old\0new\0')]:
+            with self.subTest(probe=probe):
+                identity, _ = self.identity([completed(self.revision), completed(), probe])
+                metadata = identity['git']['tracked_paths']
+                self.assertFalse(metadata['complete'])
+                self.assertEqual(metadata['paths'], [])
+                self.assertIs(identity['tracked_dirty'], False)
+
+    def test_stderr_and_tracked_metadata_are_bounded_and_marked(self):
+        names = ''.join('M\0' + 'x' * 600 + str(i) + '\0' for i in range(40))
+        identity, _ = self.identity([completed(self.revision),
+                                     completed(returncode=128, stderr='x' * 2000), completed(names)])
+        diff = identity['git']['diff']
+        self.assertEqual(len(diff['stderr']), 1024)
+        self.assertTrue(diff['stderr_truncated'])
+        metadata = identity['git']['tracked_paths']
+        self.assertEqual(len(metadata['paths']), 32)
+        self.assertTrue(all(len(item['path']) == 512 and item['path_truncated'] for item in metadata['paths']))
+        self.assertTrue(metadata['truncated'])
+        self.assertFalse(metadata['complete'])
+
+    def test_filter_commands_and_credential_diagnostics_are_redacted_as_a_block(self):
+        for text in ["fatal: external filter 'echo secret-value' failed\nsecret-value\n",
+                     'fatal: https://user:secret-value@example.invalid/repo\n',
+                     'Authorization: Bearer secret-value\n',
+                     'x' * 2000 + "\nfilter 'echo secret-value' failed\n"]:
+            with self.subTest(text=text):
+                identity, _ = self.identity([completed(self.revision),
+                                             completed(returncode=128, stderr=text), completed()])
+                self.assertTrue(identity['git']['diff']['stderr_redacted'])
+                self.assertNotIn('secret-value', json.dumps(identity))
+                self.assertEqual(identity['git']['diff']['stderr'], '[redacted sensitive Git diagnostics]')
+
+    def test_git_unavailable_records_three_unknown_independent_outcomes(self):
+        identity, _ = self.identity([FileNotFoundError(2, 'missing Git') for _ in range(3)])
+        self.assertIsNone(identity['git_head'])
+        self.assertIsNone(identity['tracked_dirty'])
+        self.assertTrue(all(probe['returncode'] is None for probe in identity['git'].values()))
+        self.assertFalse(identity['git']['tracked_paths']['complete'])
+
+
 class OrchestrationTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -129,6 +243,7 @@ class OrchestrationTests(unittest.TestCase):
         code, summary, text, calls = self.run_main(self.success_responses())
         self.assertEqual(code, 0)
         self.assertEqual(summary['status'], 'passed')
+        self.assertEqual(summary['source'], self.identity)
         self.assertEqual([summary[key] for key in ['expected', 'selected_discovered', 'executed', 'passed']], [12]*4)
         self.assertEqual(sum(target['discovered_total'] for target in summary['targets']), 14)
         self.assertEqual(len(calls), 5)

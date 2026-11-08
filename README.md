@@ -9,7 +9,7 @@ Turn rough ideas into clear wireframes. Sketch a landing page, plan a mobile scr
 ## Make room for your ideas
 
 - Build screens from 86 controls: buttons, forms, navigation, tables, charts, device frames and more.
-- Choose **Wireframe** or **Mockup** in the top toolbar for a rough sketch or a clean style. Add your own images, icons and project fonts.
+- Choose **Wireframe** for a clean style or **Mockup** for a hand-drawn style in the top toolbar. Add your own images, icons and project fonts.
 - Search Wikimedia Commons for images and review their credits before adding them. Extract printed English text from screenshots locally, review it and copy it.
 - Double-click controls to edit their text. Move, resize, align and group them, with Undo and Redo as you work.
 - Organize pages, reuse components, and add notes and review comments.

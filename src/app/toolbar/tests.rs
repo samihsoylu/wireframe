@@ -3,12 +3,12 @@
 use super::*;
 use std::collections::BTreeMap;
 
-fn frame(
+fn toolbar_frame(
     app: &mut WireframeApp,
     ctx: &egui::Context,
     width: f32,
     events: Vec<egui::Event>,
-) -> BTreeMap<String, Rect> {
+) -> egui::FullOutput {
     use eframe::App;
     let mut raw = egui::RawInput {
         screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(width, 700.))),
@@ -16,7 +16,16 @@ fn frame(
         ..Default::default()
     };
     app.raw_input_hook(ctx, &mut raw);
-    let mut output = ctx.run_ui(raw, |ui| app.toolbar(ui));
+    ctx.run_ui(raw, |ui| app.toolbar(ui))
+}
+
+fn frame(
+    app: &mut WireframeApp,
+    ctx: &egui::Context,
+    width: f32,
+    events: Vec<egui::Event>,
+) -> BTreeMap<String, Rect> {
+    let mut output = toolbar_frame(app, ctx, width, events);
     let result = output
         .platform_output
         .accesskit_update
@@ -48,21 +57,50 @@ fn setup() -> (egui::Context, WireframeApp) {
     (ctx, app)
 }
 
+fn assert_selected_style(app: &mut WireframeApp, ctx: &egui::Context, selected: &str) {
+    use egui::accesskit::Toggled;
+
+    let mut output = toolbar_frame(app, ctx, 940., vec![]);
+    output.textures_delta.clear();
+    let nodes = &output
+        .platform_output
+        .accesskit_update
+        .as_ref()
+        .unwrap()
+        .nodes;
+    for label in ["Wireframe", "Mockup"] {
+        let (_, node) = nodes
+            .iter()
+            .find(|(_, node)| node.label() == Some(label))
+            .unwrap_or_else(|| panic!("Missing style button {label}"));
+        let expected = if label == selected {
+            Toggled::True
+        } else {
+            Toggled::False
+        };
+        assert_eq!(node.toggled(), Some(expected), "{label} selection");
+    }
+}
+
 #[test]
 fn visible_style_switch_changes_only_project_style_and_keeps_noop_redo() {
     let (ctx, mut app) = setup();
     let before = app.editor.document.clone();
-    click(&mut app, &ctx, "Mockup");
+    assert!(before.settings.sketch);
+    assert_selected_style(&mut app, &ctx, "Mockup");
+    click(&mut app, &ctx, "Wireframe");
     let mut expected = before.clone();
     expected.settings.sketch = false;
     assert!(app.editor.document == expected);
+    assert_selected_style(&mut app, &ctx, "Wireframe");
     app.editor.undo();
     assert!(app.editor.document == before);
-    click(&mut app, &ctx, "Wireframe");
+    assert_selected_style(&mut app, &ctx, "Mockup");
+    click(&mut app, &ctx, "Mockup");
     assert!(app.editor.document == before);
     app.editor.redo();
     assert!(app.editor.document == expected);
-    click(&mut app, &ctx, "Wireframe");
+    click(&mut app, &ctx, "Mockup");
     assert!(app.editor.document == before);
     app.editor.undo();
     assert!(app.editor.document == expected);
@@ -95,7 +133,8 @@ fn visible_style_switch_respects_an_open_canvas_text_draft() {
     let id = app.editor.nodes()[0].id;
     app.begin_text_edit(id);
     let before = app.editor.document.clone();
-    click(&mut app, &ctx, "Mockup");
+    assert!(before.settings.sketch);
+    click(&mut app, &ctx, "Wireframe");
     assert!(app.editor.document == before);
     assert!(app.text_edit.is_some());
 }

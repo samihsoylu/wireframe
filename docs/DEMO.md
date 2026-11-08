@@ -13,7 +13,7 @@ Choose a page in the left navigator and explore at your own pace:
 
 Use **Fit page** in the toolbar, or Command/Ctrl+0, to bring the whole page into view. The notes on each page suggest a few things to try.
 
-Choose **Wireframe** or **Mockup** in the top toolbar to compare hand-drawn and clean styles. This changes every page in the project; **Undo** restores the previous style.
+Choose **Wireframe** for the clean style or **Mockup** for the hand-drawn style in the top toolbar. This changes every page in the project; **Undo** restores the previous style.
 
 Double-click the Landing headline, type your own wording and press Return. Try **Undo** and **Redo**. For a multiline message, Return adds a line; Command/Ctrl+Enter finishes the edit. Escape cancels an unfinished edit.
 

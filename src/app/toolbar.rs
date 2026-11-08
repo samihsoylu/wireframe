@@ -113,10 +113,14 @@ impl WireframeApp {
             for (label, value, hint) in [
                 (
                     "Wireframe",
+                    false,
+                    "Clean style for all pages in this project",
+                ),
+                (
+                    "Mockup",
                     true,
                     "Hand-drawn style for all pages in this project",
                 ),
-                ("Mockup", false, "Clean style for all pages in this project"),
             ] {
                 if ui
                     .selectable_label(sketch == value, label)

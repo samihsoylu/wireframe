@@ -54,6 +54,18 @@ Other tests, integration/vendor suites, native desktop/UI/clipboard/dialog behav
 python3 -m unittest discover -s scripts -p 'test_check.py'
 ```
 
+For changes to build, packaging, updater configuration, notices or PE inspection,
+run the existing Python tooling suite directly from the checkout:
+
+```sh
+python3 -m unittest discover -s scripts -p 'test_*.py'
+```
+
+This includes the runner checks above, uses temporary/synthetic package fixtures,
+and does not launch Wireframe or Windows binaries. macOS-only archive checks are
+reported as skipped on other hosts. The separate opt-in native bus checks under
+`scripts/verification` are not part of this discovery command.
+
 The [Linux fast-feedback workflow](../.github/workflows/fast-feedback.yml) runs these runner contract tests and the same 12 selected checks on Ubuntu 24.04 with Rust 1.99.0. It triggers for pull requests, pushes to `main` or `codex/**`, and manual runs. The workflow lists the Linux build packages and records the actual compiler/CMake versions; it uses two build jobs and two test threads without starting a desktop session. The Windows build-only workflow remains separate.
 
 CI reuses Cargo registry data and debug build outputs, keyed by runner image,

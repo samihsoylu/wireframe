@@ -22,13 +22,31 @@ python3 scripts/check.py fast
 python3 scripts/check.py fast --offline
 ```
 
+For a focused edit, select an existing regression group:
+
+```sh
+python3 scripts/check.py fast --offline --case arrows
+python3 scripts/check.py fast --offline --case picker
+python3 scripts/check.py fast --offline --case text --case io
+```
+
+The choices are `arrows` (seven geometry guards), `picker`, `drag`, `text`
+(draft/save/history/reopen), `io` (async failure/ownership), and `link` (No link
+cancellation). App choices each select one existing scenario. Repeated choices
+are deduplicated. Only the needed root test targets are built and listed: an
+arrow-only check does not build the application test binary. Cargo still checks
+freshness, and executable/input hashes and exact result accounting remain in force.
+The console and JSON identify omitted fast tests. Use the full command without
+`--case` before handing off a change; focused success does not replace the full
+fast lane. CI continues to run all 12 checks.
+
 This host-headless lane builds only the root library and application test binaries, then runs seven arrow guards and five full-app scenarios (picker input/focus, interrupted drag/history, draft/save/reopen, async failure/ownership, and whole-control No link cancellation). It preserves the existing tests. Build and test phases are sequential, with two build jobs and two test threads by default; use `--jobs 1 --test-threads 1` for serial debugging.
 
-The command lists only those two executables and verifies every required name and result. Missing, duplicate, ignored, failed or incomplete required results fail the command; unselected tests are never reported as passed. There are no retries, automatic timeouts, tool installs or profile changes. Configure the same Rust/C/C++/SDK/CMake environment as an ordinary build; all `WIREFRAME_*` app overrides are removed from child processes. Cross-target `CARGO_BUILD_TARGET` is rejected because the lane executes host test binaries.
+The command lists each selected executable and verifies every required name and result. Missing, duplicate, ignored, failed or incomplete required results fail the command; unselected tests are never reported as passed. There are no retries, automatic timeouts, tool installs or profile changes. Configure the same Rust/C/C++/SDK/CMake environment as an ordinary build; all `WIREFRAME_*` app overrides are removed from child processes. Cross-target `CARGO_BUILD_TARGET` is rejected because the lane executes host test binaries.
 
 A concise console result separates build, discovery and test execution time. The machine summary defaults to `target/check-fast.json`; choose another path with `--json PATH`. Check both the command's exit status and the summary's `status`. A new run replaces an old green report with `running` before building. Fixture/configuration and executable hashes identify the measured selection; timings describe that invocation, with no full-cold or whole-suite speed claim or fixed pass-time threshold.
 
-The runner checks each recorded executable hash immediately before and after its discovery and execution, then checks both executables and the recorded fixture/configuration inputs again before reporting success. Observed drift fails the command. These are point-in-time concurrency checks; they cannot establish an atomic snapshot or detect a change that is restored between checks. Avoid concurrent builds and source edits during the lane.
+The runner checks each recorded executable hash immediately before and after its discovery and execution, then checks all selected executables and the recorded fixture/configuration inputs again before reporting success. Observed drift fails the command. These are point-in-time concurrency checks; they cannot establish an atomic snapshot or detect a change that is restored between checks. Avoid concurrent builds and source edits during the lane.
 
 Other tests, integration/vendor suites, native desktop/UI/clipboard/dialog behavior, visual checks, Windows desktop runtime and release builds are outside this command. Passing this lane is not release or native acceptance. The broader commands above remain separate checks. Runner contract tests use synthetic Cargo/libtest output:
 

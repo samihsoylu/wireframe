@@ -224,13 +224,13 @@ class OrchestrationTests(unittest.TestCase):
         self.messages = messages + [{'reason': 'build-finished', 'success': True}]
         self.build = '\n'.join(json.dumps(item) for item in self.messages)
 
-    def run_main(self, responses):
+    def run_main(self, responses, *args):
         text = io.StringIO()
         with patch.object(check, 'ROOT', self.root), patch.object(check, 'source_identity', return_value=self.identity), \
              patch.object(check, 'invoke', side_effect=responses) as invoke, \
              patch.dict(os.environ, {'CARGO_BUILD_TARGET': '', 'WIREFRAME_INPUT_TRACE': '/never-read'}), \
              contextlib.redirect_stdout(text):
-            code = check.main(['fast', '--offline', '--json', str(self.summary)])
+            code = check.main(['fast', '--offline', '--json', str(self.summary), *args])
         return code, json.loads(self.summary.read_text()), text.getvalue(), invoke.call_args_list
 
     def success_responses(self):
@@ -270,6 +270,54 @@ class OrchestrationTests(unittest.TestCase):
         self.assertEqual(summary['executed'], 0)
         self.assertEqual(len(calls), 1)
         self.assertNotIn('FAST PASSED', text)
+
+    def focused_responses(self, lane, names):
+        build = '\n'.join(json.dumps(message) for message in self.messages
+                          if message.get('reason') == 'build-finished'
+                          or message['target']['kind'] == [lane])
+        inventory = check.FAST[lane]
+        return [completed(build), completed(listing(inventory)),
+                completed(output(names, filtered=len(inventory) - len(names)))]
+
+    def test_arrows_only_never_builds_or_runs_application_target(self):
+        code, summary, text, calls = self.run_main(
+            self.focused_responses('lib', check.FAST['lib']), '--case', 'arrows')
+        self.assertEqual((code, summary['expected'], summary['passed']), (0, 7, 7))
+        self.assertIn('--lib', calls[0].args[0])
+        self.assertNotIn('--bin', calls[0].args[0])
+        self.assertEqual(len(calls), 3)
+        self.assertEqual(summary['unselected_fast_tests'], list(check.FAST['bin']))
+        self.assertIn('5 other fast checks not run', text)
+
+    def test_combined_app_cases_are_exact_and_deduplicated(self):
+        names = check.FAST['bin'][:2]
+        code, summary, _, calls = self.run_main(self.focused_responses('bin', names),
+            '--case', 'drag', '--case', 'picker', '--case', 'drag')
+        self.assertEqual((code, summary['expected'], summary['passed']), (0, 2, 2))
+        self.assertNotIn('--lib', calls[0].args[0])
+        self.assertIn('--bin', calls[0].args[0])
+        self.assertEqual(calls[-1].args[0][-2:], list(names))
+        self.assertEqual(len(summary['unselected_fast_tests']), 10)
+
+    def test_focused_missing_or_ignored_case_cannot_pass(self):
+        names = check.CASES['text']['bin']
+        for missing in (True, False):
+            responses = self.focused_responses('bin', names)
+            if missing:
+                responses[1] = completed(listing(check.FAST['bin'][:2]))
+            else:
+                responses[2] = completed(output(names, ignored=names, filtered=4))
+            code, summary, text, calls = self.run_main(responses, '--case', 'text')
+            self.assertEqual((code, summary['status']), (1, 'failed'))
+            self.assertEqual(len(calls), 2 if missing else 3)
+            self.assertNotIn('FAST PASSED', text)
+
+    def test_all_aliases_restore_the_full_unchanged_selection(self):
+        self.assertEqual(check.selection(list(check.CASES)), check.FAST)
+        code, summary, _, calls = self.run_main(self.success_responses(),
+            *[arg for case in check.CASES for arg in ('--case', case)])
+        self.assertEqual((code, summary['passed'], len(calls)), (0, 12, 5))
+        self.assertEqual(summary['unselected_fast_tests'], [])
 
     def test_executable_replacement_with_unchanged_results_never_passes(self):
         # Replace either binary at each list/run boundary. Names/results stay green.

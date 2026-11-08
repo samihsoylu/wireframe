@@ -31,6 +31,20 @@ FAST = {
         'whole_control_no_link_enter_down_escape_preserves_graph_and_history',
     )),
 }
+CASES = {'arrows': {'lib': FAST['lib']}, **{
+    alias: {'bin': (name,)} for alias, name in zip(
+        ('picker', 'drag', 'text', 'io', 'link'), FAST['bin'], strict=True)
+}}
+
+
+def selection(cases):
+    if not cases:
+        return FAST
+    wanted = {name for case in cases for names in CASES[case].values() for name in names}
+    return {lane: tuple(name for name in names if name in wanted)
+            for lane, names in FAST.items() if wanted.intersection(names)}
+
+
 OMITTED = ['other root tests', 'integration and vendor test suites',
            'native desktop/UI, clipboard, dialogs and OS input',
            'Windows desktop runtime', 'visual/graphics checks', 'release builds']
@@ -53,7 +67,7 @@ def expected_names(names):
     require(bool(names) and len(names) == len(set(names)), 'empty or duplicate required selection')
 
 
-def build_artifacts(output, root):
+def build_artifacts(output, root, lanes=FAST):
     artifacts = {}
     finished = []
     for line in output.splitlines():
@@ -83,7 +97,7 @@ def build_artifacts(output, root):
         require(executable.is_file(), 'Cargo test executable is missing')
         artifacts[lane] = executable
     require(len(finished) == 1 and finished[0] is True, 'missing, duplicate or unsuccessful Cargo build result')
-    require(set(artifacts) == set(FAST), 'missing root lib/bin test executable')
+    require(set(artifacts) == set(lanes), 'missing or unexpected root test executable')
     return artifacts
 
 
@@ -269,43 +283,54 @@ def main(argv=None):
     parser.add_argument('--offline', action='store_true', help='use only cached Cargo dependencies')
     parser.add_argument('--jobs', type=int, choices=[1, 2], default=2)
     parser.add_argument('--test-threads', type=int, choices=[1, 2], default=2)
+    parser.add_argument('--case', action='append', choices=CASES,
+                        help='run only this existing regression group; repeat to combine (default: all)')
     args = parser.parse_args(argv)
+    selected = selection(args.case)
     start = time.perf_counter()
-    result = {'schema': 1, 'mode': args.mode, 'status': 'running', 'expected': sum(map(len, FAST.values())),
+    result = {'schema': 1, 'mode': args.mode, 'status': 'running', 'expected': sum(map(len, selected.values())),
+              'selection': sorted(set(args.case)) if args.case else ['all'],
+              'unselected_fast_tests': [name for lane, names in FAST.items()
+                                        for name in names if name not in selected.get(lane, ())],
               'selected_discovered': 0, 'executed': 0, 'passed': 0,
               'build_seconds': 0.0, 'discovery_seconds': 0.0, 'execution_seconds': 0.0,
               'jobs': args.jobs, 'test_threads': args.test_threads,
               'targets': [{'target': lane, 'expected': list(names), 'discovery_complete': False,
                            'discovered_total': None, 'selected_discovered': None,
                            'execution_complete': False, 'executed': 0, 'passed': 0}
-                          for lane, names in FAST.items()], 'omitted': OMITTED,
+                          for lane, names in selected.items()], 'omitted': OMITTED,
               'timing_scope': 'this invocation only; full-cold and whole-suite speed unmeasured'}
     stage = 'setup'
     active = None
     try:
         # Replace any earlier green report before starting work.
         write_summary(args.json, result)
-        for expected in FAST.values():
+        for expected in selected.values():
             expected_names(expected)
         require(not os.environ.get('CARGO_BUILD_TARGET'), 'unset CARGO_BUILD_TARGET; fast executes host test binaries')
         result['source'] = source_identity()
         env = {key: value for key, value in os.environ.items() if not key.startswith('WIREFRAME_')}
         env['CARGO_TERM_COLOR'] = 'never'
-        command = ['cargo', 'test', '--locked', '--no-run', '--lib', '--bin', 'wireframe',
-                   '--message-format=json', '-j', str(args.jobs)]
+        command = ['cargo', 'test', '--locked', '--no-run']
+        if 'lib' in selected:
+            command += ['--lib']
+        if 'bin' in selected:
+            command += ['--bin', 'wireframe']
+        command += ['--message-format=json', '-j', str(args.jobs)]
         if args.offline:
             command.append('--offline')
         stage = 'build'
-        print('Fast scope: 7 arrow guards + 5 headless app scenarios. Building root lib/bin only.', flush=True)
+        print(f"Fast scope: {', '.join(result['selection'])}; {result['expected']} required checks. "
+              f"Building root {'/'.join(selected)} only.", flush=True)
         built = timed_invoke(command, env, result, 'build_seconds')
         result['build_returncode'] = built.returncode
         require(built.returncode == 0, 'Cargo build failed:\n' + cargo_errors(built.stdout) + built.stderr[-2000:])
-        artifacts = build_artifacts(built.stdout, ROOT)
+        artifacts = build_artifacts(built.stdout, ROOT, selected)
         # Record both identities before discovery; the shared Cargo cache is mutable.
         for target in result['targets']:
             executable = artifacts[target['target']]
             target.update(executable=str(executable), executable_sha256=digest(executable))
-        for lane, expected in FAST.items():
+        for lane, expected in selected.items():
             active = next(item for item in result['targets'] if item['target'] == lane)
             executable = artifacts[lane]
             stage = lane + ' discovery'
@@ -319,7 +344,7 @@ def main(argv=None):
             result['selected_discovered'] += active['selected_discovered']
             validate_inventory(names, expected)
             active['discovery_complete'] = True
-        for lane, expected in FAST.items():
+        for lane, expected in selected.items():
             active = next(item for item in result['targets'] if item['target'] == lane)
             executable = artifacts[lane]
             stage = lane + ' execution'
@@ -359,6 +384,9 @@ def main(argv=None):
     print(f"Build {result['build_seconds']:.2f}s; discovery {result['discovery_seconds']:.2f}s; "
           f"test execution {result['execution_seconds']:.2f}s.", flush=True)
     print('Not run: ' + '; '.join(OMITTED) + '. No whole-suite/cold speed claim.', flush=True)
+    if result['unselected_fast_tests']:
+        print(f"Focused run: {len(result['unselected_fast_tests'])} other fast checks not run. "
+              "Run without --case for the complete fast lane.", flush=True)
     print('Summary: ' + str(args.json), flush=True)
     if result['status'] == 'passed':
         print(f"FAST PASSED: {result['passed']}/{result['expected']} required checks executed and passed.", flush=True)

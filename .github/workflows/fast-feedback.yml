@@ -70,10 +70,48 @@ jobs:
             df -h .
           } 2>&1 | tee -a fast-feedback/toolchain.log
 
+      # Cache inputs are public dependencies and disposable build outputs only.
+      # Cargo still checks freshness and every selected test runs on cache hits.
+      - name: Identify build cache environment
+        id: cache-env
+        run: echo "image=${ImageOS}-${ImageVersion}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore Rust dependencies and build outputs
+        id: rust-cache
+        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            target/debug
+          key: fast-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.cache-env.outputs.image }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ hashFiles('Cargo.lock', '**/Cargo.toml', '.cargo/**', '.github/workflows/fast-feedback.yml') }}-${{ github.sha }}
+          restore-keys: |
+            fast-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.cache-env.outputs.image }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ hashFiles('Cargo.lock', '**/Cargo.toml', '.cargo/**', '.github/workflows/fast-feedback.yml') }}-
+
+      - name: Record cache result
+        env:
+          CACHE_HIT: ${{ steps.rust-cache.outputs.cache-hit }}
+          CACHE_KEY: ${{ steps.rust-cache.outputs.cache-matched-key }}
+        run: |
+          echo "exact_hit=$CACHE_HIT" > fast-feedback/cache.log
+          echo "matched_key=$CACHE_KEY" >> fast-feedback/cache.log
+
       - name: Run exactly 12 selected headless checks; no full-suite or native acceptance
         timeout-minutes: 35
         run: |
           python3 scripts/check.py fast --jobs 2 --test-threads 2 --json fast-feedback/summary.json 2>&1 | tee fast-feedback/fast.log
+
+      - name: Save successful push build cache
+        if: github.event_name == 'push' && steps.rust-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            target/debug
+          key: ${{ steps.rust-cache.outputs.cache-primary-key }}
 
       # Never upload target binaries, the workspace, home directories or app data.
       # Upload is best effort on cancellation/job timeout; Actions logs remain separate.
@@ -88,6 +126,7 @@ jobs:
             fast-feedback/dependencies.log
             fast-feedback/toolchain.log
             fast-feedback/fast.log
+            fast-feedback/cache.log
             fast-feedback/summary.json
           if-no-files-found: warn
           retention-days: 14

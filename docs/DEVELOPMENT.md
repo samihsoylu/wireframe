@@ -56,6 +56,14 @@ python3 -m unittest discover -s scripts -p 'test_check.py'
 
 The [Linux fast-feedback workflow](../.github/workflows/fast-feedback.yml) runs these runner contract tests and the same 12 selected checks on Ubuntu 24.04 with Rust 1.99.0. It triggers for pull requests, pushes to `main` or `codex/**`, and manual runs. The workflow lists the Linux build packages and records the actual compiler/CMake versions; it uses two build jobs and two test threads without starting a desktop session. The Windows build-only workflow remains separate.
 
+CI reuses Cargo registry data and debug build outputs, keyed by runner image,
+architecture, compiler, dependency/profile configuration and commit. A compatible
+earlier commit can supply a fallback cache; Cargo still validates freshness and
+all 12 selected checks always execute. Only successful push runs save caches.
+No Cargo credentials, application data or test-result summaries are cached.
+The retained `cache.log` reports hits; compare cache restore/save and total job
+time as well as the runner's build time when assessing the benefit.
+
 CI retains console diagnostics and `summary.json` for 14 days, including failures. The JSON distinguishes expected, selected-discovered, executed and passed counts; missing/incomplete results cannot pass. Early setup failure may leave no runner JSON, and cancellation/timeouts may prevent artifact upload; check the job result and Actions logs as well. Obsolete runs are cancelled through GitHub concurrency on disposable hosted runners, with a 35-minute fast step and 45-minute job limit. Passing CI covers only this selection and its synthetic runner checks, with the same native/full-suite/release omissions above; it makes no cold-build speed claim.
 
 Tests cover document behavior, editing, history, persistence and rendering. Passing tests or cross-compilation does not establish native desktop acceptance. See the [release checklist](RELEASE-CHECKLIST.md) for current limits and [packaging](PACKAGING.md) for distribution commands.

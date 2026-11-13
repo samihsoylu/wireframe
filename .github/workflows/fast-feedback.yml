@@ -1,4 +1,4 @@
-name: Linux fast feedback (12 selected checks)
+name: Linux development checks
 
 on:
   push:
@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   fast:
-    name: Headless Linux; 7 arrow guards + 5 app scenarios
+    name: Headless Linux; fast, persistence and toolkit checks
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     defaults:
@@ -107,6 +107,11 @@ jobs:
         run: |
           cargo test --locked -j 2 -p egui -p egui-winit --lib -- --test-threads=2 2>&1 | tee fast-feedback/dependency-contracts.log
 
+      - name: Check persistence integration with real workers and temporary files
+        timeout-minutes: 5
+        run: |
+          cargo test --locked -j 2 --test save_lifecycle --test project_session -- --test-threads=2 2>&1 | tee fast-feedback/persistence-integration.log
+
       - name: Save successful push build cache
         if: github.event_name == 'push' && steps.rust-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -133,6 +138,7 @@ jobs:
             fast-feedback/fast.log
             fast-feedback/cache.log
             fast-feedback/dependency-contracts.log
+            fast-feedback/persistence-integration.log
             fast-feedback/summary.json
           if-no-files-found: warn
           retention-days: 14

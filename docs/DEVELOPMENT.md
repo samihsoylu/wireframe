@@ -66,7 +66,7 @@ and does not launch Wireframe or Windows binaries. macOS-only archive checks are
 reported as skipped on other hosts. The separate opt-in native bus checks under
 `scripts/verification` are not part of this discovery command.
 
-The [Linux fast-feedback workflow](../.github/workflows/fast-feedback.yml) runs the Python tooling suite, the same 12 selected root checks, and the patched dependency checks below on Ubuntu 24.04 with Rust 1.99.0. It triggers for pull requests, pushes to `main` or `codex/**`, and manual runs. The workflow lists the Linux build packages and records the actual compiler/CMake versions; it uses two build jobs and two test threads without starting a desktop session. The Windows build-only workflow remains separate.
+The [Linux fast-feedback workflow](../.github/workflows/fast-feedback.yml) runs the Python tooling suite, the same 12 selected root checks, and the patched dependency and persistence integration checks below on Ubuntu 24.04 with Rust 1.99.0. It triggers for pull requests, pushes to `main` or `codex/**`, and manual runs. The workflow lists the Linux build packages and records the actual compiler/CMake versions; it uses two build jobs and two test threads without starting a desktop session. The Windows build-only workflow remains separate.
 
 CI reuses Cargo registry data and debug build outputs, keyed by runner image,
 architecture, compiler, dependency/profile configuration and commit. A compatible
@@ -76,7 +76,7 @@ No Cargo credentials, application data or test-result summaries are cached.
 The retained `cache.log` reports hits; compare cache restore/save and total job
 time as well as the runner's build time when assessing the benefit.
 
-CI retains console diagnostics and `summary.json` for 14 days, including failures. The JSON distinguishes expected, selected-discovered, executed and passed counts; missing/incomplete results cannot pass. Early setup failure may leave no runner JSON, and cancellation/timeouts may prevent artifact upload; check the job result and Actions logs as well. Obsolete runs are cancelled through GitHub concurrency on disposable hosted runners, with a 35-minute fast step and 45-minute job limit. Passing CI covers the selected root checks, Python tooling fixtures and patched-toolkit library tests. Native behavior, other integration/vendor suites and release acceptance remain outside this job; it makes no cold-build speed claim.
+CI retains console diagnostics and `summary.json` for 14 days, including failures. The JSON distinguishes expected, selected-discovered, executed and passed counts; missing/incomplete results cannot pass. Early setup failure may leave no runner JSON, and cancellation/timeouts may prevent artifact upload; check the job result and Actions logs as well. Obsolete runs are cancelled through GitHub concurrency on disposable hosted runners, with a 35-minute fast step and 45-minute job limit. Passing CI covers the selected root checks, Python tooling fixtures, patched-toolkit library tests and the two persistence integration targets below. Native behavior, other integration/vendor suites and release acceptance remain outside this job; it makes no cold-build speed claim.
 
 Tests cover document behavior, editing, history, persistence and rendering. Passing tests or cross-compilation does not establish native desktop acceptance. See the [release checklist](RELEASE-CHECKLIST.md) for current limits and [packaging](PACKAGING.md) for distribution commands.
 
@@ -98,6 +98,28 @@ and retains its per-crate counts in `dependency-contracts.log`. Its five-minute
 step limit and the overall job limit still apply. The root `summary.json` covers
 only the 12 selected root checks; the dependency and Python results are separate
 logs, and all required steps must pass for the job to succeed.
+
+## Persistence integration
+
+Run the existing save and recovery targets together from the repository root:
+
+```sh
+cargo test --offline --locked -j 2 --test save_lifecycle --test project_session -- --test-threads=2
+```
+
+Omit `--offline` when dependencies are not cached. This runs all three
+`save_lifecycle` and twelve `project_session` tests, with real temporary files,
+worker threads, save ownership and failure/recovery checks. The session tests
+use the desktop `workspace::Editor`; they do not start the desktop app. Keep
+the real automatic-save debounce check (at least 5.9 seconds) alongside the
+coordinator tests that supply logical time. No assertions or waits are removed
+for this command, and no equivalent-work speedup is claimed.
+
+CI runs the same command without `--offline`, with a five-minute step limit.
+`persistence-integration.log` retains both target summaries and failure output.
+These 15 tests are separate from the 12-check root JSON, Python suite and toolkit
+counts. This is one persistence batch, not all integration coverage, crash-process
+coverage or proof of native dialogs and OS file-system behavior on other platforms.
 
 Integration tests also need a scope check before choosing affected targets.
 For example, `tests/workflows.rs` exercises the retained `editor::Editor` model;

@@ -93,7 +93,11 @@ dependency resolution and existing unit tests; no private test controller or
 previously compiled executable path is needed. Keep each crate's reported test
 counts separate from the 12 fast checks. These contracts cover toolkit behavior
 and simulated native-input ordering, not actual OS keyboard or clipboard delivery.
-This separate lane is not currently included in fast-feedback CI.
+Fast-feedback CI runs this command after the 12 root checks, without `--offline`,
+and retains its per-crate counts in `dependency-contracts.log`. Its five-minute
+step limit and the overall job limit still apply. The root `summary.json` covers
+only the 12 selected root checks; the dependency and Python results are separate
+logs, and all required steps must pass for the job to succeed.
 
 Integration tests also need a scope check before choosing affected targets.
 For example, `tests/workflows.rs` exercises the retained `editor::Editor` model;

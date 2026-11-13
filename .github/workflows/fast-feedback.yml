@@ -102,6 +102,11 @@ jobs:
         run: |
           python3 scripts/check.py fast --jobs 2 --test-threads 2 --json fast-feedback/summary.json 2>&1 | tee fast-feedback/fast.log
 
+      - name: Check patched toolkit library contracts (separate counts)
+        timeout-minutes: 5
+        run: |
+          cargo test --locked -j 2 -p egui -p egui-winit --lib -- --test-threads=2 2>&1 | tee fast-feedback/dependency-contracts.log
+
       - name: Save successful push build cache
         if: github.event_name == 'push' && steps.rust-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -127,6 +132,7 @@ jobs:
             fast-feedback/toolchain.log
             fast-feedback/fast.log
             fast-feedback/cache.log
+            fast-feedback/dependency-contracts.log
             fast-feedback/summary.json
           if-no-files-found: warn
           retention-days: 14

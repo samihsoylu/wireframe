@@ -1,6 +1,6 @@
 {
   "armed": true,
-  "productCommit": "75b316c0d2af4fe9380c5f6484169331b7ca8231",
+  "productCommit": "b3a60dc9082106796e3a87e91d73ef46dec29636",
   "version": "0.1.0-beta.6",
   "sourceManifest": {
     ".gitattributes": {
@@ -50,8 +50,8 @@
     },
     "README.md": {
       "mode": "0o644",
-      "bytes": 3435,
-      "sha256": "8ef36ae473aab81e540058ccd5b2d0a08fb57345c2ac3aec56bde36986bdaeb6"
+      "bytes": 3440,
+      "sha256": "8566040cff87b500dfff25249971726754118cd25452688eb9c3de441e06fe47"
     },
     "THIRD_PARTY_NOTICES.md": {
       "mode": "0o644",
@@ -370,8 +370,8 @@
     },
     "docs/DEMO.md": {
       "mode": "0o644",
-      "bytes": 1694,
-      "sha256": "7e996d51267360d6da5d9d1ae69a01241712286a6830f16e08daef2a76fad6a4"
+      "bytes": 1700,
+      "sha256": "d08a4c83c49829d767ba6fbebcaa4efdaca71d4db09f7aa7abe36e0a8a453c86"
     },
     "docs/DEVELOPMENT.md": {
       "mode": "0o644",
@@ -410,8 +410,8 @@
     },
     "docs/GETTING-STARTED.md": {
       "mode": "0o644",
-      "bytes": 2269,
-      "sha256": "92981397f11a156db4f16491a4efc6edddc0b982fa83681a94d2edbd16d6fea6"
+      "bytes": 2265,
+      "sha256": "77b01df1d9dcc44d2dc57dec09e586680b0ea171c8a835f44a21bf7c3586ff4f"
     },
     "docs/ICON-CATALOG.md": {
       "mode": "0o644",
@@ -5665,8 +5665,8 @@
     },
     "src/app/toolbar.rs": {
       "mode": "0o644",
-      "bytes": 18207,
-      "sha256": "d8dc0bdbc15207dc62b1a1f54f56ae7cfac98f6b9acd8162159c2ee7017687f0"
+      "bytes": 18286,
+      "sha256": "dba676ae3132fabc1f4ce5ddfacd29bb8044fddae77660f187357e0809138e4c"
     },
     "src/app/toolbar/icons.rs": {
       "mode": "0o644",
@@ -5675,8 +5675,8 @@
     },
     "src/app/toolbar/tests.rs": {
       "mode": "0o644",
-      "bytes": 20101,
-      "sha256": "bf4636a79ac41026cfaa85d7b5727fd363a3d1b78e1d520b9b730b9e907f0111"
+      "bytes": 21302,
+      "sha256": "5dd54757a5d0e36bb5016baf919311dd2feb7b06a08a5a4b91adf62778480b29"
     },
     "src/app/trash.rs": {
       "mode": "0o644",
@@ -10133,5 +10133,5 @@
   "platformExcludedTargets": {
     "interface_typography": "Source file explicitly cfg(target_os=macos); separate platform acceptance"
   },
-  "reviewEvidenceSHA256": "bed5318445314a4eb02169b2f40009c4e6f12301600f00a4383bb1f0dc44570f"
+  "reviewEvidenceSHA256": "4891166dedcb63e2c9e8452ea4906cde21a0574d34025a6739b0298b690b6cb1"
 }

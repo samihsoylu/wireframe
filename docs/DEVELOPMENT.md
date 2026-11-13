@@ -127,6 +127,46 @@ it is legacy compatibility coverage, whereas the fast app scenarios exercise
 the desktop application's `workspace::Editor`. A legacy save/reopen pass must
 not be presented as a desktop workflow pass. Preserve both sets of assertions.
 
+## Broad batch checks
+
+Use a broad batch at an integration boundary to catch mistakes in focused test
+selection. On an authorized macOS or Linux host, the bounded headless selection
+is all root library, application and integration tests except the crash-process
+and native typography cases listed below:
+
+```sh
+cargo test --locked -j 2 --lib --bins --tests -- --test-threads=2 \
+  --skip working_copy::crash_tests:: \
+  --skip heading_weight_changes_ink_without_mutating_existing_regular_layouts \
+  --skip installing_interface_fonts_preserves_canvas_families_and_project_bytes \
+  --skip interface_labels_and_fields_follow_native_sizing_across_display_scales
+cargo test --locked -j 2 --doc
+```
+
+Add `--offline` before `--` when dependencies are cached. Keep these commands
+sequential, with no competing build or timing run. Retain the complete Cargo
+output and exit status; each executable has its own passed, failed, ignored and
+filtered counts. A filtered or ignored test is not a pass. The first command
+does not cover examples, dependencies, Python or doctests; the second is the
+separate doctest check, which may legitimately report zero when there are no
+Rust documentation examples. Run the Python and toolkit commands above as
+separate checks. Review source changes to the exclusion names before reuse.
+
+The crash group deliberately kills child processes; its three parent tests
+remain excluded here, and its ignored child helper must never run alone.
+The three typography cases use the macOS AppKit adapter; on other hosts their
+target is empty. Ordinary libtest execution also leaves three opt-in graphics
+tests and the public-network image-provider test ignored. Run those only in
+their separately prepared environments. These exclusions preserve the bounded
+headless scope; they do not establish crash, graphics, native or network coverage.
+Windows execution remains outside this procedure.
+
+Keep the existing integration targets and assertions. Consolidating executables
+or replacing real worker tests needs a measured benefit; a warm build or a
+smaller selection alone does not justify such a migration. The broad batch is
+manual and separate from the per-change CI lane, whose selected scope is listed
+above. No broad-suite result should be inferred from a green fast CI run.
+
 ## Project records
 
 Operational session notes are maintained privately outside this repository. Detailed subsystem documents describe implementation contracts; the README and installation guide are written for people using the app. Completed changes belong in Git history.

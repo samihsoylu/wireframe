@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""Small host-headless feedback lane. Build/list/run only root lib and bin tests."""
+"""Host-headless fast and broad root checks, with explicit result accounting."""
 import argparse
 from collections import Counter
 import hashlib
@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 import time
 
@@ -101,7 +102,7 @@ def build_artifacts(output, root, lanes=FAST):
     return artifacts
 
 
-def discovery(output):
+def discovery(output, allow_empty=False):
     names = []
     footer = None
     for line in output.splitlines():
@@ -115,7 +116,7 @@ def discovery(output):
         summary = re.fullmatch(r'(\d+) tests?, (\d+) benchmarks?', line)
         require(summary is not None and footer is None, 'malformed or duplicate test discovery output')
         footer = tuple(map(int, summary.groups()))
-    require(names, 'zero discovered tests')
+    require(names or allow_empty, 'zero discovered tests')
     require(footer is None or footer == (len(names), 0), 'discovery footer does not match inventory')
     return names
 
@@ -149,7 +150,7 @@ def execution(output, returncode, expected, discovered_total):
     require(passed == sum(result == 'ok' for _, result in rows) and
             failed == sum(result == 'FAILED' for _, result in rows) and
             ignored == sum(result.startswith('ignored') for _, result in rows), 'case results disagree with summary')
-    return {'complete': True, 'executed': len(rows), 'passed': passed, 'failed': failed,
+    return {'complete': True, 'executed': passed + failed, 'passed': passed, 'failed': failed,
             'ignored': ignored, 'filtered_out': filtered,
             'succeeded': returncode == 0 and status == 'ok' and passed == len(expected) and
                          failed == ignored == measured == 0}
@@ -253,6 +254,22 @@ def invoke(argv, env):
     return subprocess.run(argv, cwd=ROOT, env=env, capture_output=True, text=True, encoding='utf-8', errors='replace')
 
 
+def host_target(output, platform):
+    hosts = re.findall(r'^host: ([a-zA-Z0-9_.-]+)$', output, re.M)
+    require(len(hosts) == 1, 'missing or duplicate compiler host identity')
+    host = hosts[0]
+    require((platform == 'darwin' and host.endswith('-apple-darwin'))
+            or (platform == 'linux' and '-linux-' in host), 'compiler host is not the running OS')
+    return host
+
+
+def compiler_host(env):
+    require(sys.platform in ('darwin', 'linux'), 'checks support macOS/Linux hosts only; Windows runtime held')
+    compiler = invoke(['rustc', '-vV'], env)
+    require(compiler.returncode == 0, 'cannot identify compiler host: ' + compiler.stderr[-2000:])
+    return host_target(compiler.stdout, sys.platform)
+
+
 def timed_invoke(argv, env, result, timing):
     before = time.perf_counter()
     try:
@@ -277,15 +294,22 @@ def cargo_errors(output):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=['fast'])
-    parser.add_argument('--json', type=Path, default=ROOT / 'target/check-fast.json', metavar='PATH',
-                        help='machine summary (default: target/check-fast.json)')
+    parser.add_argument('mode', choices=['fast', 'batch'])
+    parser.add_argument('--json', type=Path, metavar='PATH',
+                        help='machine summary (default: target/check-MODE.json)')
     parser.add_argument('--offline', action='store_true', help='use only cached Cargo dependencies')
     parser.add_argument('--jobs', type=int, choices=[1, 2], default=2)
     parser.add_argument('--test-threads', type=int, choices=[1, 2], default=2)
     parser.add_argument('--case', action='append', choices=CASES,
                         help='run only this existing regression group; repeat to combine (default: all)')
     args = parser.parse_args(argv)
+    if args.json is None:
+        args.json = ROOT / ('target/check-' + args.mode + '.json')
+    if args.mode == 'batch':
+        if args.case:
+            parser.error('--case applies only to fast; batch runs the complete declared root selection')
+        from check_batch import run
+        return run(args)
     selected = selection(args.case)
     start = time.perf_counter()
     result = {'schema': 1, 'mode': args.mode, 'status': 'running', 'expected': sum(map(len, selected.values())),
@@ -311,7 +335,9 @@ def main(argv=None):
         result['source'] = source_identity()
         env = {key: value for key, value in os.environ.items() if not key.startswith('WIREFRAME_')}
         env['CARGO_TERM_COLOR'] = 'never'
-        command = ['cargo', 'test', '--locked', '--no-run']
+        stage = 'compiler host'
+        result['host_target'] = compiler_host(env)
+        command = ['cargo', 'test', '--locked', '--no-run', '--target', result['host_target']]
         if 'lib' in selected:
             command += ['--lib']
         if 'bin' in selected:

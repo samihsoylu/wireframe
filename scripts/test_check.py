@@ -33,6 +33,20 @@ def output(names, *, failed=(), ignored=(), filtered=0):
 class AccountingTests(unittest.TestCase):
     names = ('required::one', 'required::two')
 
+    def test_compiler_host_identity_is_single_and_matches_running_os(self):
+        self.assertEqual(check.host_target('host: aarch64-apple-darwin\n', 'darwin'), 'aarch64-apple-darwin')
+        self.assertEqual(check.host_target('host: x86_64-unknown-linux-gnu\n', 'linux'), 'x86_64-unknown-linux-gnu')
+        for text, platform in [('', 'darwin'), ('host: x86_64-pc-windows-msvc\n', 'darwin'),
+                               ('host: aarch64-apple-darwin\nhost: aarch64-apple-darwin\n', 'darwin'),
+                               ('host: aarch64-apple-darwin\n', 'win32')]:
+            with self.assertRaises(check.CheckError):
+                check.host_target(text, platform)
+
+    def test_failed_compiler_host_probe_cannot_fall_back_to_cargo_configuration(self):
+        with patch.object(check.sys, 'platform', 'darwin'), patch.object(check, 'invoke', return_value=completed('', 1)):
+            with self.assertRaises(check.CheckError):
+                check.compiler_host({})
+
     def test_valid_selection_counts_only_executed_checks(self):
         inventory = check.discovery(listing((*self.names, 'not::selected')))
         check.validate_inventory(inventory, self.names)
@@ -73,13 +87,13 @@ class AccountingTests(unittest.TestCase):
                 check.execution(text, 0, self.names, 2)
 
     def test_failed_ignored_or_failed_process_is_accounted_but_never_success(self):
-        cases = [(output(self.names, failed=self.names[:1]), 101),
-                 (output(self.names, ignored=self.names[:1]), 0), (output(self.names), 9)]
-        for text, code in cases:
+        cases = [(output(self.names, failed=self.names[:1]), 101, 2),
+                 (output(self.names, ignored=self.names[:1]), 0, 1), (output(self.names), 9, 2)]
+        for text, code, executed in cases:
             with self.subTest(code=code, text=text):
                 result = check.execution(text, code, self.names, 2)
                 self.assertTrue(result['complete'])
-                self.assertEqual(result['executed'], 2)
+                self.assertEqual(result['executed'], executed)
                 self.assertFalse(result['succeeded'])
 
     def test_result_counts_and_discovery_filtered_count_must_agree(self):
@@ -227,6 +241,7 @@ class OrchestrationTests(unittest.TestCase):
     def run_main(self, responses, *args):
         text = io.StringIO()
         with patch.object(check, 'ROOT', self.root), patch.object(check, 'source_identity', return_value=self.identity), \
+             patch.object(check, 'compiler_host', return_value='aarch64-apple-darwin'), \
              patch.object(check, 'invoke', side_effect=responses) as invoke, \
              patch.dict(os.environ, {'CARGO_BUILD_TARGET': '', 'WIREFRAME_INPUT_TRACE': '/never-read'}), \
              contextlib.redirect_stdout(text):
@@ -251,6 +266,7 @@ class OrchestrationTests(unittest.TestCase):
         self.assertIn('--lib', build)
         self.assertIn('--bin', build)
         self.assertNotIn('--all-targets', build)
+        self.assertEqual(build[build.index('--target') + 1], 'aarch64-apple-darwin')
         for index, execution_index, lane in [(1, 3, 'lib'), (2, 4, 'bin')]:
             self.assertEqual(calls[index].args[0][0], str(self.artifacts[lane]))
             self.assertIn('--list', calls[index].args[0])
@@ -394,7 +410,7 @@ class OrchestrationTests(unittest.TestCase):
         lib = check.FAST['lib']
         responses[3] = completed(output(lib, ignored=lib[:1], filtered=1))
         code, summary, text, calls = self.run_main(responses)
-        self.assertEqual((code, len(calls), summary['executed'], summary['passed']), (1, 4, 7, 6))
+        self.assertEqual((code, len(calls), summary['executed'], summary['passed']), (1, 4, 6, 6))
         self.assertTrue(summary['targets'][0]['execution_complete'])
         self.assertEqual(summary['targets'][0]['ignored'], 1)
         self.assertNotIn('FAST PASSED', text)

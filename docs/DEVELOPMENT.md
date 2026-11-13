@@ -42,7 +42,7 @@ fast lane. CI continues to run all 12 checks.
 
 This host-headless lane builds only the root library and application test binaries, then runs seven arrow guards and five full-app scenarios (picker input/focus, interrupted drag/history, draft/save/reopen, async failure/ownership, and whole-control No link cancellation). It preserves the existing tests. Build and test phases are sequential, with two build jobs and two test threads by default; use `--jobs 1 --test-threads 1` for serial debugging.
 
-The command lists each selected executable and verifies every required name and result. Missing, duplicate, ignored, failed or incomplete required results fail the command; unselected tests are never reported as passed. There are no retries, automatic timeouts, tool installs or profile changes. Configure the same Rust/C/C++/SDK/CMake environment as an ordinary build; all `WIREFRAME_*` app overrides are removed from child processes. Cross-target `CARGO_BUILD_TARGET` is rejected because the lane executes host test binaries.
+The command lists each selected executable and verifies every required name and result. Missing, duplicate, ignored, failed or incomplete required results fail the command; unselected tests are never reported as passed. There are no retries, automatic timeouts, tool installs or profile changes. Configure the same Rust/C/C++/SDK/CMake environment as an ordinary build; all `WIREFRAME_*` app overrides are removed from child processes. Nonempty `CARGO_BUILD_TARGET` is rejected. The runner obtains the compiler host from `rustc -vV`, checks that it matches the running macOS/Linux OS, and passes that target explicitly to Cargo. This overrides a cross-target `build.target` in Cargo configuration. Windows execution is refused.
 
 A concise console result separates build, discovery and test execution time. The machine summary defaults to `target/check-fast.json`; choose another path with `--json PATH`. Check both the command's exit status and the summary's `status`. A new run replaces an old green report with `running` before building. Fixture/configuration and executable hashes identify the measured selection; timings describe that invocation, with no full-cold or whole-suite speed claim or fixed pass-time threshold.
 
@@ -68,7 +68,8 @@ reported as skipped on other hosts. The separate opt-in native bus checks under
 
 The [Linux fast-feedback workflow](../.github/workflows/fast-feedback.yml) runs the Python tooling suite, the same 12 selected root checks, and the patched dependency and persistence integration checks below on Ubuntu 24.04 with Rust 1.99.0. It triggers for pull requests, pushes to `main` or `codex/**`, and manual runs. The workflow lists the Linux build packages and records the actual compiler/CMake versions; it uses two build jobs and two test threads without starting a desktop session. The Windows build-only workflow remains separate.
 
-CI reuses Cargo registry data and debug build outputs, keyed by runner image,
+CI reuses Cargo registry data and debug build outputs (including the explicit
+host-target directory), keyed by runner image,
 architecture, compiler, dependency/profile configuration and commit. A compatible
 earlier commit can supply a fallback cache; Cargo still validates freshness and
 all 12 selected checks always execute. Only successful push runs save caches.
@@ -98,6 +99,11 @@ and retains its per-crate counts in `dependency-contracts.log`. Its five-minute
 step limit and the overall job limit still apply. The root `summary.json` covers
 only the 12 selected root checks; the dependency and Python results are separate
 logs, and all required steps must pass for the job to succeed.
+
+To share build outputs with the host-target runners, add
+`--target "$(rustc -vV | sed -n 's/^host: //p')"` before the `--` separator in
+these direct Cargo commands. CI uses this same explicit compiler host for its
+toolkit and persistence steps, so those steps reuse the fast lane's build outputs.
 
 ## Persistence integration
 
@@ -129,10 +135,41 @@ not be presented as a desktop workflow pass. Preserve both sets of assertions.
 
 ## Broad batch checks
 
+```sh
+python3 scripts/check.py batch --offline
+```
+
+This uses the same build/discovery/result validation as the fast runner, with
+all root library, application and integration targets from Cargo metadata.
+Every target is built and listed before any tests execute. The JSON report at
+`target/check-batch.json` lists exact discovered and selected names, source-ignored
+reasons, held cases, executable hashes and build/discovery/execution times.
+Parsed discovery lists remain in failed reports. Ignored result rows are
+reported separately and never counted as executed test bodies. An
+unknown ignored case, changed crash-test inventory, missing executable, unexpected
+empty target, failed or incomplete result fails the batch without retry. The one
+known empty target is macOS-only `interface_typography` on Linux. Windows hosts
+and cross-target execution are refused, including Cargo configuration overrides;
+the explicit compiler-host target takes precedence. Shared executable paths or
+file identities across declared targets are rejected before discovery. Product tests and assertions are unchanged.
+`--case` remains fast-only; `--jobs`, `--test-threads` and `--json` apply to both.
+The explicit host target uses Cargo's target-specific cache directory; its first
+build may recompile dependencies previously cached without `--target`. Retained
+predecessor timings are not measurements of this updated runner.
+
+The batch removes `WIREFRAME_*` overrides and checks recorded target entry-point
+and fast-fixture/configuration hashes at completion. It checks executable hashes
+around discovery/execution and at completion. These are point-in-time checks,
+not an atomic source snapshot: avoid concurrent source edits or builds. This is
+root test accounting only, not an aggregate pass for dependencies, Python,
+doctests, graphics or release acceptance. Use the separate commands below and
+above for those scopes.
+
 Use a broad batch at an integration boundary to catch mistakes in focused test
 selection. On an authorized macOS or Linux host, the bounded headless selection
 is all root library, application and integration tests except the crash-process
-and native typography cases listed below:
+and native typography cases listed below. The equivalent direct Cargo commands
+are useful for diagnosis but do not produce the runner's reconciled JSON:
 
 ```sh
 cargo test --locked -j 2 --lib --bins --tests -- --test-threads=2 \

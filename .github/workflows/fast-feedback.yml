@@ -57,6 +57,7 @@ jobs:
       - name: Install pinned Rust compiler and record toolchain
         run: |
           rustup toolchain install 1.99.0 --profile minimal 2>&1 | tee fast-feedback/toolchain.log
+          rustc -vV | sed -n 's/^host: /CHECK_HOST_TARGET=/p' >> "$GITHUB_ENV"
           {
             git rev-parse HEAD
             uname -sm
@@ -85,6 +86,7 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/registry/src
             target/debug
+            target/*/debug
           key: fast-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.cache-env.outputs.image }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ hashFiles('Cargo.lock', '**/Cargo.toml', '.cargo/**', '.github/workflows/fast-feedback.yml') }}-${{ github.sha }}
           restore-keys: |
             fast-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.cache-env.outputs.image }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ hashFiles('Cargo.lock', '**/Cargo.toml', '.cargo/**', '.github/workflows/fast-feedback.yml') }}-
@@ -105,12 +107,12 @@ jobs:
       - name: Check patched toolkit library contracts (separate counts)
         timeout-minutes: 5
         run: |
-          cargo test --locked -j 2 -p egui -p egui-winit --lib -- --test-threads=2 2>&1 | tee fast-feedback/dependency-contracts.log
+          cargo test --locked -j 2 --target "$CHECK_HOST_TARGET" -p egui -p egui-winit --lib -- --test-threads=2 2>&1 | tee fast-feedback/dependency-contracts.log
 
       - name: Check persistence integration with real workers and temporary files
         timeout-minutes: 5
         run: |
-          cargo test --locked -j 2 --test save_lifecycle --test project_session -- --test-threads=2 2>&1 | tee fast-feedback/persistence-integration.log
+          cargo test --locked -j 2 --target "$CHECK_HOST_TARGET" --test save_lifecycle --test project_session -- --test-threads=2 2>&1 | tee fast-feedback/persistence-integration.log
 
       - name: Save successful push build cache
         if: github.event_name == 'push' && steps.rust-cache.outputs.cache-hit != 'true'
@@ -121,6 +123,7 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/registry/src
             target/debug
+            target/*/debug
           key: ${{ steps.rust-cache.outputs.cache-primary-key }}
 
       # Never upload target binaries, the workspace, home directories or app data.
